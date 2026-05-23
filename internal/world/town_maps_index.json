@@ -1,0 +1,2426 @@
+{
+  "source": "mapdefined/mapping.xml",
+  "generator": "tools/classic-resource-importer/import-classic-config.js",
+  "maps": [
+    {
+      "id": "1",
+      "name": "云隐村",
+      "sourceXml": "mapdefined/xml/1.xml"
+    },
+    {
+      "id": "2",
+      "name": "大佛村",
+      "sourceXml": "mapdefined/xml/2.xml"
+    },
+    {
+      "id": "3",
+      "name": "涧庭村",
+      "sourceXml": "mapdefined/xml/3.xml"
+    },
+    {
+      "id": "4",
+      "name": "云隐村口",
+      "sourceXml": "mapdefined/xml/4.xml"
+    },
+    {
+      "id": "5",
+      "name": "云隐村口_1",
+      "sourceXml": "mapdefined/xml/5.xml"
+    },
+    {
+      "id": "6",
+      "name": "大佛村口",
+      "sourceXml": "mapdefined/xml/6.xml"
+    },
+    {
+      "id": "7",
+      "name": "卧佛谷_1",
+      "sourceXml": "mapdefined/xml/7.xml"
+    },
+    {
+      "id": "8",
+      "name": "卧佛谷_2",
+      "sourceXml": "mapdefined/xml/8.xml"
+    },
+    {
+      "id": "9",
+      "name": "云隐村口_2",
+      "sourceXml": "mapdefined/xml/9.xml"
+    },
+    {
+      "id": "10",
+      "name": "涧庭村口",
+      "sourceXml": "mapdefined/xml/10.xml"
+    },
+    {
+      "id": "11",
+      "name": "涧庭道_1",
+      "sourceXml": "mapdefined/xml/11.xml"
+    },
+    {
+      "id": "12",
+      "name": "涧庭道_2",
+      "sourceXml": "mapdefined/xml/12.xml"
+    },
+    {
+      "id": "13",
+      "name": "云隐山道_1",
+      "sourceXml": "mapdefined/xml/13.xml"
+    },
+    {
+      "id": "14",
+      "name": "云隐山道_2",
+      "sourceXml": "mapdefined/xml/14.xml"
+    },
+    {
+      "id": "15",
+      "name": "云隐山道_3",
+      "sourceXml": "mapdefined/xml/15.xml"
+    },
+    {
+      "id": "16",
+      "name": "云隐山道_4",
+      "sourceXml": "mapdefined/xml/16.xml"
+    },
+    {
+      "id": "17",
+      "name": "云隐山道_5",
+      "sourceXml": "mapdefined/xml/17.xml"
+    },
+    {
+      "id": "18",
+      "name": "飞仙崖",
+      "sourceXml": "mapdefined/xml/18.xml"
+    },
+    {
+      "id": "19",
+      "name": "树海_1",
+      "sourceXml": "mapdefined/xml/19.xml"
+    },
+    {
+      "id": "20",
+      "name": "树海_2",
+      "sourceXml": "mapdefined/xml/20.xml"
+    },
+    {
+      "id": "21",
+      "name": "树海_3",
+      "sourceXml": "mapdefined/xml/21.xml"
+    },
+    {
+      "id": "22",
+      "name": "树海_4",
+      "sourceXml": "mapdefined/xml/22.xml"
+    },
+    {
+      "id": "23",
+      "name": "树海_5",
+      "sourceXml": "mapdefined/xml/23.xml"
+    },
+    {
+      "id": "24",
+      "name": "树海_6",
+      "sourceXml": "mapdefined/xml/24.xml"
+    },
+    {
+      "id": "25",
+      "name": "树海_7",
+      "sourceXml": "mapdefined/xml/25.xml"
+    },
+    {
+      "id": "26",
+      "name": "树海_8",
+      "sourceXml": "mapdefined/xml/26.xml"
+    },
+    {
+      "id": "27",
+      "name": "树海_9",
+      "sourceXml": "mapdefined/xml/27.xml"
+    },
+    {
+      "id": "28",
+      "name": "树海_10",
+      "sourceXml": "mapdefined/xml/28.xml"
+    },
+    {
+      "id": "29",
+      "name": "树海_11",
+      "sourceXml": "mapdefined/xml/29.xml"
+    },
+    {
+      "id": "30",
+      "name": "树洞",
+      "sourceXml": "mapdefined/xml/30.xml"
+    },
+    {
+      "id": "31",
+      "name": "平原_1",
+      "sourceXml": "mapdefined/xml/31.xml"
+    },
+    {
+      "id": "32",
+      "name": "树海_13",
+      "sourceXml": "mapdefined/xml/32.xml"
+    },
+    {
+      "id": "33",
+      "name": "平原_2",
+      "sourceXml": "mapdefined/xml/33.xml"
+    },
+    {
+      "id": "34",
+      "name": "平原_3",
+      "sourceXml": "mapdefined/xml/34.xml"
+    },
+    {
+      "id": "35",
+      "name": "平原_4",
+      "sourceXml": "mapdefined/xml/35.xml"
+    },
+    {
+      "id": "36",
+      "name": "平原_5",
+      "sourceXml": "mapdefined/xml/36.xml"
+    },
+    {
+      "id": "37",
+      "name": "平原_6",
+      "sourceXml": "mapdefined/xml/37.xml"
+    },
+    {
+      "id": "38",
+      "name": "平原_7",
+      "sourceXml": "mapdefined/xml/38.xml"
+    },
+    {
+      "id": "39",
+      "name": "平原_8",
+      "sourceXml": "mapdefined/xml/39.xml"
+    },
+    {
+      "id": "40",
+      "name": "平原_9",
+      "sourceXml": "mapdefined/xml/40.xml"
+    },
+    {
+      "id": "41",
+      "name": "平原_10",
+      "sourceXml": "mapdefined/xml/41.xml"
+    },
+    {
+      "id": "42",
+      "name": "平原_11",
+      "sourceXml": "mapdefined/xml/42.xml"
+    },
+    {
+      "id": "43",
+      "name": "平原_12",
+      "sourceXml": "mapdefined/xml/43.xml"
+    },
+    {
+      "id": "44",
+      "name": "平原_13",
+      "sourceXml": "mapdefined/xml/44.xml"
+    },
+    {
+      "id": "45",
+      "name": "广青镇_1",
+      "sourceXml": "mapdefined/xml/45.xml"
+    },
+    {
+      "id": "46",
+      "name": "广青镇_2",
+      "sourceXml": "mapdefined/xml/46.xml"
+    },
+    {
+      "id": "47",
+      "name": "广青镇_3",
+      "sourceXml": "mapdefined/xml/47.xml"
+    },
+    {
+      "id": "48",
+      "name": "平原_14",
+      "sourceXml": "mapdefined/xml/48.xml"
+    },
+    {
+      "id": "49",
+      "name": "平原_15",
+      "sourceXml": "mapdefined/xml/49.xml"
+    },
+    {
+      "id": "50",
+      "name": "平原_16",
+      "sourceXml": "mapdefined/xml/50.xml"
+    },
+    {
+      "id": "51",
+      "name": "平原_17",
+      "sourceXml": "mapdefined/xml/51.xml"
+    },
+    {
+      "id": "52",
+      "name": "平原_18",
+      "sourceXml": "mapdefined/xml/52.xml"
+    },
+    {
+      "id": "53",
+      "name": "平原_19",
+      "sourceXml": "mapdefined/xml/53.xml"
+    },
+    {
+      "id": "54",
+      "name": "平原_20",
+      "sourceXml": "mapdefined/xml/54.xml"
+    },
+    {
+      "id": "55",
+      "name": "平原_21",
+      "sourceXml": "mapdefined/xml/55.xml"
+    },
+    {
+      "id": "56",
+      "name": "沼泽_1",
+      "sourceXml": "mapdefined/xml/56.xml"
+    },
+    {
+      "id": "57",
+      "name": "沼泽_2",
+      "sourceXml": "mapdefined/xml/57.xml"
+    },
+    {
+      "id": "58",
+      "name": "沼泽_3",
+      "sourceXml": "mapdefined/xml/58.xml"
+    },
+    {
+      "id": "59",
+      "name": "沼泽_4",
+      "sourceXml": "mapdefined/xml/59.xml"
+    },
+    {
+      "id": "60",
+      "name": "沼泽_5",
+      "sourceXml": "mapdefined/xml/60.xml"
+    },
+    {
+      "id": "61",
+      "name": "沼泽_7",
+      "sourceXml": "mapdefined/xml/61.xml"
+    },
+    {
+      "id": "62",
+      "name": "沼泽_6",
+      "sourceXml": "mapdefined/xml/62.xml"
+    },
+    {
+      "id": "63",
+      "name": "沼泽_8",
+      "sourceXml": "mapdefined/xml/63.xml"
+    },
+    {
+      "id": "64",
+      "name": "飞仙洞_1",
+      "sourceXml": "mapdefined/xml/64.xml"
+    },
+    {
+      "id": "65",
+      "name": "飞仙洞_2",
+      "sourceXml": "mapdefined/xml/65.xml"
+    },
+    {
+      "id": "66",
+      "name": "飞仙洞_3",
+      "sourceXml": "mapdefined/xml/66.xml"
+    },
+    {
+      "id": "67",
+      "name": "飞仙洞_4",
+      "sourceXml": "mapdefined/xml/67.xml"
+    },
+    {
+      "id": "68",
+      "name": "飞仙洞_5",
+      "sourceXml": "mapdefined/xml/68.xml"
+    },
+    {
+      "id": "69",
+      "name": "飞仙洞_6",
+      "sourceXml": "mapdefined/xml/69.xml"
+    },
+    {
+      "id": "70",
+      "name": "飞仙洞_7",
+      "sourceXml": "mapdefined/xml/70.xml"
+    },
+    {
+      "id": "71",
+      "name": "飞仙洞_8",
+      "sourceXml": "mapdefined/xml/71.xml"
+    },
+    {
+      "id": "72",
+      "name": "飞仙洞_9",
+      "sourceXml": "mapdefined/xml/72.xml"
+    },
+    {
+      "id": "73",
+      "name": "飞仙洞_10",
+      "sourceXml": "mapdefined/xml/73.xml"
+    },
+    {
+      "id": "74",
+      "name": "飞仙洞_11",
+      "sourceXml": "mapdefined/xml/74.xml"
+    },
+    {
+      "id": "75",
+      "name": "飞仙洞_12",
+      "sourceXml": "mapdefined/xml/75.xml"
+    },
+    {
+      "id": "76",
+      "name": "飞仙洞_13",
+      "sourceXml": "mapdefined/xml/76.xml"
+    },
+    {
+      "id": "77",
+      "name": "飞仙洞_14",
+      "sourceXml": "mapdefined/xml/77.xml"
+    },
+    {
+      "id": "78",
+      "name": "飞仙洞_15",
+      "sourceXml": "mapdefined/xml/78.xml"
+    },
+    {
+      "id": "79",
+      "name": "黄泉路_1",
+      "sourceXml": "mapdefined/xml/79.xml"
+    },
+    {
+      "id": "80",
+      "name": "黄泉路_2",
+      "sourceXml": "mapdefined/xml/80.xml"
+    },
+    {
+      "id": "81",
+      "name": "黄泉路_3",
+      "sourceXml": "mapdefined/xml/81.xml"
+    },
+    {
+      "id": "82",
+      "name": "奈何桥",
+      "sourceXml": "mapdefined/xml/82.xml"
+    },
+    {
+      "id": "83",
+      "name": "重生台",
+      "sourceXml": "mapdefined/xml/83.xml"
+    },
+    {
+      "id": "84",
+      "name": "竹林_1",
+      "sourceXml": "mapdefined/xml/84.xml"
+    },
+    {
+      "id": "85",
+      "name": "竹林_2",
+      "sourceXml": "mapdefined/xml/85.xml"
+    },
+    {
+      "id": "86",
+      "name": "竹林_3",
+      "sourceXml": "mapdefined/xml/86.xml"
+    },
+    {
+      "id": "87",
+      "name": "竹林_4",
+      "sourceXml": "mapdefined/xml/87.xml"
+    },
+    {
+      "id": "88",
+      "name": "竹林_5",
+      "sourceXml": "mapdefined/xml/88.xml"
+    },
+    {
+      "id": "89",
+      "name": "竹林_6",
+      "sourceXml": "mapdefined/xml/89.xml"
+    },
+    {
+      "id": "90",
+      "name": "竹林_7",
+      "sourceXml": "mapdefined/xml/90.xml"
+    },
+    {
+      "id": "91",
+      "name": "竹林_8",
+      "sourceXml": "mapdefined/xml/91.xml"
+    },
+    {
+      "id": "92",
+      "name": "竹林_9",
+      "sourceXml": "mapdefined/xml/92.xml"
+    },
+    {
+      "id": "93",
+      "name": "雾岭遗迹_7",
+      "sourceXml": "mapdefined/xml/93.xml"
+    },
+    {
+      "id": "94",
+      "name": "雾岭遗迹_6",
+      "sourceXml": "mapdefined/xml/94.xml"
+    },
+    {
+      "id": "95",
+      "name": "云帝陵_1",
+      "sourceXml": "mapdefined/xml/95.xml"
+    },
+    {
+      "id": "96",
+      "name": "云帝陵_2",
+      "sourceXml": "mapdefined/xml/96.xml"
+    },
+    {
+      "id": "97",
+      "name": "竹林_10",
+      "sourceXml": "mapdefined/xml/97.xml"
+    },
+    {
+      "id": "98",
+      "name": "竹林_11",
+      "sourceXml": "mapdefined/xml/98.xml"
+    },
+    {
+      "id": "99",
+      "name": "竹林_12",
+      "sourceXml": "mapdefined/xml/99.xml"
+    },
+    {
+      "id": "100",
+      "name": "竹林_13",
+      "sourceXml": "mapdefined/xml/100.xml"
+    },
+    {
+      "id": "101",
+      "name": "竹林_14",
+      "sourceXml": "mapdefined/xml/101.xml"
+    },
+    {
+      "id": "102",
+      "name": "平原_22",
+      "sourceXml": "mapdefined/xml/102.xml"
+    },
+    {
+      "id": "103",
+      "name": "平原_23",
+      "sourceXml": "mapdefined/xml/103.xml"
+    },
+    {
+      "id": "104",
+      "name": "平原_24",
+      "sourceXml": "mapdefined/xml/104.xml"
+    },
+    {
+      "id": "105",
+      "name": "云帝陵_3",
+      "sourceXml": "mapdefined/xml/105.xml"
+    },
+    {
+      "id": "106",
+      "name": "竹林_15",
+      "sourceXml": "mapdefined/xml/106.xml"
+    },
+    {
+      "id": "107",
+      "name": "竹林_16",
+      "sourceXml": "mapdefined/xml/107.xml"
+    },
+    {
+      "id": "108",
+      "name": "卧佛谷_3",
+      "sourceXml": "mapdefined/xml/108.xml"
+    },
+    {
+      "id": "109",
+      "name": "卧佛谷_4",
+      "sourceXml": "mapdefined/xml/109.xml"
+    },
+    {
+      "id": "110",
+      "name": "卧佛谷_5",
+      "sourceXml": "mapdefined/xml/110.xml"
+    },
+    {
+      "id": "111",
+      "name": "卧佛谷_6",
+      "sourceXml": "mapdefined/xml/111.xml"
+    },
+    {
+      "id": "112",
+      "name": "卧佛谷_7",
+      "sourceXml": "mapdefined/xml/112.xml"
+    },
+    {
+      "id": "113",
+      "name": "卧佛谷_8",
+      "sourceXml": "mapdefined/xml/113.xml"
+    },
+    {
+      "id": "114",
+      "name": "卧佛谷_10",
+      "sourceXml": "mapdefined/xml/114.xml"
+    },
+    {
+      "id": "115",
+      "name": "卧佛谷_9",
+      "sourceXml": "mapdefined/xml/115.xml"
+    },
+    {
+      "id": "116",
+      "name": "卧佛谷_11",
+      "sourceXml": "mapdefined/xml/116.xml"
+    },
+    {
+      "id": "117",
+      "name": "卧佛谷_12",
+      "sourceXml": "mapdefined/xml/117.xml"
+    },
+    {
+      "id": "118",
+      "name": "卧佛谷_13",
+      "sourceXml": "mapdefined/xml/118.xml"
+    },
+    {
+      "id": "119",
+      "name": "卧佛谷_14",
+      "sourceXml": "mapdefined/xml/119.xml"
+    },
+    {
+      "id": "120",
+      "name": "卧佛谷_15",
+      "sourceXml": "mapdefined/xml/120.xml"
+    },
+    {
+      "id": "121",
+      "name": "卧佛谷_16",
+      "sourceXml": "mapdefined/xml/121.xml"
+    },
+    {
+      "id": "122",
+      "name": "黄风寨口",
+      "sourceXml": "mapdefined/xml/122.xml"
+    },
+    {
+      "id": "123",
+      "name": "涧庭山道_1",
+      "sourceXml": "mapdefined/xml/123.xml"
+    },
+    {
+      "id": "124",
+      "name": "涧庭山道_2",
+      "sourceXml": "mapdefined/xml/124.xml"
+    },
+    {
+      "id": "125",
+      "name": "涧庭山道_3",
+      "sourceXml": "mapdefined/xml/125.xml"
+    },
+    {
+      "id": "126",
+      "name": "涧庭山道_4",
+      "sourceXml": "mapdefined/xml/126.xml"
+    },
+    {
+      "id": "127",
+      "name": "观瀑台",
+      "sourceXml": "mapdefined/xml/127.xml"
+    },
+    {
+      "id": "128",
+      "name": "平原_26",
+      "sourceXml": "mapdefined/xml/128.xml"
+    },
+    {
+      "id": "129",
+      "name": "平原_25",
+      "sourceXml": "mapdefined/xml/129.xml"
+    },
+    {
+      "id": "130",
+      "name": "平原_27",
+      "sourceXml": "mapdefined/xml/130.xml"
+    },
+    {
+      "id": "131",
+      "name": "水帘洞_1",
+      "sourceXml": "mapdefined/xml/131.xml"
+    },
+    {
+      "id": "132",
+      "name": "水帘洞_2",
+      "sourceXml": "mapdefined/xml/132.xml"
+    },
+    {
+      "id": "133",
+      "name": "水帘洞_3",
+      "sourceXml": "mapdefined/xml/133.xml"
+    },
+    {
+      "id": "134",
+      "name": "水帘洞_4",
+      "sourceXml": "mapdefined/xml/134.xml"
+    },
+    {
+      "id": "135",
+      "name": "水帘洞_5",
+      "sourceXml": "mapdefined/xml/135.xml"
+    },
+    {
+      "id": "136",
+      "name": "水帘洞_6",
+      "sourceXml": "mapdefined/xml/136.xml"
+    },
+    {
+      "id": "137",
+      "name": "水帘洞_7",
+      "sourceXml": "mapdefined/xml/137.xml"
+    },
+    {
+      "id": "138",
+      "name": "水帘洞_8",
+      "sourceXml": "mapdefined/xml/138.xml"
+    },
+    {
+      "id": "139",
+      "name": "水帘洞_9",
+      "sourceXml": "mapdefined/xml/139.xml"
+    },
+    {
+      "id": "140",
+      "name": "水帘洞_10",
+      "sourceXml": "mapdefined/xml/140.xml"
+    },
+    {
+      "id": "141",
+      "name": "水帘洞_11",
+      "sourceXml": "mapdefined/xml/141.xml"
+    },
+    {
+      "id": "142",
+      "name": "水帘洞_12",
+      "sourceXml": "mapdefined/xml/142.xml"
+    },
+    {
+      "id": "143",
+      "name": "水帘洞_13",
+      "sourceXml": "mapdefined/xml/143.xml"
+    },
+    {
+      "id": "144",
+      "name": "水帘洞_14",
+      "sourceXml": "mapdefined/xml/144.xml"
+    },
+    {
+      "id": "145",
+      "name": "水帘洞_15",
+      "sourceXml": "mapdefined/xml/145.xml"
+    },
+    {
+      "id": "146",
+      "name": "黄风寨_1",
+      "sourceXml": "mapdefined/xml/146.xml"
+    },
+    {
+      "id": "147",
+      "name": "黄风寨_2",
+      "sourceXml": "mapdefined/xml/147.xml"
+    },
+    {
+      "id": "148",
+      "name": "黄风寨_3",
+      "sourceXml": "mapdefined/xml/148.xml"
+    },
+    {
+      "id": "149",
+      "name": "黄风寨_4",
+      "sourceXml": "mapdefined/xml/149.xml"
+    },
+    {
+      "id": "150",
+      "name": "黄风寨_5",
+      "sourceXml": "mapdefined/xml/150.xml"
+    },
+    {
+      "id": "151",
+      "name": "黄风寨_6",
+      "sourceXml": "mapdefined/xml/151.xml"
+    },
+    {
+      "id": "152",
+      "name": "黄风寨_7",
+      "sourceXml": "mapdefined/xml/152.xml"
+    },
+    {
+      "id": "153",
+      "name": "黄风寨_8",
+      "sourceXml": "mapdefined/xml/153.xml"
+    },
+    {
+      "id": "154",
+      "name": "黄风寨_9",
+      "sourceXml": "mapdefined/xml/154.xml"
+    },
+    {
+      "id": "155",
+      "name": "黄风寨_10",
+      "sourceXml": "mapdefined/xml/155.xml"
+    },
+    {
+      "id": "156",
+      "name": "黄风寨_11",
+      "sourceXml": "mapdefined/xml/156.xml"
+    },
+    {
+      "id": "157",
+      "name": "黄风寨_12",
+      "sourceXml": "mapdefined/xml/157.xml"
+    },
+    {
+      "id": "158",
+      "name": "狮虎窟_1",
+      "sourceXml": "mapdefined/xml/158.xml"
+    },
+    {
+      "id": "159",
+      "name": "狮虎窟_2",
+      "sourceXml": "mapdefined/xml/159.xml"
+    },
+    {
+      "id": "160",
+      "name": "狮虎窟_3",
+      "sourceXml": "mapdefined/xml/160.xml"
+    },
+    {
+      "id": "161",
+      "name": "狮虎窟_4",
+      "sourceXml": "mapdefined/xml/161.xml"
+    },
+    {
+      "id": "162",
+      "name": "狮虎窟_5",
+      "sourceXml": "mapdefined/xml/162.xml"
+    },
+    {
+      "id": "163",
+      "name": "狮虎窟_6",
+      "sourceXml": "mapdefined/xml/163.xml"
+    },
+    {
+      "id": "164",
+      "name": "狮虎窟_7",
+      "sourceXml": "mapdefined/xml/164.xml"
+    },
+    {
+      "id": "165",
+      "name": "狮虎窟_8",
+      "sourceXml": "mapdefined/xml/165.xml"
+    },
+    {
+      "id": "166",
+      "name": "狮虎窟_9",
+      "sourceXml": "mapdefined/xml/166.xml"
+    },
+    {
+      "id": "167",
+      "name": "狮虎窟_10",
+      "sourceXml": "mapdefined/xml/167.xml"
+    },
+    {
+      "id": "168",
+      "name": "白源镇_1",
+      "sourceXml": "mapdefined/xml/168.xml"
+    },
+    {
+      "id": "169",
+      "name": "白源镇_2",
+      "sourceXml": "mapdefined/xml/169.xml"
+    },
+    {
+      "id": "170",
+      "name": "白源镇_3",
+      "sourceXml": "mapdefined/xml/170.xml"
+    },
+    {
+      "id": "171",
+      "name": "沼泽_9",
+      "sourceXml": "mapdefined/xml/171.xml"
+    },
+    {
+      "id": "172",
+      "name": "沼泽_10",
+      "sourceXml": "mapdefined/xml/172.xml"
+    },
+    {
+      "id": "173",
+      "name": "沼泽_11",
+      "sourceXml": "mapdefined/xml/173.xml"
+    },
+    {
+      "id": "174",
+      "name": "沼泽_12",
+      "sourceXml": "mapdefined/xml/174.xml"
+    },
+    {
+      "id": "175",
+      "name": "沼泽_13",
+      "sourceXml": "mapdefined/xml/175.xml"
+    },
+    {
+      "id": "176",
+      "name": "沼泽_14",
+      "sourceXml": "mapdefined/xml/176.xml"
+    },
+    {
+      "id": "177",
+      "name": "沼泽_15",
+      "sourceXml": "mapdefined/xml/177.xml"
+    },
+    {
+      "id": "178",
+      "name": "沼泽_16",
+      "sourceXml": "mapdefined/xml/178.xml"
+    },
+    {
+      "id": "179",
+      "name": "葬龙潭_1",
+      "sourceXml": "mapdefined/xml/179.xml"
+    },
+    {
+      "id": "180",
+      "name": "葬龙潭_2",
+      "sourceXml": "mapdefined/xml/180.xml"
+    },
+    {
+      "id": "181",
+      "name": "葬龙潭_3",
+      "sourceXml": "mapdefined/xml/181.xml"
+    },
+    {
+      "id": "182",
+      "name": "葬龙潭_4",
+      "sourceXml": "mapdefined/xml/182.xml"
+    },
+    {
+      "id": "183",
+      "name": "葬龙潭_5",
+      "sourceXml": "mapdefined/xml/183.xml"
+    },
+    {
+      "id": "184",
+      "name": "葬龙潭_6",
+      "sourceXml": "mapdefined/xml/184.xml"
+    },
+    {
+      "id": "185",
+      "name": "葬龙潭_7",
+      "sourceXml": "mapdefined/xml/185.xml"
+    },
+    {
+      "id": "186",
+      "name": "葬龙潭_8",
+      "sourceXml": "mapdefined/xml/186.xml"
+    },
+    {
+      "id": "187",
+      "name": "牧原镇_1",
+      "sourceXml": "mapdefined/xml/187.xml"
+    },
+    {
+      "id": "188",
+      "name": "牧原镇_2",
+      "sourceXml": "mapdefined/xml/188.xml"
+    },
+    {
+      "id": "189",
+      "name": "牧原镇_3",
+      "sourceXml": "mapdefined/xml/189.xml"
+    },
+    {
+      "id": "190",
+      "name": "乌梁营地_1",
+      "sourceXml": "mapdefined/xml/190.xml"
+    },
+    {
+      "id": "191",
+      "name": "乌梁营地_2",
+      "sourceXml": "mapdefined/xml/191.xml"
+    },
+    {
+      "id": "192",
+      "name": "妖之森_1",
+      "sourceXml": "mapdefined/xml/192.xml"
+    },
+    {
+      "id": "193",
+      "name": "妖之森_2",
+      "sourceXml": "mapdefined/xml/193.xml"
+    },
+    {
+      "id": "194",
+      "name": "妖之森_3",
+      "sourceXml": "mapdefined/xml/194.xml"
+    },
+    {
+      "id": "195",
+      "name": "妖之森_4",
+      "sourceXml": "mapdefined/xml/195.xml"
+    },
+    {
+      "id": "196",
+      "name": "妖之森_5",
+      "sourceXml": "mapdefined/xml/196.xml"
+    },
+    {
+      "id": "197",
+      "name": "妖之森_6",
+      "sourceXml": "mapdefined/xml/197.xml"
+    },
+    {
+      "id": "198",
+      "name": "妖之森_7",
+      "sourceXml": "mapdefined/xml/198.xml"
+    },
+    {
+      "id": "199",
+      "name": "妖之森_8",
+      "sourceXml": "mapdefined/xml/199.xml"
+    },
+    {
+      "id": "200",
+      "name": "妖之森_9",
+      "sourceXml": "mapdefined/xml/200.xml"
+    },
+    {
+      "id": "201",
+      "name": "妖之森_10",
+      "sourceXml": "mapdefined/xml/201.xml"
+    },
+    {
+      "id": "202",
+      "name": "妖之森_11",
+      "sourceXml": "mapdefined/xml/202.xml"
+    },
+    {
+      "id": "203",
+      "name": "雷兽神坛",
+      "sourceXml": "mapdefined/xml/203.xml"
+    },
+    {
+      "id": "204",
+      "name": "妖之森_13",
+      "sourceXml": "mapdefined/xml/204.xml"
+    },
+    {
+      "id": "205",
+      "name": "妖之森_14",
+      "sourceXml": "mapdefined/xml/205.xml"
+    },
+    {
+      "id": "206",
+      "name": "一棵松",
+      "sourceXml": "mapdefined/xml/206.xml"
+    },
+    {
+      "id": "207",
+      "name": "草坝_1",
+      "sourceXml": "mapdefined/xml/207.xml"
+    },
+    {
+      "id": "208",
+      "name": "草坝_2",
+      "sourceXml": "mapdefined/xml/208.xml"
+    },
+    {
+      "id": "209",
+      "name": "草坝_3",
+      "sourceXml": "mapdefined/xml/209.xml"
+    },
+    {
+      "id": "210",
+      "name": "草坝_4",
+      "sourceXml": "mapdefined/xml/210.xml"
+    },
+    {
+      "id": "211",
+      "name": "草坝_5",
+      "sourceXml": "mapdefined/xml/211.xml"
+    },
+    {
+      "id": "212",
+      "name": "草坝_6",
+      "sourceXml": "mapdefined/xml/212.xml"
+    },
+    {
+      "id": "213",
+      "name": "草坝_7",
+      "sourceXml": "mapdefined/xml/213.xml"
+    },
+    {
+      "id": "214",
+      "name": "草坝_8",
+      "sourceXml": "mapdefined/xml/214.xml"
+    },
+    {
+      "id": "215",
+      "name": "草坝_9",
+      "sourceXml": "mapdefined/xml/215.xml"
+    },
+    {
+      "id": "216",
+      "name": "草坝_11",
+      "sourceXml": "mapdefined/xml/216.xml"
+    },
+    {
+      "id": "217",
+      "name": "草坝_10",
+      "sourceXml": "mapdefined/xml/217.xml"
+    },
+    {
+      "id": "218",
+      "name": "草坝_12",
+      "sourceXml": "mapdefined/xml/218.xml"
+    },
+    {
+      "id": "219",
+      "name": "草坝_13",
+      "sourceXml": "mapdefined/xml/219.xml"
+    },
+    {
+      "id": "220",
+      "name": "草坝_14",
+      "sourceXml": "mapdefined/xml/220.xml"
+    },
+    {
+      "id": "221",
+      "name": "草坝_15",
+      "sourceXml": "mapdefined/xml/221.xml"
+    },
+    {
+      "id": "222",
+      "name": "草坝_16",
+      "sourceXml": "mapdefined/xml/222.xml"
+    },
+    {
+      "id": "223",
+      "name": "画皮寨_1",
+      "sourceXml": "mapdefined/xml/223.xml"
+    },
+    {
+      "id": "224",
+      "name": "画皮寨_2",
+      "sourceXml": "mapdefined/xml/224.xml"
+    },
+    {
+      "id": "225",
+      "name": "画皮寨_3",
+      "sourceXml": "mapdefined/xml/225.xml"
+    },
+    {
+      "id": "226",
+      "name": "画皮寨_4",
+      "sourceXml": "mapdefined/xml/226.xml"
+    },
+    {
+      "id": "227",
+      "name": "画皮寨_5",
+      "sourceXml": "mapdefined/xml/227.xml"
+    },
+    {
+      "id": "228",
+      "name": "画皮寨_6",
+      "sourceXml": "mapdefined/xml/228.xml"
+    },
+    {
+      "id": "229",
+      "name": "画皮寨_7",
+      "sourceXml": "mapdefined/xml/229.xml"
+    },
+    {
+      "id": "230",
+      "name": "画皮寨_8",
+      "sourceXml": "mapdefined/xml/230.xml"
+    },
+    {
+      "id": "231",
+      "name": "画皮寨_9",
+      "sourceXml": "mapdefined/xml/231.xml"
+    },
+    {
+      "id": "232",
+      "name": "画皮寨_10",
+      "sourceXml": "mapdefined/xml/232.xml"
+    },
+    {
+      "id": "233",
+      "name": "画皮寨_11",
+      "sourceXml": "mapdefined/xml/233.xml"
+    },
+    {
+      "id": "234",
+      "name": "画皮寨_12",
+      "sourceXml": "mapdefined/xml/234.xml"
+    },
+    {
+      "id": "235",
+      "name": "一柱山_1",
+      "sourceXml": "mapdefined/xml/235.xml"
+    },
+    {
+      "id": "236",
+      "name": "一柱山_2",
+      "sourceXml": "mapdefined/xml/236.xml"
+    },
+    {
+      "id": "237",
+      "name": "一柱山_3",
+      "sourceXml": "mapdefined/xml/237.xml"
+    },
+    {
+      "id": "238",
+      "name": "一柱山_4",
+      "sourceXml": "mapdefined/xml/238.xml"
+    },
+    {
+      "id": "239",
+      "name": "灵霞村_1",
+      "sourceXml": "mapdefined/xml/239.xml"
+    },
+    {
+      "id": "240",
+      "name": "灵霞村_2",
+      "sourceXml": "mapdefined/xml/240.xml"
+    },
+    {
+      "id": "241",
+      "name": "一柱山_5",
+      "sourceXml": "mapdefined/xml/241.xml"
+    },
+    {
+      "id": "242",
+      "name": "一柱山_6",
+      "sourceXml": "mapdefined/xml/242.xml"
+    },
+    {
+      "id": "243",
+      "name": "一柱山_7",
+      "sourceXml": "mapdefined/xml/243.xml"
+    },
+    {
+      "id": "244",
+      "name": "一柱山_8",
+      "sourceXml": "mapdefined/xml/244.xml"
+    },
+    {
+      "id": "245",
+      "name": "一柱山_9",
+      "sourceXml": "mapdefined/xml/245.xml"
+    },
+    {
+      "id": "246",
+      "name": "一柱山_10",
+      "sourceXml": "mapdefined/xml/246.xml"
+    },
+    {
+      "id": "247",
+      "name": "二柱山_1",
+      "sourceXml": "mapdefined/xml/247.xml"
+    },
+    {
+      "id": "248",
+      "name": "二柱山_2",
+      "sourceXml": "mapdefined/xml/248.xml"
+    },
+    {
+      "id": "249",
+      "name": "二柱山_3",
+      "sourceXml": "mapdefined/xml/249.xml"
+    },
+    {
+      "id": "250",
+      "name": "二柱山_7",
+      "sourceXml": "mapdefined/xml/250.xml"
+    },
+    {
+      "id": "251",
+      "name": "二柱山_8",
+      "sourceXml": "mapdefined/xml/251.xml"
+    },
+    {
+      "id": "252",
+      "name": "二柱山_4",
+      "sourceXml": "mapdefined/xml/252.xml"
+    },
+    {
+      "id": "253",
+      "name": "二柱山_5",
+      "sourceXml": "mapdefined/xml/253.xml"
+    },
+    {
+      "id": "254",
+      "name": "二柱山_6",
+      "sourceXml": "mapdefined/xml/254.xml"
+    },
+    {
+      "id": "255",
+      "name": "二柱山_9",
+      "sourceXml": "mapdefined/xml/255.xml"
+    },
+    {
+      "id": "256",
+      "name": "二柱山_10",
+      "sourceXml": "mapdefined/xml/256.xml"
+    },
+    {
+      "id": "257",
+      "name": "三柱山_1",
+      "sourceXml": "mapdefined/xml/257.xml"
+    },
+    {
+      "id": "258",
+      "name": "三柱山_2",
+      "sourceXml": "mapdefined/xml/258.xml"
+    },
+    {
+      "id": "259",
+      "name": "三柱山_3",
+      "sourceXml": "mapdefined/xml/259.xml"
+    },
+    {
+      "id": "260",
+      "name": "三柱山_4",
+      "sourceXml": "mapdefined/xml/260.xml"
+    },
+    {
+      "id": "261",
+      "name": "三柱山_5",
+      "sourceXml": "mapdefined/xml/261.xml"
+    },
+    {
+      "id": "262",
+      "name": "三柱山_6",
+      "sourceXml": "mapdefined/xml/262.xml"
+    },
+    {
+      "id": "263",
+      "name": "三柱山_7",
+      "sourceXml": "mapdefined/xml/263.xml"
+    },
+    {
+      "id": "264",
+      "name": "三柱山_8",
+      "sourceXml": "mapdefined/xml/264.xml"
+    },
+    {
+      "id": "265",
+      "name": "三柱山_9",
+      "sourceXml": "mapdefined/xml/265.xml"
+    },
+    {
+      "id": "266",
+      "name": "四柱山_1",
+      "sourceXml": "mapdefined/xml/266.xml"
+    },
+    {
+      "id": "267",
+      "name": "四柱山_2",
+      "sourceXml": "mapdefined/xml/267.xml"
+    },
+    {
+      "id": "268",
+      "name": "四柱山_3",
+      "sourceXml": "mapdefined/xml/268.xml"
+    },
+    {
+      "id": "269",
+      "name": "四柱山_4",
+      "sourceXml": "mapdefined/xml/269.xml"
+    },
+    {
+      "id": "270",
+      "name": "四柱山_5",
+      "sourceXml": "mapdefined/xml/270.xml"
+    },
+    {
+      "id": "271",
+      "name": "四柱山_6",
+      "sourceXml": "mapdefined/xml/271.xml"
+    },
+    {
+      "id": "272",
+      "name": "四柱山_7",
+      "sourceXml": "mapdefined/xml/272.xml"
+    },
+    {
+      "id": "273",
+      "name": "四柱山_8",
+      "sourceXml": "mapdefined/xml/273.xml"
+    },
+    {
+      "id": "274",
+      "name": "五柱山_1",
+      "sourceXml": "mapdefined/xml/274.xml"
+    },
+    {
+      "id": "275",
+      "name": "五柱山_2",
+      "sourceXml": "mapdefined/xml/275.xml"
+    },
+    {
+      "id": "276",
+      "name": "五柱山_3",
+      "sourceXml": "mapdefined/xml/276.xml"
+    },
+    {
+      "id": "277",
+      "name": "五柱山_4",
+      "sourceXml": "mapdefined/xml/277.xml"
+    },
+    {
+      "id": "278",
+      "name": "五柱山_5",
+      "sourceXml": "mapdefined/xml/278.xml"
+    },
+    {
+      "id": "279",
+      "name": "五柱山_6",
+      "sourceXml": "mapdefined/xml/279.xml"
+    },
+    {
+      "id": "280",
+      "name": "五柱山_7",
+      "sourceXml": "mapdefined/xml/280.xml"
+    },
+    {
+      "id": "281",
+      "name": "五柱山_8",
+      "sourceXml": "mapdefined/xml/281.xml"
+    },
+    {
+      "id": "282",
+      "name": "六柱山_1",
+      "sourceXml": "mapdefined/xml/282.xml"
+    },
+    {
+      "id": "283",
+      "name": "六柱山_2",
+      "sourceXml": "mapdefined/xml/283.xml"
+    },
+    {
+      "id": "284",
+      "name": "六柱山_7",
+      "sourceXml": "mapdefined/xml/284.xml"
+    },
+    {
+      "id": "285",
+      "name": "六柱山_3",
+      "sourceXml": "mapdefined/xml/285.xml"
+    },
+    {
+      "id": "286",
+      "name": "六柱山_8",
+      "sourceXml": "mapdefined/xml/286.xml"
+    },
+    {
+      "id": "287",
+      "name": "六柱山_9",
+      "sourceXml": "mapdefined/xml/287.xml"
+    },
+    {
+      "id": "288",
+      "name": "六柱山_10",
+      "sourceXml": "mapdefined/xml/288.xml"
+    },
+    {
+      "id": "289",
+      "name": "断岩桥_1",
+      "sourceXml": "mapdefined/xml/289.xml"
+    },
+    {
+      "id": "290",
+      "name": "断岩桥_2",
+      "sourceXml": "mapdefined/xml/290.xml"
+    },
+    {
+      "id": "291",
+      "name": "断岩桥_3",
+      "sourceXml": "mapdefined/xml/291.xml"
+    },
+    {
+      "id": "292",
+      "name": "云帝陵_4",
+      "sourceXml": "mapdefined/xml/292.xml"
+    },
+    {
+      "id": "293",
+      "name": "云帝陵_5",
+      "sourceXml": "mapdefined/xml/293.xml"
+    },
+    {
+      "id": "294",
+      "name": "云帝陵_6",
+      "sourceXml": "mapdefined/xml/294.xml"
+    },
+    {
+      "id": "295",
+      "name": "云帝陵_7",
+      "sourceXml": "mapdefined/xml/295.xml"
+    },
+    {
+      "id": "296",
+      "name": "云帝陵_8",
+      "sourceXml": "mapdefined/xml/296.xml"
+    },
+    {
+      "id": "297",
+      "name": "困兽岩_1",
+      "sourceXml": "mapdefined/xml/297.xml"
+    },
+    {
+      "id": "298",
+      "name": "困兽岩_2",
+      "sourceXml": "mapdefined/xml/298.xml"
+    },
+    {
+      "id": "299",
+      "name": "困兽岩_3",
+      "sourceXml": "mapdefined/xml/299.xml"
+    },
+    {
+      "id": "300",
+      "name": "困兽岩_4",
+      "sourceXml": "mapdefined/xml/300.xml"
+    },
+    {
+      "id": "301",
+      "name": "困兽岩_5",
+      "sourceXml": "mapdefined/xml/301.xml"
+    },
+    {
+      "id": "302",
+      "name": "困兽岩_6",
+      "sourceXml": "mapdefined/xml/302.xml"
+    },
+    {
+      "id": "303",
+      "name": "困兽岩_7",
+      "sourceXml": "mapdefined/xml/303.xml"
+    },
+    {
+      "id": "304",
+      "name": "困兽岩_8",
+      "sourceXml": "mapdefined/xml/304.xml"
+    },
+    {
+      "id": "305",
+      "name": "困兽岩_9",
+      "sourceXml": "mapdefined/xml/305.xml"
+    },
+    {
+      "id": "306",
+      "name": "困兽岩_10",
+      "sourceXml": "mapdefined/xml/306.xml"
+    },
+    {
+      "id": "307",
+      "name": "困兽岩_11",
+      "sourceXml": "mapdefined/xml/307.xml"
+    },
+    {
+      "id": "308",
+      "name": "困兽岩_12",
+      "sourceXml": "mapdefined/xml/308.xml"
+    },
+    {
+      "id": "309",
+      "name": "困兽岩_13",
+      "sourceXml": "mapdefined/xml/309.xml"
+    },
+    {
+      "id": "310",
+      "name": "困兽岩_14",
+      "sourceXml": "mapdefined/xml/310.xml"
+    },
+    {
+      "id": "311",
+      "name": "困兽岩_15",
+      "sourceXml": "mapdefined/xml/311.xml"
+    },
+    {
+      "id": "312",
+      "name": "清霄营地_1",
+      "sourceXml": "mapdefined/xml/312.xml"
+    },
+    {
+      "id": "313",
+      "name": "清霄营地_2",
+      "sourceXml": "mapdefined/xml/313.xml"
+    },
+    {
+      "id": "314",
+      "name": "雾岭_1",
+      "sourceXml": "mapdefined/xml/314.xml"
+    },
+    {
+      "id": "315",
+      "name": "雾岭_2",
+      "sourceXml": "mapdefined/xml/315.xml"
+    },
+    {
+      "id": "316",
+      "name": "雾岭_3",
+      "sourceXml": "mapdefined/xml/316.xml"
+    },
+    {
+      "id": "317",
+      "name": "雾岭_4",
+      "sourceXml": "mapdefined/xml/317.xml"
+    },
+    {
+      "id": "318",
+      "name": "雾岭_5",
+      "sourceXml": "mapdefined/xml/318.xml"
+    },
+    {
+      "id": "319",
+      "name": "雾岭_6",
+      "sourceXml": "mapdefined/xml/319.xml"
+    },
+    {
+      "id": "320",
+      "name": "雾岭_7",
+      "sourceXml": "mapdefined/xml/320.xml"
+    },
+    {
+      "id": "321",
+      "name": "雾岭_8",
+      "sourceXml": "mapdefined/xml/321.xml"
+    },
+    {
+      "id": "322",
+      "name": "雾岭_9",
+      "sourceXml": "mapdefined/xml/322.xml"
+    },
+    {
+      "id": "323",
+      "name": "雾岭_10",
+      "sourceXml": "mapdefined/xml/323.xml"
+    },
+    {
+      "id": "324",
+      "name": "吉祥圣地_1",
+      "sourceXml": "mapdefined/xml/324.xml"
+    },
+    {
+      "id": "325",
+      "name": "雾岭_11",
+      "sourceXml": "mapdefined/xml/325.xml"
+    },
+    {
+      "id": "326",
+      "name": "雾岭_12",
+      "sourceXml": "mapdefined/xml/326.xml"
+    },
+    {
+      "id": "327",
+      "name": "雾岭_13",
+      "sourceXml": "mapdefined/xml/327.xml"
+    },
+    {
+      "id": "328",
+      "name": "雾岭_14",
+      "sourceXml": "mapdefined/xml/328.xml"
+    },
+    {
+      "id": "329",
+      "name": "雾岭_15",
+      "sourceXml": "mapdefined/xml/329.xml"
+    },
+    {
+      "id": "330",
+      "name": "雾岭遗迹_1",
+      "sourceXml": "mapdefined/xml/330.xml"
+    },
+    {
+      "id": "331",
+      "name": "雾岭遗迹_2",
+      "sourceXml": "mapdefined/xml/331.xml"
+    },
+    {
+      "id": "332",
+      "name": "雾岭遗迹_3",
+      "sourceXml": "mapdefined/xml/332.xml"
+    },
+    {
+      "id": "333",
+      "name": "雾岭遗迹_4",
+      "sourceXml": "mapdefined/xml/333.xml"
+    },
+    {
+      "id": "334",
+      "name": "雾岭遗迹_5",
+      "sourceXml": "mapdefined/xml/334.xml"
+    },
+    {
+      "id": "335",
+      "name": "雾岭遗迹_8",
+      "sourceXml": "mapdefined/xml/335.xml"
+    },
+    {
+      "id": "336",
+      "name": "雾岭遗迹_9",
+      "sourceXml": "mapdefined/xml/336.xml"
+    },
+    {
+      "id": "337",
+      "name": "迷冢_8",
+      "sourceXml": "mapdefined/xml/337.xml"
+    },
+    {
+      "id": "338",
+      "name": "雾岭遗迹_10",
+      "sourceXml": "mapdefined/xml/338.xml"
+    },
+    {
+      "id": "339",
+      "name": "雾岭遗迹_11",
+      "sourceXml": "mapdefined/xml/339.xml"
+    },
+    {
+      "id": "340",
+      "name": "雾岭遗迹_12",
+      "sourceXml": "mapdefined/xml/340.xml"
+    },
+    {
+      "id": "341",
+      "name": "雾岭遗迹_13",
+      "sourceXml": "mapdefined/xml/341.xml"
+    },
+    {
+      "id": "342",
+      "name": "清霄城_1",
+      "sourceXml": "mapdefined/xml/342.xml"
+    },
+    {
+      "id": "343",
+      "name": "清霄城_2",
+      "sourceXml": "mapdefined/xml/343.xml"
+    },
+    {
+      "id": "344",
+      "name": "清霄城_3",
+      "sourceXml": "mapdefined/xml/344.xml"
+    },
+    {
+      "id": "345",
+      "name": "清霄城_4",
+      "sourceXml": "mapdefined/xml/345.xml"
+    },
+    {
+      "id": "346",
+      "name": "清霄城_5",
+      "sourceXml": "mapdefined/xml/346.xml"
+    },
+    {
+      "id": "347",
+      "name": "清霄城_6",
+      "sourceXml": "mapdefined/xml/347.xml"
+    },
+    {
+      "id": "348",
+      "name": "清霄城_7",
+      "sourceXml": "mapdefined/xml/348.xml"
+    },
+    {
+      "id": "349",
+      "name": "清霄城_8",
+      "sourceXml": "mapdefined/xml/349.xml"
+    },
+    {
+      "id": "350",
+      "name": "清霄城_9",
+      "sourceXml": "mapdefined/xml/350.xml"
+    },
+    {
+      "id": "351",
+      "name": "清霄城_10",
+      "sourceXml": "mapdefined/xml/351.xml"
+    },
+    {
+      "id": "352",
+      "name": "清霄城_11",
+      "sourceXml": "mapdefined/xml/352.xml"
+    },
+    {
+      "id": "353",
+      "name": "清霄城_12",
+      "sourceXml": "mapdefined/xml/353.xml"
+    },
+    {
+      "id": "354",
+      "name": "清霄城_13",
+      "sourceXml": "mapdefined/xml/354.xml"
+    },
+    {
+      "id": "355",
+      "name": "清霄城_14",
+      "sourceXml": "mapdefined/xml/355.xml"
+    },
+    {
+      "id": "356",
+      "name": "清霄城_15",
+      "sourceXml": "mapdefined/xml/356.xml"
+    },
+    {
+      "id": "357",
+      "name": "清霄城门口",
+      "sourceXml": "mapdefined/xml/357.xml"
+    },
+    {
+      "id": "358",
+      "name": "吉祥圣地_2",
+      "sourceXml": "mapdefined/xml/358.xml"
+    },
+    {
+      "id": "359",
+      "name": "吉祥圣地_3",
+      "sourceXml": "mapdefined/xml/359.xml"
+    },
+    {
+      "id": "360",
+      "name": "登峰阁",
+      "sourceXml": "mapdefined/xml/360.xml"
+    },
+    {
+      "id": "361",
+      "name": "步云道_1",
+      "sourceXml": "mapdefined/xml/361.xml"
+    },
+    {
+      "id": "362",
+      "name": "步云道_2",
+      "sourceXml": "mapdefined/xml/362.xml"
+    },
+    {
+      "id": "363",
+      "name": "步云道_3",
+      "sourceXml": "mapdefined/xml/363.xml"
+    },
+    {
+      "id": "364",
+      "name": "步云道_4",
+      "sourceXml": "mapdefined/xml/364.xml"
+    },
+    {
+      "id": "365",
+      "name": "步云道_5",
+      "sourceXml": "mapdefined/xml/365.xml"
+    },
+    {
+      "id": "366",
+      "name": "步云道_6",
+      "sourceXml": "mapdefined/xml/366.xml"
+    },
+    {
+      "id": "367",
+      "name": "步云道_7",
+      "sourceXml": "mapdefined/xml/367.xml"
+    },
+    {
+      "id": "368",
+      "name": "步云道_8",
+      "sourceXml": "mapdefined/xml/368.xml"
+    },
+    {
+      "id": "369",
+      "name": "步云道_9",
+      "sourceXml": "mapdefined/xml/369.xml"
+    },
+    {
+      "id": "370",
+      "name": "步云道_10",
+      "sourceXml": "mapdefined/xml/370.xml"
+    },
+    {
+      "id": "371",
+      "name": "步云道_11",
+      "sourceXml": "mapdefined/xml/371.xml"
+    },
+    {
+      "id": "372",
+      "name": "步云道_12",
+      "sourceXml": "mapdefined/xml/372.xml"
+    },
+    {
+      "id": "373",
+      "name": "步云道_13",
+      "sourceXml": "mapdefined/xml/373.xml"
+    },
+    {
+      "id": "374",
+      "name": "步云道_14",
+      "sourceXml": "mapdefined/xml/374.xml"
+    },
+    {
+      "id": "375",
+      "name": "步云道_15",
+      "sourceXml": "mapdefined/xml/375.xml"
+    },
+    {
+      "id": "376",
+      "name": "步云道_16",
+      "sourceXml": "mapdefined/xml/376.xml"
+    },
+    {
+      "id": "377",
+      "name": "擎天宫_1",
+      "sourceXml": "mapdefined/xml/377.xml"
+    },
+    {
+      "id": "378",
+      "name": "擎天宫_2",
+      "sourceXml": "mapdefined/xml/378.xml"
+    },
+    {
+      "id": "379",
+      "name": "擎天宫_3",
+      "sourceXml": "mapdefined/xml/379.xml"
+    },
+    {
+      "id": "380",
+      "name": "诡腾寨_1",
+      "sourceXml": "mapdefined/xml/380.xml"
+    },
+    {
+      "id": "381",
+      "name": "升天阁_2",
+      "sourceXml": "mapdefined/xml/381.xml"
+    },
+    {
+      "id": "382",
+      "name": "升天阁_1",
+      "sourceXml": "mapdefined/xml/382.xml"
+    },
+    {
+      "id": "383",
+      "name": "升天阁_3",
+      "sourceXml": "mapdefined/xml/383.xml"
+    },
+    {
+      "id": "384",
+      "name": "升天阁_4",
+      "sourceXml": "mapdefined/xml/384.xml"
+    },
+    {
+      "id": "385",
+      "name": "升天阁_5",
+      "sourceXml": "mapdefined/xml/385.xml"
+    },
+    {
+      "id": "386",
+      "name": "升天阁_6",
+      "sourceXml": "mapdefined/xml/386.xml"
+    },
+    {
+      "id": "387",
+      "name": "升天阁_8",
+      "sourceXml": "mapdefined/xml/387.xml"
+    },
+    {
+      "id": "388",
+      "name": "升天阁_13",
+      "sourceXml": "mapdefined/xml/388.xml"
+    },
+    {
+      "id": "389",
+      "name": "升天阁_10",
+      "sourceXml": "mapdefined/xml/389.xml"
+    },
+    {
+      "id": "390",
+      "name": "升天阁_7",
+      "sourceXml": "mapdefined/xml/390.xml"
+    },
+    {
+      "id": "391",
+      "name": "升天阁_12",
+      "sourceXml": "mapdefined/xml/391.xml"
+    },
+    {
+      "id": "392",
+      "name": "升天阁_14",
+      "sourceXml": "mapdefined/xml/392.xml"
+    },
+    {
+      "id": "393",
+      "name": "升天阁_9",
+      "sourceXml": "mapdefined/xml/393.xml"
+    },
+    {
+      "id": "394",
+      "name": "升天阁_11",
+      "sourceXml": "mapdefined/xml/394.xml"
+    },
+    {
+      "id": "395",
+      "name": "升天阁_15",
+      "sourceXml": "mapdefined/xml/395.xml"
+    },
+    {
+      "id": "396",
+      "name": "百兽岭",
+      "sourceXml": "mapdefined/xml/396.xml"
+    },
+    {
+      "id": "397",
+      "name": "迷魂冢",
+      "sourceXml": "mapdefined/xml/397.xml"
+    },
+    {
+      "id": "398",
+      "name": "冽风崖",
+      "sourceXml": "mapdefined/xml/398.xml"
+    },
+    {
+      "id": "399",
+      "name": "万虫洞",
+      "sourceXml": "mapdefined/xml/399.xml"
+    },
+    {
+      "id": "400",
+      "name": "诛妖洞_1",
+      "sourceXml": "mapdefined/xml/400.xml"
+    },
+    {
+      "id": "401",
+      "name": "诛妖洞_2",
+      "sourceXml": "mapdefined/xml/401.xml"
+    },
+    {
+      "id": "402",
+      "name": "诛妖洞_3",
+      "sourceXml": "mapdefined/xml/402.xml"
+    },
+    {
+      "id": "403",
+      "name": "诛妖洞_4",
+      "sourceXml": "mapdefined/xml/403.xml"
+    },
+    {
+      "id": "404",
+      "name": "回音谷_1",
+      "sourceXml": "mapdefined/xml/404.xml"
+    },
+    {
+      "id": "405",
+      "name": "回音谷_2",
+      "sourceXml": "mapdefined/xml/405.xml"
+    },
+    {
+      "id": "406",
+      "name": "回音谷_3",
+      "sourceXml": "mapdefined/xml/406.xml"
+    },
+    {
+      "id": "407",
+      "name": "回音谷_4",
+      "sourceXml": "mapdefined/xml/407.xml"
+    },
+    {
+      "id": "408",
+      "name": "回音谷_5",
+      "sourceXml": "mapdefined/xml/408.xml"
+    },
+    {
+      "id": "409",
+      "name": "回音谷_6",
+      "sourceXml": "mapdefined/xml/409.xml"
+    },
+    {
+      "id": "410",
+      "name": "回音谷_7",
+      "sourceXml": "mapdefined/xml/410.xml"
+    },
+    {
+      "id": "411",
+      "name": "回音谷_8",
+      "sourceXml": "mapdefined/xml/411.xml"
+    },
+    {
+      "id": "412",
+      "name": "回音谷_9",
+      "sourceXml": "mapdefined/xml/412.xml"
+    },
+    {
+      "id": "413",
+      "name": "回音谷_10",
+      "sourceXml": "mapdefined/xml/413.xml"
+    },
+    {
+      "id": "414",
+      "name": "回音谷_11",
+      "sourceXml": "mapdefined/xml/414.xml"
+    },
+    {
+      "id": "415",
+      "name": "回音谷_12",
+      "sourceXml": "mapdefined/xml/415.xml"
+    },
+    {
+      "id": "416",
+      "name": "回音谷_13",
+      "sourceXml": "mapdefined/xml/416.xml"
+    },
+    {
+      "id": "417",
+      "name": "回音谷_14",
+      "sourceXml": "mapdefined/xml/417.xml"
+    },
+    {
+      "id": "418",
+      "name": "回音谷_15",
+      "sourceXml": "mapdefined/xml/418.xml"
+    },
+    {
+      "id": "419",
+      "name": "悬底洞",
+      "sourceXml": "mapdefined/xml/419.xml"
+    },
+    {
+      "id": "420",
+      "name": "玉镜湖_1",
+      "sourceXml": "mapdefined/xml/420.xml"
+    },
+    {
+      "id": "421",
+      "name": "玉镜湖_2",
+      "sourceXml": "mapdefined/xml/421.xml"
+    },
+    {
+      "id": "422",
+      "name": "玉镜湖_3",
+      "sourceXml": "mapdefined/xml/422.xml"
+    },
+    {
+      "id": "423",
+      "name": "玉镜湖_4",
+      "sourceXml": "mapdefined/xml/423.xml"
+    },
+    {
+      "id": "424",
+      "name": "玉镜湖_5",
+      "sourceXml": "mapdefined/xml/424.xml"
+    },
+    {
+      "id": "425",
+      "name": "玉镜湖_6",
+      "sourceXml": "mapdefined/xml/425.xml"
+    },
+    {
+      "id": "426",
+      "name": "玉镜湖_7",
+      "sourceXml": "mapdefined/xml/426.xml"
+    },
+    {
+      "id": "427",
+      "name": "玉镜湖_8",
+      "sourceXml": "mapdefined/xml/427.xml"
+    },
+    {
+      "id": "428",
+      "name": "玉镜湖_9",
+      "sourceXml": "mapdefined/xml/428.xml"
+    },
+    {
+      "id": "429",
+      "name": "玉镜湖_10",
+      "sourceXml": "mapdefined/xml/429.xml"
+    },
+    {
+      "id": "430",
+      "name": "玉镜湖_11",
+      "sourceXml": "mapdefined/xml/430.xml"
+    },
+    {
+      "id": "431",
+      "name": "玉镜湖_12",
+      "sourceXml": "mapdefined/xml/431.xml"
+    },
+    {
+      "id": "432",
+      "name": "日月窟",
+      "sourceXml": "mapdefined/xml/432.xml"
+    },
+    {
+      "id": "433",
+      "name": "神机营_1",
+      "sourceXml": "mapdefined/xml/433.xml"
+    },
+    {
+      "id": "434",
+      "name": "神机营_2",
+      "sourceXml": "mapdefined/xml/434.xml"
+    },
+    {
+      "id": "435",
+      "name": "神机营_3",
+      "sourceXml": "mapdefined/xml/435.xml"
+    },
+    {
+      "id": "436",
+      "name": "迷迭谷",
+      "sourceXml": "mapdefined/xml/436.xml"
+    },
+    {
+      "id": "437",
+      "name": "飞禽洞",
+      "sourceXml": "mapdefined/xml/437.xml"
+    },
+    {
+      "id": "438",
+      "name": "扬名亭",
+      "sourceXml": "mapdefined/xml/438.xml"
+    },
+    {
+      "id": "439",
+      "name": "幻象楼",
+      "sourceXml": "mapdefined/xml/439.xml"
+    },
+    {
+      "id": "440",
+      "name": "万剑峡_1",
+      "sourceXml": "mapdefined/xml/440.xml"
+    },
+    {
+      "id": "441",
+      "name": "万剑峡_2",
+      "sourceXml": "mapdefined/xml/441.xml"
+    },
+    {
+      "id": "442",
+      "name": "万剑峡_3",
+      "sourceXml": "mapdefined/xml/442.xml"
+    },
+    {
+      "id": "443",
+      "name": "万剑峡_4",
+      "sourceXml": "mapdefined/xml/443.xml"
+    },
+    {
+      "id": "444",
+      "name": "万剑峡_5",
+      "sourceXml": "mapdefined/xml/444.xml"
+    },
+    {
+      "id": "445",
+      "name": "冒险谷",
+      "sourceXml": "mapdefined/xml/445.xml"
+    },
+    {
+      "id": "446",
+      "name": "冒险谷_秘密宝库",
+      "sourceXml": "mapdefined/xml/446.xml"
+    },
+    {
+      "id": "447",
+      "name": "幽冥剑窟",
+      "sourceXml": "mapdefined/xml/447.xml"
+    },
+    {
+      "id": "448",
+      "name": "",
+      "sourceXml": "mapdefined/xml/448.xml"
+    },
+    {
+      "id": "449",
+      "name": "",
+      "sourceXml": "mapdefined/xml/449.xml"
+    },
+    {
+      "id": "450",
+      "name": "",
+      "sourceXml": "mapdefined/xml/450.xml"
+    },
+    {
+      "id": "451",
+      "name": "",
+      "sourceXml": "mapdefined/xml/451.xml"
+    },
+    {
+      "id": "452",
+      "name": "",
+      "sourceXml": "mapdefined/xml/452.xml"
+    },
+    {
+      "id": "453",
+      "name": "",
+      "sourceXml": "mapdefined/xml/453.xml"
+    },
+    {
+      "id": "454",
+      "name": "",
+      "sourceXml": "mapdefined/xml/454.xml"
+    },
+    {
+      "id": "455",
+      "name": "邪寇林",
+      "sourceXml": "mapdefined/xml/455.xml"
+    },
+    {
+      "id": "456",
+      "name": "藏宝阁_1",
+      "sourceXml": "mapdefined/xml/456.xml"
+    },
+    {
+      "id": "457",
+      "name": "迷离渊_1",
+      "sourceXml": "mapdefined/xml/457.xml"
+    },
+    {
+      "id": "458",
+      "name": "迷离渊_2",
+      "sourceXml": "mapdefined/xml/458.xml"
+    },
+    {
+      "id": "459",
+      "name": "迷离渊_3",
+      "sourceXml": "mapdefined/xml/459.xml"
+    },
+    {
+      "id": "460",
+      "name": "迷离渊_4",
+      "sourceXml": "mapdefined/xml/460.xml"
+    },
+    {
+      "id": "461",
+      "name": "迷离渊_5",
+      "sourceXml": "mapdefined/xml/461.xml"
+    },
+    {
+      "id": "462",
+      "name": "迷离渊_6",
+      "sourceXml": "mapdefined/xml/462.xml"
+    },
+    {
+      "id": "463",
+      "name": "迷离渊_7",
+      "sourceXml": "mapdefined/xml/463.xml"
+    },
+    {
+      "id": "464",
+      "name": "迷离渊_8",
+      "sourceXml": "mapdefined/xml/464.xml"
+    },
+    {
+      "id": "465",
+      "name": "迷离渊_9",
+      "sourceXml": "mapdefined/xml/465.xml"
+    },
+    {
+      "id": "466",
+      "name": "迷离渊_10",
+      "sourceXml": "mapdefined/xml/466.xml"
+    },
+    {
+      "id": "467",
+      "name": "迷离渊_11",
+      "sourceXml": "mapdefined/xml/467.xml"
+    },
+    {
+      "id": "468",
+      "name": "迷离渊_12",
+      "sourceXml": "mapdefined/xml/468.xml"
+    },
+    {
+      "id": "469",
+      "name": "迷离渊_13",
+      "sourceXml": "mapdefined/xml/469.xml"
+    },
+    {
+      "id": "470",
+      "name": "迷离渊_14",
+      "sourceXml": "mapdefined/xml/470.xml"
+    },
+    {
+      "id": "471",
+      "name": "迷离渊_15",
+      "sourceXml": "mapdefined/xml/471.xml"
+    },
+    {
+      "id": "472",
+      "name": "雷霆剑冢",
+      "sourceXml": "mapdefined/xml/472.xml"
+    },
+    {
+      "id": "473",
+      "name": "藏宝阁_2",
+      "sourceXml": "mapdefined/xml/473.xml"
+    },
+    {
+      "id": "474",
+      "name": "藏宝阁_3",
+      "sourceXml": "mapdefined/xml/474.xml"
+    },
+    {
+      "id": "475",
+      "name": "万剑峡_6",
+      "sourceXml": "mapdefined/xml/475.xml"
+    },
+    {
+      "id": "476",
+      "name": "万剑峡_7",
+      "sourceXml": "mapdefined/xml/476.xml"
+    },
+    {
+      "id": "477",
+      "name": "万剑峡_8",
+      "sourceXml": "mapdefined/xml/477.xml"
+    },
+    {
+      "id": "478",
+      "name": "万剑峡_12",
+      "sourceXml": "mapdefined/xml/478.xml"
+    },
+    {
+      "id": "479",
+      "name": "万剑峡_11",
+      "sourceXml": "mapdefined/xml/479.xml"
+    },
+    {
+      "id": "480",
+      "name": "万剑峡_10",
+      "sourceXml": "mapdefined/xml/480.xml"
+    },
+    {
+      "id": "481",
+      "name": "万剑峡_9",
+      "sourceXml": "mapdefined/xml/481.xml"
+    },
+    {
+      "id": "482",
+      "name": "常夏城_1",
+      "sourceXml": "mapdefined/xml/482.xml"
+    },
+    {
+      "id": "483",
+      "name": "常夏城_2",
+      "sourceXml": "mapdefined/xml/483.xml"
+    },
+    {
+      "id": "484",
+      "name": "常夏城_3",
+      "sourceXml": "mapdefined/xml/484.xml"
+    }
+  ]
+}

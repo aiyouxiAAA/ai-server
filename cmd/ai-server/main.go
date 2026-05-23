@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
+	"path/filepath"
 
+	"ai-server/internal/mall"
 	"ai-server/internal/protocol"
 	"ai-server/internal/session"
 	"github.com/gorilla/websocket"
@@ -22,6 +23,83 @@ const (
 	cmdRoleSelectResponse = 1016
 	cmdRoleRemoveRequest  = 1017
 	cmdRoleRemoveResponse = 1018
+
+	cmdClassicTownLoadMapPush      = 1101
+	cmdClassicTownCreatePlayerPush = 1102
+	cmdClassicTownCreateRolePush   = 1103
+	cmdClassicTownRemoveRolePush   = 1104
+	cmdClassicTownQuestStatePush   = 1105
+	cmdClassicTownAnswerSpeakPush  = 1106
+	cmdClassicTownSkillInfoPush    = 1107
+	cmdClassicTownSkillCapPush     = 1108
+	cmdClassicTownSkillShopPush    = 1109
+	cmdClassicTownCurrencyPush     = 1110
+	cmdClassicTownTargetRoleReq    = 1111
+	cmdClassicTownActiveRoleReq    = 1112
+	cmdClassicTownAnswerReq        = 1113
+	cmdClassicTownTransferReq      = 1114
+	cmdClassicTownCrossRoleReq     = 1115
+	cmdClassicTownGetSkillListReq  = 1116
+	cmdClassicTownBuySkillReq      = 1117
+	cmdClassicTownBuySkillResult   = 1118
+	cmdClassicTownGetCapacityReq   = 1119
+	cmdClassicTownGetItemListReq   = 1120
+	cmdClassicTownCapacityPush     = 1121
+	cmdClassicTownItemInfoPush     = 1122
+	cmdClassicTownItemInfoClear    = 1123
+	cmdClassicTownEquipItemReq     = 1124
+	cmdClassicTownFastPanelPush    = 1125
+	cmdClassicTownGetFastPanelReq  = 1126
+	cmdClassicTownGetQuestLogReq   = 1127
+	cmdClassicTownQuestInfoPush    = 1128
+	cmdClassicTownClearQuestInfo   = 1129
+	cmdClassicTownRemoveQuestReq   = 1130
+	cmdClassicTownRoleStatePush    = 1131
+	cmdClassicTownRolePhysiquePush = 1132
+	cmdClassicTownContainerMove    = 1133
+	cmdClassicTownAddPointReq      = 1134
+	cmdClassicSocialFriendInfo     = 1140
+	cmdClassicSocialClearFriend    = 1141
+	cmdClassicSocialBlackListInfo  = 1142
+	cmdClassicSocialClearBlackList = 1143
+	cmdClassicSocialEnemyInfo      = 1144
+	cmdClassicSocialClearEnemy     = 1145
+	cmdClassicSocialAddFriendReq   = 1146
+	cmdClassicSocialRemoveFriend   = 1147
+	cmdClassicSocialAddBlackReq    = 1148
+	cmdClassicSocialRemoveBlack    = 1149
+	cmdClassicGuildInfoReq         = 1150
+	cmdClassicGuildInfoPush        = 1151
+	cmdClassicGuildMemberPush      = 1152
+	cmdClassicGuildMemberClear     = 1153
+	cmdClassicGuildAuthPush        = 1154
+	cmdClassicGuildNoticePush      = 1155
+	cmdClassicGuildCreateReq       = 1156
+	cmdClassicGuildCreateResult    = 1157
+	cmdClassicGuildLeaveReq        = 1158
+	cmdClassicGuildKickReq         = 1159
+	cmdClassicGuildDismissReq      = 1160
+	cmdClassicGuildNoticeUpdateReq = 1161
+	cmdClassicMallCategoryListReq  = 1170
+	cmdClassicMallCategoryListPush = 1171
+	cmdClassicMallSearchCountReq   = 1172
+	cmdClassicMallSearchCountPush  = 1173
+	cmdClassicMallSearchPageReq    = 1174
+	cmdClassicMallSearchPagePush   = 1175
+	cmdClassicMallCurrencyPush     = 1176
+	cmdClassicMallPurchaseReq      = 1177
+	cmdClassicMallPurchaseResult   = 1178
+	cmdClassicMallPaymentDisabled  = 1179
+
+	cmdClassicBattleStartReq      = 3000
+	cmdClassicBattleStartPush     = 3001
+	cmdClassicBattleCellInfoPush  = 3002
+	cmdClassicBattleStartCommand  = 3003
+	cmdClassicBattleActionReq     = 3004
+	cmdClassicBattleActionPush    = 3005
+	cmdClassicBattleOverPush      = 3006
+	cmdClassicBattleActiveItemReq = 3011
+	cmdClassicBattlePlayOverReq   = 3012
 )
 
 var upgrader = websocket.Upgrader{
@@ -31,7 +109,15 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
-	store := session.NewStore()
+	store, err := session.NewPersistentStore(filepath.Join("data", "ai-server.db"))
+	if err != nil {
+		log.Fatalf("[ai-server] initialize persistent store failed: %v", err)
+	}
+	defer func() {
+		if closeErr := store.Close(); closeErr != nil {
+			log.Printf("[ai-server] close persistent store failed: %v", closeErr)
+		}
+	}()
 
 	apiMux := http.NewServeMux()
 	wsMux := http.NewServeMux()
@@ -66,6 +152,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 	}
 	defer conn.Close()
 
+	socketWriter := &websocketWriter{
+		conn:          conn,
+		nextServerSeq: 1000,
+	}
+	socketSession := &packetSession{}
+
 	for {
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
@@ -82,63 +174,259 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 			continue
 		}
 
-		responseCmd, responsePayload, ok := handlePacket(store, packet)
-		if !ok {
+		result := handlePacketWithSession(store, packet, socketSession)
+		if !result.handled {
 			log.Printf("[ai-server] unsupported command: %d", packet.Cmd)
 			continue
 		}
 
-		response := protocol.Encode(protocol.Packet{
-			Cmd:         responseCmd,
-			Seq:         packet.Seq,
-			Payload:     responsePayload,
-			TimestampMs: uint64(time.Now().UnixMilli()),
-		})
-		if err := conn.WriteMessage(websocket.BinaryMessage, response); err != nil {
-			log.Printf("[ai-server] write response failed: %v", err)
-			return
+		if result.responseCmd != 0 {
+			if err := socketWriter.writePacket(result.responseCmd, packet.Seq, result.responsePayload); err != nil {
+				log.Printf("[ai-server] write response failed: %v", err)
+				return
+			}
 		}
-	}
-}
-
-func handlePacket(store *session.Store, packet protocol.Packet) (uint64, []byte, bool) {
-	switch packet.Cmd {
-	case cmdAuthLoginRequest:
-		var request session.LoginRequest
-		if !decodePayload(packet.Payload, &request) {
-			return 0, nil, false
+		if result.townBootstrap != nil {
+			socketWriter.writeClassicTownBootstrap(*result.townBootstrap)
 		}
-		return cmdAuthLoginResponse, encodePayload(store.Login(request)), true
-	case cmdRoleListRequest:
-		var request session.RoleListRequest
-		if !decodePayload(packet.Payload, &request) {
-			return 0, nil, false
+		if result.createPlayer != nil {
+			if err := socketWriter.writePush(cmdClassicTownCreatePlayerPush, encodePayload(*result.createPlayer)); err != nil {
+				log.Printf("[ai-server] write classic town createPlayer push failed: %v", err)
+				return
+			}
 		}
-		return cmdRoleListResponse, encodePayload(store.ListRoles(request.PlayerID)), true
-	case cmdRoleCreateRequest:
-		var request session.RoleCreateRequest
-		if !decodePayload(packet.Payload, &request) {
-			return 0, nil, false
+		if result.rolePhysique != nil {
+			if err := socketWriter.writePush(cmdClassicTownRolePhysiquePush, encodePayload(*result.rolePhysique)); err != nil {
+				log.Printf("[ai-server] write classic town rolePhysique push failed: %v", err)
+				return
+			}
 		}
-		return cmdRoleCreateResponse, encodePayload(store.CreateRole(request)), true
-	case cmdRoleSelectRequest:
-		var request session.RoleSelectRequest
-		if !decodePayload(packet.Payload, &request) {
-			return 0, nil, false
+		if result.roleState != nil {
+			if err := socketWriter.writePush(cmdClassicTownRoleStatePush, encodePayload(*result.roleState)); err != nil {
+				log.Printf("[ai-server] write classic town roleState push failed: %v", err)
+				return
+			}
 		}
-		response, ok := store.SelectRole(request.PlayerID, request.RoleID)
-		if !ok {
-			return 0, nil, false
+		if result.answerSpeak != nil {
+			if err := socketWriter.writePush(cmdClassicTownAnswerSpeakPush, encodePayload(*result.answerSpeak)); err != nil {
+				log.Printf("[ai-server] write classic town answerSpeak push failed: %v", err)
+				return
+			}
 		}
-		return cmdRoleSelectResponse, encodePayload(response), true
-	case cmdRoleRemoveRequest:
-		var request session.RoleRemoveRequest
-		if !decodePayload(packet.Payload, &request) {
-			return 0, nil, false
+		if result.skillCap != nil {
+			if err := socketWriter.writePush(cmdClassicTownSkillCapPush, encodePayload(*result.skillCap)); err != nil {
+				log.Printf("[ai-server] write classic town skillCap push failed: %v", err)
+				return
+			}
 		}
-		return cmdRoleRemoveResponse, encodePayload(store.RemoveRole(request)), true
-	default:
-		return 0, nil, false
+		for _, skillInfo := range result.skillInfos {
+			if err := socketWriter.writePush(cmdClassicTownSkillInfoPush, encodePayload(skillInfo)); err != nil {
+				log.Printf("[ai-server] write classic town skillInfo push failed: %v", err)
+				return
+			}
+		}
+		if result.skillShop != nil {
+			if err := socketWriter.writePush(cmdClassicTownSkillShopPush, encodePayload(*result.skillShop)); err != nil {
+				log.Printf("[ai-server] write classic town skillShop push failed: %v", err)
+				return
+			}
+		}
+		if result.currencyPush != nil {
+			if err := socketWriter.writePush(cmdClassicTownCurrencyPush, encodePayload(*result.currencyPush)); err != nil {
+				log.Printf("[ai-server] write classic town currency push failed: %v", err)
+				return
+			}
+		}
+		if result.fastPanel != nil {
+			if err := socketWriter.writePush(cmdClassicTownFastPanelPush, encodePayload(*result.fastPanel)); err != nil {
+				log.Printf("[ai-server] write classic town fastPanel push failed: %v", err)
+				return
+			}
+		}
+		if result.buySkillResult != nil {
+			if err := socketWriter.writePush(cmdClassicTownBuySkillResult, encodePayload(*result.buySkillResult)); err != nil {
+				log.Printf("[ai-server] write classic town buySkill result failed: %v", err)
+				return
+			}
+		}
+		if result.containerCap != nil {
+			if err := socketWriter.writePush(cmdClassicTownCapacityPush, encodePayload(*result.containerCap)); err != nil {
+				log.Printf("[ai-server] write classic town container capacity failed: %v", err)
+				return
+			}
+		}
+		for _, itemInfo := range result.itemInfos {
+			if err := socketWriter.writePush(cmdClassicTownItemInfoPush, encodePayload(itemInfo)); err != nil {
+				log.Printf("[ai-server] write classic town item info failed: %v", err)
+				return
+			}
+		}
+		for _, itemClear := range result.itemClears {
+			if err := socketWriter.writePush(cmdClassicTownItemInfoClear, encodePayload(itemClear)); err != nil {
+				log.Printf("[ai-server] write classic town item clear failed: %v", err)
+				return
+			}
+		}
+		for _, questInfo := range result.questInfos {
+			if err := socketWriter.writePush(cmdClassicTownQuestInfoPush, encodePayload(questInfo)); err != nil {
+				log.Printf("[ai-server] write classic town QuestInfo failed: %v", err)
+				return
+			}
+		}
+		for _, questClear := range result.questClears {
+			if err := socketWriter.writePush(cmdClassicTownClearQuestInfo, encodePayload(questClear)); err != nil {
+				log.Printf("[ai-server] write classic town ClearQuestInfo failed: %v", err)
+				return
+			}
+		}
+		for _, questState := range result.questStates {
+			if err := socketWriter.writePush(cmdClassicTownQuestStatePush, encodePayload(questState)); err != nil {
+				log.Printf("[ai-server] write classic town QuestState failed: %v", err)
+				return
+			}
+		}
+		for _, friend := range result.friendInfos {
+			if err := socketWriter.writePush(cmdClassicSocialFriendInfo, encodePayload(friend)); err != nil {
+				log.Printf("[ai-server] write classic social FriendInfo failed: %v", err)
+				return
+			}
+		}
+		for _, friendClear := range result.friendClears {
+			if err := socketWriter.writePush(cmdClassicSocialClearFriend, encodePayload(friendClear)); err != nil {
+				log.Printf("[ai-server] write classic social ClearFriendInfo failed: %v", err)
+				return
+			}
+		}
+		for _, black := range result.blackInfos {
+			if err := socketWriter.writePush(cmdClassicSocialBlackListInfo, encodePayload(black)); err != nil {
+				log.Printf("[ai-server] write classic social BlackListInfo failed: %v", err)
+				return
+			}
+		}
+		for _, blackClear := range result.blackClears {
+			if err := socketWriter.writePush(cmdClassicSocialClearBlackList, encodePayload(blackClear)); err != nil {
+				log.Printf("[ai-server] write classic social ClearBlackListInfo failed: %v", err)
+				return
+			}
+		}
+		for _, enemy := range result.enemyInfos {
+			if err := socketWriter.writePush(cmdClassicSocialEnemyInfo, encodePayload(enemy)); err != nil {
+				log.Printf("[ai-server] write classic social EnemyInfo failed: %v", err)
+				return
+			}
+		}
+		for _, enemyClear := range result.enemyClears {
+			if err := socketWriter.writePush(cmdClassicSocialClearEnemy, encodePayload(enemyClear)); err != nil {
+				log.Printf("[ai-server] write classic social ClearEnemyInfo failed: %v", err)
+				return
+			}
+		}
+		if result.guildInfo != nil {
+			if err := socketWriter.writePush(cmdClassicGuildInfoPush, encodePayload(*result.guildInfo)); err != nil {
+				log.Printf("[ai-server] write classic guild GuidInfo failed: %v", err)
+				return
+			}
+		}
+		for _, member := range result.guildMembers {
+			if err := socketWriter.writePush(cmdClassicGuildMemberPush, encodePayload(member)); err != nil {
+				log.Printf("[ai-server] write classic guild GuidMemberInfo failed: %v", err)
+				return
+			}
+		}
+		for _, memberClear := range result.guildMemberClears {
+			if err := socketWriter.writePush(cmdClassicGuildMemberClear, encodePayload(memberClear)); err != nil {
+				log.Printf("[ai-server] write classic guild ClearGuidMemberInfo failed: %v", err)
+				return
+			}
+		}
+		if result.guildAuth != nil {
+			if err := socketWriter.writePush(cmdClassicGuildAuthPush, encodePayload(*result.guildAuth)); err != nil {
+				log.Printf("[ai-server] write classic guild auth failed: %v", err)
+				return
+			}
+		}
+		if result.guildNotice != nil {
+			if err := socketWriter.writePush(cmdClassicGuildNoticePush, encodePayload(*result.guildNotice)); err != nil {
+				log.Printf("[ai-server] write classic guild notice failed: %v", err)
+				return
+			}
+		}
+		if result.guildResult != nil {
+			if err := socketWriter.writePush(cmdClassicGuildCreateResult, encodePayload(*result.guildResult)); err != nil {
+				log.Printf("[ai-server] write classic guild result failed: %v", err)
+				return
+			}
+		}
+		for _, category := range result.mallCategories {
+			if err := socketWriter.writePush(cmdClassicMallCategoryListPush, encodePayload(category)); err != nil {
+				log.Printf("[ai-server] write classic mall category failed: %v", err)
+				return
+			}
+		}
+		if result.mallSearchCount != nil {
+			if err := socketWriter.writePush(cmdClassicMallSearchCountPush, encodePayload(*result.mallSearchCount)); err != nil {
+				log.Printf("[ai-server] write classic mall search count failed: %v", err)
+				return
+			}
+		}
+		if result.mallSearchPage != nil {
+			if err := socketWriter.writePush(cmdClassicMallSearchPagePush, encodePayload(*result.mallSearchPage)); err != nil {
+				log.Printf("[ai-server] write classic mall search page failed: %v", err)
+				return
+			}
+		}
+		if result.mallCurrency != nil {
+			if err := socketWriter.writePush(cmdClassicMallCurrencyPush, encodePayload(*result.mallCurrency)); err != nil {
+				log.Printf("[ai-server] write classic mall currency failed: %v", err)
+				return
+			}
+		}
+		if result.mallPurchase != nil {
+			cmd := uint64(cmdClassicMallPurchaseResult)
+			if result.mallPurchase.ErrorCode == mall.PAYMENT_DISABLED {
+				cmd = cmdClassicMallPaymentDisabled
+			}
+			if err := socketWriter.writePush(cmd, encodePayload(*result.mallPurchase)); err != nil {
+				log.Printf("[ai-server] write classic mall purchase result failed: %v", err)
+				return
+			}
+		}
+		if result.battleStart != nil {
+			if err := socketWriter.writePush(cmdClassicBattleStartPush, encodePayload(*result.battleStart)); err != nil {
+				log.Printf("[ai-server] write classic battle StartBattle failed: %v", err)
+				return
+			}
+		}
+		for _, battleCell := range result.battleCells {
+			if err := socketWriter.writePush(cmdClassicBattleCellInfoPush, encodePayload(battleCell)); err != nil {
+				log.Printf("[ai-server] write classic battle BattleCellInfo failed: %v", err)
+				return
+			}
+		}
+		if result.battleStart != nil && result.battleCommand != nil {
+			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
+				log.Printf("[ai-server] write classic battle startCommand failed: %v", err)
+				return
+			}
+		}
+		for _, battleAction := range result.battleActions {
+			if err := socketWriter.writePush(cmdClassicBattleActionPush, encodePayload(battleAction)); err != nil {
+				log.Printf("[ai-server] write classic battle battleAction failed: %v", err)
+				return
+			}
+		}
+		if result.battleOver != nil {
+			if err := socketWriter.writePush(cmdClassicBattleOverPush, encodePayload(*result.battleOver)); err != nil {
+				log.Printf("[ai-server] write classic battle OverBattle failed: %v", err)
+				return
+			}
+		}
+		if result.battleStart == nil && result.battleCommand != nil {
+			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
+				log.Printf("[ai-server] write classic battle startCommand failed: %v", err)
+				return
+			}
+		}
 	}
 }
 

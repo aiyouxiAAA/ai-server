@@ -1,14 +1,55 @@
 package session
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
-	"strconv"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+
+	"ai-server/internal/guild"
+	"ai-server/internal/mall"
+	_ "modernc.org/sqlite"
+)
+
+const (
+	defaultRoleVoc  = "新手"
+	defaultSkillCap = 12
+	defaultBagCap   = 30
+	defaultEquipCap = 20
+	defaultMallCap  = 30
+	defaultCopper   = 5000
+	defaultSilver   = 1
 )
 
 type RoleAppearance map[string]any
+
+type RoleCurrencies map[string]int
+
+type RoleSkill struct {
+	Name        string `json:"name"`
+	Level       int    `json:"level"`
+	Type        string `json:"type"`
+	Icon        string `json:"icon"`
+	Description string `json:"description"`
+}
+
+type RoleItem struct {
+	Handle      string `json:"handle,omitempty"`
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	ItemType    string `json:"itemType"`
+	Display     string `json:"display"`
+	Description string `json:"description"`
+	Count       int    `json:"count"`
+	Index       int    `json:"index"`
+	Level       int    `json:"level"`
+	EndTime     int    `json:"endTime"`
+	Owner       string `json:"owner"`
+	ItemLevel   int    `json:"itemLevel"`
+}
 
 type LoginRequest struct {
 	Platform string `json:"platform"`
@@ -30,11 +71,21 @@ type RoleSummary struct {
 	RoleID       string         `json:"roleId"`
 	DisplayName  string         `json:"displayName"`
 	Level        int            `json:"level"`
+	Exp          int            `json:"exp"`
+	Voc          string         `json:"voc,omitempty"`
+	AGI          int            `json:"AGI,omitempty"`
+	STR          int            `json:"STR,omitempty"`
+	INT          int            `json:"INT,omitempty"`
+	CON          int            `json:"CON,omitempty"`
+	LCK          int            `json:"LCK,omitempty"`
 	MapID        int            `json:"mapId"`
 	VisualRoleID int            `json:"visualRoleId"`
 	PresetID     int            `json:"presetId,omitempty"`
 	SourceQuery  string         `json:"sourceQuery,omitempty"`
 	Appearance   RoleAppearance `json:"appearance,omitempty"`
+	Skills       []RoleSkill    `json:"skills,omitempty"`
+	Currencies   RoleCurrencies `json:"currencies,omitempty"`
+	Items        []RoleItem     `json:"items,omitempty"`
 }
 
 type RoleListRequest struct {
@@ -43,11 +94,15 @@ type RoleListRequest struct {
 }
 
 type RoleListResponse struct {
-	Roles []RoleSummary `json:"roles"`
+	Success      bool          `json:"success"`
+	ErrorCode    string        `json:"errorCode,omitempty"`
+	ErrorMessage string        `json:"errorMessage,omitempty"`
+	Roles        []RoleSummary `json:"roles"`
 }
 
 type RoleCreateRequest struct {
 	PlayerID       string         `json:"playerId"`
+	SessionToken   string         `json:"sessionToken,omitempty"`
 	DisplayName    string         `json:"displayName"`
 	Gender         string         `json:"gender"`
 	RoleTemplateID int            `json:"roleTemplateId"`
@@ -57,12 +112,16 @@ type RoleCreateRequest struct {
 }
 
 type RoleCreateResponse struct {
-	Role RoleSummary `json:"role"`
+	Success      bool        `json:"success"`
+	ErrorCode    string      `json:"errorCode,omitempty"`
+	ErrorMessage string      `json:"errorMessage,omitempty"`
+	Role         RoleSummary `json:"role"`
 }
 
 type RoleSelectRequest struct {
-	PlayerID string `json:"playerId"`
-	RoleID   string `json:"roleId"`
+	PlayerID     string `json:"playerId"`
+	SessionToken string `json:"sessionToken,omitempty"`
+	RoleID       string `json:"roleId"`
 }
 
 type PlayerBaseData struct {
@@ -71,22 +130,65 @@ type PlayerBaseData struct {
 	DisplayName  string         `json:"displayName"`
 	Level        int            `json:"level"`
 	Exp          int            `json:"exp"`
+	Voc          string         `json:"voc,omitempty"`
+	HP           int            `json:"hp,omitempty"`
+	MP           int            `json:"mp,omitempty"`
+	MaxHP        int            `json:"maxHp,omitempty"`
+	MaxMP        int            `json:"maxMp,omitempty"`
 	MapID        int            `json:"mapId"`
 	VisualRoleID int            `json:"visualRoleId"`
 	PresetID     int            `json:"presetId,omitempty"`
 	SourceQuery  string         `json:"sourceQuery,omitempty"`
 	Appearance   RoleAppearance `json:"appearance,omitempty"`
+	Currencies   RoleCurrencies `json:"currencies,omitempty"`
+	RoleState    *RoleState     `json:"roleState,omitempty"`
+	RolePhysique *RolePhysique  `json:"rolePhysique,omitempty"`
+}
+
+type RoleState struct {
+	Handle string `json:"handle,omitempty"`
+	HP     int    `json:"hp"`
+	MP     int    `json:"mp"`
+	Exp    int    `json:"exp"`
+	Lv     int    `json:"lv"`
+	Speed  int    `json:"speed"`
+	OutG   int    `json:"outG,omitempty"`
+	InG    int    `json:"inG,omitempty"`
+}
+
+type RolePhysique struct {
+	Handle    string   `json:"handle,omitempty"`
+	ResPros   []string `json:"resPros,omitempty"`
+	AGI       int      `json:"AGI"`
+	STR       int      `json:"STR"`
+	INT       int      `json:"INT"`
+	CON       int      `json:"CON"`
+	LCK       int      `json:"LCK"`
+	MaxHP     int      `json:"maxHp"`
+	MaxMP     int      `json:"maxMp"`
+	PhyAtk    int      `json:"phyAtk"`
+	MgcAtk    int      `json:"mgcAtk"`
+	PhyDef    int      `json:"phyDef"`
+	MgcDef    int      `json:"mgcDef"`
+	Hit       int      `json:"hit"`
+	Dog       int      `json:"dog"`
+	Fat       int      `json:"fat"`
+	LastPoint int      `json:"lastPoint"`
 }
 
 type RoleSelectResponse struct {
-	Role       RoleSummary    `json:"role"`
-	PlayerBase PlayerBaseData `json:"playerBase"`
+	Success      bool           `json:"success"`
+	ErrorCode    string         `json:"errorCode,omitempty"`
+	ErrorMessage string         `json:"errorMessage,omitempty"`
+	Role         RoleSummary    `json:"role"`
+	PlayerBase   PlayerBaseData `json:"playerBase"`
 }
 
 type RoleRemoveRequest struct {
-	PlayerID string `json:"playerId"`
-	RoleID   string `json:"roleId"`
-	Password string `json:"password"`
+	PlayerID     string `json:"playerId"`
+	SessionToken string `json:"sessionToken,omitempty"`
+	RoleID       string `json:"roleId"`
+	Password     string `json:"password"`
 }
 
 type RoleRemoveResponse struct {
@@ -97,11 +199,71 @@ type RoleRemoveResponse struct {
 	ErrorMessage  string `json:"errorMessage,omitempty"`
 }
 
+type RoleSkillPurchaseResult struct {
+	Skills       []RoleSkill
+	SkillCap     int
+	Currencies   RoleCurrencies
+	Found        bool
+	Learned      bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
+type RoleItemClear struct {
+	Type  string
+	Index int
+}
+
+type RoleEquipItemResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	EquippedItem RoleItem
+	ClearedItems []RoleItemClear
+	Found        bool
+	Equipped     bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
+type RoleUseItemResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	Item         RoleItem
+	UpdatedItem  *RoleItem
+	ClearedItems []RoleItemClear
+	Found        bool
+	Used         bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
+type RoleExpGrantResult struct {
+	Role       RoleSummary
+	PlayerBase PlayerBaseData
+	RoleState  RoleState
+	Found      bool
+	Granted    bool
+}
+
+type RoleAddPointResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	RolePhysique RolePhysique
+	Found        bool
+	Applied      bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
 type Store struct {
 	mu               sync.Mutex
 	rolesByPID       map[string][]RoleSummary
 	nextRoleSeqByPID map[string]int
 	accountsByName   map[string]AccountRecord
+	db               *sql.DB
+	Guilds           *guild.Service
+	Mall             *mall.Service
+	mallRequests     map[string]mall.PurchaseResult
 }
 
 type AccountRecord struct {
@@ -125,7 +287,51 @@ func NewStore() *Store {
 				SessionToken: "mock-session-token-001",
 			},
 		},
+		Guilds:       guild.NewMemoryService(),
+		Mall:         mall.NewService(),
+		mallRequests: make(map[string]mall.PurchaseResult),
 	}
+}
+
+func NewPersistentStore(persistencePath string) (*Store, error) {
+	store := NewStore()
+	if persistencePath == "" {
+		return store, nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(persistencePath), 0o755); err != nil {
+		return nil, fmt.Errorf("create persistence directory: %w", err)
+	}
+
+	db, err := sql.Open("sqlite", persistencePath)
+	if err != nil {
+		return nil, fmt.Errorf("open sqlite database: %w", err)
+	}
+	db.SetMaxOpenConns(1)
+	store.db = db
+	guildService, err := guild.NewService(db)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("initialize guild store: %w", err)
+	}
+	store.Guilds = guildService
+
+	if err := store.initSchema(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	if err := store.loadFromDB(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	if err := store.saveLocked(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	return store, nil
 }
 
 func (store *Store) Login(request LoginRequest) LoginResponse {
@@ -162,6 +368,9 @@ func (store *Store) loginByAccount(userName string, password string) LoginRespon
 	account, ok := store.accountsByName[userName]
 	if !ok {
 		account = store.createAccountLocked(userName, password)
+		if err := store.persistAccountLocked(account); err != nil {
+			log.Printf("[session.Store] persist auto registered account failed: %v", err)
+		}
 		log.Printf("[session.Store] auto registered account userName=%s playerId=%s", account.UserName, account.PlayerID)
 		return LoginResponse{
 			PlayerID:     account.PlayerID,
@@ -199,19 +408,50 @@ func (store *Store) createAccountLocked(userName string, password string) Accoun
 	return account
 }
 
-func (store *Store) ListRoles(playerID string) RoleListResponse {
+func (store *Store) ListRoles(request RoleListRequest) RoleListResponse {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
-	store.normalizeRoleIDsLocked(playerID)
-	roles := append(make([]RoleSummary, 0), store.rolesByPID[playerID]...)
-	log.Printf("[session.Store] ListRoles playerId=%s roles=%s", playerID, formatRoleSummaries(roles))
-	return RoleListResponse{Roles: roles}
+	validationFailure, ok := store.validateRoleAccessLocked(request.PlayerID, request.SessionToken)
+	if !ok {
+		return RoleListResponse{
+			Success:      false,
+			ErrorCode:    validationFailure.ErrorCode,
+			ErrorMessage: validationFailure.ErrorMessage,
+			Roles:        []RoleSummary{},
+		}
+	}
+
+	normalized := store.normalizeRoleIDsLocked(request.PlayerID)
+	if normalized {
+		if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
+			log.Printf("[session.Store] persist normalized role ids failed: %v", err)
+		}
+	}
+	roles := append(make([]RoleSummary, 0), store.rolesByPID[request.PlayerID]...)
+	for index := range roles {
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+	}
+	log.Printf("[session.Store] ListRoles playerId=%s roles=%s", request.PlayerID, formatRoleSummaries(roles))
+	return RoleListResponse{
+		Success: true,
+		Roles:   roles,
+	}
 }
 
 func (store *Store) CreateRole(request RoleCreateRequest) RoleCreateResponse {
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
+	validationFailure, ok := store.validateRoleAccessLocked(request.PlayerID, request.SessionToken)
+	if !ok {
+		return RoleCreateResponse{
+			Success:      false,
+			ErrorCode:    validationFailure.ErrorCode,
+			ErrorMessage: validationFailure.ErrorMessage,
+			Role:         emptyRoleSummary(),
+		}
+	}
 
 	store.normalizeRoleIDsLocked(request.PlayerID)
 	displayName := request.DisplayName
@@ -226,56 +466,892 @@ func (store *Store) CreateRole(request RoleCreateRequest) RoleCreateResponse {
 		RoleID:       fmt.Sprintf("%s-role-%03d", request.PlayerID, roleSeq),
 		DisplayName:  displayName,
 		Level:        1,
+		Voc:          defaultRoleVoc,
 		MapID:        1,
 		VisualRoleID: resolveVisualRoleID(request.PresetID),
 		PresetID:     request.PresetID,
 		SourceQuery:  request.SourceQuery,
 		Appearance:   request.Appearance,
+		Currencies:   defaultRoleCurrencies(),
 	}
 	store.rolesByPID[request.PlayerID] = append(roles, role)
+	if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
+		log.Printf("[session.Store] persist created role failed: %v", err)
+	}
 
-	return RoleCreateResponse{Role: role}
+	return RoleCreateResponse{
+		Success: true,
+		Role:    role,
+	}
 }
 
-func (store *Store) SelectRole(playerID string, roleID string) (RoleSelectResponse, bool) {
+func (store *Store) SelectRole(request RoleSelectRequest) RoleSelectResponse {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
-	store.normalizeRoleIDsLocked(playerID)
-	for _, role := range store.rolesByPID[playerID] {
-		if role.RoleID == roleID {
-			return RoleSelectResponse{
-				Role: role,
-				PlayerBase: PlayerBaseData{
-					PlayerID:     playerID,
-					RoleID:       role.RoleID,
-					DisplayName:  role.DisplayName,
-					Level:        role.Level,
-					Exp:          0,
-					MapID:        role.MapID,
-					VisualRoleID: role.VisualRoleID,
-					PresetID:     role.PresetID,
-					SourceQuery:  role.SourceQuery,
-					Appearance:   role.Appearance,
-				},
-			}, true
+	validationFailure, ok := store.validateRoleAccessLocked(request.PlayerID, request.SessionToken)
+	if !ok {
+		return RoleSelectResponse{
+			Success:      false,
+			ErrorCode:    validationFailure.ErrorCode,
+			ErrorMessage: validationFailure.ErrorMessage,
+			Role:         emptyRoleSummary(),
+			PlayerBase:   emptyPlayerBaseData(request.PlayerID),
 		}
 	}
 
-	return RoleSelectResponse{}, false
+	normalized := store.normalizeRoleIDsLocked(request.PlayerID)
+	if normalized {
+		if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
+			log.Printf("[session.Store] persist normalized role ids failed: %v", err)
+		}
+	}
+	for _, role := range store.rolesByPID[request.PlayerID] {
+		if role.RoleID == request.RoleID {
+			role = withRoleRuntimeDefaults(role)
+			return RoleSelectResponse{
+				Success:    true,
+				Role:       role,
+				PlayerBase: playerBaseDataFromRole(request.PlayerID, role),
+			}
+		}
+	}
+
+	return RoleSelectResponse{
+		Success:      false,
+		ErrorCode:    "5",
+		ErrorMessage: "角色不存在。",
+		Role:         emptyRoleSummary(),
+		PlayerBase:   emptyPlayerBaseData(request.PlayerID),
+	}
+}
+
+func (store *Store) UpdateRoleMap(playerID string, roleID string, mapID int) (RoleSummary, PlayerBaseData, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if mapID <= 0 {
+		return RoleSummary{}, emptyPlayerBaseData(playerID), false
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index].MapID = mapID
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist role map failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		return role, playerBaseDataFromRole(playerID, role), true
+	}
+
+	return RoleSummary{}, emptyPlayerBaseData(playerID), false
+}
+
+func (store *Store) GetRoleSkills(playerID string, roleID string) ([]RoleSkill, int, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID != roleID {
+			continue
+		}
+
+		role = withRoleRuntimeDefaults(role)
+		return cloneRoleSkills(role.Skills), defaultSkillCap, true
+	}
+
+	return nil, defaultSkillCap, false
+}
+
+func (store *Store) GetRoleCurrencies(playerID string, roleID string) (RoleCurrencies, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID == roleID {
+			return cloneRoleCurrencies(withRoleRuntimeDefaults(role).Currencies), true
+		}
+	}
+
+	return RoleCurrencies{}, false
+}
+
+func (store *Store) GetRoleContainerCapacity(playerID string, roleID string, containerType string) (int, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	containerType = strings.TrimSpace(containerType)
+	capacity, supported := roleContainerCapacity(containerType)
+	if !supported {
+		return 0, false
+	}
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID == roleID {
+			return capacity, true
+		}
+	}
+
+	return 0, false
+}
+
+func (store *Store) GetRoleItems(playerID string, roleID string, containerType string) ([]RoleItem, int, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	containerType = strings.TrimSpace(containerType)
+	capacity, supported := roleContainerCapacity(containerType)
+	if !supported {
+		return []RoleItem{}, 0, false
+	}
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID != roleID {
+			continue
+		}
+
+		role = withRoleRuntimeDefaults(role)
+		items := make([]RoleItem, 0, len(role.Items))
+		for _, item := range role.Items {
+			if item.Type == containerType {
+				items = append(items, item)
+			}
+		}
+		return cloneRoleItems(items), capacity, true
+	}
+
+	return []RoleItem{}, 0, false
+}
+
+func (store *Store) GetRoleRuntimeData(playerID string, roleID string) (RoleSummary, PlayerBaseData, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID != roleID {
+			continue
+		}
+
+		role = withRoleRuntimeDefaults(role)
+		return role, playerBaseDataFromRole(playerID, role), true
+	}
+
+	return RoleSummary{}, emptyPlayerBaseData(playerID), false
+}
+
+func (store *Store) GetRoleItem(playerID string, roleID string, containerType string, itemIndex int) (RoleItem, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	containerType = strings.TrimSpace(containerType)
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID != roleID {
+			continue
+		}
+		role = withRoleRuntimeDefaults(role)
+		item, ok := findRoleItem(role.Items, containerType, itemIndex)
+		if !ok {
+			return RoleItem{}, false
+		}
+		return normalizeRoleItem(item), true
+	}
+	return RoleItem{}, false
+}
+
+func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem) (RoleItem, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	item = normalizeRoleItem(item)
+	if item.Type == "" {
+		item.Type = "背包"
+	}
+	if item.Count <= 0 {
+		item.Count = 1
+	}
+	if item.Name == "" {
+		return RoleItem{}, false
+	}
+
+	capacity, supported := roleContainerCapacity(item.Type)
+	if !supported {
+		return RoleItem{}, false
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		if item.Index < 0 {
+			updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
+			remainingCount := item.Count
+			var grantedItem RoleItem
+			grantedItemSet := false
+			for _, existing := range roles[index].Items {
+				if remainingCount > 0 && canRoleItemsStack(existing, item) {
+					stackLimit := classicItemStackLimit(existing)
+					if existing.Count < stackLimit {
+						addedCount := remainingCount
+						if addedCount > stackLimit-existing.Count {
+							addedCount = stackLimit - existing.Count
+						}
+						existing.Count += addedCount
+						remainingCount -= addedCount
+						existing = normalizeRoleItem(existing)
+						if !grantedItemSet {
+							grantedItem = existing
+							grantedItemSet = true
+						}
+					}
+				}
+				updatedItems = append(updatedItems, existing)
+			}
+			if remainingCount > 0 {
+				targetIndex, ok := nextRoleItemIndex(updatedItems, item.Type, capacity)
+				if !ok {
+					return RoleItem{}, false
+				}
+				item.Index = targetIndex
+				item.Count = remainingCount
+				normalizedItem := normalizeRoleItem(item)
+				updatedItems = append(updatedItems, normalizedItem)
+				if !grantedItemSet {
+					grantedItem = normalizedItem
+					grantedItemSet = true
+				}
+			}
+			roles[index].Items = normalizeRoleItems(updatedItems)
+			store.rolesByPID[playerID] = roles
+			if err := store.persistPlayerStateLocked(playerID); err != nil {
+				log.Printf("[session.Store] persist granted item failed: %v", err)
+			}
+			return grantedItem, grantedItemSet
+		}
+
+		updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
+		for _, existing := range roles[index].Items {
+			if existing.Type == item.Type && existing.Index == item.Index {
+				continue
+			}
+			updatedItems = append(updatedItems, existing)
+		}
+		updatedItems = append(updatedItems, normalizeRoleItem(item))
+		roles[index].Items = normalizeRoleItems(updatedItems)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist granted item failed: %v", err)
+		}
+		return item, true
+	}
+	return RoleItem{}, false
+}
+
+func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta int) RoleExpGrantResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if expDelta <= 0 {
+		return RoleExpGrantResult{}
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		roles[index].Exp += expDelta
+		roles[index].Level = ClassicRoleLevelForExp(roles[index].Exp, roles[index].Level)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist granted experience failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		playerBase := playerBaseDataFromRole(playerID, role)
+		roleState := *playerBase.RoleState
+		return RoleExpGrantResult{
+			Role:       role,
+			PlayerBase: playerBase,
+			RoleState:  roleState,
+			Found:      true,
+			Granted:    true,
+		}
+	}
+	return RoleExpGrantResult{}
+}
+
+func (store *Store) AddRolePoint(playerID string, roleID string, statName string) RoleAddPointResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	statName = strings.ToUpper(strings.TrimSpace(statName))
+	if !isClassicRolePointStat(statName) {
+		return RoleAddPointResult{
+			ErrorCode:    "invalid_stat",
+			ErrorMessage: "属性不存在。",
+		}
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		roles[index].Level = ClassicRoleLevelForExp(roles[index].Exp, roles[index].Level)
+		if remainingRolePoint(roles[index]) <= 0 {
+			return RoleAddPointResult{
+				Role:         withRoleRuntimeDefaults(roles[index]),
+				PlayerBase:   playerBaseDataFromRole(playerID, roles[index]),
+				Found:        true,
+				ErrorCode:    "no_point",
+				ErrorMessage: "没有可分配的能力点。",
+			}
+		}
+		addRolePointToStat(&roles[index], statName)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist added role point failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		playerBase := playerBaseDataFromRole(playerID, role)
+		rolePhysique := *playerBase.RolePhysique
+		return RoleAddPointResult{
+			Role:         role,
+			PlayerBase:   playerBase,
+			RolePhysique: rolePhysique,
+			Found:        true,
+			Applied:      true,
+		}
+	}
+	return RoleAddPointResult{
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) ConsumeRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, count int) RoleUseItemResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	sourceType = strings.TrimSpace(sourceType)
+	if count <= 0 {
+		count = 1
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		sourceItem, ok := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Found:        true,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "物品不存在。",
+			}
+		}
+		if sourceItem.Count < count {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "item_not_enough",
+				ErrorMessage: "物品数量不足。",
+			}
+		}
+
+		updatedItems := make([]RoleItem, 0, len(roles[index].Items))
+		for _, item := range roles[index].Items {
+			if item.Type == sourceType && item.Index == sourceIndex {
+				continue
+			}
+			updatedItems = append(updatedItems, item)
+		}
+
+		result := RoleUseItemResult{
+			Item:  normalizeRoleItem(sourceItem),
+			Found: true,
+			Used:  true,
+		}
+		if sourceItem.Count > count {
+			updatedItem := sourceItem
+			updatedItem.Count -= count
+			updatedItems = append(updatedItems, normalizeRoleItem(updatedItem))
+			normalizedUpdated := normalizeRoleItem(updatedItem)
+			result.UpdatedItem = &normalizedUpdated
+		} else {
+			result.ClearedItems = []RoleItemClear{{
+				Type:  sourceType,
+				Index: sourceIndex,
+			}}
+		}
+
+		roles[index].Items = normalizeRoleItems(updatedItems)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist consumed item failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		result.Role = role
+		result.PlayerBase = playerBaseDataFromRole(playerID, role)
+		return result
+	}
+
+	return RoleUseItemResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) PurchaseMallProduct(playerID string, roleID string, product mall.Product, quantity int, requestID string) mall.PurchaseResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	requestID = strings.TrimSpace(requestID)
+	if requestID != "" {
+		key := roleID + ":" + requestID
+		if previous, ok := store.mallRequests[key]; ok {
+			previous.ErrorCode = mall.DUPLICATE_REQUEST
+			previous.ErrorMessage = "重复购买请求。"
+			return previous
+		}
+	}
+	if quantity <= 0 || quantity > 99 {
+		return mall.PurchaseResult{
+			Success:      false,
+			ProductID:    product.ProductID,
+			Quantity:     quantity,
+			RequestID:    requestID,
+			ErrorCode:    mall.INVALID_QUANTITY,
+			ErrorMessage: "购买数量不合法。",
+		}
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		totalPrice := product.Price * quantity
+		if roles[index].Currencies[product.Currency] < totalPrice {
+			return mall.PurchaseResult{
+				Success:         false,
+				ProductID:       product.ProductID,
+				Quantity:        quantity,
+				RequestID:       requestID,
+				CurrencyName:    product.Currency,
+				CurrencyBalance: roles[index].Currencies[product.Currency],
+				ErrorCode:       mall.INSUFFICIENT_CURRENCY,
+				ErrorMessage:    product.Currency + "不足。",
+			}
+		}
+		targetIndex, ok := nextRoleItemIndex(roles[index].Items, "商城", defaultMallCap)
+		if !ok {
+			return mall.PurchaseResult{
+				Success:      false,
+				ProductID:    product.ProductID,
+				Quantity:     quantity,
+				RequestID:    requestID,
+				ErrorCode:    "MALL_BAG_FULL",
+				ErrorMessage: "商城背包已满。",
+			}
+		}
+		roles[index].Currencies[product.Currency] -= totalPrice
+		roles[index].Items = normalizeRoleItems(append(roles[index].Items, RoleItem{
+			Type:        "商城",
+			Name:        product.Name,
+			ItemType:    "mall",
+			Display:     product.Icon,
+			Description: product.Description,
+			Count:       quantity,
+			Index:       targetIndex,
+			Level:       1,
+			EndTime:     0,
+			Owner:       roles[index].DisplayName,
+			ItemLevel:   1,
+		}))
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist mall purchase failed: %v", err)
+		}
+		result := mall.PurchaseResult{
+			Success:         true,
+			ProductID:       product.ProductID,
+			Quantity:        quantity,
+			RequestID:       requestID,
+			CurrencyName:    product.Currency,
+			CurrencyBalance: roles[index].Currencies[product.Currency],
+		}
+		if requestID != "" {
+			store.mallRequests[roleID+":"+requestID] = result
+		}
+		return result
+	}
+
+	return mall.PurchaseResult{
+		Success:      false,
+		ProductID:    product.ProductID,
+		Quantity:     quantity,
+		RequestID:    requestID,
+		ErrorCode:    "ROLE_NOT_FOUND",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, count int) RoleEquipItemResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	sourceType = strings.TrimSpace(sourceType)
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		sourceItem, ok := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if !ok {
+			return RoleEquipItemResult{
+				Role:         withRoleRuntimeDefaults(roles[index]),
+				PlayerBase:   playerBaseDataFromRole(playerID, roles[index]),
+				Found:        true,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "物品不存在。",
+			}
+		}
+
+		targetIndex, ok := roleEquipTargetIndex(sourceItem)
+		if !ok {
+			return RoleEquipItemResult{
+				Role:         withRoleRuntimeDefaults(roles[index]),
+				PlayerBase:   playerBaseDataFromRole(playerID, roles[index]),
+				Found:        true,
+				ErrorCode:    "not_equipment",
+				ErrorMessage: "该物品不能装备。",
+			}
+		}
+
+		updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
+		var replacedItem *RoleItem
+		for _, item := range roles[index].Items {
+			if item.Type == sourceType && item.Index == sourceIndex {
+				continue
+			}
+			if item.Type == "装备" && item.Index == targetIndex {
+				copyItem := item
+				replacedItem = &copyItem
+				continue
+			}
+			updatedItems = append(updatedItems, item)
+		}
+
+		if replacedItem != nil && sourceType != "装备" {
+			replacedItem.Type = sourceType
+			replacedItem.Index = sourceIndex
+			updatedItems = append(updatedItems, normalizeRoleItem(*replacedItem))
+		}
+
+		equippedItem := sourceItem
+		equippedItem.Type = "装备"
+		equippedItem.Index = targetIndex
+		if count > 0 && count < equippedItem.Count {
+			equippedItem.Count = count
+		}
+		updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
+		roles[index].Items = normalizeRoleItems(updatedItems)
+		roles[index].SourceQuery = applyRoleItemAppearanceToSourceQuery(roles[index].SourceQuery, equippedItem)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist equipped item failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		return RoleEquipItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			EquippedItem: equippedItem,
+			ClearedItems: []RoleItemClear{{
+				Type:  sourceType,
+				Index: sourceIndex,
+			}},
+			Found:    true,
+			Equipped: true,
+		}
+	}
+
+	return RoleEquipItemResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func roleContainerCapacity(containerType string) (int, bool) {
+	switch containerType {
+	case "背包":
+		return defaultBagCap, true
+	case "装备":
+		return defaultEquipCap, true
+	case "商城":
+		return defaultMallCap, true
+	default:
+		return 0, false
+	}
+}
+
+func nextRoleItemIndex(items []RoleItem, containerType string, capacity int) (int, bool) {
+	used := make(map[int]bool, len(items))
+	for _, item := range items {
+		if item.Type == containerType {
+			used[item.Index] = true
+		}
+	}
+	for index := 0; index < capacity; index += 1 {
+		if !used[index] {
+			return index, true
+		}
+	}
+	return 0, false
+}
+
+func findRoleItem(items []RoleItem, itemType string, index int) (RoleItem, bool) {
+	for _, item := range items {
+		if item.Type == itemType && item.Index == index {
+			return item, true
+		}
+	}
+	return RoleItem{}, false
+}
+
+func roleEquipTargetIndex(item RoleItem) (int, bool) {
+	if item.ItemType != "equip" {
+		return 0, false
+	}
+	switch item.Name {
+	case "铁斧":
+		return 3, true
+	case "蓝布衣":
+		return 4, true
+	case "蓝布裤":
+		return 5, true
+	case "布鞋":
+		return 12, true
+	}
+	if strings.Contains(item.Description, "武器") {
+		return 3, true
+	}
+	if strings.Contains(item.Description, "护具·躯干") {
+		return 4, true
+	}
+	if strings.Contains(item.Description, "护具·腿") {
+		return 5, true
+	}
+	if strings.Contains(item.Description, "护具·足部") {
+		return 12, true
+	}
+	return 0, false
+}
+
+func applyRoleItemAppearanceToSourceQuery(sourceQuery string, item RoleItem) string {
+	switch item.Name {
+	case "铁斧":
+		return setSourceQueryParam(sourceQuery, "w8", "5")
+	case "蓝布衣":
+		return setSourceQueryParam(sourceQuery, "c", "1")
+	case "蓝布裤":
+		return setSourceQueryParam(sourceQuery, "p", "1")
+	case "布鞋":
+		return setSourceQueryParam(sourceQuery, "se", "1")
+	}
+	return sourceQuery
+}
+
+func setSourceQueryParam(sourceQuery string, key string, value string) string {
+	sourceQuery = strings.TrimSpace(sourceQuery)
+	if sourceQuery == "" {
+		sourceQuery = "human/human.swf?"
+	}
+
+	base := sourceQuery
+	query := ""
+	if separator := strings.Index(sourceQuery, "?"); separator >= 0 {
+		base = sourceQuery[:separator]
+		query = sourceQuery[separator+1:]
+	}
+	if base == "" {
+		base = "human/human.swf"
+	}
+
+	parts := make([]string, 0)
+	for _, part := range strings.Split(query, "&") {
+		part = strings.TrimSpace(part)
+		if part == "" || strings.HasPrefix(part, key+"=") {
+			continue
+		}
+		parts = append(parts, part)
+	}
+	parts = append(parts, key+"="+value)
+	return base + "?" + strings.Join(parts, "&") + "&"
+}
+
+func (store *Store) LearnRoleSkill(playerID string, roleID string, skill RoleSkill) ([]RoleSkill, int, bool, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		skill = normalizeRoleSkill(skill)
+		if skill.Name == "" {
+			return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, false
+		}
+
+		for _, existing := range roles[index].Skills {
+			if existing.Name == skill.Name {
+				return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, false
+			}
+		}
+
+		if len(roles[index].Skills) >= defaultSkillCap {
+			return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, false
+		}
+
+		roles[index].Skills = append(roles[index].Skills, skill)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist learned skill failed: %v", err)
+		}
+
+		return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, true
+	}
+
+	return nil, defaultSkillCap, false, false
+}
+
+func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill RoleSkill, cost RoleCurrencies) RoleSkillPurchaseResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		skill = normalizeRoleSkill(skill)
+		currentSkills := cloneRoleSkills(roles[index].Skills)
+		currentCurrencies := cloneRoleCurrencies(roles[index].Currencies)
+		if skill.Name == "" {
+			return RoleSkillPurchaseResult{
+				Skills:       currentSkills,
+				SkillCap:     defaultSkillCap,
+				Currencies:   currentCurrencies,
+				Found:        true,
+				ErrorCode:    "invalid_skill",
+				ErrorMessage: "技能不存在。",
+			}
+		}
+
+		for _, existing := range roles[index].Skills {
+			if existing.Name == skill.Name {
+				return RoleSkillPurchaseResult{
+					Skills:       currentSkills,
+					SkillCap:     defaultSkillCap,
+					Currencies:   currentCurrencies,
+					Found:        true,
+					ErrorCode:    "already_learned",
+					ErrorMessage: "已经学会该技能。",
+				}
+			}
+		}
+
+		if len(roles[index].Skills) >= defaultSkillCap {
+			return RoleSkillPurchaseResult{
+				Skills:       currentSkills,
+				SkillCap:     defaultSkillCap,
+				Currencies:   currentCurrencies,
+				Found:        true,
+				ErrorCode:    "skill_cap_full",
+				ErrorMessage: "可学习技能数量已满。",
+			}
+		}
+
+		normalizedCost := normalizeRoleCurrencies(cost)
+		for name, count := range normalizedCost {
+			if roles[index].Currencies[name] < count {
+				return RoleSkillPurchaseResult{
+					Skills:       currentSkills,
+					SkillCap:     defaultSkillCap,
+					Currencies:   currentCurrencies,
+					Found:        true,
+					ErrorCode:    "not_enough_currency",
+					ErrorMessage: fmt.Sprintf("%s不足。", name),
+				}
+			}
+		}
+
+		for name, count := range normalizedCost {
+			roles[index].Currencies[name] -= count
+		}
+		roles[index].Skills = append(roles[index].Skills, skill)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist purchased skill failed: %v", err)
+		}
+
+		return RoleSkillPurchaseResult{
+			Skills:     cloneRoleSkills(roles[index].Skills),
+			SkillCap:   defaultSkillCap,
+			Currencies: cloneRoleCurrencies(roles[index].Currencies),
+			Found:      true,
+			Learned:    true,
+		}
+	}
+
+	return RoleSkillPurchaseResult{
+		SkillCap:     defaultSkillCap,
+		Currencies:   RoleCurrencies{},
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
 }
 
 func (store *Store) RemoveRole(request RoleRemoveRequest) RoleRemoveResponse {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
-	account, ok := store.findAccountByPlayerIDLocked(request.PlayerID)
+	account, validationFailure, ok := store.validateRoleAccessLockedWithAccountLocked(request.PlayerID, request.SessionToken)
 	if !ok {
-		return RoleRemoveResponse{
-			Success:      false,
-			ErrorCode:    "2",
-			ErrorMessage: "帐号不存在!",
-		}
+		return validationFailure
 	}
 	if request.Password == "" {
 		return RoleRemoveResponse{
@@ -311,6 +1387,9 @@ func (store *Store) RemoveRole(request RoleRemoveRequest) RoleRemoveResponse {
 	if removed {
 		store.rolesByPID[request.PlayerID] = updatedRoles
 		store.normalizeRoleIDsLocked(request.PlayerID)
+		if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
+			log.Printf("[session.Store] persist removed role failed: %v", err)
+		}
 		log.Printf(
 			"[session.Store] RemoveRole success playerId=%s roleId=%s rolesAfter=%s",
 			request.PlayerID,
@@ -331,6 +1410,49 @@ func (store *Store) RemoveRole(request RoleRemoveRequest) RoleRemoveResponse {
 	}
 }
 
+func (store *Store) validateRoleAccessLocked(playerID string, sessionToken string) (RoleRemoveResponse, bool) {
+	_, failure, ok := store.validateRoleAccessLockedWithAccountLocked(playerID, sessionToken)
+	return failure, ok
+}
+
+func (store *Store) validateRoleAccessLockedWithAccountLocked(playerID string, sessionToken string) (AccountRecord, RoleRemoveResponse, bool) {
+	trimmedPlayerID := strings.TrimSpace(playerID)
+	trimmedSessionToken := strings.TrimSpace(sessionToken)
+	if trimmedPlayerID == "" || trimmedSessionToken == "" {
+		return AccountRecord{}, RoleRemoveResponse{
+			Success:      false,
+			ErrorCode:    "6",
+			ErrorMessage: "登录状态已失效，请重新登录。",
+		}, false
+	}
+
+	account, ok := store.findAccountByPlayerIDLocked(trimmedPlayerID)
+	if ok {
+		if account.SessionToken != trimmedSessionToken {
+			return AccountRecord{}, RoleRemoveResponse{
+				Success:      false,
+				ErrorCode:    "6",
+				ErrorMessage: "登录状态已失效，请重新登录。",
+			}, false
+		}
+		return account, RoleRemoveResponse{}, true
+	}
+
+	localSessionToken := fmt.Sprintf("local-session-%s", trimmedPlayerID)
+	if trimmedSessionToken == localSessionToken {
+		return AccountRecord{
+			PlayerID:     trimmedPlayerID,
+			SessionToken: trimmedSessionToken,
+		}, RoleRemoveResponse{}, true
+	}
+
+	return AccountRecord{}, RoleRemoveResponse{
+		Success:      false,
+		ErrorCode:    "6",
+		ErrorMessage: "登录状态已失效，请重新登录。",
+	}, false
+}
+
 func (store *Store) findAccountByPlayerIDLocked(playerID string) (AccountRecord, bool) {
 	for _, account := range store.accountsByName {
 		if account.PlayerID == playerID {
@@ -341,12 +1463,13 @@ func (store *Store) findAccountByPlayerIDLocked(playerID string) (AccountRecord,
 	return AccountRecord{}, false
 }
 
-func (store *Store) normalizeRoleIDsLocked(playerID string) {
+func (store *Store) normalizeRoleIDsLocked(playerID string) bool {
 	roles := store.rolesByPID[playerID]
 	if len(roles) == 0 {
-		return
+		return false
 	}
 
+	changed := false
 	maxSeq := store.nextRoleSeqByPID[playerID]
 	usedRoleIDs := make(map[string]struct{}, len(roles))
 	for index := range roles {
@@ -365,45 +1488,15 @@ func (store *Store) normalizeRoleIDsLocked(playerID string) {
 		maxSeq += 1
 		roles[index].RoleID = fmt.Sprintf("%s-role-%03d", playerID, maxSeq)
 		usedRoleIDs[roles[index].RoleID] = struct{}{}
+		changed = true
 	}
 
 	store.rolesByPID[playerID] = roles
+	if store.nextRoleSeqByPID[playerID] != maxSeq {
+		changed = true
+	}
 	store.nextRoleSeqByPID[playerID] = maxSeq
-}
-
-func parseRoleSeq(playerID string, roleID string) (int, bool) {
-	prefix := playerID + "-role-"
-	if !strings.HasPrefix(roleID, prefix) {
-		return 0, false
-	}
-
-	roleSeq, err := strconv.Atoi(roleID[len(prefix):])
-	if err != nil || roleSeq <= 0 {
-		return 0, false
-	}
-
-	return roleSeq, true
-}
-
-func formatRoleSummaries(roles []RoleSummary) string {
-	if len(roles) == 0 {
-		return "[]"
-	}
-
-	parts := make([]string, 0, len(roles))
-	for _, role := range roles {
-		parts = append(parts, fmt.Sprintf("{id:%s,name:%s,level:%d}", role.RoleID, role.DisplayName, role.Level))
-	}
-
-	return "[" + strings.Join(parts, ", ") + "]"
-}
-
-func resolveVisualRoleID(presetID int) int {
-	if presetID > 0 {
-		return presetID
-	}
-
-	return 1
+	return changed
 }
 
 func validateUserName(userName string) string {

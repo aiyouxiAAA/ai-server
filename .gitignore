@@ -1,1 +1,4 @@
 tmp-ai-server*.log
+.ai-server.pid
+logs/ai-server-stdout.log
+logs/ai-server-stderr.log

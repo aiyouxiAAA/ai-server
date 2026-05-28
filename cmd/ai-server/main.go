@@ -255,15 +255,15 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
-		for _, itemInfo := range result.itemInfos {
-			if err := socketWriter.writePush(cmdClassicTownItemInfoPush, encodePayload(itemInfo)); err != nil {
-				log.Printf("[ai-server] write classic town item info failed: %v", err)
-				return
-			}
-		}
 		for _, itemClear := range result.itemClears {
 			if err := socketWriter.writePush(cmdClassicTownItemInfoClear, encodePayload(itemClear)); err != nil {
 				log.Printf("[ai-server] write classic town item clear failed: %v", err)
+				return
+			}
+		}
+		for _, itemInfo := range result.itemInfos {
+			if err := socketWriter.writePush(cmdClassicTownItemInfoPush, encodePayload(itemInfo)); err != nil {
+				log.Printf("[ai-server] write classic town item info failed: %v", err)
 				return
 			}
 		}

@@ -123,6 +123,7 @@ type ActionPush struct {
 	CommandID             string         `json:"commandId,omitempty"`
 	ActionName            string         `json:"actionName"`
 	SourceActionLabel     string         `json:"sourceActionLabel,omitempty"`
+	TargetInDef           bool           `json:"targetInDef,omitempty"`
 	TargetActionState     string         `json:"targetActionState,omitempty"`
 	TargetActionStateCode string         `json:"targetActionStateCode,omitempty"`
 	Damage                int            `json:"damage"`
@@ -179,9 +180,19 @@ type ActionResult struct {
 	ErrorCode    string
 }
 
+type commandProfile struct {
+	ActionName        string
+	SourceActionLabel string
+	DamageMultiplier  float64
+	MPCost            int
+	CanDodge          bool
+	CanFat            bool
+}
+
 func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, request StartRequest) (*Runtime, StartBundle, bool) {
 	mapID := strings.TrimSpace(request.MapID)
-	if mapID != "4" && mapID != "5" {
+	enemy, ok := sourceEnemyForMap(mapID)
+	if !ok {
 		return nil, StartBundle{}, false
 	}
 	mapName := strings.TrimSpace(request.MapName)
@@ -223,7 +234,6 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		playerDog = maxInt(0, rolePhysique.Dog)
 		playerFat = maxInt(0, rolePhysique.Fat)
 	}
-	enemy := sourceEnemyForMap(mapID)
 	cells := []CellInfoPush{
 		{
 			BattleID:     battleID,
@@ -307,9 +317,13 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		}
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, 0)
-		runtime.Phase = PhaseFinished
+		runtime.Phase = PhasePlaying
+		runtime.PendingStart = nil
+		runtime.PendingOver = runtime.buildOver(CampEnemy, true)
 		return ActionResult{
-			Over: runtime.buildOver(CampEnemy, true),
+			Actions: []ActionPush{
+				runtime.resolveSelfAction(actor, commandID, "逃跑", "escapeSuccess"),
+			},
 		}
 	case CommandDefense:
 		if !runtime.isSelfTarget(actor, request.TargetHandle) {
@@ -331,7 +345,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, runtime.powerFor(actor.Handle)+1)
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveSelfAction(actor, commandID, "蓄气", "store"),
+			runtime.resolveSelfAction(actor, commandID, "蓄力", "def"),
 		})
 	}
 
@@ -479,36 +493,43 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 }
 
 func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush, commandID string) ActionPush {
-	multiplier := 1.0
-	actionName := actor.CommandLabel
-	sourceActionLabel := "nomalAtk"
-	switch commandID {
-	case CommandMiZhan:
-		multiplier = 1.45
-		actionName = "密斩"
-		sourceActionLabel = "manycut"
-	case CommandNormalAttack, CommandEnemyAttack:
-		actionName = "普通攻击"
-	}
-	defense := target.Defense
-	if runtime.DefendingHandles[target.Handle] {
-		defense *= 2
-	}
-	damage := maxInt(1, int(math.Round(float64(actor.Attack)*multiplier))-defense)
+	profile := battleCommandProfile(actor, commandID)
+	targetInDef := runtime.DefendingHandles[target.Handle]
+	defense := effectiveBattleDefense(target, targetInDef)
 	targetActionState := "normal"
 	targetActionStateCode := "0"
-	if runtime.resolveCriticalHit(actor, target, commandID) {
+	if runtime.resolveDodge(actor, target, commandID, profile) {
+		return ActionPush{
+			BattleID:              runtime.BattleID,
+			ActorHandle:           actor.Handle,
+			TargetHandle:          target.Handle,
+			CommandID:             commandID,
+			ActionName:            profile.ActionName,
+			SourceActionLabel:     profile.SourceActionLabel,
+			TargetInDef:           targetInDef,
+			TargetActionState:     "dog",
+			TargetActionStateCode: "1",
+			Damage:                0,
+			TargetHP:              target.HP,
+			TargetDead:            target.HP <= 0,
+			RefreshInfos:          []CellInfoPush{*target},
+			Round:                 runtime.Round,
+			Sequence:              runtime.nextSequence,
+		}
+	}
+	damage := baseBattleDamage(actor, profile, defense)
+	if runtime.resolveCriticalHit(actor, target, commandID, profile) {
 		damage *= 2
 		targetActionState = "fat"
 		targetActionStateCode = "2"
 	}
 	target.HP = maxInt(0, target.HP-damage)
 	delete(runtime.DefendingHandles, target.Handle)
-	if commandID == CommandMiZhan {
-		actor.MP = maxInt(0, actor.MP-miZhanMPCost)
+	if profile.MPCost > 0 {
+		actor.MP = maxInt(0, actor.MP-profile.MPCost)
 	}
 	refreshInfos := []CellInfoPush{*target}
-	if commandID == CommandMiZhan {
+	if profile.MPCost > 0 {
 		refreshInfos = []CellInfoPush{*actor, *target}
 	}
 	return ActionPush{
@@ -516,8 +537,9 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 		ActorHandle:           actor.Handle,
 		TargetHandle:          target.Handle,
 		CommandID:             commandID,
-		ActionName:            actionName,
-		SourceActionLabel:     sourceActionLabel,
+		ActionName:            profile.ActionName,
+		SourceActionLabel:     profile.SourceActionLabel,
+		TargetInDef:           targetInDef,
 		TargetActionState:     targetActionState,
 		TargetActionStateCode: targetActionStateCode,
 		Damage:                damage,
@@ -529,22 +551,82 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 	}
 }
 
-func (runtime *Runtime) resolveCriticalHit(actor *CellInfoPush, target *CellInfoPush, commandID string) bool {
-	if actor == nil || target == nil || actor.Fat <= 0 {
-		return false
+func battleCommandProfile(actor *CellInfoPush, commandID string) commandProfile {
+	profile := commandProfile{
+		ActionName:        "普通攻击",
+		SourceActionLabel: "nomalAtk",
+		DamageMultiplier:  1,
+		CanDodge:          true,
+		CanFat:            true,
 	}
-	if commandID != CommandNormalAttack && commandID != CommandEnemyAttack {
+	if actor != nil && strings.TrimSpace(actor.CommandLabel) != "" {
+		profile.ActionName = actor.CommandLabel
+	}
+	switch commandID {
+	case CommandMiZhan:
+		profile.ActionName = "密斩"
+		profile.SourceActionLabel = "manycut"
+		profile.DamageMultiplier = 1.45
+		profile.MPCost = miZhanMPCost
+		profile.CanDodge = false
+		profile.CanFat = false
+	case CommandNormalAttack, CommandEnemyAttack:
+		profile.ActionName = "普通攻击"
+	}
+	return profile
+}
+
+func effectiveBattleDefense(target *CellInfoPush, targetInDef bool) int {
+	if target == nil {
+		return 0
+	}
+	if targetInDef {
+		return target.Defense * 2
+	}
+	return target.Defense
+}
+
+func baseBattleDamage(actor *CellInfoPush, profile commandProfile, defense int) int {
+	if actor == nil {
+		return 0
+	}
+	return maxInt(1, int(math.Round(float64(actor.Attack)*profile.DamageMultiplier))-defense)
+}
+
+func (runtime *Runtime) resolveCriticalHit(actor *CellInfoPush, target *CellInfoPush, commandID string, profile commandProfile) bool {
+	if !profile.CanFat || actor == nil || target == nil || actor.Fat <= 0 {
 		return false
 	}
 	if actor.Fat >= 100 {
 		return true
 	}
+	return runtime.hashBattleRoll(actor, target, commandID) < actor.Fat
+}
+
+func (runtime *Runtime) resolveDodge(actor *CellInfoPush, target *CellInfoPush, commandID string, profile commandProfile) bool {
+	if !profile.CanDodge || actor == nil || target == nil || target.Dog <= 0 {
+		return false
+	}
+	if actor.Hit <= 0 {
+		return true
+	}
+	chance := target.Dog - actor.Hit + 100
+	if chance <= 0 {
+		return false
+	}
+	if chance >= 100 {
+		return true
+	}
+	return runtime.hashBattleRoll(actor, target, commandID) < chance
+}
+
+func (runtime *Runtime) hashBattleRoll(actor *CellInfoPush, target *CellInfoPush, commandID string) int {
 	score := 0
 	seed := fmt.Sprintf("%s:%d:%d:%s:%s:%s", runtime.BattleID, runtime.Round, runtime.nextSequence, actor.Handle, target.Handle, commandID)
 	for _, char := range seed {
 		score = (score*31 + int(char)) % 100
 	}
-	return score < actor.Fat
+	return score
 }
 
 func (runtime *Runtime) resolveSelfAction(
@@ -706,45 +788,165 @@ func (runtime *Runtime) resolveWinner() Camp {
 	return ""
 }
 
-func sourceEnemyForMap(mapID string) CellInfoPush {
-	switch mapID {
-	case "5":
-		return CellInfoPush{
-			Camp:         CampEnemy,
-			Handle:       "7069963681398983",
-			Name:         "山林狼兽",
-			DisplayURL:   "monstermap/graywolf.swf",
-			Level:        1,
-			XScale:       100,
-			YScale:       100,
-			MaxHP:        72,
-			HP:           72,
-			MaxMP:        9,
-			MP:           9,
-			Speed:        15,
-			Attack:       9,
-			Defense:      9,
-			CommandLabel: "普通攻击",
-		}
-	default:
-		return CellInfoPush{
-			Camp:         CampEnemy,
-			Handle:       "7089932810872715",
-			Name:         "山林蜘蛛",
-			DisplayURL:   "monstermap/forestspider.swf",
-			Level:        1,
-			XScale:       100,
-			YScale:       100,
-			MaxHP:        72,
-			HP:           72,
-			MaxMP:        9,
-			MP:           9,
-			Speed:        15,
-			Attack:       9,
-			Defense:      9,
-			CommandLabel: "普通攻击",
-		}
-	}
+var sourceWildEnemyByMapID = map[string]CellInfoPush{
+	"4": {
+		Camp:         CampEnemy,
+		Handle:       "7089932810872715",
+		Name:         "山林蜘蛛",
+		DisplayURL:   "monstermap/forestspider.swf",
+		Level:        1,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        72,
+		HP:           72,
+		MaxMP:        9,
+		MP:           9,
+		Speed:        15,
+		Attack:       9,
+		Defense:      9,
+		CommandLabel: "普通攻击",
+	},
+	"5": {
+		Camp:         CampEnemy,
+		Handle:       "7069963681398983",
+		Name:         "山林狼兽",
+		DisplayURL:   "monstermap/graywolf.swf",
+		Level:        1,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        72,
+		HP:           72,
+		MaxMP:        9,
+		MP:           9,
+		Speed:        15,
+		Attack:       9,
+		Defense:      9,
+		CommandLabel: "普通攻击",
+	},
+	"84": {
+		Camp:         CampEnemy,
+		Handle:       "6807541628986490",
+		Name:         "绿甲螳螂",
+		DisplayURL:   "monstermap/greenmantis.swf",
+		Level:        3,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        40,
+		HP:           40,
+		MaxMP:        40,
+		MP:           40,
+		Speed:        110,
+		Attack:       8,
+		Defense:      8,
+		CommandLabel: "普通攻击",
+	},
+	"85": {
+		Camp:         CampEnemy,
+		Handle:       "8881541656023182",
+		Name:         "绿甲螳螂",
+		DisplayURL:   "monstermap/greenmantis.swf",
+		Level:        4,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        45,
+		HP:           45,
+		MaxMP:        45,
+		MP:           45,
+		Speed:        140,
+		Attack:       9,
+		Defense:      9,
+		CommandLabel: "普通攻击",
+	},
+	"86": {
+		Camp:         CampEnemy,
+		Handle:       "1200541669444892",
+		Name:         "小竹妖",
+		DisplayURL:   "monstermap/bambooboy.swf",
+		Level:        6,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        90,
+		HP:           90,
+		MaxMP:        90,
+		MP:           90,
+		Speed:        180,
+		Attack:       14,
+		Defense:      14,
+		CommandLabel: "普通攻击",
+	},
+	"87": {
+		Camp:         CampEnemy,
+		Handle:       "4857541734860164",
+		Name:         "跳跳竹",
+		DisplayURL:   "monstermap/jumpboo.swf",
+		Level:        6,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        94,
+		HP:           94,
+		MaxMP:        94,
+		MP:           94,
+		Speed:        180,
+		Attack:       14,
+		Defense:      14,
+		CommandLabel: "普通攻击",
+	},
+	"88": {
+		Camp:         CampEnemy,
+		Handle:       "6668541757519206",
+		Name:         "刀手螳螂",
+		DisplayURL:   "monstermap/kinfemantis.swf",
+		Level:        6,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        90,
+		HP:           90,
+		MaxMP:        90,
+		MP:           90,
+		Speed:        180,
+		Attack:       14,
+		Defense:      14,
+		CommandLabel: "普通攻击",
+	},
+	"90": {
+		Camp:         CampEnemy,
+		Handle:       "8848541914382828",
+		Name:         "竹炮",
+		DisplayURL:   "monstermap/boobomb.swf",
+		Level:        7,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        100,
+		HP:           100,
+		MaxMP:        100,
+		MP:           100,
+		Speed:        190,
+		Attack:       7,
+		Defense:      7,
+		CommandLabel: "普通攻击",
+	},
+	"97": {
+		Camp:         CampEnemy,
+		Handle:       "8100462475820589",
+		Name:         "小竹妖",
+		DisplayURL:   "monstermap/bambooboy.swf",
+		Level:        5,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        80,
+		HP:           80,
+		MaxMP:        80,
+		MP:           80,
+		Speed:        150,
+		Attack:       11,
+		Defense:      11,
+		CommandLabel: "普通攻击",
+	},
+}
+
+func sourceEnemyForMap(mapID string) (CellInfoPush, bool) {
+	enemy, ok := sourceWildEnemyByMapID[mapID]
+	return enemy, ok
 }
 
 func (cell CellInfoPush) withBattleID(battleID string) CellInfoPush {
@@ -753,17 +955,21 @@ func (cell CellInfoPush) withBattleID(battleID string) CellInfoPush {
 }
 
 func queueIndexForMap(mapID string) int {
-	if mapID == "5" {
+	switch mapID {
+	case "5", "84", "85", "86", "87", "88", "90", "97":
 		return 1
+	default:
+		return 0
 	}
-	return 0
 }
 
 func enemyQueueIndexForMap(mapID string) int {
-	if mapID == "5" {
+	switch mapID {
+	case "5", "84", "85", "86", "87", "88", "90", "97":
 		return 4
+	default:
+		return 0
 	}
-	return 0
 }
 
 func defaultString(value string, fallback string) string {

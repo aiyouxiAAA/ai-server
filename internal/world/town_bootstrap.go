@@ -80,7 +80,24 @@ type sourceNPCEntry struct {
 	Height      int
 	SpawnFlash  SpawnPoint
 	QuestState  int
+	Kind        string
 	Dialogue    *sourceNPCDialogueEntry
+}
+
+type SourceCollectionPoint struct {
+	Handle           string
+	MapID            int
+	DisplayName      string
+	SourceQuery      string
+	SpriteName       string
+	Width            int
+	Height           int
+	SpawnFlash       SpawnPoint
+	QuestState       int
+	RequiredItemName string
+	RewardItemName   string
+	QuestTitle       string
+	QuestDescription string
 }
 
 type sourceNPCDialogueEntry struct {
@@ -117,6 +134,10 @@ type sourceTransportLink struct {
 	Slot      int
 }
 
+var capturedTownTransportDestinations = map[string]TownTransportDestination{
+	"transp_0": {MapID: 3, Spawn: SpawnPoint{X: 825, Y: 624}},
+}
+
 type townMapsIndexFile struct {
 	Maps []townMapsIndexEntry `json:"maps"`
 }
@@ -130,26 +151,46 @@ type townMapsIndexEntry struct {
 var sourceWildBattleMapIDs = map[int]struct{}{
 	4:  {},
 	5:  {},
-	9:  {},
-	13: {},
-	14: {},
-	15: {},
-	16: {},
-	17: {},
-	18: {},
-	19: {},
-	20: {},
-	21: {},
-	22: {},
-	23: {},
-	24: {},
-	25: {},
-	26: {},
-	27: {},
-	28: {},
-	29: {},
-	30: {},
-	32: {},
+	84: {},
+	85: {},
+	86: {},
+	87: {},
+	88: {},
+	90: {},
+	97: {},
+}
+
+var sourceCollectionPointsByHandle = map[string]SourceCollectionPoint{
+	"2810542613719308": {
+		Handle:           "2810542613719308",
+		MapID:            89,
+		DisplayName:      "金银花采集点",
+		SourceQuery:      "transp/flag2.swf",
+		SpriteName:       "flag2",
+		Width:            158,
+		Height:           258,
+		SpawnFlash:       SpawnPoint{X: 1242, Y: 451},
+		QuestState:       2,
+		RequiredItemName: "普通采集手套",
+		RewardItemName:   "金银花",
+		QuestTitle:       "采集金银花",
+		QuestDescription: "<ml>采集金银花<br/>[g]=前往【竹林_6】采集点，携带普通采集手套采集金银花。",
+	},
+	"2050542611677774": {
+		Handle:           "2050542611677774",
+		MapID:            91,
+		DisplayName:      "黄连采集点",
+		SourceQuery:      "transp/flag2.swf",
+		SpriteName:       "flag2",
+		Width:            158,
+		Height:           258,
+		SpawnFlash:       SpawnPoint{X: 1755, Y: 452},
+		QuestState:       2,
+		RequiredItemName: "普通采集手套",
+		RewardItemName:   "黄连",
+		QuestTitle:       "采集黄连",
+		QuestDescription: "<ml>采集黄连<br/>[g]=前往【竹林_8】采集点，携带普通采集手套采集黄连。",
+	},
 }
 
 //go:embed town_maps_index.json
@@ -169,7 +210,75 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOne.SupportsTransferIn = true
 	definitions[1] = mapOne
 
-	for _, link := range yunyinSourceTransportLinks {
+	mapTwo := definitions[2]
+	mapTwo.ID = 2
+	mapTwo.Name = "大佛村"
+	mapTwo.XMLURL = "xml/2.xml"
+	mapTwo.DefaultSpawn = SpawnPoint{X: 1000, Y: 600}
+	mapTwo.SourceNPCs = map2SourceNPCs
+	mapTwo.SupportsTransferIn = true
+	definitions[2] = mapTwo
+
+	mapThree := definitions[3]
+	mapThree.ID = 3
+	mapThree.Name = "涧庭村"
+	mapThree.XMLURL = "xml/3.xml"
+	mapThree.DefaultSpawn = SpawnPoint{X: 825, Y: 624}
+	mapThree.SourceNPCs = map3SourceNPCs
+	mapThree.SupportsTransferIn = true
+	definitions[3] = mapThree
+
+	mapFortyNine := definitions[49]
+	mapFortyNine.SourceNPCs = map49SourceNPCs
+	definitions[49] = mapFortyNine
+
+	mapFifty := definitions[50]
+	mapFifty.SourceNPCs = map50SourceNPCs
+	definitions[50] = mapFifty
+
+	mapSeventyNine := definitions[79]
+	mapSeventyNine.SourceNPCs = map79SourceNPCs
+	definitions[79] = mapSeventyNine
+
+	mapEighty := definitions[80]
+	mapEighty.SourceNPCs = map80SourceNPCs
+	definitions[80] = mapEighty
+
+	mapEightyOne := definitions[81]
+	mapEightyOne.SourceNPCs = map81SourceNPCs
+	definitions[81] = mapEightyOne
+
+	mapEightyTwo := definitions[82]
+	mapEightyTwo.SourceNPCs = map82SourceNPCs
+	definitions[82] = mapEightyTwo
+
+	mapEightyThree := definitions[83]
+	mapEightyThree.SourceNPCs = map83SourceNPCs
+	definitions[83] = mapEightyThree
+
+	for _, point := range sourceCollectionPointsByHandle {
+		mapDefinition, ok := definitions[point.MapID]
+		if !ok {
+			continue
+		}
+		if !hasSourceNPCHandle(mapDefinition.SourceNPCs, point.Handle) {
+			mapDefinition.SourceNPCs = append(mapDefinition.SourceNPCs, sourceNPCEntry{
+				Handle:      point.Handle,
+				RoleID:      point.Handle,
+				DisplayName: point.DisplayName,
+				SourceQuery: point.SourceQuery,
+				SpriteName:  point.SpriteName,
+				Width:       point.Width,
+				Height:      point.Height,
+				SpawnFlash:  point.SpawnFlash,
+				QuestState:  point.QuestState,
+				Kind:        "collection",
+			})
+		}
+		definitions[point.MapID] = mapDefinition
+	}
+
+	for _, link := range sourceTransportLinks {
 		mapDefinition, ok := definitions[link.FromMapID]
 		if !ok {
 			continue
@@ -177,11 +286,22 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 		if _, ok := definitions[link.ToMapID]; !ok {
 			continue
 		}
-		mapDefinition.SourceNPCs = append(mapDefinition.SourceNPCs, buildSourceTransportNPC(link))
+		if !hasSourceNPCHandle(mapDefinition.SourceNPCs, "transp_"+itoa(link.ToMapID)) {
+			mapDefinition.SourceNPCs = append(mapDefinition.SourceNPCs, buildSourceTransportNPC(link))
+		}
 		definitions[link.FromMapID] = mapDefinition
 	}
 
 	return definitions
+}
+
+func hasSourceNPCHandle(npcs []sourceNPCEntry, handle string) bool {
+	for _, npc := range npcs {
+		if npc.Handle == handle {
+			return true
+		}
+	}
+	return false
 }
 
 func loadTownMapIndexDefinitions() map[int]townMapBootstrapDefinition {
@@ -215,6 +335,10 @@ func loadTownMapIndexDefinitions() map[int]townMapBootstrapDefinition {
 
 func resolveSourceMapDefaultSpawn(mapName string) SpawnPoint {
 	switch mapName {
+	case "平原_15":
+		return SpawnPoint{X: 2862, Y: 586}
+	case "平原_16":
+		return SpawnPoint{X: 131, Y: 423}
 	case "云隐村口_1", "云隐村口_2":
 		return SpawnPoint{X: 1000, Y: 450}
 	case "云隐山道_3", "云隐山道_4":
@@ -223,6 +347,20 @@ func resolveSourceMapDefaultSpawn(mapName string) SpawnPoint {
 		return SpawnPoint{X: 500, Y: 400}
 	case "树洞":
 		return SpawnPoint{X: 500, Y: 550}
+	case "涧庭村口":
+		return SpawnPoint{X: 180, Y: 500}
+	case "涧庭道_1":
+		return SpawnPoint{X: 200, Y: 482}
+	case "黄泉路_1":
+		return SpawnPoint{X: 2037, Y: 460}
+	case "黄泉路_2":
+		return SpawnPoint{X: 2800, Y: 486}
+	case "黄泉路_3":
+		return SpawnPoint{X: 2828, Y: 429}
+	case "奈何桥":
+		return SpawnPoint{X: 2809, Y: 433}
+	case "重生台":
+		return SpawnPoint{X: 2788, Y: 456}
 	default:
 		return SpawnPoint{X: 1000, Y: 600}
 	}
@@ -274,6 +412,10 @@ func buildTownBootstrap(
 		if roleID == "" {
 			roleID = npc.Handle
 		}
+		kind := npc.Kind
+		if kind == "" {
+			kind = "npc"
+		}
 		createRoles = append(createRoles, RolePush{
 			Handle:          npc.Handle,
 			RoleID:          roleID,
@@ -282,7 +424,7 @@ func buildTownBootstrap(
 			MapID:           mapID,
 			VisualRoleID:    0,
 			SourceQuery:     npc.SourceQuery,
-			Kind:            "npc",
+			Kind:            kind,
 			SpawnFlash:      npc.SpawnFlash,
 			SourceNPCVisual: buildNPCVisual(npc),
 		})
@@ -365,14 +507,23 @@ func BuildAnswerSpeak(handle string) AnswerSpeakPush {
 	}
 }
 
+func FindSourceCollectionPoint(handle string) (SourceCollectionPoint, bool) {
+	point, ok := sourceCollectionPointsByHandle[strings.TrimSpace(handle)]
+	return point, ok
+}
+
 func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *AnswerSpeakPush {
-	dialogue, ok := map1SourceNPCDialogueReplies[sourceNPCDialogueReplyKey{
+	key := sourceNPCDialogueReplyKey{
 		Handle:       handle,
 		MsgHandle:    msgHandle,
 		AnswerHandle: answerHandle,
-	}]
+	}
+	dialogue, ok := map1SourceNPCDialogueReplies[key]
 	if !ok {
-		return nil
+		dialogue, ok = map2SourceNPCDialogueReplies[key]
+		if !ok {
+			return nil
+		}
 	}
 	if dialogue.MsgHandle == "1" && dialogue.Message == "" && dialogue.Answers == nil {
 		returnValue := BuildAnswerSpeak(handle)
@@ -388,8 +539,14 @@ func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *Ans
 }
 
 func ResolveTownTransportAnswer(handle string, answerHandle string) (TownTransportDestination, bool) {
-	if answerHandle != "goto" {
+	if answerHandle != "goto" && !isCapturedTownTransportConfirmAnswer(handle, answerHandle) {
 		return TownTransportDestination{}, false
+	}
+	if destination, ok := capturedTownTransportDestinations[handle]; ok {
+		if !SupportsTownTransferMap(destination.MapID) {
+			return TownTransportDestination{}, false
+		}
+		return destination, true
 	}
 	mapIDText, ok := strings.CutPrefix(handle, "transp_")
 	if !ok {
@@ -405,6 +562,10 @@ func ResolveTownTransportAnswer(handle string, answerHandle string) (TownTranspo
 		MapID: mapID,
 		Spawn: mapDefinition.DefaultSpawn,
 	}, true
+}
+
+func isCapturedTownTransportConfirmAnswer(handle string, answerHandle string) bool {
+	return handle == "transp_10" && answerHandle == "1"
 }
 
 func buildSourceTransportNPC(link sourceTransportLink) sourceNPCEntry {

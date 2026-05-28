@@ -225,6 +225,17 @@ type RoleEquipItemResult struct {
 	ErrorMessage string
 }
 
+type RoleMoveItemResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	UpdatedItems []RoleItem
+	ClearedItems []RoleItemClear
+	Found        bool
+	Moved        bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
 type RoleUseItemResult struct {
 	Role         RoleSummary
 	PlayerBase   PlayerBaseData
@@ -1104,6 +1115,135 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 	}
 
 	return RoleEquipItemResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, targetType string, targetIndex int, count int) RoleMoveItemResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	sourceType = strings.TrimSpace(sourceType)
+	targetType = strings.TrimSpace(targetType)
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		capacity, supported := roleContainerCapacity(targetType)
+		if !supported || targetIndex < 0 || targetIndex >= capacity {
+			return RoleMoveItemResult{
+				Role:         withRoleRuntimeDefaults(roles[index]),
+				PlayerBase:   playerBaseDataFromRole(playerID, roles[index]),
+				Found:        true,
+				ErrorCode:    "target_invalid",
+				ErrorMessage: "目标位置无效。",
+			}
+		}
+
+		_, ok := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if !ok {
+			return RoleMoveItemResult{
+				Role:         withRoleRuntimeDefaults(roles[index]),
+				PlayerBase:   playerBaseDataFromRole(playerID, roles[index]),
+				Found:        true,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "物品不存在。",
+			}
+		}
+		if sourceType == targetType && sourceIndex == targetIndex {
+			return RoleMoveItemResult{
+				Role:       withRoleRuntimeDefaults(roles[index]),
+				PlayerBase: playerBaseDataFromRole(playerID, roles[index]),
+				Found:      true,
+			}
+		}
+
+		sourceItem, _ := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if count <= 0 || count > sourceItem.Count {
+			count = sourceItem.Count
+		}
+		moveCount := count
+		targetItem, hasTarget := findRoleItem(roles[index].Items, targetType, targetIndex)
+		canStack := hasTarget && sourceType == targetType && strings.TrimSpace(sourceItem.Name) != "" && sourceItem.Name == targetItem.Name
+		canSplitMove := sourceType == targetType && targetType == "背包" && moveCount < sourceItem.Count && !hasTarget
+		updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
+		updatedResultItems := make([]RoleItem, 0, 3)
+		for _, item := range roles[index].Items {
+			switch {
+			case canStack && item.Type == sourceType && item.Index == sourceIndex:
+				if sourceItem.Count > moveCount {
+					remaining := item
+					remaining.Count = sourceItem.Count - moveCount
+					updatedItems = append(updatedItems, normalizeRoleItem(remaining))
+					updatedResultItems = append(updatedResultItems, normalizeRoleItem(remaining))
+				}
+			case canStack && item.Type == targetType && item.Index == targetIndex:
+				stacked := item
+				stacked.Count += moveCount
+				updatedItems = append(updatedItems, normalizeRoleItem(stacked))
+				updatedResultItems = append(updatedResultItems, normalizeRoleItem(stacked))
+			case canSplitMove && item.Type == sourceType && item.Index == sourceIndex:
+				remaining := item
+				remaining.Count = sourceItem.Count - moveCount
+				updatedItems = append(updatedItems, normalizeRoleItem(remaining))
+				updatedResultItems = append(updatedResultItems, normalizeRoleItem(remaining))
+				moved := item
+				moved.Type = targetType
+				moved.Index = targetIndex
+				moved.Count = moveCount
+				updatedItems = append(updatedItems, normalizeRoleItem(moved))
+				updatedResultItems = append(updatedResultItems, normalizeRoleItem(moved))
+			case item.Type == sourceType && item.Index == sourceIndex:
+				moved := item
+				moved.Type = targetType
+				moved.Index = targetIndex
+				moved.Count = moveCount
+				updatedItems = append(updatedItems, normalizeRoleItem(moved))
+				updatedResultItems = append(updatedResultItems, normalizeRoleItem(moved))
+			case hasTarget && item.Type == targetType && item.Index == targetIndex:
+				swapped := item
+				swapped.Type = sourceType
+				swapped.Index = sourceIndex
+				updatedItems = append(updatedItems, normalizeRoleItem(swapped))
+				updatedResultItems = append(updatedResultItems, normalizeRoleItem(swapped))
+			default:
+				updatedItems = append(updatedItems, item)
+			}
+		}
+
+		roles[index].Items = normalizeRoleItems(updatedItems)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist moved item failed: %v", err)
+		}
+
+			role := withRoleRuntimeDefaults(roles[index])
+			cleared := make([]RoleItemClear, 0, 2)
+			if !canSplitMove && !(canStack && sourceItem.Count > moveCount) {
+				cleared = append(cleared, RoleItemClear{Type: sourceType, Index: sourceIndex})
+			}
+			if sourceType != targetType || sourceIndex != targetIndex {
+				cleared = append(cleared, RoleItemClear{Type: targetType, Index: targetIndex})
+			}
+			if !hasTarget {
+				_ = targetItem
+			}
+		return RoleMoveItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			UpdatedItems: updatedResultItems,
+			ClearedItems: cleared,
+			Found:        true,
+			Moved:        true,
+		}
+	}
+
+	return RoleMoveItemResult{
 		Found:        false,
 		ErrorCode:    "role_missing",
 		ErrorMessage: "角色不存在。",

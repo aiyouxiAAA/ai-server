@@ -42,9 +42,12 @@ type classicTownContainerRequest struct {
 }
 
 type classicTownContainerMoveRequest struct {
-	SourceType string   `json:"sourceType"`
-	TargetType string   `json:"targetType"`
-	Names      []string `json:"names,omitempty"`
+	SourceType  string   `json:"sourceType"`
+	TargetType  string   `json:"targetType"`
+	SourceIndex *int     `json:"sourceIndex,omitempty"`
+	TargetIndex *int     `json:"targetIndex,omitempty"`
+	Count       *int     `json:"count,omitempty"`
+	Names       []string `json:"names,omitempty"`
 }
 
 type classicTownEquipItemRequest struct {

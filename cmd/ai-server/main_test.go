@@ -171,6 +171,100 @@ func TestHandlePacketClassicTownActiveRolePushesAnswerSpeak(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownActiveCollectionGrantsRewardAndQuest(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	gloves, ok := session.CapturedRoleItemTemplate("普通采集手套")
+	if !ok {
+		t.Fatal("expected captured 普通采集手套 template")
+	}
+	gloves.Type = "背包"
+	gloves.Index = -1
+	gloves.Count = 1
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, gloves); !ok {
+		t.Fatal("expected to grant 普通采集手套 for collection test")
+	}
+	if selectedRole, playerBase, ok := store.GetRoleRuntimeData(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID); ok {
+		socketSession.selectedRole = &selectedRole
+		socketSession.playerBase = &playerBase
+	}
+	transferResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownTransferReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownTransferRequest{
+			MapID: "89",
+			X:     1242,
+			Y:     451,
+		}),
+	}, socketSession)
+	if !transferResult.handled || transferResult.townBootstrap == nil {
+		t.Fatalf("expected transfer to map89 bootstrap, got %+v", transferResult)
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveRoleReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRoleInteractionRequest{
+			Handle: "2810542613719308",
+			RoleID: "2810542613719308",
+			Kind:   "collection",
+			MapID:  "89",
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected collection activeRole to be handled")
+	}
+	if result.answerSpeak == nil || result.answerSpeak.Msg != "你获得了【金银花】。" {
+		t.Fatalf("expected collection success answerSpeak, got %+v", result.answerSpeak)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != "背包" || result.itemInfos[0].Name != "金银花" || result.itemInfos[0].Count != 1 {
+		t.Fatalf("expected 金银花 item push, got %+v", result.itemInfos)
+	}
+	if len(result.questInfos) != 1 || result.questInfos[0].Title != "采集金银花" {
+		t.Fatalf("expected collection quest info, got %+v", result.questInfos)
+	}
+	if len(result.questStates) != 1 || result.questStates[0].Handle != "2810542613719308" || result.questStates[0].State != 2 {
+		t.Fatalf("expected collection quest state refresh, got %+v", result.questStates)
+	}
+}
+
+func TestHandlePacketClassicTownActiveCollectionRequiresTool(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	transferResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownTransferReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownTransferRequest{
+			MapID: "91",
+			X:     1755,
+			Y:     452,
+		}),
+	}, socketSession)
+	if !transferResult.handled || transferResult.townBootstrap == nil {
+		t.Fatalf("expected transfer to map91 bootstrap, got %+v", transferResult)
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveRoleReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRoleInteractionRequest{
+			Handle: "2050542611677774",
+			RoleID: "2050542611677774",
+			Kind:   "collection",
+			MapID:  "91",
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected collection activeRole without tool to be handled")
+	}
+	if result.answerSpeak == nil || result.answerSpeak.Msg != "需要携带普通采集手套才能进行采集。" {
+		t.Fatalf("expected missing-tool answerSpeak, got %+v", result.answerSpeak)
+	}
+	if len(result.itemInfos) != 0 || len(result.questInfos) != 0 {
+		t.Fatalf("expected no reward without tool, got items=%+v quests=%+v", result.itemInfos, result.questInfos)
+	}
+}
+
 func TestHandlePacketClassicTownAnswerNoResponse(t *testing.T) {
 	store := session.NewStore()
 	result := handlePacket(store, protocol.Packet{
@@ -506,6 +600,147 @@ func TestHandlePacketClassicTownEquipItemMovesAxeAndPushesAppearance(t *testing.
 	}, socketSession)
 	if len(listResult.itemInfos) != 1 || listResult.itemInfos[0].Name != "铁斧" || listResult.itemInfos[0].Index != 3 {
 		t.Fatalf("expected equipped axe to persist in equipment list, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveMovesBagItemBySlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	sourceIndex := 19
+	targetIndex := 0
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  "背包",
+			TargetType:  "背包",
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected bag ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 {
+		t.Fatalf("expected source/target bag clears, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != "背包" || result.itemInfos[0].Name != "铁斧" || result.itemInfos[0].Index != 0 {
+		t.Fatalf("expected moved axe push at bag slot 0, got %+v", result.itemInfos)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "背包"}),
+	}, socketSession)
+	if len(listResult.itemInfos) != 1 || listResult.itemInfos[0].Name != "铁斧" || listResult.itemInfos[0].Index != 0 {
+		t.Fatalf("expected moved axe to persist in bag slot 0, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveStacksSameBagItems(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	roleID := socketSession.selectedRole.RoleID
+	playerID := socketSession.playerBase.PlayerID
+	template, ok := session.CapturedRoleItemTemplate("肉")
+	if !ok {
+		t.Fatal("expected captured 肉 template")
+	}
+	template.Type = "背包"
+	template.Index = 0
+	template.Count = 2
+	if _, ok := store.GrantRoleItem(playerID, roleID, template); !ok {
+		t.Fatal("expected first 肉 grant to succeed")
+	}
+	template.Index = 1
+	template.Count = 3
+	if _, ok := store.GrantRoleItem(playerID, roleID, template); !ok {
+		t.Fatal("expected second 肉 grant to succeed")
+	}
+
+	sourceIndex := 1
+	targetIndex := 0
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  "背包",
+			TargetType:  "背包",
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+		}),
+	}, socketSession)
+	if !result.handled {
+		t.Fatal("expected bag stack ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 {
+		t.Fatalf("expected source/target bag clears for stack, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Name != "肉" || result.itemInfos[0].Index != 0 || result.itemInfos[0].Count != 5 {
+		t.Fatalf("expected stacked 肉 push at slot 0 count 5, got %+v", result.itemInfos)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "背包"}),
+	}, socketSession)
+	items := itemInfosByName(listResult.itemInfos)
+	if items["肉"].Index != 0 || items["肉"].Count != 5 {
+		t.Fatalf("expected stacked 肉 to persist at slot 0 count 5, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveSplitsBagItemByCount(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	roleID := socketSession.selectedRole.RoleID
+	playerID := socketSession.playerBase.PlayerID
+	template, ok := session.CapturedRoleItemTemplate("肉")
+	if !ok {
+		t.Fatal("expected captured 肉 template")
+	}
+	template.Type = "背包"
+	template.Index = 1
+	template.Count = 5
+	if _, ok := store.GrantRoleItem(playerID, roleID, template); !ok {
+		t.Fatal("expected 肉 grant to succeed")
+	}
+
+	sourceIndex := 1
+	targetIndex := 2
+	moveCount := 2
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  "背包",
+			TargetType:  "背包",
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+			Count:       &moveCount,
+		}),
+	}, socketSession)
+	if !result.handled {
+		t.Fatal("expected bag split ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 1 || result.itemClears[0].Index != 2 {
+		t.Fatalf("expected only target clear for split move, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 2 {
+		t.Fatalf("expected source+target item infos for split move, got %+v", result.itemInfos)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "背包"}),
+	}, socketSession)
+	itemsByIndex := map[int]classicTownItemInfoPush{}
+	for _, item := range listResult.itemInfos {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[1].Count != 3 || itemsByIndex[2].Count != 2 {
+		t.Fatalf("expected split stacks count 3/2 at slots 1/2, got %+v", listResult.itemInfos)
 	}
 }
 
@@ -1254,6 +1489,45 @@ func TestHandlePacketClassicBattleStartPushesServerOwnedBattle(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicBattleStartSupportsCapturedBambooMaps(t *testing.T) {
+	cases := []struct {
+		mapID      string
+		mapName    string
+		enemyName  string
+		displayURL string
+	}{
+		{mapID: "84", mapName: "竹林_1", enemyName: "绿甲螳螂", displayURL: "monstermap/greenmantis.swf"},
+		{mapID: "86", mapName: "竹林_3", enemyName: "小竹妖", displayURL: "monstermap/bambooboy.swf"},
+		{mapID: "90", mapName: "竹林_7", enemyName: "竹炮", displayURL: "monstermap/boobomb.swf"},
+		{mapID: "97", mapName: "竹林_10", enemyName: "小竹妖", displayURL: "monstermap/bambooboy.swf"},
+	}
+
+	for _, testCase := range cases {
+		_, socketSession := seedSelectedRoleSession(t)
+		result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+			Cmd: cmdClassicBattleStartReq,
+			Seq: 2,
+			Payload: mustJSON(t, battle.StartRequest{
+				MapID:       testCase.mapID,
+				MapName:     testCase.mapName,
+				StageFocusX: 320,
+				ReturnRoute: "town-placeholder",
+			}),
+		}, socketSession)
+
+		if !result.handled || result.battleStart == nil || result.battleCommand == nil {
+			t.Fatalf("expected bamboo StartBattle %s to be handled, got %+v", testCase.mapID, result)
+		}
+		if len(result.battleCells) != 2 {
+			t.Fatalf("expected bamboo map %s to push two battle cells, got %+v", testCase.mapID, result.battleCells)
+		}
+		enemy := result.battleCells[1]
+		if enemy.Name != testCase.enemyName || enemy.DisplayURL != testCase.displayURL {
+			t.Fatalf("expected bamboo map %s enemy %s/%s, got %+v", testCase.mapID, testCase.enemyName, testCase.displayURL, enemy)
+		}
+	}
+}
+
 func TestHandlePacketClassicBattleActionResolvesAndRejectsConsumedSequence(t *testing.T) {
 	_, socketSession := seedSelectedRoleSession(t)
 	startResult := handlePacketWithSession(session.NewStore(), protocol.Packet{
@@ -1335,6 +1609,7 @@ func TestHandlePacketClassicBattleUtilityCommands(t *testing.T) {
 		_, socketSession := seedSelectedRoleSession(t)
 		startResult := startClassicBattleForTest(t, socketSession)
 		socketSession.battleRuntime.Cells[0].Defense = 10
+		socketSession.battleRuntime.Cells[0].Dog = 0
 		socketSession.battleRuntime.Cells[1].Attack = 40
 
 		result := handlePacketWithSession(session.NewStore(), protocol.Packet{
@@ -1380,11 +1655,18 @@ func TestHandlePacketClassicBattleUtilityCommands(t *testing.T) {
 			}),
 		}, socketSession)
 
-		if len(result.battleActions) == 0 || result.battleActions[0].SourceActionLabel != "store" || result.battleActions[0].Damage != 0 {
-			t.Fatalf("expected store self action, got %+v", result.battleActions)
+		if len(result.battleActions) != 2 {
+			t.Fatalf("expected store pose then enemy action, got %+v", result.battleActions)
+		}
+		storeAction := result.battleActions[0]
+		if storeAction.CommandID != battle.CommandStore || storeAction.ActionName != "蓄力" || storeAction.SourceActionLabel != "def" {
+			t.Fatalf("expected captured store def pose action, got %+v", storeAction)
+		}
+		if result.battleActions[1].CommandID != battle.CommandEnemyAttack {
+			t.Fatalf("expected enemy action after store pose, got %+v", result.battleActions)
 		}
 		if result.battleCommand != nil || result.battleOver != nil {
-			t.Fatalf("expected store to wait for BattlePlayOver before next command, got %+v", result)
+			t.Fatalf("expected store enemy action to wait for BattlePlayOver before next command, got %+v", result)
 		}
 
 		playOver := handlePacketWithSession(session.NewStore(), protocol.Packet{
@@ -1399,7 +1681,7 @@ func TestHandlePacketClassicBattleUtilityCommands(t *testing.T) {
 		}
 	})
 
-	t.Run("escape ends the battle without damage actions", func(t *testing.T) {
+	t.Run("escape plays source action before battle over", func(t *testing.T) {
 		_, socketSession := seedSelectedRoleSession(t)
 		startResult := startClassicBattleForTest(t, socketSession)
 
@@ -1416,16 +1698,84 @@ func TestHandlePacketClassicBattleUtilityCommands(t *testing.T) {
 			}),
 		}, socketSession)
 
-		if len(result.battleActions) != 0 || result.battleOver == nil {
-			t.Fatalf("expected escape to finish without battle actions, got %+v", result)
+		if len(result.battleActions) != 1 || result.battleOver != nil || result.battleCommand != nil {
+			t.Fatalf("expected escape source action before over, got %+v", result)
 		}
-		if result.battleOver.Winner != battle.CampEnemy || !result.battleOver.Result.Escaped {
-			t.Fatalf("expected escaped enemy over result, got %+v", result.battleOver)
+		action := result.battleActions[0]
+		if action.CommandID != battle.CommandEscape || action.SourceActionLabel != "escapeSuccess" {
+			t.Fatalf("expected escapeSuccess action, got %+v", action)
+		}
+		if socketSession.battleRuntime == nil {
+			t.Fatal("expected battle runtime to wait for BattlePlayOver after escape action")
+		}
+
+		playOver := handlePacketWithSession(session.NewStore(), protocol.Packet{
+			Cmd: cmdClassicBattlePlayOverReq,
+			Seq: 4,
+			Payload: mustJSON(t, battle.PlayOverRequest{
+				BattleID: startResult.battleStart.BattleID,
+			}),
+		}, socketSession)
+
+		if playOver.battleOver == nil || playOver.battleOver.Winner != battle.CampEnemy || !playOver.battleOver.Result.Escaped {
+			t.Fatalf("expected escaped enemy over result after BattlePlayOver, got %+v", playOver.battleOver)
 		}
 		if socketSession.battleRuntime != nil {
 			t.Fatalf("expected battle runtime to be cleared after escape, got %+v", socketSession.battleRuntime)
 		}
 	})
+}
+
+func TestHandlePacketClassicBattlePersistsRemainingHPMPIntoNextBattle(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	firstStart := startClassicBattleForTest(t, socketSession)
+	socketSession.battleRuntime.Cells[0].HP = 123
+	socketSession.battleRuntime.Cells[0].MP = 22
+	socketSession.battleRuntime.Cells[0].Attack = 80
+	socketSession.battleRuntime.Cells[0].Fat = 0
+	socketSession.battleRuntime.Cells[1].HP = 10
+	socketSession.battleRuntime.Cells[1].Defense = 0
+	socketSession.battleRuntime.Cells[1].Dog = 0
+
+	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicBattleActionReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.ActionRequest{
+			BattleID:     firstStart.battleStart.BattleID,
+			ActorHandle:  socketSession.selectedRole.RoleID,
+			CommandID:    battle.CommandMiZhan,
+			TargetHandle: firstStart.battleCells[1].Handle,
+			Round:        firstStart.battleCommand.Round,
+			Sequence:     firstStart.battleCommand.Sequence,
+		}),
+	}, socketSession)
+
+	if len(result.battleActions) != 1 || result.battleOver != nil {
+		t.Fatalf("expected winning action to wait for BattlePlayOver, got %+v", result)
+	}
+	if result.battleActions[0].TargetDead != true || result.battleActions[0].RefreshInfos[0].MP != 17 {
+		t.Fatalf("expected 密斩 to kill enemy and reduce MP to 17, got %+v", result.battleActions[0])
+	}
+
+	playOver := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicBattlePlayOverReq,
+		Seq: 4,
+		Payload: mustJSON(t, battle.PlayOverRequest{
+			BattleID: firstStart.battleStart.BattleID,
+		}),
+	}, socketSession)
+	if playOver.battleOver == nil || playOver.battleOver.Winner != battle.CampTeam {
+		t.Fatalf("expected team over after first battle, got %+v", playOver)
+	}
+	if socketSession.playerBase.HP != 123 || socketSession.playerBase.MP != 17 || socketSession.playerBase.RoleState.HP != 123 || socketSession.playerBase.RoleState.MP != 17 {
+		t.Fatalf("expected first battle to persist HP/MP 123/17, got playerBase=%+v roleState=%+v", socketSession.playerBase, socketSession.playerBase.RoleState)
+	}
+
+	secondStart := startClassicBattleForTest(t, socketSession)
+	team := secondStart.battleCells[0]
+	if team.HP != 123 || team.MP != 17 {
+		t.Fatalf("expected second battle to start from persisted HP/MP 123/17, got %+v", team)
+	}
 }
 
 func TestHandlePacketClassicBattleActiveItemConsumesAndRefreshes(t *testing.T) {

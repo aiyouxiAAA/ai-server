@@ -162,6 +162,45 @@ func TestResolveTownTransportAnswerUsesSourceMapXYSpawn(t *testing.T) {
 	}
 }
 
+func TestResolveTownTransportAnswerAcceptsCapturedConfirmHandle(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswer("transp_10", "1")
+	if !ok {
+		t.Fatal("expected captured transp_10 answer handle 1 to resolve")
+	}
+	if destination.MapID != 10 {
+		t.Fatalf("expected mapId 10, got %d", destination.MapID)
+	}
+	if destination.Spawn.X != 180 || destination.Spawn.Y != 500 {
+		t.Fatalf("expected captured map10 spawn 180,500 got %+v", destination.Spawn)
+	}
+}
+
+func TestResolveTownTransportAnswerUsesCapturedJiantingRoadSpawn(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswer("transp_11", "goto")
+	if !ok {
+		t.Fatal("expected transp_11 goto answer to resolve")
+	}
+	if destination.MapID != 11 {
+		t.Fatalf("expected mapId 11, got %d", destination.MapID)
+	}
+	if destination.Spawn.X != 200 || destination.Spawn.Y != 482 {
+		t.Fatalf("expected captured map11 spawn 200,482 got %+v", destination.Spawn)
+	}
+}
+
+func TestResolveTownTransportAnswerUsesCapturedReturnHandleDestination(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswer("transp_0", "goto")
+	if !ok {
+		t.Fatal("expected transp_0 goto answer to resolve")
+	}
+	if destination.MapID != 3 {
+		t.Fatalf("expected mapId 3, got %d", destination.MapID)
+	}
+	if destination.Spawn.X != 825 || destination.Spawn.Y != 624 {
+		t.Fatalf("expected captured map3 spawn 825,624 got %+v", destination.Spawn)
+	}
+}
+
 func TestBuildTownTransferBootstrapUsesMapFourScene(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-001",
@@ -214,6 +253,206 @@ func TestBuildTownTransferBootstrapUsesMapFourScene(t *testing.T) {
 	}
 }
 
+func TestBuildTownBootstrapUsesCapturedMapTwoTransportData(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-002",
+		DisplayName:  "测试女侠",
+		Level:        8,
+		MapID:        2,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        2,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	snapshot := BuildTownBootstrap(role, playerBase)
+	if snapshot.LoadMap.MapID != "2" || snapshot.LoadMap.MapName != "大佛村" || snapshot.LoadMap.XMLURL != "xml/2.xml" {
+		t.Fatalf("expected map2 loadMap, got %+v", snapshot.LoadMap)
+	}
+	if snapshot.LoadMap.EnemyShow {
+		t.Fatal("expected map2 enemyShow to stay false")
+	}
+	if snapshot.CreatePlayer.SpawnFlash.X != 1000 || snapshot.CreatePlayer.SpawnFlash.Y != 600 {
+		t.Fatalf("expected captured map2 spawn 1000,600 got %+v", snapshot.CreatePlayer.SpawnFlash)
+	}
+	if len(snapshot.CreateRoles) != 12 || len(snapshot.QuestStates) != 12 {
+		t.Fatalf("expected map2 captured source roles, got roles=%d quests=%d", len(snapshot.CreateRoles), len(snapshot.QuestStates))
+	}
+
+	assertRole := func(handle string, name string, sourceQuery string, x int, y int) {
+		t.Helper()
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.Handle != handle {
+				continue
+			}
+			if rolePush.DisplayName != name || rolePush.SourceQuery != sourceQuery {
+				t.Fatalf("expected %s/%s for %s, got name=%q source=%q", name, sourceQuery, handle, rolePush.DisplayName, rolePush.SourceQuery)
+			}
+			if rolePush.SpawnFlash.X != x || rolePush.SpawnFlash.Y != y {
+				t.Fatalf("expected %s spawn %d,%d got %+v", handle, x, y, rolePush.SpawnFlash)
+			}
+			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath == "" {
+				t.Fatalf("expected source visual for %s, got %+v", handle, rolePush.SourceNPCVisual)
+			}
+			return
+		}
+		t.Fatalf("expected map2 role %s", handle)
+	}
+
+	assertRole("4180542615109515", "交易行管理员", "npc/交易行管理员.swf", 2162, 465)
+	assertRole("4190542615111877", "通天八卦炉<ma>", "npc/通天八卦炉.swf", 780, 465)
+	assertRole("4110542614676637", "无颜", "npc/无颜.swf", 1781, 463)
+	assertRole("4170542615108676", "妖术狐狸", "npc/狐狸.swf", 2370, 465)
+	assertRole("4140542615070416", "噌痴", "npc/噌痴.swf", 407, 360)
+	assertRole("4100542614427315", "娴无禄", "npc/娴无录.swf", 2450, 400)
+	assertRole("transp_6", "", "transp/flag2.swf", 3000, 500)
+
+	foxSpeak := BuildAnswerSpeak("4170542615108676")
+	if foxSpeak.MsgHandle != "1" || foxSpeak.Msg != `知道((广青镇))吗？它可是方圆百里最繁华的集市哦~` {
+		t.Fatalf("expected captured map2 fox dialogue, got %+v", foxSpeak)
+	}
+	if len(foxSpeak.Answers) != 5 || foxSpeak.Answers[2].Msg != "传送到【黄风寨口】(未激活！)" {
+		t.Fatalf("expected captured map2 fox answers, got %+v", foxSpeak.Answers)
+	}
+
+	wuyanSpeak := BuildAnswerSpeak("4110542614676637")
+	if wuyanSpeak.MsgHandle != "1" || len(wuyanSpeak.Answers) != 6 || wuyanSpeak.Answers[0].Handle != "2q21gs" {
+		t.Fatalf("expected captured wuyan entry dialogue, got %+v", wuyanSpeak)
+	}
+	wuyanReply := BuildAnswerReply("4110542614676637", "1", "4q69gs")
+	if wuyanReply == nil {
+		t.Fatal("expected captured wuyan follow-up dialogue")
+	}
+	if wuyanReply.MsgHandle != "4q69d_1" || len(wuyanReply.Answers) != 2 || wuyanReply.Answers[0].Handle != "4q69a_1_1" {
+		t.Fatalf("expected wuyan 4q69d_1 dialogue, got %+v", wuyanReply)
+	}
+	wuyanReply2 := BuildAnswerReply("4110542614676637", "4q69d_1", "4q69a_1_1")
+	if wuyanReply2 == nil {
+		t.Fatal("expected captured wuyan second follow-up dialogue")
+	}
+	if wuyanReply2.MsgHandle != "4q69d_2" || len(wuyanReply2.Answers) != 2 || wuyanReply2.Answers[0].Handle != "4q69a_2_1" {
+		t.Fatalf("expected wuyan 4q69d_2 dialogue, got %+v", wuyanReply2)
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedUnderworldTransportData(t *testing.T) {
+	cases := []struct {
+		mapID   int
+		mapName string
+		xmlURL  string
+		handles []string
+		spawns  []SpawnPoint
+	}{
+		{mapID: 79, mapName: "黄泉路_1", xmlURL: "xml/79.xml", handles: []string{"transp_80"}, spawns: []SpawnPoint{{X: 60, Y: 524}}},
+		{mapID: 80, mapName: "黄泉路_2", xmlURL: "xml/80.xml", handles: []string{"transp_81", "transp_79"}, spawns: []SpawnPoint{{X: 80, Y: 534}, {X: 2940, Y: 524}}},
+		{mapID: 81, mapName: "黄泉路_3", xmlURL: "xml/81.xml", handles: []string{"transp_82", "transp_80"}, spawns: []SpawnPoint{{X: 75, Y: 464}, {X: 2940, Y: 464}}},
+		{mapID: 82, mapName: "奈何桥", xmlURL: "xml/82.xml", handles: []string{"transp_83", "transp_81"}, spawns: []SpawnPoint{{X: 75, Y: 464}, {X: 2940, Y: 464}}},
+		{mapID: 83, mapName: "重生台", xmlURL: "xml/83.xml", handles: []string{"transp_0", "transp_82"}, spawns: []SpawnPoint{{X: 341, Y: 363}, {X: 2930, Y: 480}}},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-underworld",
+			DisplayName:  "测试女侠",
+			Level:        8,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != testCase.xmlURL {
+			t.Fatalf("expected map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if len(snapshot.CreateRoles) != len(testCase.handles) {
+			t.Fatalf("expected map%d transport count %d got %d", testCase.mapID, len(testCase.handles), len(snapshot.CreateRoles))
+		}
+		for index, handle := range testCase.handles {
+			rolePush := snapshot.CreateRoles[index]
+			if rolePush.Handle != handle {
+				t.Fatalf("expected map%d transport handle %s at index %d got %s", testCase.mapID, handle, index, rolePush.Handle)
+			}
+			if rolePush.SpawnFlash != testCase.spawns[index] {
+				t.Fatalf("expected map%d %s spawn %+v got %+v", testCase.mapID, handle, testCase.spawns[index], rolePush.SpawnFlash)
+			}
+		}
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedMapThreeData(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-003",
+		DisplayName:  "测试女侠",
+		Level:        8,
+		MapID:        3,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        3,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	snapshot := BuildTownBootstrap(role, playerBase)
+	if snapshot.LoadMap.MapID != "3" || snapshot.LoadMap.MapName != "涧庭村" || snapshot.LoadMap.XMLURL != "xml/3.xml" {
+		t.Fatalf("expected map3 loadMap, got %+v", snapshot.LoadMap)
+	}
+	if snapshot.LoadMap.EnemyShow {
+		t.Fatal("expected map3 enemyShow to stay false")
+	}
+	if len(snapshot.CreateRoles) != 12 || len(snapshot.QuestStates) != 12 {
+		t.Fatalf("expected map3 captured source roles, got roles=%d quests=%d", len(snapshot.CreateRoles), len(snapshot.QuestStates))
+	}
+
+	assertRole := func(handle string, name string, sourceQuery string, x int, y int) {
+		t.Helper()
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.Handle != handle {
+				continue
+			}
+			if rolePush.DisplayName != name || rolePush.SourceQuery != sourceQuery {
+				t.Fatalf("expected %s/%s for %s, got name=%q source=%q", name, sourceQuery, handle, rolePush.DisplayName, rolePush.SourceQuery)
+			}
+			if rolePush.SpawnFlash.X != x || rolePush.SpawnFlash.Y != y {
+				t.Fatalf("expected %s spawn %d,%d got %+v", handle, x, y, rolePush.SpawnFlash)
+			}
+			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath == "" {
+				t.Fatalf("expected source visual for %s, got %+v", handle, rolePush.SourceNPCVisual)
+			}
+			return
+		}
+		t.Fatalf("expected map3 role %s", handle)
+	}
+
+	assertRole("4970542616788530", "VIP大使", "npc/other/节日大使.swf", 372, 595)
+	assertRole("4910542615957836", "申公烈", "npc/申公烈.swf", 675, 545)
+	assertRole("4920542616052493", "火娥娘", "npc/火娥娘.swf", 1180, 409)
+	assertRole("5010542616817526", "交易行管理员", "npc/交易行管理员.swf", 1612, 420)
+	assertRole("4930542616250587", "铃铛", "npc/铃铛.swf", 1829, 426)
+	assertRole("4990542616803864", "通天八卦炉<ma>", "npc/通天八卦炉.swf", 2139, 430)
+	assertRole("5000542616815700", "妖术狐狸", "npc/狐狸.swf", 2370, 465)
+	assertRole("4940542616468969", "叶眉", "npc/叶眉.swf", 2589, 465)
+	assertRole("4950542616589339", "熊猫竹生", "npc/熊猫竹生.swf", 2862, 426)
+	assertRole("4960542616750900", "介象", "npc/介象.swf", 3051, 442)
+	assertRole("4980542616799322", "排行告示", "npc/公告牌.swf", 3325, 420)
+	assertRole("transp_10", "", "transp/flag2.swf", 3566, 522)
+}
+
 func TestBuildTownTransferBootstrapMarksCapturedWildMapEnemyShow(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-001",
@@ -243,6 +482,134 @@ func TestBuildTownTransferBootstrapMarksCapturedWildMapEnemyShow(t *testing.T) {
 	}
 	if snapshot.CreatePlayer.SpawnFlash.X != 1000 || snapshot.CreatePlayer.SpawnFlash.Y != 450 {
 		t.Fatalf("expected transfer spawn 1000,450 got %+v", snapshot.CreatePlayer.SpawnFlash)
+	}
+}
+
+func TestBuildTownTransferBootstrapMarksCapturedBambooEnemyShow(t *testing.T) {
+	capturedMaps := []struct {
+		mapID   int
+		mapName string
+	}{
+		{mapID: 84, mapName: "竹林_1"},
+		{mapID: 85, mapName: "竹林_2"},
+		{mapID: 86, mapName: "竹林_3"},
+		{mapID: 87, mapName: "竹林_4"},
+		{mapID: 88, mapName: "竹林_5"},
+		{mapID: 90, mapName: "竹林_7"},
+		{mapID: 97, mapName: "竹林_10"},
+	}
+
+	for _, testCase := range capturedMaps {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-bamboo",
+			DisplayName:  "测试女侠",
+			Level:        8,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, testCase.mapID, SpawnPoint{X: 1000, Y: 300})
+		if !ok {
+			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
+		}
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected bamboo map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if !snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected captured bamboo map%d enemyShow to be true", testCase.mapID)
+		}
+	}
+}
+
+func TestBuildTownTransferBootstrapRestoresBambooCollectionPoints(t *testing.T) {
+	cases := []struct {
+		mapID       int
+		mapName     string
+		handle      string
+		displayName string
+		spawn       SpawnPoint
+	}{
+		{mapID: 89, mapName: "竹林_6", handle: "2810542613719308", displayName: "金银花采集点", spawn: SpawnPoint{X: 1242, Y: 451}},
+		{mapID: 91, mapName: "竹林_8", handle: "2050542611677774", displayName: "黄连采集点", spawn: SpawnPoint{X: 1755, Y: 452}},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-collection",
+			DisplayName:  "测试女侠",
+			Level:        8,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, testCase.mapID, SpawnPoint{X: 1000, Y: 300})
+		if !ok {
+			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
+		}
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected collection map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected collection map%d enemyShow to stay false", testCase.mapID)
+		}
+		if len(snapshot.CreateRoles) != 1 || len(snapshot.QuestStates) != 1 {
+			t.Fatalf("expected one collection role and quest state on map%d, got roles=%d quests=%d", testCase.mapID, len(snapshot.CreateRoles), len(snapshot.QuestStates))
+		}
+		rolePush := snapshot.CreateRoles[0]
+		if rolePush.Handle != testCase.handle || rolePush.Kind != "collection" || rolePush.DisplayName != testCase.displayName {
+			t.Fatalf("expected collection role %+v, got %+v", testCase, rolePush)
+		}
+		if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-npc/movieclips/flag2/flag2-movieclip-ir" {
+			t.Fatalf("expected collection role to reuse flag2 visual, got %+v", rolePush.SourceNPCVisual)
+		}
+		if rolePush.SpawnFlash != testCase.spawn {
+			t.Fatalf("expected collection map%d spawn %+v, got %+v", testCase.mapID, testCase.spawn, rolePush.SpawnFlash)
+		}
+	}
+}
+
+func TestBuildTownTransferBootstrapDoesNotExposeUncapturedWildBattleMaps(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-009",
+		DisplayName:  "测试女侠",
+		Level:        8,
+		MapID:        9,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        9,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	snapshot, ok := BuildTownTransferBootstrap(role, playerBase, 9, SpawnPoint{X: 1000, Y: 300})
+	if !ok {
+		t.Fatal("expected map9 transfer bootstrap to be supported")
+	}
+	if snapshot.LoadMap.MapID != "9" || snapshot.LoadMap.XMLURL != "xml/9.xml" {
+		t.Fatalf("expected map9 loadMap, got %+v", snapshot.LoadMap)
+	}
+	if snapshot.LoadMap.EnemyShow {
+		t.Fatal("expected uncaptured map9 enemyShow to stay false")
 	}
 }
 

@@ -358,6 +358,171 @@ func TestStoreEquipStarterAxeMovesBagItemToWeaponSlot(t *testing.T) {
 	}
 }
 
+func TestStoreMoveRoleItemMovesBagItemToEmptySlot(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "挪包女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	result := store.MoveRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 19, "背包", 0, 0)
+	if !result.Found || !result.Moved {
+		t.Fatalf("expected starter axe move success, got %+v", result)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Name != "铁斧" || result.UpdatedItems[0].Index != 0 {
+		t.Fatalf("expected moved axe at slot 0, got %+v", result.UpdatedItems)
+	}
+	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok || len(bagItems) != 1 || bagItems[0].Name != "铁斧" || bagItems[0].Index != 0 {
+		t.Fatalf("expected bag to persist moved axe at slot 0, ok=%v items=%+v", ok, bagItems)
+	}
+}
+
+func TestStoreMoveRoleItemSwapsOccupiedBagSlots(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "换包女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	template, ok := CapturedRoleItemTemplate("肉")
+	if !ok {
+		t.Fatal("expected captured 肉 template")
+	}
+	template.Type = "背包"
+	template.Index = 0
+	template.Count = 1
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template); !ok {
+		t.Fatal("expected 肉 grant to succeed")
+	}
+
+	result := store.MoveRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 19, "背包", 0, 0)
+	if !result.Found || !result.Moved {
+		t.Fatalf("expected bag slot swap success, got %+v", result)
+	}
+	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag list after swap")
+	}
+	itemsByIndex := map[int]RoleItem{}
+	for _, item := range bagItems {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[0].Name != "铁斧" || itemsByIndex[19].Name != "肉" {
+		t.Fatalf("expected axe/meat swap between slots 19 and 0, got %+v", bagItems)
+	}
+}
+
+func TestStoreMoveRoleItemStacksSameNameBagItems(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "叠包女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	template, ok := CapturedRoleItemTemplate("肉")
+	if !ok {
+		t.Fatal("expected captured 肉 template")
+	}
+	template.Type = "背包"
+	template.Index = 0
+	template.Count = 2
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template); !ok {
+		t.Fatal("expected first 肉 grant to succeed")
+	}
+	template.Index = 1
+	template.Count = 3
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template); !ok {
+		t.Fatal("expected second 肉 grant to succeed")
+	}
+
+	result := store.MoveRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 1, "背包", 0, 0)
+	if !result.Found || !result.Moved {
+		t.Fatalf("expected bag item stack success, got %+v", result)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Index != 0 || result.UpdatedItems[0].Count != 5 || result.UpdatedItems[0].Name != "肉" {
+		t.Fatalf("expected single stacked 肉 push at slot 0 count 5, got %+v", result.UpdatedItems)
+	}
+	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag list after stacking")
+	}
+	if len(bagItems) != 2 {
+		t.Fatalf("expected only starter axe and stacked 肉 left in bag, got %+v", bagItems)
+	}
+	itemsByIndex := map[int]RoleItem{}
+	for _, item := range bagItems {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[0].Name != "肉" || itemsByIndex[0].Count != 5 {
+		t.Fatalf("expected 肉 count 5 at slot 0 after stacking, got %+v", itemsByIndex[0])
+	}
+	if _, exists := itemsByIndex[1]; exists {
+		t.Fatalf("expected slot 1 to be cleared after stacking, got %+v", bagItems)
+	}
+}
+
+func TestStoreMoveRoleItemSplitsBagItemToEmptySlot(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "分堆女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	template, ok := CapturedRoleItemTemplate("肉")
+	if !ok {
+		t.Fatal("expected captured 肉 template")
+	}
+	template.Type = "背包"
+	template.Index = 1
+	template.Count = 5
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template); !ok {
+		t.Fatal("expected 肉 grant to succeed")
+	}
+
+	result := store.MoveRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 1, "背包", 2, 2)
+	if !result.Found || !result.Moved {
+		t.Fatalf("expected bag item split success, got %+v", result)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Index != 2 {
+		t.Fatalf("expected only target slot clear before split push, got %+v", result.ClearedItems)
+	}
+	itemsByIndex := map[int]RoleItem{}
+	for _, item := range result.UpdatedItems {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[1].Count != 3 || itemsByIndex[2].Count != 2 {
+		t.Fatalf("expected source count 3 and moved stack count 2, got %+v", result.UpdatedItems)
+	}
+	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag list after split move")
+	}
+	persistedByIndex := map[int]RoleItem{}
+	for _, item := range bagItems {
+		persistedByIndex[item.Index] = item
+	}
+	if persistedByIndex[1].Count != 3 || persistedByIndex[2].Count != 2 {
+		t.Fatalf("expected persisted split stacks at slots 1 and 2, got %+v", bagItems)
+	}
+}
+
 func TestStoreClassicRoleProgressionMatchesCapturedRoleStateAndPhysique(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")

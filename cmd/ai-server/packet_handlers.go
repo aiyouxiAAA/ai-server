@@ -150,6 +150,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		log.Printf("[ai-server] classic town activeRole handle=%s roleId=%s kind=%s mapId=%s", request.Handle, request.RoleID, request.Kind, request.MapID)
+		if result, ok := buildClassicTownCollectionResult(store, socketSession, request); ok {
+			return result
+		}
 		answerSpeak := world.BuildAnswerSpeak(request.Handle)
 		return packetResult{
 			answerSpeak: &answerSpeak,
@@ -734,58 +737,94 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 
 	sourceType := strings.TrimSpace(request.SourceType)
 	targetType := strings.TrimSpace(request.TargetType)
-	if sourceType != classicBattleLootType || targetType != "背包" {
-		log.Printf("[ai-server] classic town ContainerMove ignored unsupported source=%s target=%s", sourceType, targetType)
-		return packetResult{handled: true}
-	}
-
-	nameFilter := map[string]bool{}
-	for _, name := range request.Names {
-		name = strings.TrimSpace(name)
-		if name != "" {
-			nameFilter[name] = true
-		}
-	}
-
-	remaining := make([]session.RoleItem, 0, len(socketSession.battleLoot))
-	itemInfos := []classicTownItemInfoPush{}
-	itemClears := []classicTownItemInfoClearPush{}
-	for _, item := range socketSession.battleLoot {
-		if item.Type != classicBattleLootType || (len(nameFilter) > 0 && !nameFilter[item.Name]) {
-			remaining = append(remaining, item)
-			continue
+	if sourceType == classicBattleLootType && targetType == "背包" {
+		nameFilter := map[string]bool{}
+		for _, name := range request.Names {
+			name = strings.TrimSpace(name)
+			if name != "" {
+				nameFilter[name] = true
+			}
 		}
 
-		moved := item
-		moved.Type = "背包"
-		moved.Index = -1
-		granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, moved)
-		if !ok {
-			remaining = append(remaining, item)
-			continue
+		remaining := make([]session.RoleItem, 0, len(socketSession.battleLoot))
+		itemInfos := []classicTownItemInfoPush{}
+		itemClears := []classicTownItemInfoClearPush{}
+		for _, item := range socketSession.battleLoot {
+			if item.Type != classicBattleLootType || (len(nameFilter) > 0 && !nameFilter[item.Name]) {
+				remaining = append(remaining, item)
+				continue
+			}
+
+			moved := item
+			moved.Type = "背包"
+			moved.Index = -1
+			granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, moved)
+			if !ok {
+				remaining = append(remaining, item)
+				continue
+			}
+
+			granted.Handle = socketSession.selectedRole.RoleID
+			itemInfos = append(itemInfos, classicTownItemInfoPushFromRoleItem(granted))
+			itemClears = append(itemClears, classicTownItemInfoClearPush{
+				Handle: socketSession.selectedRole.RoleID,
+				Type:   classicBattleLootType,
+				Index:  item.Index,
+			})
 		}
+		socketSession.battleLoot = remaining
 
-		granted.Handle = socketSession.selectedRole.RoleID
-		itemInfos = append(itemInfos, classicTownItemInfoPushFromRoleItem(granted))
-		itemClears = append(itemClears, classicTownItemInfoClearPush{
-			Handle: socketSession.selectedRole.RoleID,
-			Type:   classicBattleLootType,
-			Index:  item.Index,
-		})
+		return packetResult{
+			containerCap: &classicTownContainerCapacityPush{
+				Handle:   socketSession.selectedRole.RoleID,
+				Type:     classicBattleLootType,
+				Capacity: classicBattleLootCap,
+				OpenType: "",
+			},
+			itemInfos:  itemInfos,
+			itemClears: itemClears,
+			handled:    true,
+		}
 	}
-	socketSession.battleLoot = remaining
+	if sourceType == "背包" && targetType == "背包" && request.SourceIndex != nil && request.TargetIndex != nil {
+		moveCount := 0
+		if request.Count != nil {
+			moveCount = *request.Count
+		}
+		moveResult := store.MoveRoleItem(
+			socketSession.playerBase.PlayerID,
+			socketSession.selectedRole.RoleID,
+			sourceType,
+			*request.SourceIndex,
+			targetType,
+			*request.TargetIndex,
+			moveCount,
+		)
+		if !moveResult.Found || !moveResult.Moved {
+			log.Printf("[ai-server] classic town ContainerMove bag noop roleId=%s source=%s[%v] target=%s[%v] error=%s", socketSession.selectedRole.RoleID, sourceType, request.SourceIndex, targetType, request.TargetIndex, moveResult.ErrorCode)
+			return packetResult{handled: true}
+		}
+		result := packetResult{
+			itemInfos:  make([]classicTownItemInfoPush, 0, len(moveResult.UpdatedItems)),
+			itemClears: make([]classicTownItemInfoClearPush, 0, len(moveResult.ClearedItems)),
+			handled:    true,
+		}
+		for _, clear := range moveResult.ClearedItems {
+			result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+				Handle: socketSession.selectedRole.RoleID,
+				Type:   clear.Type,
+				Index:  clear.Index,
+			})
+		}
+		for _, item := range moveResult.UpdatedItems {
+			item.Handle = socketSession.selectedRole.RoleID
+			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+		}
+		return result
+	}
 
-	return packetResult{
-		containerCap: &classicTownContainerCapacityPush{
-			Handle:   socketSession.selectedRole.RoleID,
-			Type:     classicBattleLootType,
-			Capacity: classicBattleLootCap,
-			OpenType: "",
-		},
-		itemInfos:  itemInfos,
-		itemClears: itemClears,
-		handled:    true,
-	}
+	log.Printf("[ai-server] classic town ContainerMove ignored unsupported source=%s target=%s", sourceType, targetType)
+	return packetResult{handled: true}
 }
 
 func buildClassicTownSourceQuestRewardResult(store *session.Store, socketSession *packetSession, request classicTownAnswerRequest) (packetResult, bool) {

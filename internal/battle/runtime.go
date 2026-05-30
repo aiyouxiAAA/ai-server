@@ -3,6 +3,7 @@ package battle
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -19,16 +20,23 @@ const (
 	PhasePlaying  = "playing"
 	PhaseFinished = "finished"
 
-	CommandNormalAttack = "skill-normal-attack"
-	CommandMiZhan       = "skill-mi-zhan"
-	CommandEnemyAttack  = "enemy-normal-attack"
-	CommandDefense      = "defense"
-	CommandStore        = "battle-store"
-	CommandEscape       = "battle-escape"
-	CommandItem         = "battle-item"
+	CommandNormalAttack  = "skill-normal-attack"
+	CommandMiZhan        = "skill-mi-zhan"
+	CommandDuoDuanZhan   = "skill-duo-duan-zhan"
+	CommandShiXueZhan    = "skill-shi-xue-zhan"
+	CommandEnemyAttack   = "enemy-normal-attack"
+	CommandEnemySlideCut = "enemy-slide-cut"
+	CommandDefense       = "defense"
+	CommandStore         = "battle-store"
+	CommandEscape        = "battle-escape"
+	CommandItem          = "battle-item"
 
-	maxStoredPower = 5
-	miZhanMPCost   = 5
+	maxStoredPower      = 5
+	enemySlideCutMPCost = 10
+	enemySlideCutChance = 20
+	defaultBattleHit    = 100
+	defaultBattleDog    = 50
+	defaultBattleFat    = 5
 )
 
 type StartRequest struct {
@@ -39,17 +47,18 @@ type StartRequest struct {
 }
 
 type StartPush struct {
-	BattleID        string  `json:"battleId"`
-	QueueIndexTeam  int     `json:"queueIndexTeam"`
-	QueueIndexEnemy int     `json:"queueIndexEnemy"`
-	LastMapName     string  `json:"lastMapName"`
-	SelfHandle      string  `json:"selfHandle"`
-	IsArena         bool    `json:"isArena"`
-	MapID           string  `json:"mapId"`
-	EncounterID     string  `json:"encounterId"`
-	EncounterLabel  string  `json:"encounterLabel"`
-	StageFocusX     float64 `json:"stageFocusX"`
-	ReturnRoute     string  `json:"returnRoute,omitempty"`
+	BattleID        string              `json:"battleId"`
+	QueueIndexTeam  int                 `json:"queueIndexTeam"`
+	QueueIndexEnemy int                 `json:"queueIndexEnemy"`
+	LastMapName     string              `json:"lastMapName"`
+	SelfHandle      string              `json:"selfHandle"`
+	IsArena         bool                `json:"isArena"`
+	MapID           string              `json:"mapId"`
+	EncounterID     string              `json:"encounterId"`
+	EncounterLabel  string              `json:"encounterLabel"`
+	StageFocusX     float64             `json:"stageFocusX"`
+	ReturnRoute     string              `json:"returnRoute,omitempty"`
+	Commands        []CommandDefinition `json:"commands,omitempty"`
 }
 
 type CellInfoPush struct {
@@ -80,6 +89,18 @@ type StartCommandPush struct {
 	Round       int         `json:"round"`
 	Sequence    int         `json:"sequence"`
 	Power       interface{} `json:"power"`
+}
+
+type CommandDefinition struct {
+	ID                string  `json:"id"`
+	Kind              string  `json:"kind"`
+	Label             string  `json:"label"`
+	SourceType        string  `json:"sourceType,omitempty"`
+	ActionName        string  `json:"actionName,omitempty"`
+	SourceActionLabel string  `json:"sourceActionLabel,omitempty"`
+	Target            string  `json:"target"`
+	DamageMultiplier  float64 `json:"damageMultiplier,omitempty"`
+	MPCost            int     `json:"mpCost,omitempty"`
 }
 
 type ActionRequest struct {
@@ -155,6 +176,7 @@ type Runtime struct {
 	BattleID         string
 	RoleID           string
 	MapID            string
+	RoleSkills       []session.RoleSkill
 	Phase            string
 	Round            int
 	Cells            []CellInfoPush
@@ -187,6 +209,8 @@ type commandProfile struct {
 	MPCost            int
 	CanDodge          bool
 	CanFat            bool
+	LifeStealChance   int
+	LifeStealRatio    float64
 }
 
 func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, request StartRequest) (*Runtime, StartBundle, bool) {
@@ -221,9 +245,9 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 	playerSpeed := 130
 	playerAttack := 10
 	playerDefense := 10
-	playerHit := 100
-	playerDog := 50
-	playerFat := 5
+	playerHit := defaultBattleHit
+	playerDog := defaultBattleDog
+	playerFat := defaultBattleFat
 	if roleState != nil && roleState.Speed > 0 {
 		playerSpeed = roleState.Speed
 	}
@@ -262,6 +286,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		BattleID:         battleID,
 		RoleID:           role.RoleID,
 		MapID:            mapID,
+		RoleSkills:       cloneBattleRoleSkills(role.Skills),
 		Phase:            PhaseCommand,
 		Round:            1,
 		Cells:            cells,
@@ -283,6 +308,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		EncounterLabel:  mapName + " 暗雷",
 		StageFocusX:     request.StageFocusX,
 		ReturnRoute:     defaultString(request.ReturnRoute, "town-placeholder"),
+		Commands:        sourceBattleCommandDefinitions(role.Skills),
 	}
 	return runtime, StartBundle{
 		Start: start,
@@ -347,6 +373,10 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
 			runtime.resolveSelfAction(actor, commandID, "蓄力", "def"),
 		})
+	}
+
+	if !runtime.isBattleCommandAllowed(commandID) {
+		return ActionResult{ErrorCode: "unsupported_command"}
 	}
 
 	target := runtime.cellByHandle(request.TargetHandle)
@@ -463,7 +493,7 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 	enemy := runtime.firstLiving(CampEnemy)
 	team := runtime.firstLiving(CampTeam)
 	if enemy != nil && team != nil {
-		actions = append(actions, runtime.resolveAttack(enemy, team, CommandEnemyAttack))
+		actions = append(actions, runtime.resolveAttack(enemy, team, runtime.enemyBattleCommand(enemy, team)))
 	}
 	if winner := runtime.resolveWinner(); winner != "" {
 		runtime.Phase = PhaseFinished
@@ -493,12 +523,19 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 }
 
 func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush, commandID string) ActionPush {
-	profile := battleCommandProfile(actor, commandID)
+	profile := runtime.battleCommandProfile(actor, commandID)
 	targetInDef := runtime.DefendingHandles[target.Handle]
 	defense := effectiveBattleDefense(target, targetInDef)
 	targetActionState := "normal"
 	targetActionStateCode := "0"
 	if runtime.resolveDodge(actor, target, commandID, profile) {
+		if profile.MPCost > 0 {
+			actor.MP = maxInt(0, actor.MP-profile.MPCost)
+		}
+		refreshInfos := []CellInfoPush{*target}
+		if profile.MPCost > 0 {
+			refreshInfos = []CellInfoPush{*actor, *target}
+		}
 		return ActionPush{
 			BattleID:              runtime.BattleID,
 			ActorHandle:           actor.Handle,
@@ -512,7 +549,7 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 			Damage:                0,
 			TargetHP:              target.HP,
 			TargetDead:            target.HP <= 0,
-			RefreshInfos:          []CellInfoPush{*target},
+			RefreshInfos:          refreshInfos,
 			Round:                 runtime.Round,
 			Sequence:              runtime.nextSequence,
 		}
@@ -528,8 +565,11 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 	if profile.MPCost > 0 {
 		actor.MP = maxInt(0, actor.MP-profile.MPCost)
 	}
+	if profile.LifeStealChance > 0 && profile.LifeStealRatio > 0 && damage > 0 && runtime.resolveLifeSteal(actor, target, commandID, profile) {
+		actor.HP = clampInt(actor.HP+int(math.Floor(float64(damage)*profile.LifeStealRatio)), 0, actor.MaxHP)
+	}
 	refreshInfos := []CellInfoPush{*target}
-	if profile.MPCost > 0 {
+	if profile.MPCost > 0 || profile.LifeStealChance > 0 {
 		refreshInfos = []CellInfoPush{*actor, *target}
 	}
 	return ActionPush{
@@ -551,7 +591,7 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 	}
 }
 
-func battleCommandProfile(actor *CellInfoPush, commandID string) commandProfile {
+func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID string) commandProfile {
 	profile := commandProfile{
 		ActionName:        "普通攻击",
 		SourceActionLabel: "nomalAtk",
@@ -562,18 +602,435 @@ func battleCommandProfile(actor *CellInfoPush, commandID string) commandProfile 
 	if actor != nil && strings.TrimSpace(actor.CommandLabel) != "" {
 		profile.ActionName = actor.CommandLabel
 	}
-	switch commandID {
+	switch normalizeBattleCommandID(commandID) {
 	case CommandMiZhan:
-		profile.ActionName = "密斩"
-		profile.SourceActionLabel = "manycut"
-		profile.DamageMultiplier = 1.45
-		profile.MPCost = miZhanMPCost
-		profile.CanDodge = false
-		profile.CanFat = false
+		return runtime.sourceSkillProfile("密斩", 1)
+	case CommandDuoDuanZhan:
+		return runtime.sourceSkillProfile("多段斩", 1)
+	case CommandShiXueZhan:
+		return runtime.sourceSkillProfile("嗜血斩", 1)
+	case CommandEnemySlideCut:
+		return commandProfile{
+			ActionName:        "滑行斩",
+			SourceActionLabel: "slideCut",
+			DamageMultiplier:  1,
+			MPCost:            enemySlideCutMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
 		profile.ActionName = "普通攻击"
 	}
 	return profile
+}
+
+func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
+	if sourceEnemyCanSlideCut(enemy) && enemy.MP >= enemySlideCutMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemySlideCut, enemySlideCutChance) {
+		return CommandEnemySlideCut
+	}
+	return CommandEnemyAttack
+}
+
+func (runtime *Runtime) resolveEnemySkillUse(actor *CellInfoPush, target *CellInfoPush, commandID string, chance int) bool {
+	if chance <= 0 || runtime == nil || actor == nil || target == nil {
+		return false
+	}
+	if chance >= 100 {
+		return true
+	}
+	return runtime.hashBattleRollWithSalt(actor, target, commandID, "enemy-skill") < chance
+}
+
+func sourceEnemyCanSlideCut(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	return strings.TrimSpace(enemy.Name) == "盗贼" || strings.Contains(strings.ToLower(strings.TrimSpace(enemy.DisplayURL)), "monstermap/robber.swf")
+}
+
+func (runtime *Runtime) isBattleCommandAllowed(commandID string) bool {
+	switch normalizeBattleCommandID(commandID) {
+	case CommandNormalAttack:
+		return true
+	case CommandMiZhan:
+		if len(runtime.RoleSkills) == 0 {
+			return true
+		}
+		return runtime.hasRoleSkill("密斩")
+	case CommandDuoDuanZhan:
+		return runtime.hasRoleSkill("多段斩")
+	case CommandShiXueZhan:
+		return runtime.hasRoleSkill("嗜血斩")
+	default:
+		return false
+	}
+}
+
+func (runtime *Runtime) sourceSkillProfile(name string, fallbackLevel int) commandProfile {
+	skill, ok := runtime.roleSkillByName(name)
+	if !ok {
+		skill = fallbackSourceBattleSkill(name, fallbackLevel)
+	}
+	profile := sourceBattleSkillProfile(skill)
+	if strings.TrimSpace(profile.ActionName) == "" {
+		return commandProfile{
+			ActionName:        "普通攻击",
+			SourceActionLabel: "nomalAtk",
+			DamageMultiplier:  1,
+			CanDodge:          true,
+			CanFat:            true,
+		}
+	}
+	return profile
+}
+
+func (runtime *Runtime) hasRoleSkill(name string) bool {
+	_, ok := runtime.roleSkillByName(name)
+	return ok
+}
+
+func (runtime *Runtime) roleSkillByName(name string) (session.RoleSkill, bool) {
+	if runtime == nil {
+		return session.RoleSkill{}, false
+	}
+	normalizedName := strings.TrimSpace(name)
+	for _, skill := range runtime.RoleSkills {
+		if strings.TrimSpace(skill.Name) == normalizedName {
+			return skill, true
+		}
+	}
+	return session.RoleSkill{}, false
+}
+
+func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
+	name := strings.TrimSpace(skill.Name)
+	level := skill.Level
+	if level <= 0 {
+		level = 1
+	}
+	profile := commandProfile{
+		ActionName:        name,
+		SourceActionLabel: sourceBattleSkillActionLabel(name, level),
+		DamageMultiplier:  sourceBattleSkillDamageMultiplier(skill.Description),
+		MPCost:            sourceBattleSkillMPCost(skill.Description),
+		CanDodge:          true,
+		CanFat:            true,
+	}
+	if profile.DamageMultiplier <= 0 {
+		profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
+	}
+	if profile.MPCost <= 0 {
+		profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
+	}
+	if name == "嗜血斩" {
+		profile.LifeStealChance = sourceBattleSkillLifeStealChance(skill.Description)
+		profile.LifeStealRatio = sourceBattleSkillLifeStealRatio(skill.Description)
+		if profile.LifeStealChance <= 0 {
+			profile.LifeStealChance = fallbackShiXueLifeStealChance(level)
+		}
+		if profile.LifeStealRatio <= 0 {
+			profile.LifeStealRatio = 0.7
+		}
+	}
+	return profile
+}
+
+func sourceBattleCommandDefinitions(skills []session.RoleSkill) []CommandDefinition {
+	commands := []CommandDefinition{
+		{
+			ID:                CommandNormalAttack,
+			Kind:              "skill",
+			Label:             "普通攻击",
+			SourceType:        "oneE",
+			ActionName:        "普通攻击",
+			SourceActionLabel: "nomalAtk",
+			Target:            "enemy",
+			DamageMultiplier:  1,
+		},
+	}
+	seen := map[string]bool{"普通攻击": true}
+	for _, skill := range skills {
+		normalizedName := strings.TrimSpace(skill.Name)
+		if seen[normalizedName] {
+			continue
+		}
+		commandID := sourceBattleSkillCommandID(normalizedName)
+		if commandID == "" {
+			continue
+		}
+		profile := sourceBattleSkillProfile(skill)
+		if strings.TrimSpace(profile.ActionName) == "" {
+			continue
+		}
+		commands = append(commands, CommandDefinition{
+			ID:                commandID,
+			Kind:              "skill",
+			Label:             normalizedName,
+			SourceType:        defaultString(strings.TrimSpace(skill.Type), "oneE"),
+			ActionName:        profile.ActionName,
+			SourceActionLabel: profile.SourceActionLabel,
+			Target:            sourceBattleCommandTarget(skill.Type),
+			DamageMultiplier:  profile.DamageMultiplier,
+			MPCost:            profile.MPCost,
+		})
+		seen[normalizedName] = true
+	}
+	commands = append(commands,
+		CommandDefinition{
+			ID:                CommandStore,
+			Kind:              "store",
+			Label:             "蓄魂",
+			ActionName:        "蓄魂",
+			SourceActionLabel: "def",
+			Target:            "self",
+		},
+		CommandDefinition{
+			ID:                CommandDefense,
+			Kind:              "defense",
+			Label:             "防御",
+			ActionName:        "防御",
+			SourceActionLabel: "def",
+			Target:            "self",
+		},
+		CommandDefinition{
+			ID:                CommandEscape,
+			Kind:              "escape",
+			Label:             "逃跑",
+			ActionName:        "逃跑",
+			SourceActionLabel: "escapeSuccess",
+			Target:            "self",
+		},
+	)
+	return commands
+}
+
+func sourceBattleSkillCommandID(name string) string {
+	switch strings.TrimSpace(name) {
+	case "密斩":
+		return CommandMiZhan
+	case "多段斩":
+		return CommandDuoDuanZhan
+	case "嗜血斩":
+		return CommandShiXueZhan
+	default:
+		return ""
+	}
+}
+
+func sourceBattleCommandTarget(sourceType string) string {
+	switch strings.TrimSpace(sourceType) {
+	case "own":
+		return "self"
+	default:
+		return "enemy"
+	}
+}
+
+var (
+	sourceMPCostPattern          = regexp.MustCompile(`&2@(\d+)`)
+	sourceImproveDamagePattern   = regexp.MustCompile(`提升(\d+)%的物理伤害`)
+	sourcePercentDamagePattern   = regexp.MustCompile(`造成(\d+)%的物理伤害`)
+	sourceLifeStealChancePattern = regexp.MustCompile(`有(\d+)%机率`)
+	sourceLifeStealRatioPattern  = regexp.MustCompile(`伤害的(\d+)%`)
+)
+
+func normalizeBattleCommandID(commandID string) string {
+	switch strings.TrimSpace(commandID) {
+	case "密斩":
+		return CommandMiZhan
+	case "多段斩":
+		return CommandDuoDuanZhan
+	case "嗜血斩":
+		return CommandShiXueZhan
+	default:
+		return strings.TrimSpace(commandID)
+	}
+}
+
+func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
+	if level <= 0 {
+		level = 1
+	}
+	switch strings.TrimSpace(name) {
+	case "密斩":
+		return session.RoleSkill{
+			Name:        "密斩",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "426.png",
+			Description: "f_s_密斩&9@单体·攻击&7@3&10@单刀/单斧&22@战斗&2@5&4@提升40%的物理伤害",
+		}
+	case "多段斩":
+		return session.RoleSkill{
+			Name:        "多段斩",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "178.png",
+			Description: fallbackDuoDuanDescription(level),
+		}
+	case "嗜血斩":
+		return session.RoleSkill{
+			Name:        "嗜血斩",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "179.png",
+			Description: fallbackShiXueDescription(level),
+		}
+	default:
+		return session.RoleSkill{}
+	}
+}
+
+func fallbackDuoDuanDescription(level int) string {
+	switch level {
+	case 2:
+		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@10&4@提升60%的物理伤害"
+	case 3:
+		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@12&4@提升65%的物理伤害"
+	case 4:
+		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@14&4@提升70%的物理伤害"
+	default:
+		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@8&4@提升55%的物理伤害"
+	}
+}
+
+func fallbackShiXueDescription(level int) string {
+	switch level {
+	case 2:
+		return "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@26&4@对敌人造成94%的物理伤害&0;并有84%机率将对敌人造成伤害的70%转换为气力</font>"
+	case 3:
+		return "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@28&4@对敌人造成96%的物理伤害&0;并有86%机率将对敌人造成伤害的70%转换为气力</font>"
+	default:
+		return "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@对敌人造成92%的物理伤害&0;并有82%机率将对敌人造成伤害的70%转换为气力</font>"
+	}
+}
+
+func sourceBattleSkillActionLabel(name string, level int) string {
+	switch strings.TrimSpace(name) {
+	case "密斩":
+		return "w8/manycut"
+	case "多段斩":
+		if level >= 3 {
+			return "w8/ddz2"
+		}
+		return "w8/ddz1"
+	case "嗜血斩":
+		if level >= 3 {
+			return "w8/xyz2"
+		}
+		return "w8/xyz1"
+	case "普通攻击":
+		return "nomalAtk"
+	default:
+		return ""
+	}
+}
+
+func sourceBattleSkillMPCost(description string) int {
+	return firstSourcePercentInt(sourceMPCostPattern, description)
+}
+
+func sourceBattleSkillDamageMultiplier(description string) float64 {
+	if value := firstSourcePercentInt(sourceImproveDamagePattern, description); value > 0 {
+		return 1 + float64(value)/100
+	}
+	if value := firstSourcePercentInt(sourcePercentDamagePattern, description); value > 0 {
+		return float64(value) / 100
+	}
+	return 0
+}
+
+func sourceBattleSkillLifeStealChance(description string) int {
+	return firstSourcePercentInt(sourceLifeStealChancePattern, description)
+}
+
+func sourceBattleSkillLifeStealRatio(description string) float64 {
+	value := firstSourcePercentInt(sourceLifeStealRatioPattern, description)
+	if value <= 0 {
+		return 0
+	}
+	return float64(value) / 100
+}
+
+func firstSourcePercentInt(pattern *regexp.Regexp, text string) int {
+	match := pattern.FindStringSubmatch(text)
+	if len(match) < 2 {
+		return 0
+	}
+	value, err := strconv.Atoi(match[1])
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
+func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
+	switch strings.TrimSpace(name) {
+	case "密斩":
+		return 1.4
+	case "多段斩":
+		switch level {
+		case 2:
+			return 1.6
+		case 3:
+			return 1.65
+		case 4:
+			return 1.7
+		default:
+			return 1.55
+		}
+	case "嗜血斩":
+		switch level {
+		case 2:
+			return 0.94
+		case 3:
+			return 0.96
+		default:
+			return 0.92
+		}
+	default:
+		return 1
+	}
+}
+
+func fallbackSourceBattleSkillMPCost(name string, level int) int {
+	switch strings.TrimSpace(name) {
+	case "密斩":
+		return 5
+	case "多段斩":
+		switch level {
+		case 2:
+			return 10
+		case 3:
+			return 12
+		case 4:
+			return 14
+		default:
+			return 8
+		}
+	case "嗜血斩":
+		switch level {
+		case 2:
+			return 26
+		case 3:
+			return 28
+		default:
+			return 24
+		}
+	default:
+		return 0
+	}
+}
+
+func fallbackShiXueLifeStealChance(level int) int {
+	switch level {
+	case 2:
+		return 84
+	case 3:
+		return 86
+	default:
+		return 82
+	}
 }
 
 func effectiveBattleDefense(target *CellInfoPush, targetInDef bool) int {
@@ -600,7 +1057,18 @@ func (runtime *Runtime) resolveCriticalHit(actor *CellInfoPush, target *CellInfo
 	if actor.Fat >= 100 {
 		return true
 	}
-	return runtime.hashBattleRoll(actor, target, commandID) < actor.Fat
+	chance := battleCriticalChancePercent(actor.Fat, target.Dog)
+	return runtime.hashBattleRollWithSalt(actor, target, commandID, "fat") < chance
+}
+
+func (runtime *Runtime) resolveLifeSteal(actor *CellInfoPush, target *CellInfoPush, commandID string, profile commandProfile) bool {
+	if profile.LifeStealChance <= 0 || actor == nil || target == nil {
+		return false
+	}
+	if profile.LifeStealChance >= 100 {
+		return true
+	}
+	return runtime.hashBattleRollWithSalt(actor, target, commandID, "lifesteal") < profile.LifeStealChance
 }
 
 func (runtime *Runtime) resolveDodge(actor *CellInfoPush, target *CellInfoPush, commandID string, profile commandProfile) bool {
@@ -610,19 +1078,39 @@ func (runtime *Runtime) resolveDodge(actor *CellInfoPush, target *CellInfoPush, 
 	if actor.Hit <= 0 {
 		return true
 	}
-	chance := target.Dog - actor.Hit + 100
-	if chance <= 0 {
-		return false
+	chance := battleDodgeChancePercent(actor.Hit, target.Dog)
+	return runtime.hashBattleRollWithSalt(actor, target, commandID, "dog") < chance
+}
+
+func battleCriticalChancePercent(actorFat int, targetDog int) int {
+	if actorFat <= 0 {
+		return 0
 	}
-	if chance >= 100 {
-		return true
+	if actorFat >= 100 {
+		return 100
 	}
-	return runtime.hashBattleRoll(actor, target, commandID) < chance
+	chance := int(math.Round(float64(actorFat)*0.45 - float64(maxInt(0, targetDog))/25 + 4))
+	return clampInt(chance, 1, 80)
+}
+
+func battleDodgeChancePercent(actorHit int, targetDog int) int {
+	if targetDog <= 0 {
+		return 0
+	}
+	if actorHit <= 0 {
+		return 100
+	}
+	chance := int(math.Round(8 + (float64(targetDog)-float64(actorHit)/2)/10))
+	return clampInt(chance, 1, 80)
 }
 
 func (runtime *Runtime) hashBattleRoll(actor *CellInfoPush, target *CellInfoPush, commandID string) int {
+	return runtime.hashBattleRollWithSalt(actor, target, commandID, "")
+}
+
+func (runtime *Runtime) hashBattleRollWithSalt(actor *CellInfoPush, target *CellInfoPush, commandID string, salt string) int {
 	score := 0
-	seed := fmt.Sprintf("%s:%d:%d:%s:%s:%s", runtime.BattleID, runtime.Round, runtime.nextSequence, actor.Handle, target.Handle, commandID)
+	seed := fmt.Sprintf("%s:%d:%d:%s:%s:%s:%s", runtime.BattleID, runtime.Round, runtime.nextSequence, actor.Handle, target.Handle, commandID, salt)
 	for _, char := range seed {
 		score = (score*31 + int(char)) % 100
 	}
@@ -730,14 +1218,11 @@ func sourceBattleRewardsForMap(mapID string, winner Camp, escaped bool) (int, []
 		return 0, []string{}
 	}
 
-	switch strings.TrimSpace(mapID) {
-	case "5":
-		// Captured source tail packet 20260517_043413_010_conn_0005:
-		// "战斗奖励: 肉 x1" and "获得经验:0".
-		return 0, []string{"肉"}
-	default:
+	reward, ok := sourceBattleRewardConfigForMap(mapID)
+	if !ok || reward.Status != "confirmed" {
 		return 0, []string{}
 	}
+	return reward.ExpDelta, append([]string{}, reward.Items...)
 }
 
 func (runtime *Runtime) cellByHandle(handle string) *CellInfoPush {
@@ -788,165 +1273,12 @@ func (runtime *Runtime) resolveWinner() Camp {
 	return ""
 }
 
-var sourceWildEnemyByMapID = map[string]CellInfoPush{
-	"4": {
-		Camp:         CampEnemy,
-		Handle:       "7089932810872715",
-		Name:         "山林蜘蛛",
-		DisplayURL:   "monstermap/forestspider.swf",
-		Level:        1,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        72,
-		HP:           72,
-		MaxMP:        9,
-		MP:           9,
-		Speed:        15,
-		Attack:       9,
-		Defense:      9,
-		CommandLabel: "普通攻击",
-	},
-	"5": {
-		Camp:         CampEnemy,
-		Handle:       "7069963681398983",
-		Name:         "山林狼兽",
-		DisplayURL:   "monstermap/graywolf.swf",
-		Level:        1,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        72,
-		HP:           72,
-		MaxMP:        9,
-		MP:           9,
-		Speed:        15,
-		Attack:       9,
-		Defense:      9,
-		CommandLabel: "普通攻击",
-	},
-	"84": {
-		Camp:         CampEnemy,
-		Handle:       "6807541628986490",
-		Name:         "绿甲螳螂",
-		DisplayURL:   "monstermap/greenmantis.swf",
-		Level:        3,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        40,
-		HP:           40,
-		MaxMP:        40,
-		MP:           40,
-		Speed:        110,
-		Attack:       8,
-		Defense:      8,
-		CommandLabel: "普通攻击",
-	},
-	"85": {
-		Camp:         CampEnemy,
-		Handle:       "8881541656023182",
-		Name:         "绿甲螳螂",
-		DisplayURL:   "monstermap/greenmantis.swf",
-		Level:        4,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        45,
-		HP:           45,
-		MaxMP:        45,
-		MP:           45,
-		Speed:        140,
-		Attack:       9,
-		Defense:      9,
-		CommandLabel: "普通攻击",
-	},
-	"86": {
-		Camp:         CampEnemy,
-		Handle:       "1200541669444892",
-		Name:         "小竹妖",
-		DisplayURL:   "monstermap/bambooboy.swf",
-		Level:        6,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        90,
-		HP:           90,
-		MaxMP:        90,
-		MP:           90,
-		Speed:        180,
-		Attack:       14,
-		Defense:      14,
-		CommandLabel: "普通攻击",
-	},
-	"87": {
-		Camp:         CampEnemy,
-		Handle:       "4857541734860164",
-		Name:         "跳跳竹",
-		DisplayURL:   "monstermap/jumpboo.swf",
-		Level:        6,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        94,
-		HP:           94,
-		MaxMP:        94,
-		MP:           94,
-		Speed:        180,
-		Attack:       14,
-		Defense:      14,
-		CommandLabel: "普通攻击",
-	},
-	"88": {
-		Camp:         CampEnemy,
-		Handle:       "6668541757519206",
-		Name:         "刀手螳螂",
-		DisplayURL:   "monstermap/kinfemantis.swf",
-		Level:        6,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        90,
-		HP:           90,
-		MaxMP:        90,
-		MP:           90,
-		Speed:        180,
-		Attack:       14,
-		Defense:      14,
-		CommandLabel: "普通攻击",
-	},
-	"90": {
-		Camp:         CampEnemy,
-		Handle:       "8848541914382828",
-		Name:         "竹炮",
-		DisplayURL:   "monstermap/boobomb.swf",
-		Level:        7,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        100,
-		HP:           100,
-		MaxMP:        100,
-		MP:           100,
-		Speed:        190,
-		Attack:       7,
-		Defense:      7,
-		CommandLabel: "普通攻击",
-	},
-	"97": {
-		Camp:         CampEnemy,
-		Handle:       "8100462475820589",
-		Name:         "小竹妖",
-		DisplayURL:   "monstermap/bambooboy.swf",
-		Level:        5,
-		XScale:       100,
-		YScale:       100,
-		MaxHP:        80,
-		HP:           80,
-		MaxMP:        80,
-		MP:           80,
-		Speed:        150,
-		Attack:       11,
-		Defense:      11,
-		CommandLabel: "普通攻击",
-	},
-}
-
 func sourceEnemyForMap(mapID string) (CellInfoPush, bool) {
-	enemy, ok := sourceWildEnemyByMapID[mapID]
-	return enemy, ok
+	config, ok := sourceEnemyConfigForMap(mapID)
+	if !ok {
+		return CellInfoPush{}, false
+	}
+	return config.Cell, true
 }
 
 func (cell CellInfoPush) withBattleID(battleID string) CellInfoPush {
@@ -955,21 +1287,19 @@ func (cell CellInfoPush) withBattleID(battleID string) CellInfoPush {
 }
 
 func queueIndexForMap(mapID string) int {
-	switch mapID {
-	case "5", "84", "85", "86", "87", "88", "90", "97":
-		return 1
-	default:
+	config, ok := sourceEnemyConfigForMap(mapID)
+	if !ok {
 		return 0
 	}
+	return config.QueueIndexTeam
 }
 
 func enemyQueueIndexForMap(mapID string) int {
-	switch mapID {
-	case "5", "84", "85", "86", "87", "88", "90", "97":
-		return 4
-	default:
+	config, ok := sourceEnemyConfigForMap(mapID)
+	if !ok {
 		return 0
 	}
+	return config.QueueIndexEnemy
 }
 
 func defaultString(value string, fallback string) string {
@@ -1001,6 +1331,15 @@ func maxInt(left int, right int) int {
 		return left
 	}
 	return right
+}
+
+func cloneBattleRoleSkills(skills []session.RoleSkill) []session.RoleSkill {
+	if len(skills) == 0 {
+		return nil
+	}
+	cloned := make([]session.RoleSkill, len(skills))
+	copy(cloned, skills)
+	return cloned
 }
 
 func ParseMapID(mapID string) (int, bool) {

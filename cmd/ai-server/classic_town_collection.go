@@ -80,6 +80,12 @@ func roleHasCollectionRequiredItem(store *session.Store, socketSession *packetSe
 }
 
 func buildCollectionRewardItem(point world.SourceCollectionPoint) session.RoleItem {
+	if item, ok := session.CapturedRoleItemTemplate(point.RewardItemName); ok {
+		item.Type = "背包"
+		item.Count = 1
+		item.Index = -1
+		return item
+	}
 	return session.RoleItem{
 		Type:        "背包",
 		Name:        point.RewardItemName,

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -34,6 +35,7 @@ type RoleSkill struct {
 	Type        string `json:"type"`
 	Icon        string `json:"icon"`
 	Description string `json:"description"`
+	MaxLevel    int    `json:"maxLevel,omitempty"`
 }
 
 type RoleItem struct {
@@ -209,6 +211,24 @@ type RoleSkillPurchaseResult struct {
 	ErrorMessage string
 }
 
+type RoleItemRequirement struct {
+	Name  string
+	Count int
+}
+
+type RoleItemPurchaseResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	Item         RoleItem
+	Consumed     []RoleItem
+	ClearedItems []RoleItemClear
+	Currencies   RoleCurrencies
+	Found        bool
+	Purchased    bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
 type RoleItemClear struct {
 	Type  string
 	Index int
@@ -240,10 +260,14 @@ type RoleUseItemResult struct {
 	Role         RoleSummary
 	PlayerBase   PlayerBaseData
 	Item         RoleItem
+	LearnedSkill *RoleSkill
 	UpdatedItem  *RoleItem
+	UpdatedItems []RoleItem
 	ClearedItems []RoleItemClear
+	Currencies   RoleCurrencies
 	Found        bool
 	Used         bool
+	Equipped     bool
 	ErrorCode    string
 	ErrorMessage string
 }
@@ -277,6 +301,12 @@ type Store struct {
 	mallRequests     map[string]mall.PurchaseResult
 }
 
+type DevRoleSummary struct {
+	PlayerID    string `json:"playerId"`
+	RoleID      string `json:"roleId"`
+	DisplayName string `json:"displayName"`
+}
+
 type AccountRecord struct {
 	UserName     string
 	Password     string
@@ -302,6 +332,30 @@ func NewStore() *Store {
 		Mall:         mall.NewService(),
 		mallRequests: make(map[string]mall.PurchaseResult),
 	}
+}
+
+func (store *Store) DevRoleSummaries() []DevRoleSummary {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	result := []DevRoleSummary{}
+	for playerID, roles := range store.rolesByPID {
+		for _, role := range roles {
+			role = withRoleRuntimeDefaults(role)
+			result = append(result, DevRoleSummary{
+				PlayerID:    playerID,
+				RoleID:      role.RoleID,
+				DisplayName: role.DisplayName,
+			})
+		}
+	}
+	sort.SliceStable(result, func(left int, right int) bool {
+		if result[left].PlayerID == result[right].PlayerID {
+			return result[left].RoleID < result[right].RoleID
+		}
+		return result[left].PlayerID < result[right].PlayerID
+	})
+	return result
 }
 
 func NewPersistentStore(persistencePath string) (*Store, error) {
@@ -593,6 +647,34 @@ func (store *Store) GetRoleCurrencies(playerID string, roleID string) (RoleCurre
 	return RoleCurrencies{}, false
 }
 
+func (store *Store) AddRoleCurrency(playerID string, roleID string, currencyName string, amount int) (RoleCurrencies, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	currencyName = strings.TrimSpace(currencyName)
+	if currencyName == "" || amount <= 0 {
+		return RoleCurrencies{}, false
+	}
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		currencies := cloneRoleCurrencies(roles[index].Currencies)
+		currencies[currencyName] += amount
+		roles[index].Currencies = normalizeRoleCurrencies(currencies)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist added currency failed: %v", err)
+		}
+		return cloneRoleCurrencies(roles[index].Currencies), true
+	}
+
+	return RoleCurrencies{}, false
+}
+
 func (store *Store) GetRoleContainerCapacity(playerID string, roleID string, containerType string) (int, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -700,68 +782,145 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 		}
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
-		if item.Index < 0 {
-			updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
-			remainingCount := item.Count
-			var grantedItem RoleItem
-			grantedItemSet := false
-			for _, existing := range roles[index].Items {
-				if remainingCount > 0 && canRoleItemsStack(existing, item) {
-					stackLimit := classicItemStackLimit(existing)
-					if existing.Count < stackLimit {
-						addedCount := remainingCount
-						if addedCount > stackLimit-existing.Count {
-							addedCount = stackLimit - existing.Count
-						}
-						existing.Count += addedCount
-						remainingCount -= addedCount
-						existing = normalizeRoleItem(existing)
-						if !grantedItemSet {
-							grantedItem = existing
-							grantedItemSet = true
-						}
-					}
-				}
-				updatedItems = append(updatedItems, existing)
-			}
-			if remainingCount > 0 {
-				targetIndex, ok := nextRoleItemIndex(updatedItems, item.Type, capacity)
-				if !ok {
-					return RoleItem{}, false
-				}
-				item.Index = targetIndex
-				item.Count = remainingCount
-				normalizedItem := normalizeRoleItem(item)
-				updatedItems = append(updatedItems, normalizedItem)
-				if !grantedItemSet {
-					grantedItem = normalizedItem
-					grantedItemSet = true
-				}
-			}
-			roles[index].Items = normalizeRoleItems(updatedItems)
-			store.rolesByPID[playerID] = roles
-			if err := store.persistPlayerStateLocked(playerID); err != nil {
-				log.Printf("[session.Store] persist granted item failed: %v", err)
-			}
-			return grantedItem, grantedItemSet
+		updatedItems, grantedItem, ok := grantRoleItemToItems(roles[index].Items, capacity, item)
+		if !ok {
+			return RoleItem{}, false
 		}
-
-		updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
-		for _, existing := range roles[index].Items {
-			if existing.Type == item.Type && existing.Index == item.Index {
-				continue
-			}
-			updatedItems = append(updatedItems, existing)
-		}
-		updatedItems = append(updatedItems, normalizeRoleItem(item))
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist granted item failed: %v", err)
 		}
-		return item, true
+		return grantedItem, true
 	}
 	return RoleItem{}, false
+}
+
+func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleItem, requirements []RoleItemRequirement) RoleItemPurchaseResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	item = normalizeRoleItem(item)
+	if item.Type == "" {
+		item.Type = "背包"
+	}
+	if item.Index < 0 {
+		item.Index = -1
+	}
+	if item.Count <= 0 {
+		item.Count = 1
+	}
+	if item.Name == "" {
+		return RoleItemPurchaseResult{
+			ErrorCode:    "invalid_item",
+			ErrorMessage: "物品不存在。",
+		}
+	}
+	capacity, supported := roleContainerCapacity(item.Type)
+	if !supported {
+		return RoleItemPurchaseResult{
+			ErrorCode:    "invalid_container",
+			ErrorMessage: "目标容器无效。",
+		}
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		currentRole := withRoleRuntimeDefaults(roles[index])
+		currentBase := playerBaseDataFromRole(playerID, currentRole)
+		currentCurrencies := cloneRoleCurrencies(currentRole.Currencies)
+		originalCurrencies := cloneRoleCurrencies(currentCurrencies)
+		normalizedRequirements := normalizeRoleItemRequirements(requirements)
+		for _, requirement := range normalizedRequirements {
+			if requirement.Count <= 0 {
+				continue
+			}
+			if isRoleCurrencyName(requirement.Name) {
+				if currentCurrencies[requirement.Name] < requirement.Count {
+					return RoleItemPurchaseResult{
+						Role:         currentRole,
+						PlayerBase:   currentBase,
+						Currencies:   currentCurrencies,
+						Found:        true,
+						ErrorCode:    "not_enough_currency",
+						ErrorMessage: fmt.Sprintf("%s不足。", requirement.Name),
+					}
+				}
+				continue
+			}
+			if totalRoleItemCountByName(currentRole.Items, "背包", requirement.Name) < requirement.Count {
+				return RoleItemPurchaseResult{
+					Role:         currentRole,
+					PlayerBase:   currentBase,
+					Currencies:   currentCurrencies,
+					Found:        true,
+					ErrorCode:    "item_not_enough",
+					ErrorMessage: fmt.Sprintf("%s不足。", requirement.Name),
+				}
+			}
+		}
+
+		updatedItems := cloneRoleItems(currentRole.Items)
+		consumedItems := []RoleItem{}
+		clearedItems := []RoleItemClear{}
+		for _, requirement := range normalizedRequirements {
+			if requirement.Count <= 0 {
+				continue
+			}
+			if isRoleCurrencyName(requirement.Name) {
+				currentCurrencies[requirement.Name] -= requirement.Count
+				continue
+			}
+			var consumed []RoleItem
+			var cleared []RoleItemClear
+			updatedItems, consumed, cleared = consumeRoleItemsByName(updatedItems, "背包", requirement.Name, requirement.Count)
+			consumedItems = append(consumedItems, consumed...)
+			clearedItems = append(clearedItems, cleared...)
+		}
+
+		var purchasedItem RoleItem
+		var purchased bool
+		updatedItems, purchasedItem, purchased = grantRoleItemToItems(updatedItems, capacity, item)
+		if !purchased {
+			return RoleItemPurchaseResult{
+				Role:         currentRole,
+				PlayerBase:   currentBase,
+				Currencies:   originalCurrencies,
+				Found:        true,
+				ErrorCode:    "container_full",
+				ErrorMessage: "背包已满。",
+			}
+		}
+
+		currentRole.Items = normalizeRoleItems(updatedItems)
+		currentRole.Currencies = cloneRoleCurrencies(currentCurrencies)
+		roles[index] = currentRole
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist purchased item failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		return RoleItemPurchaseResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         purchasedItem,
+			Consumed:     consumedItems,
+			ClearedItems: clearedItems,
+			Currencies:   cloneRoleCurrencies(role.Currencies),
+			Found:        true,
+			Purchased:    true,
+		}
+	}
+
+	return RoleItemPurchaseResult{
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
 }
 
 func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta int) RoleExpGrantResult {
@@ -933,6 +1092,334 @@ func (store *Store) ConsumeRoleItem(playerID string, roleID string, sourceType s
 		Found:        false,
 		ErrorCode:    "role_missing",
 		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) UseRoleItem(playerID string, roleID string, sourceType string, sourceIndex int) RoleUseItemResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	sourceType = strings.TrimSpace(sourceType)
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		sourceItem, ok := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Found:        true,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "物品不存在。",
+			}
+		}
+
+		switch sourceItem.Name {
+		case "银元宝":
+			return store.useCurrencyExchangeItemLocked(playerID, roles, index, sourceItem, 1, "铜钱", 1000)
+		case "铜钱":
+			return store.useCurrencyExchangeItemLocked(playerID, roles, index, sourceItem, 1000, "银元宝", 1)
+		default:
+			if skill, ok := roleSkillFromItem(sourceItem); ok {
+				return store.useSkillItemLocked(playerID, roles, index, sourceItem, skill)
+			}
+			targetIndex, ok := roleEquipTargetIndex(sourceItem)
+			if ok {
+				return store.useEquipmentItemLocked(playerID, roles, index, sourceItem, sourceType, sourceIndex, targetIndex)
+			}
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "item_not_usable",
+				ErrorMessage: "该物品不能使用。",
+			}
+		}
+	}
+
+	return RoleUseItemResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) useSkillItemLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+	skill RoleSkill,
+) RoleUseItemResult {
+	skill = normalizeRoleSkill(skill)
+	if skill.Name == "" {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "invalid_skill",
+			ErrorMessage: "技能不存在。",
+		}
+	}
+
+	currentSkills := cloneRoleSkills(roles[roleIndex].Skills)
+	maxLevel := normalizeSkillMaxLevel(skill.MaxLevel)
+	targetSkillIndex := -1
+	for index, existing := range roles[roleIndex].Skills {
+		existing = normalizeRoleSkill(existing)
+		if existing.Name != skill.Name {
+			continue
+		}
+		if existing.Level >= maxLevel {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "skill_level_max",
+				ErrorMessage: "该技能已达到当前最高等级。",
+			}
+		}
+		targetSkillIndex = index
+		skill.Level = existing.Level + 1
+		break
+	}
+
+	if targetSkillIndex < 0 && len(roles[roleIndex].Skills) >= defaultSkillCap {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "skill_cap_full",
+			ErrorMessage: "可学习技能数量已满。",
+		}
+	}
+
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	if updatedSource != nil {
+		updatedSource.Handle = roles[roleIndex].RoleID
+	}
+	if targetSkillIndex >= 0 {
+		roles[roleIndex].Skills[targetSkillIndex] = skill
+	} else {
+		roles[roleIndex].Skills = append(currentSkills, skill)
+	}
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist learned skill item failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	result := RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		LearnedSkill: &skill,
+		ClearedItems: clearedItems,
+		Found:        true,
+		Used:         true,
+	}
+	if updatedSource != nil {
+		result.UpdatedItems = []RoleItem{*updatedSource}
+	}
+	return result
+}
+
+func roleSkillFromItem(item RoleItem) (RoleSkill, bool) {
+	itemType := strings.TrimSpace(item.ItemType)
+	if itemType != "被动技能" && !strings.HasPrefix(itemType, "技能") {
+		return RoleSkill{}, false
+	}
+	name := strings.TrimSpace(item.Name)
+	if name == "" {
+		return RoleSkill{}, false
+	}
+	maxLevel := item.ItemLevel
+	if maxLevel <= 0 {
+		maxLevel = 5
+	}
+	return RoleSkill{
+		Name:        name,
+		Level:       1,
+		Type:        itemType,
+		Icon:        strings.TrimSpace(item.Display),
+		Description: strings.TrimSpace(item.Description),
+		MaxLevel:    maxLevel,
+	}, true
+}
+
+func (store *Store) useCurrencyExchangeItemLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+	sourceCount int,
+	targetName string,
+	targetCount int,
+) RoleUseItemResult {
+	if sourceItem.Count < sourceCount {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "item_not_enough",
+			ErrorMessage: "物品数量不足。",
+		}
+	}
+
+	currencies := cloneRoleCurrencies(roles[roleIndex].Currencies)
+	if sourceItem.Name == "银元宝" {
+		if currencies["银元宝"] < sourceCount {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "currency_not_enough",
+				ErrorMessage: "银元宝不足。",
+			}
+		}
+		currencies["银元宝"] -= sourceCount
+		currencies["铜钱"] += targetCount
+	} else if sourceItem.Name == "铜钱" {
+		if currencies["铜钱"] < sourceCount {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "currency_not_enough",
+				ErrorMessage: "铜钱不足。",
+			}
+		}
+		currencies["铜钱"] -= sourceCount
+		currencies["银元宝"] += targetCount
+	}
+
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, sourceCount)
+	updatedResults := []RoleItem{}
+	if updatedSource != nil {
+		updatedResults = append(updatedResults, *updatedSource)
+	}
+	targetTemplate, ok := CapturedRoleItemTemplate(targetName)
+	if !ok {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "target_item_missing",
+			ErrorMessage: "兑换目标物品不存在。",
+		}
+	}
+	targetTemplate.Type = sourceItem.Type
+	targetTemplate.Index = -1
+	targetTemplate.Count = targetCount
+	updatedItems, grantedItem, ok := grantRoleItemToItems(updatedItems, defaultBagCap, targetTemplate)
+	if !ok {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "bag_full",
+			ErrorMessage: "背包已满。",
+		}
+	}
+	updatedResults = append(updatedResults, grantedItem)
+
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	roles[roleIndex].Currencies = normalizeRoleCurrencies(currencies)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used role item failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	return RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		UpdatedItems: normalizeRoleItems(updatedResults),
+		ClearedItems: clearedItems,
+		Currencies:   cloneRoleCurrencies(role.Currencies),
+		Found:        true,
+		Used:         true,
+	}
+}
+
+func (store *Store) useEquipmentItemLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+	sourceType string,
+	sourceIndex int,
+	targetIndex int,
+) RoleUseItemResult {
+	updatedItems := make([]RoleItem, 0, len(roles[roleIndex].Items)+1)
+	var replacedItem *RoleItem
+	for _, item := range roles[roleIndex].Items {
+		if item.Type == sourceType && item.Index == sourceIndex {
+			continue
+		}
+		if item.Type == "装备" && item.Index == targetIndex {
+			copyItem := item
+			replacedItem = &copyItem
+			continue
+		}
+		updatedItems = append(updatedItems, item)
+	}
+
+	if replacedItem != nil && sourceType != "装备" {
+		replacedItem.Type = sourceType
+		replacedItem.Index = sourceIndex
+		updatedItems = append(updatedItems, normalizeRoleItem(*replacedItem))
+	}
+
+	equippedItem := sourceItem
+	equippedItem.Type = "装备"
+	equippedItem.Index = targetIndex
+	updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	roles[roleIndex].SourceQuery = applyRoleItemAppearanceToSourceQuery(roles[roleIndex].SourceQuery, equippedItem)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist active equipped item failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	return RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		UpdatedItems: []RoleItem{normalizeRoleItem(equippedItem)},
+		ClearedItems: []RoleItemClear{{
+			Type:  sourceType,
+			Index: sourceIndex,
+		}},
+		Found:    true,
+		Used:     true,
+		Equipped: true,
 	}
 }
 
@@ -1222,17 +1709,17 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 			log.Printf("[session.Store] persist moved item failed: %v", err)
 		}
 
-			role := withRoleRuntimeDefaults(roles[index])
-			cleared := make([]RoleItemClear, 0, 2)
-			if !canSplitMove && !(canStack && sourceItem.Count > moveCount) {
-				cleared = append(cleared, RoleItemClear{Type: sourceType, Index: sourceIndex})
-			}
-			if sourceType != targetType || sourceIndex != targetIndex {
-				cleared = append(cleared, RoleItemClear{Type: targetType, Index: targetIndex})
-			}
-			if !hasTarget {
-				_ = targetItem
-			}
+		role := withRoleRuntimeDefaults(roles[index])
+		cleared := make([]RoleItemClear, 0, 2)
+		if !canSplitMove && !(canStack && sourceItem.Count > moveCount) {
+			cleared = append(cleared, RoleItemClear{Type: sourceType, Index: sourceIndex})
+		}
+		if sourceType != targetType || sourceIndex != targetIndex {
+			cleared = append(cleared, RoleItemClear{Type: targetType, Index: targetIndex})
+		}
+		if !hasTarget {
+			_ = targetItem
+		}
 		return RoleMoveItemResult{
 			Role:         role,
 			PlayerBase:   playerBaseDataFromRole(playerID, role),
@@ -1278,6 +1765,70 @@ func nextRoleItemIndex(items []RoleItem, containerType string, capacity int) (in
 	return 0, false
 }
 
+func grantRoleItemToItems(items []RoleItem, capacity int, item RoleItem) ([]RoleItem, RoleItem, bool) {
+	item = normalizeRoleItem(item)
+	if item.Type == "" {
+		item.Type = "背包"
+	}
+	if item.Count <= 0 {
+		item.Count = 1
+	}
+	if item.Name == "" {
+		return items, RoleItem{}, false
+	}
+
+	if item.Index < 0 {
+		updatedItems := make([]RoleItem, 0, len(items)+1)
+		remainingCount := item.Count
+		var grantedItem RoleItem
+		grantedItemSet := false
+		for _, existing := range items {
+			if remainingCount > 0 && canRoleItemsStack(existing, item) {
+				stackLimit := classicItemStackLimit(existing)
+				if existing.Count < stackLimit {
+					addedCount := remainingCount
+					if addedCount > stackLimit-existing.Count {
+						addedCount = stackLimit - existing.Count
+					}
+					existing.Count += addedCount
+					remainingCount -= addedCount
+					existing = normalizeRoleItem(existing)
+					if !grantedItemSet {
+						grantedItem = existing
+						grantedItemSet = true
+					}
+				}
+			}
+			updatedItems = append(updatedItems, existing)
+		}
+		if remainingCount > 0 {
+			targetIndex, ok := nextRoleItemIndex(updatedItems, item.Type, capacity)
+			if !ok {
+				return items, RoleItem{}, false
+			}
+			item.Index = targetIndex
+			item.Count = remainingCount
+			normalizedItem := normalizeRoleItem(item)
+			updatedItems = append(updatedItems, normalizedItem)
+			if !grantedItemSet {
+				grantedItem = normalizedItem
+				grantedItemSet = true
+			}
+		}
+		return updatedItems, grantedItem, grantedItemSet
+	}
+
+	updatedItems := make([]RoleItem, 0, len(items)+1)
+	for _, existing := range items {
+		if existing.Type == item.Type && existing.Index == item.Index {
+			continue
+		}
+		updatedItems = append(updatedItems, existing)
+	}
+	updatedItems = append(updatedItems, normalizeRoleItem(item))
+	return updatedItems, item, true
+}
+
 func findRoleItem(items []RoleItem, itemType string, index int) (RoleItem, bool) {
 	for _, item := range items {
 		if item.Type == itemType && item.Index == index {
@@ -1285,6 +1836,103 @@ func findRoleItem(items []RoleItem, itemType string, index int) (RoleItem, bool)
 		}
 	}
 	return RoleItem{}, false
+}
+
+func normalizeRoleItemRequirements(requirements []RoleItemRequirement) []RoleItemRequirement {
+	result := make([]RoleItemRequirement, 0, len(requirements))
+	merged := make(map[string]int, len(requirements))
+	order := make([]string, 0, len(requirements))
+	for _, requirement := range requirements {
+		name := strings.TrimSpace(requirement.Name)
+		if name == "" || requirement.Count <= 0 {
+			continue
+		}
+		if _, ok := merged[name]; !ok {
+			order = append(order, name)
+		}
+		merged[name] += requirement.Count
+	}
+	for _, name := range order {
+		result = append(result, RoleItemRequirement{Name: name, Count: merged[name]})
+	}
+	return result
+}
+
+func isRoleCurrencyName(name string) bool {
+	switch strings.TrimSpace(name) {
+	case "铜钱", "银元宝":
+		return true
+	default:
+		return false
+	}
+}
+
+func totalRoleItemCountByName(items []RoleItem, containerType string, name string) int {
+	total := 0
+	for _, item := range items {
+		if item.Type == containerType && item.Name == name {
+			total += item.Count
+		}
+	}
+	return total
+}
+
+func consumeRoleItemsByName(items []RoleItem, containerType string, name string, count int) ([]RoleItem, []RoleItem, []RoleItemClear) {
+	remaining := count
+	updatedItems := make([]RoleItem, 0, len(items))
+	consumedItems := []RoleItem{}
+	clearedItems := []RoleItemClear{}
+	for _, item := range items {
+		if remaining <= 0 || item.Type != containerType || item.Name != name {
+			updatedItems = append(updatedItems, item)
+			continue
+		}
+		consumeCount := item.Count
+		if consumeCount > remaining {
+			consumeCount = remaining
+		}
+		remaining -= consumeCount
+		if item.Count > consumeCount {
+			item.Count -= consumeCount
+			normalizedItem := normalizeRoleItem(item)
+			updatedItems = append(updatedItems, normalizedItem)
+			consumedItems = append(consumedItems, normalizedItem)
+			continue
+		}
+		clearedItems = append(clearedItems, RoleItemClear{
+			Type:  item.Type,
+			Index: item.Index,
+		})
+	}
+	return updatedItems, consumedItems, clearedItems
+}
+
+func consumeRoleItemBySlot(items []RoleItem, containerType string, index int, count int) ([]RoleItem, *RoleItem, []RoleItemClear) {
+	if count <= 0 {
+		return items, nil, []RoleItemClear{}
+	}
+	updatedItems := make([]RoleItem, 0, len(items))
+	clearedItems := []RoleItemClear{}
+	var updatedItem *RoleItem
+	for _, item := range items {
+		if item.Type != containerType || item.Index != index {
+			updatedItems = append(updatedItems, item)
+			continue
+		}
+		if item.Count > count {
+			remaining := item
+			remaining.Count -= count
+			normalized := normalizeRoleItem(remaining)
+			updatedItems = append(updatedItems, normalized)
+			updatedItem = &normalized
+			continue
+		}
+		clearedItems = append(clearedItems, RoleItemClear{
+			Type:  item.Type,
+			Index: item.Index,
+		})
+	}
+	return updatedItems, updatedItem, clearedItems
 }
 
 func roleEquipTargetIndex(item RoleItem) (int, bool) {
@@ -1408,6 +2056,7 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
 		skill = normalizeRoleSkill(skill)
+		maxLevel := normalizeSkillMaxLevel(skill.MaxLevel)
 		currentSkills := cloneRoleSkills(roles[index].Skills)
 		currentCurrencies := cloneRoleCurrencies(roles[index].Currencies)
 		if skill.Name == "" {
@@ -1418,30 +2067,6 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 				Found:        true,
 				ErrorCode:    "invalid_skill",
 				ErrorMessage: "技能不存在。",
-			}
-		}
-
-		for _, existing := range roles[index].Skills {
-			if existing.Name == skill.Name {
-				return RoleSkillPurchaseResult{
-					Skills:       currentSkills,
-					SkillCap:     defaultSkillCap,
-					Currencies:   currentCurrencies,
-					Found:        true,
-					ErrorCode:    "already_learned",
-					ErrorMessage: "已经学会该技能。",
-				}
-			}
-		}
-
-		if len(roles[index].Skills) >= defaultSkillCap {
-			return RoleSkillPurchaseResult{
-				Skills:       currentSkills,
-				SkillCap:     defaultSkillCap,
-				Currencies:   currentCurrencies,
-				Found:        true,
-				ErrorCode:    "skill_cap_full",
-				ErrorMessage: "可学习技能数量已满。",
 			}
 		}
 
@@ -1459,9 +2084,54 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 			}
 		}
 
+		for skillIndex, existing := range roles[index].Skills {
+			if existing.Name == skill.Name {
+				existing = normalizeRoleSkill(existing)
+				if existing.Level >= maxLevel {
+					return RoleSkillPurchaseResult{
+						Skills:       currentSkills,
+						SkillCap:     defaultSkillCap,
+						Currencies:   currentCurrencies,
+						Found:        true,
+						ErrorCode:    "skill_level_max",
+						ErrorMessage: "该技能已达到当前最高等级。",
+					}
+				}
+				for name, count := range normalizedCost {
+					roles[index].Currencies[name] -= count
+				}
+				skill.Level = existing.Level + 1
+				skill.MaxLevel = maxLevel
+				roles[index].Skills[skillIndex] = skill
+				store.rolesByPID[playerID] = roles
+				if err := store.persistPlayerStateLocked(playerID); err != nil {
+					log.Printf("[session.Store] persist upgraded skill failed: %v", err)
+				}
+				return RoleSkillPurchaseResult{
+					Skills:     cloneRoleSkills(roles[index].Skills),
+					SkillCap:   defaultSkillCap,
+					Currencies: cloneRoleCurrencies(roles[index].Currencies),
+					Found:      true,
+					Learned:    true,
+				}
+			}
+		}
+
+		if len(roles[index].Skills) >= defaultSkillCap {
+			return RoleSkillPurchaseResult{
+				Skills:       currentSkills,
+				SkillCap:     defaultSkillCap,
+				Currencies:   currentCurrencies,
+				Found:        true,
+				ErrorCode:    "skill_cap_full",
+				ErrorMessage: "可学习技能数量已满。",
+			}
+		}
+
 		for name, count := range normalizedCost {
 			roles[index].Currencies[name] -= count
 		}
+		skill.MaxLevel = maxLevel
 		roles[index].Skills = append(roles[index].Skills, skill)
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {

@@ -340,6 +340,197 @@ func TestBuildTownBootstrapUsesCapturedMapTwoTransportData(t *testing.T) {
 	}
 }
 
+func TestBuildTownTransferBootstrapUsesCapturedMapThirtyThreeTransportData(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-033",
+		DisplayName:  "测试女侠",
+		Level:        8,
+		MapID:        33,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        33,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	snapshot, ok := BuildTownTransferBootstrap(role, playerBase, 33, SpawnPoint{X: 1000, Y: 600})
+	if !ok {
+		t.Fatal("expected map33 transfer bootstrap to be supported")
+	}
+	if snapshot.LoadMap.MapID != "33" || snapshot.LoadMap.MapName != "平原_2" || snapshot.LoadMap.XMLURL != "xml/33.xml" {
+		t.Fatalf("expected map33 loadMap, got %+v", snapshot.LoadMap)
+	}
+	assertTransportRole := func(handle string, x int, y int) {
+		t.Helper()
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.Handle != handle {
+				continue
+			}
+			if rolePush.DisplayName != "" || rolePush.RoleID != "-3" || rolePush.SourceQuery != "transp/flag2.swf" {
+				t.Fatalf("expected %s to be empty-name transport, got %+v", handle, rolePush)
+			}
+			if rolePush.SpawnFlash.X != x || rolePush.SpawnFlash.Y != y {
+				t.Fatalf("expected %s spawn %d,%d got %+v", handle, x, y, rolePush.SpawnFlash)
+			}
+			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-npc/movieclips/flag2/flag2-movieclip-ir" {
+				t.Fatalf("expected flag2 visual for %s, got %+v", handle, rolePush.SourceNPCVisual)
+			}
+			return
+		}
+		t.Fatalf("expected map33 transport role %s", handle)
+	}
+
+	assertTransportRole("transp_31", 57, 584)
+	assertTransportRole("transp_34", 2950, 624)
+	assertTransportRole("transp_37", 1124, 750)
+}
+
+func TestBuildTownBootstrapUsesCapturedGuangqingTownData(t *testing.T) {
+	cases := []struct {
+		mapID     int
+		mapName   string
+		roleCount int
+		roles     []struct {
+			handle      string
+			name        string
+			sourceQuery string
+			x           int
+			y           int
+			questState  int
+			irPath      string
+		}
+	}{
+		{
+			mapID:     45,
+			mapName:   "广青镇_1",
+			roleCount: 11,
+			roles: []struct {
+				handle      string
+				name        string
+				sourceQuery string
+				x           int
+				y           int
+				questState  int
+				irPath      string
+			}{
+				{handle: "1810542611191117", name: "丑二品", sourceQuery: "npc/2品丑.swf", x: 3213, y: 310, questState: 4, irPath: "runtime/classic-npc/movieclips/chouerpin/chouerpin-movieclip-ir"},
+				{handle: "1790542610850918", name: "广青守卫甲", sourceQuery: "npc/卫兵_向右.swf", x: 464, y: 419, questState: 2, irPath: "runtime/classic-npc/movieclips/weibing_right/weibing_right-movieclip-ir"},
+				{handle: "transp_46", name: "", sourceQuery: "transp/flag2.swf", x: 3460, y: 580, questState: 0, irPath: "runtime/classic-npc/movieclips/flag2/flag2-movieclip-ir"},
+			},
+		},
+		{
+			mapID:     46,
+			mapName:   "广青镇_2",
+			roleCount: 17,
+			roles: []struct {
+				handle      string
+				name        string
+				sourceQuery string
+				x           int
+				y           int
+				questState  int
+				irPath      string
+			}{
+				{handle: "2160542612239918", name: "白乞", sourceQuery: "npc/白乞.swf", x: 181, y: 395, questState: 4, irPath: "runtime/classic-npc/movieclips/baiqi/baiqi-movieclip-ir"},
+				{handle: "2220542612946566", name: "夏侯武", sourceQuery: "npc/夏侯武.swf", x: 846, y: 430, questState: 4, irPath: "runtime/classic-npc/movieclips/xiahouwu/xiahouwu-movieclip-ir"},
+				{handle: "transp_48", name: "", sourceQuery: "transp/flag2.swf", x: 1720, y: 730, questState: 0, irPath: "runtime/classic-npc/movieclips/flag2/flag2-movieclip-ir"},
+			},
+		},
+		{
+			mapID:     47,
+			mapName:   "广青镇_3",
+			roleCount: 9,
+			roles: []struct {
+				handle      string
+				name        string
+				sourceQuery string
+				x           int
+				y           int
+				questState  int
+				irPath      string
+			}{
+				{handle: "2500542613172144", name: "云衣娘", sourceQuery: "npc/云衣娘.swf", x: 1459, y: 441, questState: 0, irPath: "runtime/classic-npc/movieclips/yunyiniang/yunyiniang-movieclip-ir"},
+				{handle: "2550542613498646", name: "帚公", sourceQuery: "npc/帚公.swf", x: 876, y: 409, questState: 1, irPath: "runtime/classic-npc/movieclips/zhougong/zhougong-movieclip-ir"},
+				{handle: "transp_52", name: "", sourceQuery: "transp/flag2.swf", x: 3460, y: 550, questState: 0, irPath: "runtime/classic-npc/movieclips/flag2/flag2-movieclip-ir"},
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-guangqing",
+			DisplayName:  "测试女侠",
+			Level:        18,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected map%d enemyShow to stay false", testCase.mapID)
+		}
+		if len(snapshot.CreateRoles) != testCase.roleCount || len(snapshot.QuestStates) != testCase.roleCount {
+			t.Fatalf("expected map%d captured roles=%d got roles=%d quests=%d", testCase.mapID, testCase.roleCount, len(snapshot.CreateRoles), len(snapshot.QuestStates))
+		}
+		for _, expected := range testCase.roles {
+			assertCapturedTownRole(t, snapshot, expected.handle, expected.name, expected.sourceQuery, expected.x, expected.y, expected.questState, expected.irPath)
+		}
+	}
+}
+
+func assertCapturedTownRole(
+	t *testing.T,
+	snapshot TownBootstrapSnapshot,
+	handle string,
+	name string,
+	sourceQuery string,
+	x int,
+	y int,
+	questState int,
+	irPath string,
+) {
+	t.Helper()
+	for _, rolePush := range snapshot.CreateRoles {
+		if rolePush.Handle != handle {
+			continue
+		}
+		if rolePush.DisplayName != name || rolePush.SourceQuery != sourceQuery {
+			t.Fatalf("expected %s/%s for %s, got name=%q source=%q", name, sourceQuery, handle, rolePush.DisplayName, rolePush.SourceQuery)
+		}
+		if rolePush.SpawnFlash.X != x || rolePush.SpawnFlash.Y != y {
+			t.Fatalf("expected %s spawn %d,%d got %+v", handle, x, y, rolePush.SpawnFlash)
+		}
+		if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != irPath {
+			t.Fatalf("expected %s visual %q, got %+v", handle, irPath, rolePush.SourceNPCVisual)
+		}
+		for _, statePush := range snapshot.QuestStates {
+			if statePush.Handle == handle {
+				if statePush.State != questState {
+					t.Fatalf("expected %s quest state %d got %d", handle, questState, statePush.State)
+				}
+				return
+			}
+		}
+		t.Fatalf("expected quest state for %s", handle)
+	}
+	t.Fatalf("expected role %s", handle)
+}
+
 func TestBuildTownBootstrapUsesCapturedUnderworldTransportData(t *testing.T) {
 	cases := []struct {
 		mapID   int

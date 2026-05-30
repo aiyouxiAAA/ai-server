@@ -318,6 +318,34 @@ func TestStoreGrantRoleItemStacksCompatibleBagConsumables(t *testing.T) {
 	}
 }
 
+func TestStoreGrantRoleItemFillsCapturedHerbIcon(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "herbicon", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "草药女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	item, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "金银花",
+		ItemType:    "null",
+		Description: genericCollectionRewardDescription("金银花"),
+		Count:       1,
+		Index:       -1,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected to grant 金银花")
+	}
+	if item.Display != "97.png" || item.Description != "f_i_金银花^ffffff&24@材料&25@99&20@性寒味甘.具有清热解毒&0;凉血化淤的功效.&101@97.png&103@0&104@0&105@&107@&108@13" {
+		t.Fatalf("expected captured 金银花 icon and description, got %+v", item)
+	}
+}
+
 func TestStoreEquipStarterAxeMovesBagItemToWeaponSlot(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -739,7 +767,7 @@ func TestStorePurchaseRoleSkillRejectsInsufficientCurrencyWithoutMutation(t *tes
 	}
 }
 
-func TestStorePurchaseRoleSkillRejectsDuplicateWithoutSecondDeduction(t *testing.T) {
+func TestStorePurchaseRoleSkillUpgradesDuplicateAndDeductsAgain(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
 	createResponse := store.CreateRole(RoleCreateRequest{
@@ -757,11 +785,40 @@ func TestStorePurchaseRoleSkillRejectsDuplicateWithoutSecondDeduction(t *testing
 	if !first.Learned {
 		t.Fatalf("expected first purchase success, got %+v", first)
 	}
-	if second.Learned || second.ErrorCode != "already_learned" {
-		t.Fatalf("expected duplicate purchase rejection, got %+v", second)
+	if !second.Learned || second.ErrorCode != "" {
+		t.Fatalf("expected duplicate purchase to upgrade, got %+v", second)
+	}
+	if second.Currencies["铜钱"] != 4000 {
+		t.Fatalf("expected upgrade purchase to deduct again, got %+v", second.Currencies)
+	}
+	if len(second.Skills) != 3 || second.Skills[2].Name != "武器专精" || second.Skills[2].Level != 2 {
+		t.Fatalf("expected duplicate purchase to raise skill to level 2, got %+v", second.Skills)
+	}
+}
+
+func TestStorePurchaseRoleSkillRejectsAtMaxLevelWithoutDeduction(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "满级技能女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	skill := RoleSkill{Name: "挑衅", Level: 1, Type: "技能·通用", Icon: "634.png", MaxLevel: 1}
+
+	first := store.PurchaseRoleSkill(login.PlayerID, createResponse.Role.RoleID, skill, RoleCurrencies{"铜钱": 500})
+	second := store.PurchaseRoleSkill(login.PlayerID, createResponse.Role.RoleID, skill, RoleCurrencies{"铜钱": 500})
+
+	if !first.Learned {
+		t.Fatalf("expected first purchase success, got %+v", first)
+	}
+	if second.Learned || second.ErrorCode != "skill_level_max" {
+		t.Fatalf("expected max-level purchase rejection, got %+v", second)
 	}
 	if second.Currencies["铜钱"] != 4500 {
-		t.Fatalf("expected duplicate purchase not to deduct again, got %+v", second.Currencies)
+		t.Fatalf("expected max-level rejection not to deduct again, got %+v", second.Currencies)
 	}
 }
 

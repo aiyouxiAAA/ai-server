@@ -193,7 +193,18 @@ func normalizeRoleSkill(skill RoleSkill) RoleSkill {
 	if skill.Type == "" {
 		skill.Type = "oneO"
 	}
+	skill.MaxLevel = normalizeSkillMaxLevel(skill.MaxLevel)
 	return skill
+}
+
+func normalizeSkillMaxLevel(maxLevel int) int {
+	if maxLevel <= 0 {
+		return 5
+	}
+	if maxLevel < 1 {
+		return 1
+	}
+	return maxLevel
 }
 
 func normalizeRoleItem(item RoleItem) RoleItem {
@@ -204,6 +215,7 @@ func normalizeRoleItem(item RoleItem) RoleItem {
 	item.Display = strings.TrimSpace(item.Display)
 	item.Description = strings.TrimSpace(item.Description)
 	item.Owner = strings.TrimSpace(item.Owner)
+	item = fillMissingRoleItemTemplateFields(item)
 	if item.Count < 0 {
 		item.Count = 0
 	}
@@ -217,6 +229,33 @@ func normalizeRoleItem(item RoleItem) RoleItem {
 		item.ItemLevel = 0
 	}
 	return item
+}
+
+func fillMissingRoleItemTemplateFields(item RoleItem) RoleItem {
+	if item.Name == "" {
+		return item
+	}
+	template, ok := CapturedRoleItemTemplate(item.Name)
+	if !ok {
+		return item
+	}
+	if item.Display == "" {
+		item.Display = template.Display
+	}
+	if item.ItemType == "" {
+		item.ItemType = template.ItemType
+	}
+	if item.Description == "" || item.Description == genericCollectionRewardDescription(item.Name) {
+		item.Description = template.Description
+	}
+	if item.ItemLevel <= 0 {
+		item.ItemLevel = template.ItemLevel
+	}
+	return item
+}
+
+func genericCollectionRewardDescription(name string) string {
+	return "f_i_" + name + "&24@材料&25@99&20@采集获得的材料。"
 }
 
 func normalizeRoleCurrencies(currencies RoleCurrencies) RoleCurrencies {
@@ -630,6 +669,39 @@ func CapturedRoleItemTemplate(name string) (RoleItem, bool) {
 			return item, true
 		}
 	}
+	for _, item := range capturedAdditionalRoleItemTemplates() {
+		if item.Name == name {
+			return item, true
+		}
+	}
+	return RoleItem{}, false
+}
+
+func CapturedRoleItemTemplates() []RoleItem {
+	items := []RoleItem{}
+	items = append(items, sourceStarterEquipmentItems()...)
+	items = append(items, capturedDefaultRoleItems()...)
+	items = append(items, capturedAdditionalRoleItemTemplates()...)
+	return cloneRoleItems(items)
+}
+
+func CapturedRoleItemTemplateByID(itemID string) (RoleItem, bool) {
+	itemID = strings.TrimSpace(strings.TrimSuffix(itemID, ".png"))
+	if itemID == "" {
+		return RoleItem{}, false
+	}
+	templates := CapturedRoleItemTemplates()
+	for index, item := range templates {
+		if strconv.Itoa(index+1) == itemID {
+			return item, true
+		}
+		if strings.TrimSuffix(item.Display, ".png") == itemID {
+			return item, true
+		}
+		if item.Name == itemID {
+			return item, true
+		}
+	}
 	return RoleItem{}, false
 }
 
@@ -827,6 +899,51 @@ func capturedDefaultRoleItems() []RoleItem {
 		},
 	}
 	return ensureStarterAxeItem(items)
+}
+
+func capturedAdditionalRoleItemTemplates() []RoleItem {
+	return []RoleItem{
+		{
+			Type:        "背包",
+			Name:        "盗贼的首级",
+			ItemType:    "null",
+			Display:     "120.png",
+			Description: "f_i_盗贼的首级^5BC46D&24@材料&25@99&20@击杀盗贼的证明.&103@0&104@0&105@&107@&108@15",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "背包",
+			Name:        "当归",
+			ItemType:    "null",
+			Display:     "92.png",
+			Description: "f_i_当归^ffffff&24@材料&25@99&20@若发生气血逆乱&0;服用之后即可降逆定乱&0;使气血各有所归.&101@92.png&103@0&104@0&105@&107@&108@20",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "黄连",
+			ItemType:    "null",
+			Display:     "95.png",
+			Description: "f_i_黄连^ffffff&24@材料&25@99&20@清热燥湿&0;泻火解毒.用于湿热痞满&0;呕吐吞酸&0;泻痢&0;黄疸&0;高热神昏&0;心火亢盛&0;心烦不寐&0;血热吐衄&0;目赤&0;牙痛&0;消渴&0;痈肿疔疮.&101@95.png&103@0&104@0&105@&107@&108@11",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "金银花",
+			ItemType:    "null",
+			Display:     "97.png",
+			Description: "f_i_金银花^ffffff&24@材料&25@99&20@性寒味甘.具有清热解毒&0;凉血化淤的功效.&101@97.png&103@0&104@0&105@&107@&108@13",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+	}
 }
 
 func removeCapturedDefaultBagSeeds(items []RoleItem) []RoleItem {

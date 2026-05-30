@@ -153,6 +153,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if result, ok := buildClassicTownCollectionResult(store, socketSession, request); ok {
 			return result
 		}
+		if destination, ok := world.ResolveTownTransportAnswer(request.Handle, "goto"); ok {
+			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
+		}
 		answerSpeak := world.BuildAnswerSpeak(request.Handle)
 		return packetResult{
 			answerSpeak: &answerSpeak,
@@ -180,8 +183,11 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if destination, ok := world.ResolveTownTransportAnswer(request.Handle, request.AnswerHandle); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
-		if request.Handle == sourceSkillTeacherHandle && request.MsgHandle == "10" {
-			if result, ok := buildClassicTownSkillShopResult(store, socketSession, request.AnswerHandle); ok {
+		if result, ok := buildClassicTownItemShopResult(request); ok {
+			return result
+		}
+		if isClassicTownSkillTeacherRequest(request) {
+			if result, ok := buildClassicTownSkillShopResult(store, socketSession, request.Handle, request.AnswerHandle); ok {
 				return result
 			}
 		}
@@ -241,6 +247,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicTownAddPointResult(store, socketSession, request)
+	case cmdClassicTownActiveItemReq:
+		var request classicTownActiveItemRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownActiveItemResult(store, socketSession, request)
 	case cmdClassicTownGetQuestLogReq:
 		return buildClassicQuestLogResult(socketSession)
 	case cmdClassicTownRemoveQuestReq:
@@ -344,6 +356,10 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 	default:
 		return packetResult{}
 	}
+}
+
+func isClassicTownSkillTeacherRequest(request classicTownAnswerRequest) bool {
+	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle)
 }
 
 func buildClassicBattleStartResult(socketSession *packetSession, request battle.StartRequest) packetResult {
@@ -503,18 +519,18 @@ func buildClassicBattleLoot(socketSession *packetSession, result battle.ResultPa
 		capacity = classicBattleLootCap
 	}
 	items := make([]session.RoleItem, 0, capacity)
-	for index, name := range result.Items {
-		if index >= classicBattleLootCap {
+	for _, rawName := range result.Items {
+		if len(items) >= classicBattleLootCap {
 			break
 		}
-		name = strings.TrimSpace(name)
+		name, count := parseClassicBattleLootNameAndCount(rawName)
 		if name == "" {
 			continue
 		}
 		item := session.RoleItem{
 			Name:      name,
 			ItemType:  "own",
-			Count:     1,
+			Count:     count,
 			ItemLevel: 1,
 		}
 		if template, ok := session.CapturedRoleItemTemplate(name); ok {
@@ -522,13 +538,29 @@ func buildClassicBattleLoot(socketSession *packetSession, result battle.ResultPa
 		}
 		item.Type = classicBattleLootType
 		item.Name = name
-		item.Count = 1
-		item.Index = index
+		item.Count = count
+		item.Index = len(items)
 		item.Handle = socketSession.selectedRole.RoleID
 		item.Owner = socketSession.selectedRole.DisplayName
 		items = append(items, item)
 	}
 	return items
+}
+
+func parseClassicBattleLootNameAndCount(value string) (string, int) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", 0
+	}
+	name := value
+	count := 1
+	if splitIndex := strings.LastIndex(value, "x"); splitIndex > 0 && splitIndex < len(value)-1 {
+		if parsed, err := strconv.Atoi(strings.TrimSpace(value[splitIndex+1:])); err == nil && parsed > 0 {
+			name = strings.TrimSpace(value[:splitIndex])
+			count = parsed
+		}
+	}
+	return name, count
 }
 
 func finalizeClassicBattleOver(store *session.Store, socketSession *packetSession, result battle.ResultPayload) (*session.RoleState, *session.RolePhysique) {
@@ -940,6 +972,57 @@ func buildClassicTownEquipItemResult(store *session.Store, socketSession *packet
 	return result
 }
 
+func buildClassicTownActiveItemResult(store *session.Store, socketSession *packetSession, request classicTownActiveItemRequest) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic town ActiveItem ignored without selected role type=%s index=%d", request.Type, request.Index)
+		return packetResult{handled: true}
+	}
+
+	useResult := store.UseRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index)
+	if !useResult.Found {
+		log.Printf("[ai-server] classic town ActiveItem ignored missing role roleId=%s type=%s index=%d", socketSession.selectedRole.RoleID, request.Type, request.Index)
+		return packetResult{handled: true}
+	}
+	if !useResult.Used {
+		log.Printf("[ai-server] classic town ActiveItem rejected roleId=%s type=%s index=%d error=%s", socketSession.selectedRole.RoleID, request.Type, request.Index, useResult.ErrorCode)
+		return packetResult{handled: true}
+	}
+
+	socketSession.selectedRole = &useResult.Role
+	socketSession.playerBase = &useResult.PlayerBase
+	result := packetResult{
+		itemInfos:  make([]classicTownItemInfoPush, 0, len(useResult.UpdatedItems)),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(useResult.ClearedItems)),
+		handled:    true,
+	}
+	for _, clear := range useResult.ClearedItems {
+		result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+			Handle: useResult.Role.RoleID,
+			Type:   clear.Type,
+			Index:  clear.Index,
+		})
+	}
+	for _, item := range useResult.UpdatedItems {
+		item.Handle = useResult.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+	}
+	if len(useResult.Currencies) > 0 {
+		result.currencyPush = buildClassicTownCurrencyPush(useResult.Role.RoleID, useResult.Currencies)
+	}
+	if useResult.LearnedSkill != nil {
+		result.skillCap = &classicTownSkillCapPush{Count: 12}
+		result.skillInfos = []classicTownSkillInfoPush{
+			classicTownSkillInfoPushFromRoleSkill(useResult.Role.RoleID, *useResult.LearnedSkill),
+		}
+	}
+	if useResult.Equipped {
+		result.createPlayer = buildClassicTownCreatePlayerPush(useResult.Role, useResult.PlayerBase)
+		result.rolePhysique = useResult.PlayerBase.RolePhysique
+	}
+	log.Printf("[ai-server] classic town ActiveItem roleId=%s type=%s index=%d item=%s", useResult.Role.RoleID, request.Type, request.Index, useResult.Item.Name)
+	return result
+}
+
 func buildClassicTownCreatePlayerPush(role session.RoleSummary, playerBase session.PlayerBaseData) *world.RolePush {
 	bootstrap := world.BuildTownBootstrap(role, playerBase)
 	return &bootstrap.CreatePlayer
@@ -1006,6 +1089,10 @@ func buildClassicTownBuySkillResult(
 		return packetResult{handled: true}
 	}
 
+	if strings.HasPrefix(strings.TrimSpace(request.ShopID), "item:") {
+		return buildClassicTownBuyItemResult(store, socketSession, request)
+	}
+
 	entry, ok := findSourceSkillShopEntry(request.ShopID, request.SkillID)
 	if !ok {
 		return packetResult{
@@ -1020,46 +1107,125 @@ func buildClassicTownBuySkillResult(
 		}
 	}
 
-	purchase := store.PurchaseRoleSkill(
+	purchase := store.PurchaseRoleItem(
 		socketSession.playerBase.PlayerID,
 		socketSession.selectedRole.RoleID,
-		sourceSkillEntryToRoleSkill(entry),
-		sourceSkillRequirementsToCurrencies(entry.Requirements),
+		sourceSkillEntryToRoleItem(entry),
+		sourceSkillRequirementsToRoleItemRequirements(entry.Requirements),
 	)
 	if !purchase.Found {
 		log.Printf("[ai-server] classic town BuySkill ignored missing role roleId=%s shopId=%s skillId=%d", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID)
 		return packetResult{handled: true}
 	}
 
-	socketSession.selectedRole.Currencies = purchase.Currencies
-	socketSession.selectedRole.Skills = purchase.Skills
-	socketSession.playerBase.Currencies = purchase.Currencies
+	socketSession.selectedRole = &purchase.Role
+	socketSession.playerBase = &purchase.PlayerBase
 	result := packetResult{
-		skillCap: &classicTownSkillCapPush{Count: purchase.SkillCap},
 		currencyPush: buildClassicTownCurrencyPush(
-			socketSession.selectedRole.RoleID,
+			purchase.Role.RoleID,
 			purchase.Currencies,
 		),
 		buySkillResult: &classicTownBuySkillResultPush{
-			Success:      purchase.Learned,
+			Success:      purchase.Purchased,
 			ShopID:       request.ShopID,
 			SkillID:      request.SkillID,
 			Currencies:   purchase.Currencies,
 			ErrorCode:    purchase.ErrorCode,
 			ErrorMessage: purchase.ErrorMessage,
 		},
-		handled: true,
+		itemInfos:  make([]classicTownItemInfoPush, 0, 1+len(purchase.Consumed)),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(purchase.ClearedItems)),
+		handled:    true,
 	}
-	if purchase.Learned {
-		result.skillInfos = []classicTownSkillInfoPush{
-			classicTownSkillInfoPushFromRoleSkill(
-				socketSession.selectedRole.RoleID,
-				sourceSkillEntryToRoleSkill(entry),
-			),
+	if purchase.Purchased {
+		grantedItem := purchase.Item
+		grantedItem.Handle = purchase.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(grantedItem))
+		for _, consumedItem := range purchase.Consumed {
+			consumedItem.Handle = purchase.Role.RoleID
+			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(consumedItem))
 		}
-		log.Printf("[ai-server] classic town BuySkill learned roleId=%s shopId=%s skillId=%d skill=%s", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID, entry.Name)
+		for _, clear := range purchase.ClearedItems {
+			result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+				Handle: purchase.Role.RoleID,
+				Type:   clear.Type,
+				Index:  clear.Index,
+			})
+		}
+		log.Printf("[ai-server] classic town BuySkill purchased skill item roleId=%s shopId=%s skillId=%d skill=%s", purchase.Role.RoleID, request.ShopID, request.SkillID, entry.Name)
 	} else {
-		log.Printf("[ai-server] classic town BuySkill rejected roleId=%s shopId=%s skillId=%d error=%s", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID, purchase.ErrorCode)
+		log.Printf("[ai-server] classic town BuySkill rejected roleId=%s shopId=%s skillId=%d error=%s", purchase.Role.RoleID, request.ShopID, request.SkillID, purchase.ErrorCode)
+	}
+	return result
+}
+
+func buildClassicTownBuyItemResult(
+	store *session.Store,
+	socketSession *packetSession,
+	request classicTownBuySkillRequest,
+) packetResult {
+	row, ok := findSourceItemShopRow(request.ShopID, request.SkillID)
+	if !ok {
+		return packetResult{
+			buySkillResult: &classicTownBuySkillResultPush{
+				Success:      false,
+				ShopID:       request.ShopID,
+				SkillID:      request.SkillID,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "商品不存在。",
+			},
+			handled: true,
+		}
+	}
+
+	purchase := store.PurchaseRoleItem(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		sourceItemShopRowToRoleItem(row),
+		sourceItemShopRequirementsToRoleItemRequirements(row.requirements),
+	)
+	if !purchase.Found {
+		log.Printf("[ai-server] classic town BuyItem ignored missing role roleId=%s shopId=%s itemId=%d", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID)
+		return packetResult{handled: true}
+	}
+
+	socketSession.selectedRole = &purchase.Role
+	socketSession.playerBase = &purchase.PlayerBase
+	result := packetResult{
+		currencyPush: buildClassicTownCurrencyPush(
+			purchase.Role.RoleID,
+			purchase.Currencies,
+		),
+		buySkillResult: &classicTownBuySkillResultPush{
+			Success:      purchase.Purchased,
+			ShopID:       request.ShopID,
+			SkillID:      request.SkillID,
+			Currencies:   purchase.Currencies,
+			ErrorCode:    purchase.ErrorCode,
+			ErrorMessage: purchase.ErrorMessage,
+		},
+		itemInfos:  make([]classicTownItemInfoPush, 0, 1+len(purchase.Consumed)),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(purchase.ClearedItems)),
+		handled:    true,
+	}
+	if purchase.Purchased {
+		grantedItem := purchase.Item
+		grantedItem.Handle = purchase.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(grantedItem))
+		for _, consumedItem := range purchase.Consumed {
+			consumedItem.Handle = purchase.Role.RoleID
+			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(consumedItem))
+		}
+		for _, clear := range purchase.ClearedItems {
+			result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+				Handle: purchase.Role.RoleID,
+				Type:   clear.Type,
+				Index:  clear.Index,
+			})
+		}
+		log.Printf("[ai-server] classic town BuyItem purchased roleId=%s shopId=%s itemId=%d item=%s count=%d", purchase.Role.RoleID, request.ShopID, request.SkillID, row.name, row.count)
+	} else {
+		log.Printf("[ai-server] classic town BuyItem rejected roleId=%s shopId=%s itemId=%d error=%s", purchase.Role.RoleID, request.ShopID, request.SkillID, purchase.ErrorCode)
 	}
 	return result
 }

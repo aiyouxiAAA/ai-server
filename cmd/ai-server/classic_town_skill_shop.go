@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	sourceSkillTeacherHandle = "1000542608713897"
-	classicBattleLootType    = "战斗"
-	classicBattleLootCap     = 18
+	sourceSkillTeacherHandle    = "1000542608713897"
+	guangqingSkillTeacherHandle = "2220542612946566"
+	classicBattleLootType       = "战斗"
+	classicBattleLootCap        = 18
 )
 
 type classicTownRoleInteractionRequest struct {
@@ -54,6 +55,11 @@ type classicTownEquipItemRequest struct {
 	Type  string `json:"type"`
 	Index int    `json:"index"`
 	Count int    `json:"count"`
+}
+
+type classicTownActiveItemRequest struct {
+	Type  string `json:"type"`
+	Index int    `json:"index"`
 }
 
 type classicTownSkillInfoPush struct {
@@ -140,6 +146,7 @@ type classicTownSkillShopEntry struct {
 	TargetType   string                            `json:"targetType"`
 	Description  string                            `json:"description"`
 	Requirements []classicTownSkillShopRequirement `json:"requirements"`
+	MaxLevel     int                               `json:"maxLevel,omitempty"`
 }
 
 type classicTownSkillShopRequirement struct {
@@ -148,12 +155,13 @@ type classicTownSkillShopRequirement struct {
 	Count int    `json:"count"`
 }
 
-func buildClassicTownSkillShopResult(store *session.Store, socketSession *packetSession, answerHandle string) (packetResult, bool) {
+func buildClassicTownSkillShopResult(store *session.Store, socketSession *packetSession, sourceHandle string, answerHandle string) (packetResult, bool) {
 	shop, ok := sourceSkillTeacherShops[answerHandle]
 	if !ok {
 		return packetResult{}, false
 	}
 	shop = cloneSourceSkillShop(shop)
+	shop.Handle = sourceHandle
 	if socketSession != nil && socketSession.selectedRole != nil && socketSession.playerBase != nil {
 		skills, _, found := store.GetRoleSkills(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
 		if found {
@@ -190,7 +198,7 @@ var sourceSkillTeacherShops = map[string]classicTownSkillShopPush{
 		Title:    "战士技能",
 		Vocation: "战士",
 		SkillCap: 22,
-		Skills:   sourceSkillShopEntries("战士", sourceWarriorSkillShopRows),
+		Skills:   sourceSkillShopEntries("skill1", "战士", sourceWarriorSkillShopRows),
 	},
 	"8": {
 		Handle:   sourceSkillTeacherHandle,
@@ -198,7 +206,7 @@ var sourceSkillTeacherShops = map[string]classicTownSkillShopPush{
 		Title:    "术士技能",
 		Vocation: "术士",
 		SkillCap: 24,
-		Skills:   sourceSkillShopEntries("术士", sourceMageSkillShopRows),
+		Skills:   sourceSkillShopEntries("skill2", "术士", sourceMageSkillShopRows),
 	},
 	"9": {
 		Handle:   sourceSkillTeacherHandle,
@@ -206,11 +214,11 @@ var sourceSkillTeacherShops = map[string]classicTownSkillShopPush{
 		Title:    "游侠技能",
 		Vocation: "游侠",
 		SkillCap: 26,
-		Skills:   sourceSkillShopEntries("游侠", sourceRangerSkillShopRows),
+		Skills:   sourceSkillShopEntries("skill3", "游侠", sourceRangerSkillShopRows),
 	},
 }
 
-func sourceSkillShopEntries(vocation string, rows string) []classicTownSkillShopEntry {
+func sourceSkillShopEntries(shopID string, vocation string, rows string) []classicTownSkillShopEntry {
 	lines := strings.Split(strings.TrimSpace(rows), "\n")
 	entries := make([]classicTownSkillShopEntry, 0, len(lines))
 	for _, line := range lines {
@@ -231,26 +239,52 @@ func sourceSkillShopEntries(vocation string, rows string) []classicTownSkillShop
 			Vocation:     vocation,
 			TargetType:   columns[4],
 			Description:  columns[5],
-			Requirements: sourceSkillShopRequirements(vocation, id),
+			Requirements: sourceSkillShopRequirements(shopID, id),
+			MaxLevel:     sourceSkillShopMaxLevel(shopID, id),
 		})
 	}
 	return entries
 }
 
-func sourceSkillShopRequirements(vocation string, skillID int) []classicTownSkillShopRequirement {
-	if vocation == "战士" && skillID == 5 {
-		return []classicTownSkillShopRequirement{{
-			Name:  "银元宝",
-			Icon:  "39.png",
-			Count: 1,
-		}}
-	}
+func sourceSkillShopRequirements(shopID string, skillID int) []classicTownSkillShopRequirement {
+	requirements := sourceSkillShopRequirementByKey[sourceSkillShopKey(shopID, skillID)]
+	return append([]classicTownSkillShopRequirement(nil), requirements...)
+}
 
-	return []classicTownSkillShopRequirement{{
-		Name:  "铜钱",
-		Icon:  "163.png",
-		Count: 500,
-	}}
+func sourceSkillShopMaxLevel(shopID string, skillID int) int {
+	if sourceSkillShopSingleLevelByKey[sourceSkillShopKey(shopID, skillID)] {
+		return 1
+	}
+	return 5
+}
+
+func sourceSkillShopKey(shopID string, skillID int) string {
+	return shopID + ":" + strconv.Itoa(skillID)
+}
+
+func parseSourceSkillShopRequirementRows(rows string) map[string][]classicTownSkillShopRequirement {
+	result := map[string][]classicTownSkillShopRequirement{}
+	for _, line := range strings.Split(strings.TrimSpace(rows), "\n") {
+		columns := strings.Split(line, "|")
+		if len(columns) != 5 {
+			continue
+		}
+		skillID, err := strconv.Atoi(columns[1])
+		if err != nil {
+			continue
+		}
+		count, err := strconv.Atoi(columns[4])
+		if err != nil {
+			continue
+		}
+		key := sourceSkillShopKey(columns[0], skillID)
+		result[key] = append(result[key], classicTownSkillShopRequirement{
+			Name:  columns[2],
+			Icon:  columns[3],
+			Count: count,
+		})
+	}
+	return result
 }
 
 func cloneSourceSkillShop(shop classicTownSkillShopPush) classicTownSkillShopPush {
@@ -292,6 +326,20 @@ func sourceSkillEntryToRoleSkill(entry classicTownSkillShopEntry) session.RoleSk
 		Type:        entry.Category,
 		Icon:        entry.Icon,
 		Description: entry.Description,
+		MaxLevel:    entry.MaxLevel,
+	}
+}
+
+func sourceSkillEntryToRoleItem(entry classicTownSkillShopEntry) session.RoleItem {
+	return session.RoleItem{
+		Type:        "背包",
+		Name:        entry.Name,
+		ItemType:    entry.Category,
+		Display:     entry.Icon,
+		Description: entry.Description,
+		Count:       1,
+		Index:       -1,
+		ItemLevel:   entry.MaxLevel,
 	}
 }
 
@@ -302,6 +350,99 @@ func sourceSkillRequirementsToCurrencies(requirements []classicTownSkillShopRequ
 	}
 	return currencies
 }
+
+func sourceSkillRequirementsToRoleItemRequirements(requirements []classicTownSkillShopRequirement) []session.RoleItemRequirement {
+	result := make([]session.RoleItemRequirement, 0, len(requirements))
+	for _, requirement := range requirements {
+		result = append(result, session.RoleItemRequirement{
+			Name:  requirement.Name,
+			Count: requirement.Count,
+		})
+	}
+	return result
+}
+
+var sourceSkillShopRequirementByKey = parseSourceSkillShopRequirementRows(sourceSkillShopRequirementRows)
+
+var sourceSkillShopSingleLevelByKey = map[string]bool{
+	sourceSkillShopKey("skill1", 3): true,
+	sourceSkillShopKey("skill3", 9): true,
+}
+
+const sourceSkillShopRequirementRows = `
+skill1|0|铜钱|163.png|500
+skill1|1|铜钱|163.png|500
+skill1|2|铜钱|163.png|500
+skill1|3|铜钱|163.png|500
+skill1|4|铜钱|163.png|500
+skill1|5|银元宝|39.png|1
+skill1|6|银元宝|39.png|3
+skill1|7|银元宝|39.png|3
+skill1|8|银元宝|39.png|5
+skill1|9|银元宝|39.png|10
+skill1|10|铜钱|163.png|500
+skill1|11|银元宝|39.png|1
+skill1|12|银元宝|39.png|5
+skill1|13|银元宝|39.png|3
+skill1|14|银元宝|39.png|4
+skill1|15|银元宝|39.png|10
+skill1|16|铜钱|163.png|500
+skill1|17|银元宝|39.png|2
+skill1|18|银元宝|39.png|4
+skill1|19|银元宝|39.png|4
+skill1|20|银元宝|39.png|3
+skill1|21|银元宝|39.png|10
+skill2|0|铜钱|163.png|500
+skill2|1|铜钱|163.png|500
+skill2|2|铜钱|163.png|500
+skill2|3|铜钱|163.png|500
+skill2|4|银元宝|39.png|2
+skill2|5|银元宝|39.png|4
+skill2|6|铜钱|163.png|500
+skill2|7|银元宝|39.png|2
+skill2|8|银元宝|39.png|4
+skill2|9|银元宝|39.png|3
+skill2|10|银元宝|39.png|2
+skill2|11|银元宝|39.png|1
+skill2|12|银元宝|39.png|4
+skill2|13|银元宝|39.png|1
+skill2|14|银元宝|39.png|2
+skill2|15|银元宝|39.png|3
+skill2|16|银元宝|39.png|5
+skill2|17|银元宝|39.png|3
+skill2|18|银元宝|39.png|7
+skill2|19|银元宝|39.png|6
+skill2|20|银元宝|39.png|6
+skill2|21|银元宝|39.png|3
+skill2|22|银元宝|39.png|5
+skill2|23|银元宝|39.png|4
+skill3|0|铜钱|163.png|500
+skill3|1|铜钱|163.png|500
+skill3|2|铜钱|163.png|500
+skill3|3|铜钱|163.png|500
+skill3|4|铜钱|163.png|500
+skill3|5|铜钱|163.png|500
+skill3|6|铜钱|163.png|500
+skill3|7|银元宝|39.png|3
+skill3|8|银元宝|39.png|2
+skill3|9|银元宝|39.png|1
+skill3|10|银元宝|39.png|2
+skill3|11|银元宝|39.png|10
+skill3|12|铜钱|163.png|500
+skill3|13|银元宝|39.png|1
+skill3|14|银元宝|39.png|1
+skill3|15|银元宝|39.png|1
+skill3|16|银元宝|39.png|1
+skill3|17|银元宝|39.png|4
+skill3|18|银元宝|39.png|3
+skill3|19|银元宝|39.png|10
+skill3|20|铜钱|163.png|500
+skill3|21|银元宝|39.png|2
+skill3|22|银元宝|39.png|5
+skill3|23|银元宝|39.png|3
+skill3|24|银元宝|39.png|5
+skill3|25|银元宝|39.png|10
+`
 
 const sourceWarriorSkillShopRows = `
 0|武器专精|631.png|被动技能||用于提升物理攻击力

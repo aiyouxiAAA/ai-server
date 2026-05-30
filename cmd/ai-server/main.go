@@ -58,6 +58,7 @@ const (
 	cmdClassicTownRolePhysiquePush = 1132
 	cmdClassicTownContainerMove    = 1133
 	cmdClassicTownAddPointReq      = 1134
+	cmdClassicTownActiveItemReq    = 1135
 	cmdClassicSocialFriendInfo     = 1140
 	cmdClassicSocialClearFriend    = 1141
 	cmdClassicSocialBlackListInfo  = 1142
@@ -128,6 +129,7 @@ func main() {
 	}
 
 	apiMux.HandleFunc("/healthz", healthHandler)
+	registerDevItemHandlers(apiMux, store)
 	wsMux.HandleFunc("/healthz", healthHandler)
 	wsMux.HandleFunc("/ws", func(writer http.ResponseWriter, request *http.Request) {
 		handleWebSocket(store, writer, request)

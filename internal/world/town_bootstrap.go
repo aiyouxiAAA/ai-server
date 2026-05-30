@@ -228,6 +228,10 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapThree.SupportsTransferIn = true
 	definitions[3] = mapThree
 
+	mapThirtyThree := definitions[33]
+	mapThirtyThree.SourceNPCs = map33SourceNPCs
+	definitions[33] = mapThirtyThree
+
 	mapFortyNine := definitions[49]
 	mapFortyNine.SourceNPCs = map49SourceNPCs
 	definitions[49] = mapFortyNine
@@ -235,6 +239,18 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapFifty := definitions[50]
 	mapFifty.SourceNPCs = map50SourceNPCs
 	definitions[50] = mapFifty
+
+	mapFortyFive := definitions[45]
+	mapFortyFive.SourceNPCs = map45SourceNPCs
+	definitions[45] = mapFortyFive
+
+	mapFortySix := definitions[46]
+	mapFortySix.SourceNPCs = map46SourceNPCs
+	definitions[46] = mapFortySix
+
+	mapFortySeven := definitions[47]
+	mapFortySeven.SourceNPCs = map47SourceNPCs
+	definitions[47] = mapFortySeven
 
 	mapSeventyNine := definitions[79]
 	mapSeventyNine.SourceNPCs = map79SourceNPCs
@@ -522,7 +538,10 @@ func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *Ans
 	if !ok {
 		dialogue, ok = map2SourceNPCDialogueReplies[key]
 		if !ok {
-			return nil
+			dialogue, ok = map46SourceNPCDialogueReplies[key]
+			if !ok {
+				return nil
+			}
 		}
 	}
 	if dialogue.MsgHandle == "1" && dialogue.Message == "" && dialogue.Answers == nil {

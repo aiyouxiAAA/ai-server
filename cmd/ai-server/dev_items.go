@@ -16,6 +16,9 @@ type devItemRole struct {
 	PlayerID    string                 `json:"playerId"`
 	RoleID      string                 `json:"roleId"`
 	DisplayName string                 `json:"displayName"`
+	Level       int                    `json:"level"`
+	Exp         int                    `json:"exp"`
+	Vocation    string                 `json:"vocation"`
 	Currencies  session.RoleCurrencies `json:"currencies"`
 	Items       []session.RoleItem     `json:"items"`
 	Capacity    int                    `json:"capacity"`
@@ -63,6 +66,19 @@ type devAddCurrencyResponse struct {
 	Currencies   session.RoleCurrencies `json:"currencies,omitempty"`
 }
 
+type devSetLevelRequest struct {
+	PlayerID string `json:"playerId"`
+	RoleID   string `json:"roleId"`
+	Level    int    `json:"level"`
+}
+
+type devSetLevelResponse struct {
+	Success      bool         `json:"success"`
+	ErrorCode    string       `json:"errorCode,omitempty"`
+	ErrorMessage string       `json:"errorMessage,omitempty"`
+	Role         *devItemRole `json:"role,omitempty"`
+}
+
 func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 	mux.HandleFunc("/dev/items", devItemsPageHandler)
 	mux.Handle("/dev/classic-icons/", http.StripPrefix("/dev/classic-icons/", http.FileServer(http.Dir(resolveDevClassicIconDir()))))
@@ -86,6 +102,13 @@ func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 			return
 		}
 		handleDevAddCurrency(writer, request, store)
+	})
+	mux.HandleFunc("/dev/items/set-level", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodPost {
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		handleDevSetLevel(writer, request, store)
 	})
 }
 
@@ -131,7 +154,7 @@ func handleDevAddItem(writer http.ResponseWriter, request *http.Request, store *
 		payload.Count = 1
 	}
 
-	item, ok := session.CapturedRoleItemTemplateByID(payload.ItemID)
+	item, ok := devCapturedRoleItemTemplateByID(payload.ItemID)
 	if !ok {
 		writeDevJSONStatus(writer, http.StatusBadRequest, devAddItemResponse{
 			Success:      false,
@@ -216,6 +239,52 @@ func handleDevAddCurrency(writer http.ResponseWriter, request *http.Request, sto
 	writeDevJSON(writer, devAddCurrencyResponse{Success: true, Role: &role, Currencies: currencies})
 }
 
+func handleDevSetLevel(writer http.ResponseWriter, request *http.Request, store *session.Store) {
+	var payload devSetLevelRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writeDevJSONStatus(writer, http.StatusBadRequest, devSetLevelResponse{
+			Success:      false,
+			ErrorCode:    "bad_json",
+			ErrorMessage: "请求 JSON 不正确。",
+		})
+		return
+	}
+	payload.PlayerID = strings.TrimSpace(payload.PlayerID)
+	payload.RoleID = strings.TrimSpace(payload.RoleID)
+	if payload.PlayerID == "" || payload.RoleID == "" {
+		writeDevJSONStatus(writer, http.StatusBadRequest, devSetLevelResponse{
+			Success:      false,
+			ErrorCode:    "missing_field",
+			ErrorMessage: "需要 playerId 和 roleId。",
+		})
+		return
+	}
+	if payload.Level <= 0 {
+		writeDevJSONStatus(writer, http.StatusBadRequest, devSetLevelResponse{
+			Success:      false,
+			ErrorCode:    "bad_level",
+			ErrorMessage: "等级必须大于 0。",
+		})
+		return
+	}
+
+	result := store.SetRoleLevel(payload.PlayerID, payload.RoleID, payload.Level)
+	if !result.Found || !result.Granted {
+		writeDevJSONStatus(writer, http.StatusBadRequest, devSetLevelResponse{
+			Success:      false,
+			ErrorCode:    "set_level_failed",
+			ErrorMessage: "设置失败，角色不存在。",
+		})
+		return
+	}
+	role, ok := buildDevItemRole(store, payload.PlayerID, payload.RoleID)
+	if !ok {
+		writeDevJSON(writer, devSetLevelResponse{Success: true})
+		return
+	}
+	writeDevJSON(writer, devSetLevelResponse{Success: true, Role: &role})
+}
+
 func syncDevSilverItemToCurrency(store *session.Store, playerID string, roleID string, silverBalance int) bool {
 	if silverBalance <= 0 {
 		return true
@@ -276,6 +345,9 @@ func buildDevItemRole(store *session.Store, playerID string, roleID string) (dev
 		PlayerID:    playerID,
 		RoleID:      roleID,
 		DisplayName: role.DisplayName,
+		Level:       role.Level,
+		Exp:         role.Exp,
+		Vocation:    role.Voc,
 		Currencies:  currencies,
 		Items:       items,
 		Capacity:    capacity,
@@ -283,7 +355,7 @@ func buildDevItemRole(store *session.Store, playerID string, roleID string) (dev
 }
 
 func devItemTemplates() []devItemTemplate {
-	source := session.CapturedRoleItemTemplates()
+	source := devCapturedRoleItemTemplates()
 	result := make([]devItemTemplate, 0, len(source))
 	for index, item := range source {
 		result = append(result, devItemTemplate{
@@ -295,6 +367,73 @@ func devItemTemplates() []devItemTemplate {
 		})
 	}
 	return result
+}
+
+func devCapturedRoleItemTemplateByID(itemID string) (session.RoleItem, bool) {
+	itemID = strings.TrimSpace(strings.TrimSuffix(itemID, ".png"))
+	if itemID == "" {
+		return session.RoleItem{}, false
+	}
+	templates := devCapturedRoleItemTemplates()
+	for index, item := range templates {
+		if strconv.Itoa(index+1) == itemID {
+			return item, true
+		}
+		if strings.TrimSuffix(item.Display, ".png") == itemID {
+			return item, true
+		}
+		if item.Name == itemID {
+			return item, true
+		}
+	}
+	return session.RoleItem{}, false
+}
+
+func devCapturedRoleItemTemplates() []session.RoleItem {
+	items := session.CapturedRoleItemTemplates()
+	for _, handle := range []string{
+		"1780542610743555",
+		"4000542609162635",
+		"1820542611400955",
+		"1830542611405809",
+		"2500542613172144",
+		"2520542613299551",
+	} {
+		route, ok := sourceGuangqingItemShopRoutes[handle]
+		if !ok {
+			continue
+		}
+		for _, line := range strings.Split(strings.TrimSpace(route.rows), "\n") {
+			row, ok := parseSourceItemShopRow(line)
+			if ok {
+				items = appendDevItemTemplate(items, sourceItemShopRowToRoleItem(row))
+			}
+		}
+	}
+	for _, answerHandle := range []string{"7", "8", "9"} {
+		shop, ok := sourceSkillTeacherShops[answerHandle]
+		if !ok {
+			continue
+		}
+		for _, entry := range shop.Skills {
+			items = appendDevItemTemplate(items, sourceSkillEntryToRoleItem(entry))
+		}
+	}
+	return items
+}
+
+func appendDevItemTemplate(items []session.RoleItem, item session.RoleItem) []session.RoleItem {
+	item.Name = strings.TrimSpace(item.Name)
+	item.Display = strings.TrimSpace(item.Display)
+	if item.Name == "" {
+		return items
+	}
+	for _, existing := range items {
+		if existing.Name == item.Name || (item.Display != "" && existing.Display == item.Display && existing.Name == item.Name) {
+			return items
+		}
+	}
+	return append(items, item)
 }
 
 func writeDevJSON(writer http.ResponseWriter, value any) {
@@ -353,6 +492,11 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
         <select id="roleSelect"></select>
       </label>
       <div id="currencyInfo" class="muted"></div>
+      <label>设置等级
+        <input id="levelInput" type="number" min="1" step="1" value="20">
+      </label>
+      <button id="setLevelButton">设置等级</button>
+      <hr>
       <label>增加银元宝
         <input id="silverAmount" type="number" min="1" step="1" value="500">
       </label>
@@ -391,6 +535,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
     const roleSelect = document.getElementById('roleSelect');
     const itemIdInput = document.getElementById('itemId');
     const countInput = document.getElementById('count');
+    const levelInput = document.getElementById('levelInput');
     const silverAmountInput = document.getElementById('silverAmount');
     const statusEl = document.getElementById('status');
     const itemsBody = document.getElementById('itemsBody');
@@ -400,6 +545,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
     const templateList = document.getElementById('templateList');
     const addButton = document.getElementById('addButton');
     const addSilverButton = document.getElementById('addSilverButton');
+    const setLevelButton = document.getElementById('setLevelButton');
     const refreshButton = document.getElementById('refreshButton');
     let state = { roles: [], templates: [] };
 
@@ -449,7 +595,8 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
         roleInfo.textContent = '没有角色。';
         return;
       }
-      roleInfo.textContent = role.displayName + '  ' + role.playerId + '  背包 ' + role.items.length + '/' + role.capacity;
+      roleInfo.textContent = role.displayName + '  ' + (role.vocation || '新手') + ' Lv.' + role.level + '  ' + role.playerId + '  背包 ' + role.items.length + '/' + role.capacity;
+      levelInput.value = role.level || 1;
       currencyInfo.textContent = '银元宝：' + (role.currencies?.银元宝 || 0) + '    铜钱：' + (role.currencies?.铜钱 || 0);
       for (const item of role.items) {
         const row = document.createElement('tr');
@@ -564,10 +711,42 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
       }
     }
 
+    async function setLevel() {
+      const role = selectedRole();
+      if (!role) {
+        setStatus('没有可用角色。', true);
+        return;
+      }
+      setLevelButton.disabled = true;
+      try {
+        const response = await fetch('/dev/items/set-level', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId: role.playerId,
+            roleId: role.roleId,
+            level: Number(levelInput.value || 1),
+          }),
+        });
+        const result = await response.json();
+        if (!result.success) {
+          setStatus(result.errorMessage || '设置等级失败。', true);
+          return;
+        }
+        const index = state.roles.findIndex(current => current.roleId === result.role.roleId);
+        if (index >= 0) state.roles[index] = result.role;
+        renderItems();
+        setStatus('已设置等级：Lv.' + result.role.level + '。', false);
+      } finally {
+        setLevelButton.disabled = false;
+      }
+    }
+
     roleSelect.addEventListener('change', renderItems);
     refreshButton.addEventListener('click', refresh);
     addButton.addEventListener('click', addItem);
     addSilverButton.addEventListener('click', addSilver);
+    setLevelButton.addEventListener('click', setLevel);
     refresh().catch(error => setStatus(String(error), true));
   </script>
 </body>

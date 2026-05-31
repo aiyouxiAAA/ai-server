@@ -263,6 +263,102 @@ func TestStoreRoleInventoryRemovesOldCapturedBagSeeds(t *testing.T) {
 	}
 }
 
+func TestStoreGetRoleItemsTrimsStaleCurrencyStacks(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "钱币残留女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	silver, ok := CapturedRoleItemTemplate("银元宝")
+	if !ok {
+		t.Fatal("expected silver template")
+	}
+	silver.Type = "背包"
+	silver.Index = 1
+	silver.Count = 499
+	copper, ok := CapturedRoleItemTemplate("铜钱")
+	if !ok {
+		t.Fatal("expected copper template")
+	}
+	copper.Type = "背包"
+	copper.Index = 7
+	copper.Count = 1000
+	secondCopper := copper
+	secondCopper.Index = 8
+
+	store.rolesByPID[login.PlayerID][0].Currencies = RoleCurrencies{"银元宝": 499}
+	store.rolesByPID[login.PlayerID][0].Items = []RoleItem{silver, copper, secondCopper}
+
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	itemsByName := map[string]int{}
+	for _, item := range items {
+		itemsByName[item.Name] += item.Count
+	}
+	if itemsByName["银元宝"] != 499 {
+		t.Fatalf("expected silver stack to stay at 499, got %+v", items)
+	}
+	if itemsByName["铜钱"] != 0 {
+		t.Fatalf("expected stale copper stacks to be trimmed, got %+v", items)
+	}
+
+	persistedItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected persisted bag items")
+	}
+	for _, item := range persistedItems {
+		if item.Name == "铜钱" {
+			t.Fatalf("expected stale copper stacks to stay removed, got %+v", persistedItems)
+		}
+	}
+}
+
+func TestStoreUseRoleItemClearsSelectedStaleCurrencyStack(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "双击残留铜钱女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	copper, ok := CapturedRoleItemTemplate("铜钱")
+	if !ok {
+		t.Fatal("expected copper template")
+	}
+	copper.Type = "背包"
+	copper.Index = 7
+	copper.Count = 1000
+	store.rolesByPID[login.PlayerID][0].Currencies = RoleCurrencies{"银元宝": 499}
+	store.rolesByPID[login.PlayerID][0].Items = []RoleItem{copper}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 7)
+	if !result.Found || !result.Used {
+		t.Fatalf("expected stale currency item to be cleared as a handled use, got %+v", result)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != "背包" || result.ClearedItems[0].Index != 7 {
+		t.Fatalf("expected selected copper slot to clear, got %+v", result.ClearedItems)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	for _, item := range items {
+		if item.Name == "铜钱" {
+			t.Fatalf("expected stale copper to be removed from bag, got %+v", items)
+		}
+	}
+}
+
 func TestStoreGrantRoleItemStacksCompatibleBagConsumables(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -551,6 +647,38 @@ func TestStoreMoveRoleItemSplitsBagItemToEmptySlot(t *testing.T) {
 	}
 }
 
+func TestStoreMoveRoleItemUnequipsToNextBagSlotAndClearsAppearance(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "卸装女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	equipResult := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 19, 1)
+	if !equipResult.Found || !equipResult.Equipped || !strings.Contains(equipResult.Role.SourceQuery, "w8=5") {
+		t.Fatalf("expected starter axe equip with weapon appearance, got %+v", equipResult)
+	}
+
+	result := store.MoveRoleItem(login.PlayerID, createResponse.Role.RoleID, "装备", 3, "背包", -1, 0)
+	if !result.Found || !result.Moved {
+		t.Fatalf("expected equipment unequip success, got %+v", result)
+	}
+	if strings.Contains(result.Role.SourceQuery, "w8=5") {
+		t.Fatalf("expected weapon appearance to be cleared after unequip, got %q", result.Role.SourceQuery)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Type != "背包" || result.UpdatedItems[0].Index != 0 || result.UpdatedItems[0].Name != "铁斧" {
+		t.Fatalf("expected axe moved to first empty bag slot, got %+v", result.UpdatedItems)
+	}
+	equipItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
+	if !ok || len(equipItems) != 0 {
+		t.Fatalf("expected equipment slot to be empty after unequip, ok=%v items=%+v", ok, equipItems)
+	}
+}
+
 func TestStoreClassicRoleProgressionMatchesCapturedRoleStateAndPhysique(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -593,6 +721,108 @@ func TestStoreClassicRoleProgressionMatchesCapturedRoleStateAndPhysique(t *testi
 	}
 	if third.PlayerBase.RolePhysique == nil || third.PlayerBase.RolePhysique.MaxHP != 245 || third.PlayerBase.RolePhysique.MaxMP != 74 || third.PlayerBase.RolePhysique.LastPoint != 20 || third.PlayerBase.RolePhysique.Fat != 5 {
 		t.Fatalf("expected captured lv4 vitality and points, got %+v", third.PlayerBase.RolePhysique)
+	}
+}
+
+func TestPersistentStoreLoadsCapturedRolePanelOverrides(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "抓包面板",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	store.mu.Lock()
+	store.rolesByPID[login.PlayerID][0].Level = 24
+	store.rolesByPID[login.PlayerID][0].Exp = 712600
+	store.rolesByPID[login.PlayerID][0].Voc = "战士"
+	store.rolesByPID[login.PlayerID][0].RoleState = &RoleState{
+		HP:    1074,
+		MP:    274,
+		Exp:   712600,
+		Lv:    24,
+		Speed: 147,
+	}
+	store.rolesByPID[login.PlayerID][0].RolePhysique = &RolePhysique{
+		AGI:       42,
+		STR:       83,
+		INT:       0,
+		CON:       0,
+		LCK:       3,
+		MaxHP:     1075,
+		MaxMP:     274,
+		PhyAtk:    198,
+		MgcAtk:    0,
+		PhyDef:    160,
+		MgcDef:    40,
+		Hit:       224,
+		Dog:       114,
+		Fat:       162,
+		LastPoint: 0,
+	}
+	if err := store.persistPlayerStateLocked(login.PlayerID); err != nil {
+		store.mu.Unlock()
+		t.Fatalf("persist role panel override: %v", err)
+	}
+	store.mu.Unlock()
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected role runtime data after reopen")
+	}
+	if role.Level != 24 || role.Exp != 712600 || role.Voc != "战士" || playerBase.Voc != "战士" || playerBase.RoleState == nil || playerBase.RoleState.Speed != 147 || playerBase.RoleState.HP != 1074 {
+		t.Fatalf("expected captured role state override, role=%+v base=%+v", role, playerBase)
+	}
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.AGI != 42 || playerBase.RolePhysique.STR != 83 || playerBase.RolePhysique.MaxHP != 1075 || playerBase.RolePhysique.PhyAtk != 198 || playerBase.RolePhysique.Hit != 224 {
+		t.Fatalf("expected captured role physique override, got %+v", playerBase.RolePhysique)
+	}
+}
+
+func TestStoreSetRoleVocationPersistsSelectedVocation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "转职女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	result := store.SetRoleVocation(login.PlayerID, createResponse.Role.RoleID, "游侠")
+	if !result.Found || !result.Changed || result.Role.Voc != "游侠" || result.PlayerBase.Voc != "游侠" {
+		t.Fatalf("expected role vocation 游侠, got %+v", result)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || role.Voc != "游侠" || playerBase.Voc != "游侠" {
+		t.Fatalf("expected reopened vocation 游侠, ok=%v role=%+v base=%+v", ok, role, playerBase)
 	}
 }
 
@@ -734,6 +964,146 @@ func TestStoreCapturedStarterArmorTemplatesMatchSourceAndEquipStats(t *testing.T
 	}
 	if got := parseClassicDescriptionSignedInt(sourceBlueClothItem().Description, "3"); got != 6 {
 		t.Fatalf("expected repeated blue-cloth &3@ placeholder to resolve to final numeric value 6, got %d", got)
+	}
+}
+
+func TestStoreCapturedWarriorEquipmentSlotsAndAppearance(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "蛮力装备女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?co=5&sex=1&hr=12&e=14&m=5&",
+	})
+
+	cases := []struct {
+		name            string
+		display         string
+		descriptionPart string
+		slot            int
+		sourceQueryPart string
+	}{
+		{name: "刎刀", display: "42.png", descriptionPart: "&24@武器·单刀系", slot: 3, sourceQueryPart: "w8=42"},
+		{name: "蛮力面甲", display: "334.png", descriptionPart: "&24@护具·头部", slot: 0, sourceQueryPart: "h=8"},
+		{name: "蛮力护甲", display: "336.png", descriptionPart: "&24@护具·身体", slot: 4, sourceQueryPart: "c=10"},
+		{name: "蛮力护腰", display: "339.png", descriptionPart: "&24@护具·腰部", slot: 10, sourceQueryPart: "b=5"},
+		{name: "蛮力护腿", display: "338.png", descriptionPart: "&24@护具·腿部", slot: 5, sourceQueryPart: "p=8"},
+		{name: "蛮力战靴", display: "340.png", descriptionPart: "&24@护具·脚部", slot: 12, sourceQueryPart: "se=4"},
+		{name: "蛤蟆精战靴", display: "503.png", descriptionPart: "&24@护具·足部", slot: 12, sourceQueryPart: "se=29"},
+		{name: "蛮力肩甲", display: "335.png", descriptionPart: "&24@护具·肩部", slot: 1, sourceQueryPart: "a=4"},
+		{name: "蛮力护腕", display: "337.png", descriptionPart: "&24@护具·腕部", slot: 2, sourceQueryPart: "wr=7"},
+	}
+
+	for _, tc := range cases {
+		item := RoleItem{
+			Type:        "背包",
+			Name:        tc.name,
+			ItemType:    "equip",
+			Display:     tc.display,
+			Description: "f_i_" + tc.name + "^ffffff" + tc.descriptionPart + "&25@1&21@20&22@战士&3@17&5@30",
+			Count:       1,
+			Index:       -1,
+			ItemLevel:   1,
+		}
+		granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, item)
+		if !ok {
+			t.Fatalf("expected granting %s to bag to succeed", tc.name)
+		}
+		result := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index, 1)
+		if !result.Found || !result.Equipped {
+			t.Fatalf("expected equipping %s to succeed, got %+v", tc.name, result)
+		}
+		if result.EquippedItem.Type != "装备" || result.EquippedItem.Index != tc.slot || result.EquippedItem.Name != tc.name {
+			t.Fatalf("expected %s to equip into slot %d, got %+v", tc.name, tc.slot, result.EquippedItem)
+		}
+		if !strings.Contains(result.Role.SourceQuery, tc.sourceQueryPart) {
+			t.Fatalf("expected %s equip to add %s to source query, got %q", tc.name, tc.sourceQueryPart, result.Role.SourceQuery)
+		}
+	}
+}
+
+func TestStoreRoleSourceQueryReflectsOnlyEquippedItems(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "清理外观女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?a=4&w8=42&b=5&c=10&e=14&sex=1&hr=12&co=5&m=5&p=8&se=29&wr=7&",
+	})
+
+	store.rolesByPID[login.PlayerID][0].Items = normalizeRoleItems([]RoleItem{
+		{
+			Type:        "装备",
+			Name:        "蛮力护腿",
+			ItemType:    "equip",
+			Display:     "338.png",
+			Description: "f_i_蛮力护腿^ffffff&24@护具·腿部&25@1&21@20&22@战士",
+			Count:       1,
+			Index:       5,
+		},
+		{
+			Type:        "背包",
+			Name:        "刎刀",
+			ItemType:    "equip",
+			Display:     "42.png",
+			Description: "f_i_刎刀^ffffff&24@武器·单刀系&25@1&21@20&22@战士",
+			Count:       1,
+			Index:       0,
+		},
+	})
+
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected role runtime data")
+	}
+	for _, stalePart := range []string{"w8=42", "a=4", "b=5", "c=10", "se=29", "wr=7"} {
+		if strings.Contains(role.SourceQuery, stalePart) || strings.Contains(playerBase.SourceQuery, stalePart) {
+			t.Fatalf("expected stale %s to be removed from source query, role=%q base=%q", stalePart, role.SourceQuery, playerBase.SourceQuery)
+		}
+	}
+	if !strings.Contains(role.SourceQuery, "p=8") || !strings.Contains(playerBase.SourceQuery, "p=8") {
+		t.Fatalf("expected equipped pants to remain in source query, role=%q base=%q", role.SourceQuery, playerBase.SourceQuery)
+	}
+}
+
+func TestStoreRoleSourceQueryUsesCapturedBodyAppearance(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "白发女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&w8=5&",
+		Appearance: RoleAppearance{
+			"body": map[string]any{
+				"sex":       1,
+				"skinColor": 5,
+				"hair":      32,
+				"eyes":      14,
+				"mouth":     5,
+			},
+		},
+	})
+
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected role runtime data")
+	}
+	for _, expectedPart := range []string{"hr=32", "e=14", "m=5", "sex=1", "co=5"} {
+		if !strings.Contains(role.SourceQuery, expectedPart) || !strings.Contains(playerBase.SourceQuery, expectedPart) {
+			t.Fatalf("expected captured body %s in source query, role=%q base=%q", expectedPart, role.SourceQuery, playerBase.SourceQuery)
+		}
+	}
+	if strings.Contains(role.SourceQuery, "hr=12") || strings.Contains(role.SourceQuery, "e=6") || strings.Contains(role.SourceQuery, "m=0") {
+		t.Fatalf("expected stale body params to be replaced, got %q", role.SourceQuery)
 	}
 }
 

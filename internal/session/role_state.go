@@ -89,6 +89,33 @@ func decodeRoleSkills(raw string) ([]RoleSkill, error) {
 	return result, nil
 }
 
+func encodeRoleFastPanel(entries []RoleFastPanelEntry) (string, error) {
+	normalized := normalizeRoleFastPanel(entries)
+	if len(normalized) == 0 {
+		return "", nil
+	}
+
+	data, err := json.Marshal(normalized)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
+
+func decodeRoleFastPanel(raw string) ([]RoleFastPanelEntry, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+
+	var entries []RoleFastPanelEntry
+	if err := json.Unmarshal([]byte(raw), &entries); err != nil {
+		return nil, err
+	}
+
+	return normalizeRoleFastPanel(entries), nil
+}
+
 func encodeRoleCurrencies(currencies RoleCurrencies) (string, error) {
 	normalized := normalizeRoleCurrencies(currencies)
 	if len(normalized) == 0 {
@@ -150,6 +177,53 @@ func decodeRoleItems(raw string) ([]RoleItem, error) {
 	return result, nil
 }
 
+func encodeRoleState(roleState *RoleState) (string, error) {
+	if roleState == nil {
+		return "", nil
+	}
+	data, err := json.Marshal(roleState)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func decodeRoleState(raw string) (*RoleState, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var roleState RoleState
+	if err := json.Unmarshal([]byte(raw), &roleState); err != nil {
+		return nil, err
+	}
+	return &roleState, nil
+}
+
+func encodeRolePhysique(rolePhysique *RolePhysique) (string, error) {
+	if rolePhysique == nil {
+		return "", nil
+	}
+	data, err := json.Marshal(rolePhysique)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func decodeRolePhysique(raw string) (*RolePhysique, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var rolePhysique RolePhysique
+	if err := json.Unmarshal([]byte(raw), &rolePhysique); err != nil {
+		return nil, err
+	}
+	if rolePhysique.ResPros == nil {
+		rolePhysique.ResPros = []string{}
+	}
+	return &rolePhysique, nil
+}
+
 func cloneRoleSkills(skills []RoleSkill) []RoleSkill {
 	if len(skills) == 0 {
 		return []RoleSkill{}
@@ -157,6 +231,16 @@ func cloneRoleSkills(skills []RoleSkill) []RoleSkill {
 
 	result := make([]RoleSkill, len(skills))
 	copy(result, skills)
+	return result
+}
+
+func cloneRoleFastPanel(entries []RoleFastPanelEntry) []RoleFastPanelEntry {
+	if len(entries) == 0 {
+		return []RoleFastPanelEntry{}
+	}
+
+	result := make([]RoleFastPanelEntry, len(entries))
+	copy(result, entries)
 	return result
 }
 
@@ -195,6 +279,61 @@ func normalizeRoleSkill(skill RoleSkill) RoleSkill {
 	}
 	skill.MaxLevel = normalizeSkillMaxLevel(skill.MaxLevel)
 	return skill
+}
+
+func normalizeRoleFastPanelEntry(entry RoleFastPanelEntry) RoleFastPanelEntry {
+	entry.Type = strings.TrimSpace(entry.Type)
+	entry.Name = strings.TrimSpace(entry.Name)
+	return entry
+}
+
+func normalizeRoleFastPanel(entries []RoleFastPanelEntry) []RoleFastPanelEntry {
+	if len(entries) == 0 {
+		return []RoleFastPanelEntry{}
+	}
+
+	byIndex := make(map[int]RoleFastPanelEntry, len(entries))
+	for _, entry := range entries {
+		normalized := normalizeRoleFastPanelEntry(entry)
+		if normalized.Index < 0 || normalized.Index >= defaultRoleFastPanelSlotCount || normalized.Type == "" || normalized.Name == "" {
+			continue
+		}
+		byIndex[normalized.Index] = normalized
+	}
+
+	result := make([]RoleFastPanelEntry, 0, len(byIndex))
+	for _, entry := range byIndex {
+		result = append(result, entry)
+	}
+	sort.SliceStable(result, func(left int, right int) bool {
+		return result[left].Index < result[right].Index
+	})
+	return result
+}
+
+func filterRoleFastPanelEntries(entries []RoleFastPanelEntry, skills []RoleSkill) []RoleFastPanelEntry {
+	result := make([]RoleFastPanelEntry, 0, len(entries))
+	for _, entry := range normalizeRoleFastPanel(entries) {
+		if canSetRoleFastPanelEntry(entry, skills) {
+			result = append(result, entry)
+		}
+	}
+	return result
+}
+
+func canSetRoleFastPanelEntry(entry RoleFastPanelEntry, skills []RoleSkill) bool {
+	entry = normalizeRoleFastPanelEntry(entry)
+	if entry.Type != "skill" {
+		return false
+	}
+	for _, skill := range skills {
+		skill = normalizeRoleSkill(skill)
+		if skill.Name != entry.Name {
+			continue
+		}
+		return skill.Type != "被动技能"
+	}
+	return false
 }
 
 func normalizeSkillMaxLevel(maxLevel int) int {
@@ -277,6 +416,21 @@ func defaultRoleCurrencies() RoleCurrencies {
 	}
 }
 
+func normalizeRoleVocation(vocation string) (string, bool) {
+	switch strings.TrimSpace(vocation) {
+	case "", defaultRoleVoc:
+		return defaultRoleVoc, true
+	case "战士":
+		return "战士", true
+	case "术士":
+		return "术士", true
+	case "游侠":
+		return "游侠", true
+	default:
+		return "", false
+	}
+}
+
 func defaultRoleSkills() []RoleSkill {
 	return []RoleSkill{
 		{
@@ -293,6 +447,15 @@ func defaultRoleSkills() []RoleSkill {
 			Icon:        "7.png",
 			Description: "f_s_普通攻击^ffffff&9@单体·攻击&10@通用&22@战斗&5@给予对手普通的物理攻击.",
 		},
+	}
+}
+
+const defaultRoleFastPanelSlotCount = 10
+
+func defaultRoleFastPanel() []RoleFastPanelEntry {
+	return []RoleFastPanelEntry{
+		{Index: 0, Type: "skill", Name: "普通攻击"},
+		{Index: 1, Type: "skill", Name: "密斩"},
 	}
 }
 
@@ -367,6 +530,18 @@ func playerBaseDataFromRole(playerID string, role RoleSummary) PlayerBaseData {
 	role.Level = ClassicRoleLevelForExp(role.Exp, role.Level)
 	roleState := defaultRoleState(role.RoleID, role.Level, role.Exp)
 	rolePhysique := defaultRolePhysique(role)
+	if role.RoleState != nil {
+		roleState = *role.RoleState
+		if roleState.Handle == "" {
+			roleState.Handle = role.RoleID
+		}
+	}
+	if role.RolePhysique != nil {
+		rolePhysique = *role.RolePhysique
+		if rolePhysique.Handle == "" {
+			rolePhysique.Handle = role.RoleID
+		}
+	}
 	return PlayerBaseData{
 		PlayerID:     playerID,
 		RoleID:       role.RoleID,
@@ -456,6 +631,10 @@ func ClassicRoleLevelToExp(level int) int {
 		return classicRoleLevelToExp[len(classicRoleLevelToExp)-1]
 	}
 	return classicRoleLevelToExp[level]
+}
+
+func ClassicRoleMaxLevel() int {
+	return len(classicRoleLevelToExp) - 1
 }
 
 func ClassicRoleLevelForExp(exp int, fallbackLevel int) int {
@@ -616,10 +795,21 @@ func maxInt(left int, right int) int {
 }
 
 func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
-	if role.Voc == "" {
+	if vocation, ok := normalizeRoleVocation(role.Voc); ok {
+		role.Voc = vocation
+	} else {
 		role.Voc = defaultRoleVoc
 	}
-	role.Skills = ensureDefaultRoleSkills(role.Skills)
+	if len(role.Skills) == 0 {
+		role.Skills = defaultRoleSkills()
+	} else {
+		role.Skills = cloneRoleSkills(role.Skills)
+	}
+	if len(role.FastPanel) == 0 {
+		role.FastPanel = defaultRoleFastPanel()
+	} else {
+		role.FastPanel = normalizeRoleFastPanel(role.FastPanel)
+	}
 	if len(role.Currencies) == 0 {
 		role.Currencies = defaultRoleCurrencies()
 	} else {
@@ -630,6 +820,8 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.Items = ensureStarterAxeItem(removeCapturedDefaultBagSeeds(normalizeRoleItems(role.Items)))
 	}
+	role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
+	role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
 	return role
 }
 

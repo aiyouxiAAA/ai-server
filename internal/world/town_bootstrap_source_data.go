@@ -1307,6 +1307,9 @@ var map1SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialog
 		MsgHandle: "2",
 		Message:   "现在有三个职业可以选择，请从职业选项中选择你希望的职业......",
 		Answers: []AnswerOption{
+			{Handle: "job_warrior", Msg: "选择【战士】"},
+			{Handle: "job_sorcerer", Msg: "选择【术士】"},
+			{Handle: "job_ranger", Msg: "选择【游侠】"},
 			{Handle: "4", Msg: "了解【战士】的特点"},
 			{Handle: "5", Msg: "了解【术士】的特点"},
 			{Handle: "6", Msg: "了解【游侠】的特点"},

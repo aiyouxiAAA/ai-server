@@ -21,8 +21,10 @@ type packetResult struct {
 	createPlayer      *world.RolePush
 	roleState         *session.RoleState
 	rolePhysique      *session.RolePhysique
+	chatMessages      []classicTownChatMessagePush
 	skillCap          *classicTownSkillCapPush
 	skillInfos        []classicTownSkillInfoPush
+	skillClears       []classicTownClearSkillInfoPush
 	skillShop         *classicTownSkillShopPush
 	currencyPush      *classicTownCurrencyPush
 	fastPanel         *classicTownFastPanelPush
@@ -54,6 +56,7 @@ type packetResult struct {
 	battleCells       []battle.CellInfoPush
 	battleCommand     *battle.StartCommandPush
 	battleActions     []battle.ActionPush
+	battleBuffs       []battle.BuffInfoPush
 	battleOver        *battle.OverPush
 	handled           bool
 }
@@ -191,6 +194,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 				return result
 			}
 		}
+		if result, ok := buildClassicTownVocationResult(store, socketSession, request); ok {
+			return result
+		}
 		answerSpeak := world.BuildAnswerReply(request.Handle, request.MsgHandle, request.AnswerHandle)
 		return packetResult{
 			answerSpeak: answerSpeak,
@@ -210,13 +216,25 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 	case cmdClassicTownGetSkillListReq:
 		return buildClassicTownSkillListResult(store, socketSession)
 	case cmdClassicTownGetFastPanelReq:
-		return buildClassicTownFastPanelResult(socketSession)
+		return buildClassicTownFastPanelResult(store, socketSession)
+	case cmdClassicTownSetFastPanelReq:
+		var request classicTownSetFastPanelRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownSetFastPanelResult(store, socketSession, request)
 	case cmdClassicTownBuySkillReq:
 		var request classicTownBuySkillRequest
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
 		return buildClassicTownBuySkillResult(store, socketSession, request)
+	case cmdClassicTownRemoveSkillReq:
+		var request classicTownRemoveSkillRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownRemoveSkillResult(store, socketSession, request)
 	case cmdClassicTownGetCapacityReq:
 		var request classicTownContainerRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -253,6 +271,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicTownActiveItemResult(store, socketSession, request)
+	case cmdClassicTownChatSendReq:
+		var request classicTownChatSendRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownChatSendResult(socketSession, request)
 	case cmdClassicTownGetQuestLogReq:
 		return buildClassicQuestLogResult(socketSession)
 	case cmdClassicTownRemoveQuestReq:
@@ -407,6 +431,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	}
 	return packetResult{
 		battleActions: result.Actions,
+		battleBuffs:   result.BuffInfos,
 		battleCommand: result.StartCommand,
 		battleOver:    result.Over,
 		roleState:     roleState,
@@ -854,6 +879,46 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 		}
 		return result
 	}
+	if sourceType == "装备" && targetType == "背包" && request.SourceIndex != nil {
+		targetIndex := -1
+		if request.TargetIndex != nil {
+			targetIndex = *request.TargetIndex
+		}
+		moveResult := store.MoveRoleItem(
+			socketSession.playerBase.PlayerID,
+			socketSession.selectedRole.RoleID,
+			sourceType,
+			*request.SourceIndex,
+			targetType,
+			targetIndex,
+			0,
+		)
+		if !moveResult.Found || !moveResult.Moved {
+			log.Printf("[ai-server] classic town ContainerMove equipment noop roleId=%s source=%s[%v] target=%s[%v] error=%s", socketSession.selectedRole.RoleID, sourceType, request.SourceIndex, targetType, request.TargetIndex, moveResult.ErrorCode)
+			return packetResult{handled: true}
+		}
+		socketSession.selectedRole = &moveResult.Role
+		socketSession.playerBase = &moveResult.PlayerBase
+		result := packetResult{
+			createPlayer: buildClassicTownCreatePlayerPush(moveResult.Role, moveResult.PlayerBase),
+			itemInfos:    make([]classicTownItemInfoPush, 0, len(moveResult.UpdatedItems)),
+			itemClears:   make([]classicTownItemInfoClearPush, 0, len(moveResult.ClearedItems)),
+			handled:      true,
+		}
+		for _, clear := range moveResult.ClearedItems {
+			result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+				Handle: moveResult.Role.RoleID,
+				Type:   clear.Type,
+				Index:  clear.Index,
+			})
+		}
+		for _, item := range moveResult.UpdatedItems {
+			item.Handle = moveResult.Role.RoleID
+			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+		}
+		result.rolePhysique = moveResult.PlayerBase.RolePhysique
+		return result
+	}
 
 	log.Printf("[ai-server] classic town ContainerMove ignored unsupported source=%s target=%s", sourceType, targetType)
 	return packetResult{handled: true}
@@ -1014,6 +1079,9 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		result.skillInfos = []classicTownSkillInfoPush{
 			classicTownSkillInfoPushFromRoleSkill(useResult.Role.RoleID, *useResult.LearnedSkill),
 		}
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(
+			"习得【"+useResult.LearnedSkill.Name+"】Lv."+strconv.Itoa(useResult.LearnedSkill.Level),
+		))
 	}
 	if useResult.Equipped {
 		result.createPlayer = buildClassicTownCreatePlayerPush(useResult.Role, useResult.PlayerBase)
@@ -1021,6 +1089,67 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 	}
 	log.Printf("[ai-server] classic town ActiveItem roleId=%s type=%s index=%d item=%s", useResult.Role.RoleID, request.Type, request.Index, useResult.Item.Name)
 	return result
+}
+
+func buildClassicTownChatSendResult(socketSession *packetSession, request classicTownChatSendRequest) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil {
+		log.Printf("[ai-server] classic town Speak ignored without selected role channel=%s", request.Channel)
+		return packetResult{handled: true}
+	}
+
+	message := strings.TrimSpace(request.Msg)
+	if message == "" {
+		return packetResult{handled: true}
+	}
+
+	channel := normalizeClassicTownChatChannel(request.Channel)
+	role := socketSession.selectedRole
+	push := classicTownChatMessagePush{
+		Channel: channel,
+		Handle:  role.RoleID,
+		Name:    role.DisplayName,
+		Msg:     message,
+	}
+	if channel == "whisper" {
+		targetName := strings.TrimSpace(request.TargetName)
+		if targetName == "" {
+			return packetResult{handled: true}
+		}
+		push.TargetName = targetName
+		push.Outgoing = true
+	}
+
+	log.Printf("[ai-server] classic town Speak roleId=%s channel=%s msg=%s", role.RoleID, channel, message)
+	return packetResult{
+		chatMessages: []classicTownChatMessagePush{push},
+		handled:      true,
+	}
+}
+
+func classicTownSystemChatMessage(message string) classicTownChatMessagePush {
+	return classicTownChatMessagePush{
+		Channel: "system",
+		Msg:     message,
+	}
+}
+
+func normalizeClassicTownChatChannel(channel string) string {
+	switch strings.ToLower(strings.TrimSpace(channel)) {
+	case "1", "world", "public", "p":
+		return "world"
+	case "2", "team", "t":
+		return "team"
+	case "3", "whisper", "w":
+		return "whisper"
+	case "5", "guild", "guid", "g":
+		return "guild"
+	case "50", "system":
+		return "system"
+	case "0", "region", "local", "say":
+		return "region"
+	default:
+		return "region"
+	}
 }
 
 func buildClassicTownCreatePlayerPush(role session.RoleSummary, playerBase session.PlayerBaseData) *world.RolePush {
@@ -1075,6 +1204,41 @@ func buildClassicTownSkillListResult(store *session.Store, socketSession *packet
 			socketSession.selectedRole.RoleID,
 			roleCurrenciesOrEmpty(store, socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID),
 		),
+		handled: true,
+	}
+}
+
+func buildClassicTownRemoveSkillResult(
+	store *session.Store,
+	socketSession *packetSession,
+	request classicTownRemoveSkillRequest,
+) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic town RemoveSkill ignored without selected role skill=%s", request.Name)
+		return packetResult{handled: true}
+	}
+
+	removeResult := store.RemoveRoleSkill(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		request.Name,
+	)
+	if !removeResult.Found {
+		log.Printf("[ai-server] classic town RemoveSkill ignored missing role roleId=%s skill=%s", socketSession.selectedRole.RoleID, request.Name)
+		return packetResult{handled: true}
+	}
+	if !removeResult.Removed || removeResult.RemovedSkill == nil {
+		log.Printf("[ai-server] classic town RemoveSkill rejected roleId=%s skill=%s error=%s", socketSession.selectedRole.RoleID, request.Name, removeResult.ErrorCode)
+		return packetResult{handled: true}
+	}
+
+	log.Printf("[ai-server] classic town RemoveSkill removed roleId=%s skill=%s", socketSession.selectedRole.RoleID, removeResult.RemovedSkill.Name)
+	return packetResult{
+		skillClears: []classicTownClearSkillInfoPush{{
+			Handle: socketSession.selectedRole.RoleID,
+			Name:   removeResult.RemovedSkill.Name,
+			Level:  removeResult.RemovedSkill.Level,
+		}},
 		handled: true,
 	}
 }

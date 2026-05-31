@@ -3,3 +3,6 @@ tmp-ai-server*.log
 data/
 logs/
 ai-server.local.*.log
+
+tmp-ai-server*.exe
+tmp-ai-server.exe~

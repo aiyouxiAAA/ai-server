@@ -50,6 +50,7 @@ const (
 	cmdClassicTownEquipItemReq     = 1124
 	cmdClassicTownFastPanelPush    = 1125
 	cmdClassicTownGetFastPanelReq  = 1126
+	cmdClassicTownSetFastPanelReq  = 1180
 	cmdClassicTownGetQuestLogReq   = 1127
 	cmdClassicTownQuestInfoPush    = 1128
 	cmdClassicTownClearQuestInfo   = 1129
@@ -59,6 +60,10 @@ const (
 	cmdClassicTownContainerMove    = 1133
 	cmdClassicTownAddPointReq      = 1134
 	cmdClassicTownActiveItemReq    = 1135
+	cmdClassicTownClearSkillInfo   = 1136
+	cmdClassicTownRemoveSkillReq   = 1137
+	cmdClassicTownChatMessagePush  = 1138
+	cmdClassicTownChatSendReq      = 1139
 	cmdClassicSocialFriendInfo     = 1140
 	cmdClassicSocialClearFriend    = 1141
 	cmdClassicSocialBlackListInfo  = 1142
@@ -99,6 +104,7 @@ const (
 	cmdClassicBattleActionReq     = 3004
 	cmdClassicBattleActionPush    = 3005
 	cmdClassicBattleOverPush      = 3006
+	cmdClassicBattleBuffInfoPush  = 3008
 	cmdClassicBattleActiveItemReq = 3011
 	cmdClassicBattlePlayOverReq   = 3012
 )
@@ -215,6 +221,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		for _, chatMessage := range result.chatMessages {
+			if err := socketWriter.writePush(cmdClassicTownChatMessagePush, encodePayload(chatMessage)); err != nil {
+				log.Printf("[ai-server] write classic town chat message failed: %v", err)
+				return
+			}
+		}
 		if result.skillCap != nil {
 			if err := socketWriter.writePush(cmdClassicTownSkillCapPush, encodePayload(*result.skillCap)); err != nil {
 				log.Printf("[ai-server] write classic town skillCap push failed: %v", err)
@@ -224,6 +236,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		for _, skillInfo := range result.skillInfos {
 			if err := socketWriter.writePush(cmdClassicTownSkillInfoPush, encodePayload(skillInfo)); err != nil {
 				log.Printf("[ai-server] write classic town skillInfo push failed: %v", err)
+				return
+			}
+		}
+		for _, skillClear := range result.skillClears {
+			if err := socketWriter.writePush(cmdClassicTownClearSkillInfo, encodePayload(skillClear)); err != nil {
+				log.Printf("[ai-server] write classic town clearSkillInfo push failed: %v", err)
 				return
 			}
 		}
@@ -408,6 +426,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		if result.battleStart != nil && result.battleCommand != nil {
 			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
 				log.Printf("[ai-server] write classic battle startCommand failed: %v", err)
+				return
+			}
+		}
+		for _, battleBuff := range result.battleBuffs {
+			if err := socketWriter.writePush(cmdClassicBattleBuffInfoPush, encodePayload(battleBuff)); err != nil {
+				log.Printf("[ai-server] write classic battle BuffInfo failed: %v", err)
 				return
 			}
 		}

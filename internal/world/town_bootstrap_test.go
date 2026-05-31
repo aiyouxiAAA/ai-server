@@ -720,6 +720,57 @@ func TestBuildTownTransferBootstrapMarksCapturedBambooEnemyShow(t *testing.T) {
 	}
 }
 
+func TestBuildTownTransferBootstrapMarksCapturedPlainEnemyShow(t *testing.T) {
+	capturedMaps := []struct {
+		mapID   int
+		mapName string
+	}{
+		{mapID: 34, mapName: "平原_3"},
+		{mapID: 35, mapName: "平原_4"},
+		{mapID: 36, mapName: "平原_5"},
+		{mapID: 37, mapName: "平原_6"},
+		{mapID: 39, mapName: "平原_8"},
+		{mapID: 40, mapName: "平原_9"},
+		{mapID: 41, mapName: "平原_10"},
+		{mapID: 43, mapName: "平原_12"},
+		{mapID: 44, mapName: "平原_13"},
+		{mapID: 48, mapName: "平原_14"},
+		{mapID: 49, mapName: "平原_15"},
+		{mapID: 50, mapName: "平原_16"},
+		{mapID: 51, mapName: "平原_17"},
+		{mapID: 52, mapName: "平原_18"},
+	}
+
+	for _, testCase := range capturedMaps {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-plain",
+			DisplayName:  "测试女侠",
+			Level:        18,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, testCase.mapID, SpawnPoint{X: 1000, Y: 600})
+		if !ok {
+			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
+		}
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected plain map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if !snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected captured plain map%d enemyShow to be true", testCase.mapID)
+		}
+	}
+}
+
 func TestBuildTownTransferBootstrapRestoresBambooCollectionPoints(t *testing.T) {
 	cases := []struct {
 		mapID       int

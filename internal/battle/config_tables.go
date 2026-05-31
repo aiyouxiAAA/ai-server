@@ -15,6 +15,7 @@ type sourceWildEnemyConfig struct {
 	Cell            CellInfoPush
 	QueueIndexTeam  int
 	QueueIndexEnemy int
+	Vocation        string
 	Source          string
 }
 
@@ -27,12 +28,18 @@ type sourceBattleRewardConfig struct {
 
 var (
 	sourceWildEnemyConfigByMapID    = mustLoadSourceWildEnemyConfigs()
+	sourceWildEnemyConfigsByMapID   = mustLoadSourceWildEnemyConfigLists()
 	sourceBattleRewardConfigByMapID = mustLoadSourceBattleRewardConfigs()
 )
 
 func sourceEnemyConfigForMap(mapID string) (sourceWildEnemyConfig, bool) {
 	config, ok := sourceWildEnemyConfigByMapID[strings.TrimSpace(mapID)]
 	return config, ok
+}
+
+func sourceEnemyConfigsForMap(mapID string) []sourceWildEnemyConfig {
+	configs := sourceWildEnemyConfigsByMapID[strings.TrimSpace(mapID)]
+	return append([]sourceWildEnemyConfig(nil), configs...)
 }
 
 func sourceBattleRewardConfigForMap(mapID string) (sourceBattleRewardConfig, bool) {
@@ -45,36 +52,56 @@ func mustLoadSourceWildEnemyConfigs() map[string]sourceWildEnemyConfig {
 	header := battleConfigHeader(records[0])
 	configs := map[string]sourceWildEnemyConfig{}
 	for rowIndex, row := range records[1:] {
-		mapID := requiredBattleConfigString(row, header, "map_id", rowIndex)
-		maxHP := requiredBattleConfigInt(row, header, "max_hp", rowIndex)
-		maxMP := requiredBattleConfigInt(row, header, "max_mp", rowIndex)
-		configs[mapID] = sourceWildEnemyConfig{
-			Cell: CellInfoPush{
-				Camp:         CampEnemy,
-				Handle:       requiredBattleConfigString(row, header, "handle", rowIndex),
-				Name:         requiredBattleConfigString(row, header, "name", rowIndex),
-				DisplayURL:   requiredBattleConfigString(row, header, "display_url", rowIndex),
-				Level:        requiredBattleConfigInt(row, header, "level", rowIndex),
-				XScale:       100,
-				YScale:       100,
-				MaxHP:        maxHP,
-				HP:           maxHP,
-				MaxMP:        maxMP,
-				MP:           maxMP,
-				Speed:        requiredBattleConfigInt(row, header, "speed", rowIndex),
-				Attack:       requiredBattleConfigInt(row, header, "attack", rowIndex),
-				Defense:      requiredBattleConfigInt(row, header, "defense", rowIndex),
-				Hit:          defaultBattleHit,
-				Dog:          defaultBattleDog,
-				Fat:          defaultBattleFat,
-				CommandLabel: requiredBattleConfigString(row, header, "command_label", rowIndex),
-			},
-			QueueIndexTeam:  requiredBattleConfigInt(row, header, "queue_index_team", rowIndex),
-			QueueIndexEnemy: requiredBattleConfigInt(row, header, "queue_index_enemy", rowIndex),
-			Source:          optionalBattleConfigString(row, header, "source"),
+		mapID, config := sourceWildEnemyConfigFromRow(row, header, rowIndex)
+		if _, exists := configs[mapID]; exists {
+			continue
 		}
+		configs[mapID] = config
 	}
 	return configs
+}
+
+func mustLoadSourceWildEnemyConfigLists() map[string][]sourceWildEnemyConfig {
+	records := mustReadBattleConfigCSV("config/classic-wild-enemy.csv")
+	header := battleConfigHeader(records[0])
+	configs := map[string][]sourceWildEnemyConfig{}
+	for rowIndex, row := range records[1:] {
+		mapID, config := sourceWildEnemyConfigFromRow(row, header, rowIndex)
+		configs[mapID] = append(configs[mapID], config)
+	}
+	return configs
+}
+
+func sourceWildEnemyConfigFromRow(row []string, header map[string]int, rowIndex int) (string, sourceWildEnemyConfig) {
+	mapID := requiredBattleConfigString(row, header, "map_id", rowIndex)
+	maxHP := requiredBattleConfigInt(row, header, "max_hp", rowIndex)
+	maxMP := requiredBattleConfigInt(row, header, "max_mp", rowIndex)
+	return mapID, sourceWildEnemyConfig{
+		Cell: CellInfoPush{
+			Camp:         CampEnemy,
+			Handle:       requiredBattleConfigString(row, header, "handle", rowIndex),
+			Name:         requiredBattleConfigString(row, header, "name", rowIndex),
+			DisplayURL:   requiredBattleConfigString(row, header, "display_url", rowIndex),
+			Level:        requiredBattleConfigInt(row, header, "level", rowIndex),
+			XScale:       100,
+			YScale:       100,
+			MaxHP:        maxHP,
+			HP:           maxHP,
+			MaxMP:        maxMP,
+			MP:           maxMP,
+			Speed:        requiredBattleConfigInt(row, header, "speed", rowIndex),
+			Attack:       requiredBattleConfigInt(row, header, "attack", rowIndex),
+			Defense:      requiredBattleConfigInt(row, header, "defense", rowIndex),
+			Hit:          defaultBattleHit,
+			Dog:          defaultBattleDog,
+			Fat:          defaultBattleFat,
+			CommandLabel: requiredBattleConfigString(row, header, "command_label", rowIndex),
+		},
+		QueueIndexTeam:  requiredBattleConfigInt(row, header, "queue_index_team", rowIndex),
+		QueueIndexEnemy: requiredBattleConfigInt(row, header, "queue_index_enemy", rowIndex),
+		Vocation:        requiredBattleConfigString(row, header, "vocation", rowIndex),
+		Source:          optionalBattleConfigString(row, header, "source"),
+	}
 }
 
 func mustLoadSourceBattleRewardConfigs() map[string]sourceBattleRewardConfig {

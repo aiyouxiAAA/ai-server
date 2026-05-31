@@ -84,6 +84,9 @@ func TestHandlePacketRoleSelectPushesTownRoleStats(t *testing.T) {
 	if response.PlayerBase.RoleState == nil {
 		t.Fatalf("expected playerBase roleState, got %+v", response.PlayerBase)
 	}
+	if response.Role.Voc != "新手" || response.PlayerBase.Voc != "新手" {
+		t.Fatalf("expected default vocation 新手, got role=%q playerBase=%q", response.Role.Voc, response.PlayerBase.Voc)
+	}
 	if response.PlayerBase.RolePhysique == nil {
 		t.Fatalf("expected playerBase rolePhysique, got %+v", response.PlayerBase)
 	}
@@ -112,6 +115,58 @@ func TestHandlePacketRoleSelectPushesTownRoleStats(t *testing.T) {
 	}
 	if socketSession.playerBase == nil || socketSession.playerBase.RoleState == nil || socketSession.playerBase.RolePhysique == nil {
 		t.Fatalf("expected socket session to retain role stats, got %+v", socketSession.playerBase)
+	}
+}
+
+func TestHandlePacketClassicTownVocationAnswerChangesRoleVocation(t *testing.T) {
+	store := session.NewStore()
+	login := store.Login(session.LoginRequest{
+		UserName: "mockuser",
+		Password: "magicpwd",
+	})
+	create := store.CreateRole(session.RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "转职女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	socketSession := &packetSession{}
+	handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 2,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     login.PlayerID,
+			SessionToken: login.SessionToken,
+			RoleID:       create.Role.RoleID,
+		}),
+	}, socketSession)
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownAnswerReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownAnswerRequest{
+			Handle:       sourceSkillTeacherHandle,
+			MsgHandle:    "2",
+			AnswerHandle: "job_warrior",
+		}),
+	}, socketSession)
+
+	if !result.handled || result.answerSpeak == nil || result.answerSpeak.MsgHandle != "job_warrior" {
+		t.Fatalf("expected vocation answer result, got %+v", result.answerSpeak)
+	}
+	if socketSession.selectedRole == nil || socketSession.selectedRole.Voc != "战士" || socketSession.playerBase == nil || socketSession.playerBase.Voc != "战士" {
+		t.Fatalf("expected socket session vocation 战士, role=%+v playerBase=%+v", socketSession.selectedRole, socketSession.playerBase)
+	}
+	if result.createPlayer == nil || result.createPlayer.Vocation != "战士" {
+		t.Fatalf("expected createPlayer vocation 战士, got %+v", result.createPlayer)
+	}
+	if result.roleState == nil || result.rolePhysique == nil {
+		t.Fatalf("expected vocation result to push role state and physique, got state=%+v physique=%+v", result.roleState, result.rolePhysique)
+	}
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, create.Role.RoleID)
+	if !ok || role.Voc != "战士" || playerBase.Voc != "战士" {
+		t.Fatalf("expected persisted runtime vocation 战士, ok=%v role=%+v base=%+v", ok, role, playerBase)
 	}
 }
 
@@ -345,6 +400,101 @@ func TestHandlePacketClassicTownGetSkillListPushesSourceShape(t *testing.T) {
 	}
 	if result.currencyPush == nil || result.currencyPush.Currencies["铜钱"] != 5000 || result.currencyPush.Currencies["银元宝"] != 1 {
 		t.Fatalf("expected skill list to push default currencies, got %+v", result.currencyPush)
+	}
+}
+
+func TestHandlePacketClassicTownRemoveSkillPushesClearSkillInfo(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	_, _, found, learned := store.LearnRoleSkill(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		session.RoleSkill{Name: "武器专精", Level: 1, Type: "被动技能", Icon: "631.png"},
+	)
+	if !found || !learned {
+		t.Fatal("expected test skill to be learned")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownRemoveSkillReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRemoveSkillRequest{
+			Name: "武器专精",
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected RemoveSkill to be handled")
+	}
+	if len(result.skillClears) != 1 || result.skillClears[0].Handle != socketSession.selectedRole.RoleID || result.skillClears[0].Name != "武器专精" {
+		t.Fatalf("expected clearSkillInfo push for 武器专精, got %+v", result.skillClears)
+	}
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetSkillListReq,
+		Seq:     4,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	for _, skill := range listResult.skillInfos {
+		if skill.Name == "武器专精" {
+			t.Fatalf("expected removed skill to stay removed, got %+v", listResult.skillInfos)
+		}
+	}
+}
+
+func TestHandlePacketClassicTownRemoveSkillRejectsNormalAttack(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownRemoveSkillReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRemoveSkillRequest{
+			Name: "普通攻击",
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected RemoveSkill to be handled")
+	}
+	if len(result.skillClears) != 0 {
+		t.Fatalf("expected normal attack removal to be rejected without clear push, got %+v", result.skillClears)
+	}
+}
+
+func TestHandlePacketClassicTownRemoveDefaultSkillDoesNotResurrect(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownRemoveSkillReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRemoveSkillRequest{
+			Name: "密斩",
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected RemoveSkill to be handled")
+	}
+	if len(result.skillClears) != 1 || result.skillClears[0].Name != "密斩" {
+		t.Fatalf("expected clearSkillInfo push for 密斩, got %+v", result.skillClears)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetSkillListReq,
+		Seq:     4,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	for _, skill := range listResult.skillInfos {
+		if skill.Name == "密斩" {
+			t.Fatalf("expected removed default skill not to be re-added, got %+v", listResult.skillInfos)
+		}
+	}
+
+	fastPanelResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetFastPanelReq,
+		Seq:     5,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	for _, entry := range fastPanelResult.fastPanel.Entries {
+		if entry.Name == "密斩" {
+			t.Fatalf("expected removed default skill not to appear on fast panel, got %+v", fastPanelResult.fastPanel.Entries)
+		}
 	}
 }
 
@@ -748,6 +898,38 @@ func TestHandlePacketClassicTownActiveItemExchangesCopperToSilver(t *testing.T) 
 	}
 }
 
+func TestHandlePacketClassicTownChatSendFormatsSourceChannels(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+
+	worldResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownChatSendReq,
+		Seq: 11,
+		Payload: mustJSON(t, classicTownChatSendRequest{
+			Channel: "world",
+			Msg:     "大家好",
+		}),
+	}, socketSession)
+	if !worldResult.handled || len(worldResult.chatMessages) != 1 {
+		t.Fatalf("expected world chat push, got %+v", worldResult)
+	}
+	if worldResult.chatMessages[0].Channel != "world" || worldResult.chatMessages[0].Name != "技能测试" || worldResult.chatMessages[0].Msg != "大家好" {
+		t.Fatalf("expected source sayP-style world message, got %+v", worldResult.chatMessages[0])
+	}
+
+	whisperResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownChatSendReq,
+		Seq: 12,
+		Payload: mustJSON(t, classicTownChatSendRequest{
+			Channel:    "3",
+			TargetName: "小明",
+			Msg:        "在吗",
+		}),
+	}, socketSession)
+	if len(whisperResult.chatMessages) != 1 || whisperResult.chatMessages[0].Channel != "whisper" || !whisperResult.chatMessages[0].Outgoing || whisperResult.chatMessages[0].TargetName != "小明" {
+		t.Fatalf("expected source sayW-style outgoing whisper, got %+v", whisperResult.chatMessages)
+	}
+}
+
 func TestHandlePacketClassicTownContainerMoveMovesBagItemBySlot(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	sourceIndex := 19
@@ -780,6 +962,43 @@ func TestHandlePacketClassicTownContainerMoveMovesBagItemBySlot(t *testing.T) {
 	}, socketSession)
 	if len(listResult.itemInfos) != 1 || listResult.itemInfos[0].Name != "铁斧" || listResult.itemInfos[0].Index != 0 {
 		t.Fatalf("expected moved axe to persist in bag slot 0, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveUnequipsEquipmentToBag(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	equipResult := store.EquipRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "背包", 19, 1)
+	if !equipResult.Found || !equipResult.Equipped {
+		t.Fatalf("expected starter axe equip success, got %+v", equipResult)
+	}
+	socketSession.selectedRole = &equipResult.Role
+	socketSession.playerBase = &equipResult.PlayerBase
+
+	sourceIndex := 3
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  "装备",
+			TargetType:  "背包",
+			SourceIndex: &sourceIndex,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected equipment ContainerMove to be handled")
+	}
+	if result.createPlayer == nil || strings.Contains(result.createPlayer.SourceQuery, "w8=5") {
+		t.Fatalf("expected unequip to push createPlayer without weapon appearance, got %+v", result.createPlayer)
+	}
+	if result.rolePhysique == nil {
+		t.Fatal("expected unequip to push rolePhysique")
+	}
+	if len(result.itemClears) != 2 {
+		t.Fatalf("expected equipment and target bag clears, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != "背包" || result.itemInfos[0].Name != "铁斧" || result.itemInfos[0].Index != 0 {
+		t.Fatalf("expected unequipped axe at first empty bag slot, got %+v", result.itemInfos)
 	}
 }
 
@@ -1055,8 +1274,8 @@ func TestHandlePacketClassicTownLearnSkillAnswerPushesSourceCategoryDialogue(t *
 }
 
 func TestHandlePacketClassicTownFastPanelPushesCapturedDefaultSlots(t *testing.T) {
-	_, socketSession := seedSelectedRoleSession(t)
-	result := handlePacketWithSession(nil, protocol.Packet{
+	store, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(store, protocol.Packet{
 		Cmd:     cmdClassicTownGetFastPanelReq,
 		Seq:     2,
 		Payload: mustJSON(t, map[string]any{}),
@@ -1073,6 +1292,116 @@ func TestHandlePacketClassicTownFastPanelPushesCapturedDefaultSlots(t *testing.T
 	}
 	if result.fastPanel.Entries[1].Index != 1 || result.fastPanel.Entries[1].Type != "skill" || result.fastPanel.Entries[1].Name != "密斩" {
 		t.Fatalf("expected slot 1 mizhan, got %+v", result.fastPanel.Entries[1])
+	}
+}
+
+func TestHandlePacketClassicTownFastPanelDoesNotAutoAddLearnedSkills(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	_, _, found, learned := store.LearnRoleSkill(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		session.RoleSkill{Name: "武器专精", Level: 1, Type: "被动技能", Icon: "631.png"},
+	)
+	if !found || !learned {
+		t.Fatal("expected passive test skill to be learned")
+	}
+	_, _, found, learned = store.LearnRoleSkill(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		session.RoleSkill{Name: "挑衅", Level: 1, Type: "技能·通用", Icon: "634.png"},
+	)
+	if !found || !learned {
+		t.Fatal("expected active test skill to be learned")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetFastPanelReq,
+		Seq:     2,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+
+	if result.fastPanel == nil {
+		t.Fatal("expected fast panel push")
+	}
+	for _, entry := range result.fastPanel.Entries {
+		if entry.Name == "武器专精" {
+			t.Fatalf("expected passive skill not to appear on fast panel, got %+v", result.fastPanel.Entries)
+		}
+	}
+	for _, entry := range result.fastPanel.Entries {
+		if entry.Name == "挑衅" {
+			t.Fatalf("expected newly learned active skill not to auto-appear on fast panel, got %+v", result.fastPanel.Entries)
+		}
+	}
+	if len(result.fastPanel.Entries) != 2 || result.fastPanel.Entries[0].Name != "普通攻击" || result.fastPanel.Entries[1].Name != "密斩" {
+		t.Fatalf("expected only source default fast panel slots, got %+v", result.fastPanel.Entries)
+	}
+}
+
+func TestHandlePacketClassicTownSetFastPanelStoresActiveSkill(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	_, _, found, learned := store.LearnRoleSkill(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		session.RoleSkill{Name: "挑衅", Level: 1, Type: "技能·通用", Icon: "634.png"},
+	)
+	if !found || !learned {
+		t.Fatal("expected active test skill to be learned")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownSetFastPanelReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownSetFastPanelRequest{
+			Index: 4,
+			Type:  "skill",
+			Name:  "挑衅",
+		}),
+	}, socketSession)
+
+	if !result.handled || result.fastPanel == nil {
+		t.Fatalf("expected SetFastPanel to push fast panel, got %+v", result)
+	}
+	if !fastPanelContains(result.fastPanel.Entries, 4, "skill", "挑衅") {
+		t.Fatalf("expected slot 4 taunt after SetFastPanel, got %+v", result.fastPanel.Entries)
+	}
+
+	getResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetFastPanelReq,
+		Seq:     3,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if getResult.fastPanel == nil || !fastPanelContains(getResult.fastPanel.Entries, 4, "skill", "挑衅") {
+		t.Fatalf("expected persisted slot 4 taunt after GetFastPanel, got %+v", getResult.fastPanel)
+	}
+}
+
+func TestHandlePacketClassicTownSetFastPanelRejectsPassiveSkill(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	_, _, found, learned := store.LearnRoleSkill(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		session.RoleSkill{Name: "武器专精", Level: 1, Type: "被动技能", Icon: "631.png"},
+	)
+	if !found || !learned {
+		t.Fatal("expected passive test skill to be learned")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownSetFastPanelReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownSetFastPanelRequest{
+			Index: 4,
+			Type:  "skill",
+			Name:  "武器专精",
+		}),
+	}, socketSession)
+
+	if !result.handled || result.fastPanel == nil {
+		t.Fatalf("expected passive SetFastPanel to be handled with unchanged fast panel, got %+v", result)
+	}
+	if fastPanelContains(result.fastPanel.Entries, 4, "skill", "武器专精") {
+		t.Fatalf("expected passive skill not to enter fast panel, got %+v", result.fastPanel.Entries)
 	}
 }
 
@@ -1128,6 +1457,31 @@ func TestHandlePacketClassicTownBuySkillDeductsCurrencyAndPushesSkillItem(t *tes
 	}
 	if len(learnResult.itemClears) != 1 || learnResult.itemClears[0].Index != result.itemInfos[0].Index {
 		t.Fatalf("expected active skill item to clear consumed item, got %+v", learnResult.itemClears)
+	}
+	if len(learnResult.chatMessages) != 1 || learnResult.chatMessages[0].Channel != "system" || !strings.Contains(learnResult.chatMessages[0].Msg, "习得【武器专精】Lv.1") {
+		t.Fatalf("expected active skill item to push source sayS learn message, got %+v", learnResult.chatMessages)
+	}
+}
+
+func TestSourceSkillItemsAndSkillInfoUseCapturedLevelDescriptions(t *testing.T) {
+	entry, ok := findSourceSkillShopEntry("skill1", 10)
+	if !ok {
+		t.Fatal("expected captured 多段斩 shop entry")
+	}
+	item := sourceSkillEntryToRoleItem(entry)
+	if item.Description != "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@8&4@提升55%的物理伤害" {
+		t.Fatalf("expected 多段斩 skill item to use captured Lv1 description, got %+v", item)
+	}
+
+	skillInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "嗜血斩",
+		Level:       3,
+		Type:        "oneE",
+		Icon:        "645.png",
+		Description: "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@对敌人造成92%的物理伤害&0;并有82%机率将对敌人造成伤害的70%转换为气力</font>",
+	})
+	if !strings.Contains(skillInfo.Description, "&2@28") || !strings.Contains(skillInfo.Description, "造成96%的物理伤害") || !strings.Contains(skillInfo.Description, "86%机率") {
+		t.Fatalf("expected skillInfo to use captured 嗜血斩 Lv3 description, got %+v", skillInfo)
 	}
 }
 
@@ -1208,6 +1562,18 @@ func TestHandlePacketClassicTownBuySkillRejectsMissingSkill(t *testing.T) {
 
 func TestHandlePacketClassicTownBuyItemDeductsCurrencyAndPushesBagItem(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
+	copper, ok := session.CapturedRoleItemTemplate("铜钱")
+	if !ok {
+		t.Fatal("expected copper template")
+	}
+	copper.Type = "背包"
+	copper.Index = -1
+	copper.Count = 1000
+	grantedCopper, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, copper)
+	if !ok {
+		t.Fatal("expected copper grant")
+	}
+
 	result := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicTownBuySkillReq,
 		Seq: 2,
@@ -1226,8 +1592,12 @@ func TestHandlePacketClassicTownBuyItemDeductsCurrencyAndPushesBagItem(t *testin
 	if result.currencyPush == nil || result.currencyPush.Currencies["铜钱"] != 4992 {
 		t.Fatalf("expected copper deduction push to 4992, got %+v", result.currencyPush)
 	}
-	if len(result.itemInfos) != 1 || result.itemInfos[0].Name != "普通采集手套" || result.itemInfos[0].Count != 1 || result.itemInfos[0].Display != "856.png" {
+	itemsByName := itemInfosByName(result.itemInfos)
+	if itemsByName["普通采集手套"].Count != 1 || itemsByName["普通采集手套"].Display != "856.png" {
 		t.Fatalf("expected purchased 普通采集手套 item push, got %+v", result.itemInfos)
+	}
+	if itemsByName["铜钱"].Index != grantedCopper.Index || itemsByName["铜钱"].Count != 992 {
+		t.Fatalf("expected copper stack push to 992 at slot %d, got %+v", grantedCopper.Index, result.itemInfos)
 	}
 	if socketSession.playerBase == nil || socketSession.playerBase.Currencies["铜钱"] != 4992 {
 		t.Fatalf("expected socket currency state to update, got %+v", socketSession.playerBase)
@@ -1241,6 +1611,9 @@ func TestHandlePacketClassicTownBuyItemDeductsCurrencyAndPushesBagItem(t *testin
 	items := itemInfosByName(listResult.itemInfos)
 	if items["普通采集手套"].Count != 1 {
 		t.Fatalf("expected purchased item to persist in bag, got %+v", listResult.itemInfos)
+	}
+	if items["铜钱"].Index != grantedCopper.Index || items["铜钱"].Count != 992 {
+		t.Fatalf("expected persisted copper stack to 992 at slot %d, got %+v", grantedCopper.Index, listResult.itemInfos)
 	}
 }
 
@@ -1460,6 +1833,23 @@ func TestHandlePacketClassicTownGuangqingCapturedItemShopPushesSaleRows(t *testi
 				"铜钱",
 			},
 			multiReqCounts: []int{8},
+		},
+		{
+			name:         "yunyin armor",
+			handle:       "4000542609162635",
+			answerHandle: "1",
+			shopID:       "item:4000542609162635",
+			title:        "购买护具",
+			count:        27,
+			firstName:    "布帽",
+			firstIcon:    "293.png",
+			firstReqName: "铜钱",
+			firstReqCost: 20,
+			multiReqID:   26,
+			multiReqNames: []string{
+				"铜钱",
+			},
+			multiReqCounts: []int{150},
 		},
 		{
 			name:         "craft",
@@ -2887,6 +3277,15 @@ func seedSelectedRoleSessionInStore(t *testing.T, store *session.Store, displayN
 	return socketSession, create.Role
 }
 
+func fastPanelContains(entries []classicTownFastPanelEntry, index int, entryType string, name string) bool {
+	for _, entry := range entries {
+		if entry.Index == index && entry.Type == entryType && entry.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func mustJSON(t *testing.T, value any) []byte {
 	t.Helper()
 
@@ -2946,13 +3345,32 @@ func TestDevItemsStateListsRolesAndTemplates(t *testing.T) {
 		t.Fatal("expected item templates")
 	}
 	foundMeat := false
+	foundWeaponShopItem := false
+	foundGroceryShopItem := false
+	foundCraftShopItem := false
+	foundSkillBook := false
 	for _, item := range state.Templates {
 		if item.Name == "肉" && item.Display == "70.png" {
 			foundMeat = true
 		}
+		if item.Name == "蛮力钢剑" && item.Display == "40.png" {
+			foundWeaponShopItem = true
+		}
+		if item.Name == "宠物用营养水" && item.Display == "210.png" {
+			foundGroceryShopItem = true
+		}
+		if item.Name == "奥义秘诀" && item.Display == "2.png" {
+			foundCraftShopItem = true
+		}
+		if item.Name == "武器专精" && item.Display == "631.png" {
+			foundSkillBook = true
+		}
 	}
 	if !foundMeat {
 		t.Fatalf("expected meat template, got %+v", state.Templates)
+	}
+	if !foundWeaponShopItem || !foundGroceryShopItem || !foundCraftShopItem || !foundSkillBook {
+		t.Fatalf("expected captured shop templates weapon=%v grocery=%v craft=%v skill=%v", foundWeaponShopItem, foundGroceryShopItem, foundCraftShopItem, foundSkillBook)
 	}
 }
 
@@ -3001,6 +3419,79 @@ func TestDevAddItemHandlerAddsByDisplayID(t *testing.T) {
 	}
 	if meatCount != 2 {
 		t.Fatalf("expected persisted meat count 2, got %d", meatCount)
+	}
+}
+
+func TestDevAddItemHandlerAddsCapturedShopItemByDisplayID(t *testing.T) {
+	store := session.NewStore()
+	login := store.Login(session.LoginRequest{UserName: "mockuser", Password: "magicpwd"})
+	create := store.CreateRole(session.RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "发商店道具测试",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	payload := devAddItemRequest{
+		PlayerID: login.PlayerID,
+		RoleID:   create.Role.RoleID,
+		ItemID:   "210",
+		Count:    3,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/dev/items/add", bytes.NewReader(body))
+	recorder := httptest.NewRecorder()
+	handleDevAddItem(recorder, request, store)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+
+	var response devAddItemResponse
+	decodeJSON(t, recorder.Body.Bytes(), &response)
+	if !response.Success || response.Item.Name != "宠物用营养水" || response.Item.Display != "210.png" || response.Item.Count != 3 {
+		t.Fatalf("expected captured grocery item count 3, got %+v", response)
+	}
+}
+
+func TestDevSetLevelHandlerSetsRoleLevel(t *testing.T) {
+	store := session.NewStore()
+	login := store.Login(session.LoginRequest{UserName: "mockuser", Password: "magicpwd"})
+	create := store.CreateRole(session.RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "调等级测试",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	payload := devSetLevelRequest{
+		PlayerID: login.PlayerID,
+		RoleID:   create.Role.RoleID,
+		Level:    20,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/dev/items/set-level", bytes.NewReader(body))
+	recorder := httptest.NewRecorder()
+	handleDevSetLevel(recorder, request, store)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+
+	var response devSetLevelResponse
+	decodeJSON(t, recorder.Body.Bytes(), &response)
+	if !response.Success || response.Role == nil || response.Role.Level != 20 || response.Role.Exp != session.ClassicRoleLevelToExp(19) {
+		t.Fatalf("expected level 20 response, got %+v", response)
+	}
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, create.Role.RoleID)
+	if !ok || role.Level != 20 || playerBase.Level != 20 || playerBase.RoleState == nil || playerBase.RoleState.Lv != 20 {
+		t.Fatalf("expected persisted level 20 runtime data, ok=%v role=%+v base=%+v", ok, role, playerBase)
 	}
 }
 

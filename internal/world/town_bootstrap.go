@@ -34,6 +34,7 @@ type RolePush struct {
 	RoleID          string                 `json:"roleId"`
 	DisplayName     string                 `json:"displayName"`
 	Level           int                    `json:"level"`
+	Vocation        string                 `json:"vocation,omitempty"`
 	MapID           string                 `json:"mapId"`
 	VisualRoleID    int                    `json:"visualRoleId"`
 	PresetID        int                    `json:"presetId,omitempty"`
@@ -151,6 +152,21 @@ type townMapsIndexEntry struct {
 var sourceWildBattleMapIDs = map[int]struct{}{
 	4:  {},
 	5:  {},
+	11: {},
+	34: {},
+	35: {},
+	36: {},
+	37: {},
+	39: {},
+	40: {},
+	41: {},
+	43: {},
+	44: {},
+	48: {},
+	49: {},
+	50: {},
+	51: {},
+	52: {},
 	84: {},
 	85: {},
 	86: {},
@@ -462,6 +478,7 @@ func buildTownBootstrap(
 			RoleID:       role.RoleID,
 			DisplayName:  playerBase.DisplayName,
 			Level:        playerBase.Level,
+			Vocation:     playerBase.Voc,
 			MapID:        mapID,
 			VisualRoleID: playerBase.VisualRoleID,
 			PresetID:     playerBase.PresetID,

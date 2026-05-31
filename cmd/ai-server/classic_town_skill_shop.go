@@ -62,6 +62,23 @@ type classicTownActiveItemRequest struct {
 	Index int    `json:"index"`
 }
 
+type classicTownChatSendRequest struct {
+	Channel    string `json:"channel"`
+	Msg        string `json:"msg"`
+	TargetName string `json:"targetName,omitempty"`
+}
+
+type classicTownChatMessagePush struct {
+	Channel    string `json:"channel"`
+	Handle     string `json:"handle,omitempty"`
+	Name       string `json:"name,omitempty"`
+	TargetName string `json:"targetName,omitempty"`
+	Msg        string `json:"msg"`
+	VIP        int    `json:"vip,omitempty"`
+	Outgoing   bool   `json:"outgoing,omitempty"`
+	Color      string `json:"color,omitempty"`
+}
+
 type classicTownSkillInfoPush struct {
 	Handle      string `json:"handle"`
 	Name        string `json:"name"`
@@ -71,11 +88,27 @@ type classicTownSkillInfoPush struct {
 	Description string `json:"description"`
 }
 
+type classicTownClearSkillInfoPush struct {
+	Handle string `json:"handle"`
+	Name   string `json:"name"`
+	Level  int    `json:"level,omitempty"`
+}
+
+type classicTownRemoveSkillRequest struct {
+	Name string `json:"name"`
+}
+
 type classicTownSkillCapPush struct {
 	Count int `json:"count"`
 }
 
 type classicTownFastPanelEntry struct {
+	Index int    `json:"index"`
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+}
+
+type classicTownSetFastPanelRequest struct {
 	Index int    `json:"index"`
 	Type  string `json:"type"`
 	Name  string `json:"name"`
@@ -175,17 +208,48 @@ func buildClassicTownSkillShopResult(store *session.Store, socketSession *packet
 	}, true
 }
 
-func buildClassicTownFastPanelResult(socketSession *packetSession) packetResult {
-	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+func buildClassicTownFastPanelResult(store *session.Store, socketSession *packetSession) packetResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		return packetResult{handled: true}
 	}
 
+	entries, ok := store.GetRoleFastPanel(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
+	if !ok {
+		return packetResult{handled: true}
+	}
+
+	return classicTownFastPanelPacketResult(entries)
+}
+
+func buildClassicTownSetFastPanelResult(store *session.Store, socketSession *packetSession, request classicTownSetFastPanelRequest) packetResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return packetResult{handled: true}
+	}
+
+	entries, ok := store.SetRoleFastPanelEntry(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, session.RoleFastPanelEntry{
+		Index: request.Index,
+		Type:  strings.TrimSpace(request.Type),
+		Name:  strings.TrimSpace(request.Name),
+	})
+	if !ok {
+		return packetResult{handled: true}
+	}
+
+	return classicTownFastPanelPacketResult(entries)
+}
+
+func classicTownFastPanelPacketResult(entries []session.RoleFastPanelEntry) packetResult {
+	pushEntries := make([]classicTownFastPanelEntry, 0, len(entries))
+	for _, entry := range entries {
+		pushEntries = append(pushEntries, classicTownFastPanelEntry{
+			Index: entry.Index,
+			Type:  entry.Type,
+			Name:  entry.Name,
+		})
+	}
 	return packetResult{
 		fastPanel: &classicTownFastPanelPush{
-			Entries: []classicTownFastPanelEntry{
-				{Index: 0, Type: "skill", Name: "普通攻击"},
-				{Index: 1, Type: "skill", Name: "密斩"},
-			},
+			Entries: pushEntries,
 		},
 		handled: true,
 	}
@@ -325,7 +389,7 @@ func sourceSkillEntryToRoleSkill(entry classicTownSkillShopEntry) session.RoleSk
 		Level:       1,
 		Type:        entry.Category,
 		Icon:        entry.Icon,
-		Description: entry.Description,
+		Description: sourceRoleSkillDescription(entry.Name, 1, entry.Description),
 		MaxLevel:    entry.MaxLevel,
 	}
 }
@@ -336,10 +400,46 @@ func sourceSkillEntryToRoleItem(entry classicTownSkillShopEntry) session.RoleIte
 		Name:        entry.Name,
 		ItemType:    entry.Category,
 		Display:     entry.Icon,
-		Description: entry.Description,
+		Description: sourceRoleSkillDescription(entry.Name, 1, entry.Description),
 		Count:       1,
 		Index:       -1,
 		ItemLevel:   entry.MaxLevel,
+	}
+}
+
+func sourceRoleSkillDescription(name string, level int, fallback string) string {
+	if level <= 0 {
+		level = 1
+	}
+	switch strings.TrimSpace(name) {
+	case "普通攻击":
+		return "f_s_普通攻击^ffffff&9@单体·攻击&10@通用&22@战斗&5@给予对手普通的物理攻击."
+	case "密斩":
+		return "f_s_密斩&9@单体·攻击&7@3&10@单刀/单斧&22@战斗&2@5&4@提升40%的物理伤害"
+	case "多段斩":
+		switch level {
+		case 2:
+			return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@10&4@提升60%的物理伤害"
+		case 3:
+			return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@12&4@提升65%的物理伤害"
+		case 4:
+			return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@14&4@提升70%的物理伤害"
+		default:
+			return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@8&4@提升55%的物理伤害"
+		}
+	case "嗜血斩":
+		switch level {
+		case 2:
+			return "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@26&4@对敌人造成94%的物理伤害&0;并有84%机率将对敌人造成伤害的70%转换为气力</font>"
+		case 3:
+			return "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@28&4@对敌人造成96%的物理伤害&0;并有86%机率将对敌人造成伤害的70%转换为气力</font>"
+		default:
+			return "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@对敌人造成92%的物理伤害&0;并有82%机率将对敌人造成伤害的70%转换为气力</font>"
+		}
+	case "狂爆":
+		return "f_s_狂爆^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@15&4@3回合内物理攻击力翻倍&0;并降低100%的物理防御"
+	default:
+		return fallback
 	}
 }
 
@@ -457,7 +557,7 @@ const sourceWarriorSkillShopRows = `
 9|奥义.飘血|641.png|技能·单剑系|单体·攻击|特殊发动条件:3格魂元 / 大幅提升对敌人造成的物理伤害 / 进攻时将提升一定的命中
 10|多段斩|644.png|技能·单刀系|单体·攻击|提升对敌人造成的物理伤害
 11|嗜血斩|645.png|技能·单刀系|单体·攻击|对敌人造成物理伤害 / 击中敌人的同时有一定机率将对敌人造成的伤害转换为气力。
-12|狂爆|646.png|技能·单刀系|单体·状态|物理攻击翻倍同时降低防御
+12|狂爆|646.png|技能·单刀系|单体·状态|3回合内物理攻击力翻倍 / 并降低100%的物理防御
 13|红月斩|647.png|技能·单刀系|群体·攻击|对所有敌人造成一定的物理伤害
 14|血切|648.png|技能·单刀系|单体·状态|对敌人造成一定的物理伤害 / 击中后有机率使敌人进入外伤(每回合损失气力)状态
 15|奥义.雷魂斩|649.png|技能·单刀系|单体·攻击|特殊发动条件:3格魂元 / 大幅提升对敌人造成的物理伤害
@@ -540,7 +640,7 @@ func classicTownSkillInfoPushFromRoleSkill(roleID string, skill session.RoleSkil
 		Level:       skill.Level,
 		Type:        skill.Type,
 		Icon:        skill.Icon,
-		Description: skill.Description,
+		Description: sourceRoleSkillDescription(skill.Name, skill.Level, skill.Description),
 	}
 }
 

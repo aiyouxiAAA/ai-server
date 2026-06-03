@@ -696,6 +696,9 @@ func (store *Store) SetRoleFastPanelEntry(playerID string, roleID string, entry 
 		}
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
+		if entry.Type == "item" && !roleHasBagItemNamed(roles[index].Items, entry.Name) {
+			return cloneRoleFastPanel(filterRoleFastPanelEntries(roles[index].FastPanel, roles[index].Skills)), true
+		}
 		if !canSetRoleFastPanelEntry(entry, roles[index].Skills) {
 			return cloneRoleFastPanel(filterRoleFastPanelEntries(roles[index].FastPanel, roles[index].Skills)), true
 		}
@@ -717,6 +720,20 @@ func (store *Store) SetRoleFastPanelEntry(playerID string, roleID string, entry 
 	}
 
 	return []RoleFastPanelEntry{}, false
+}
+
+func roleHasBagItemNamed(items []RoleItem, name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return false
+	}
+	for _, item := range items {
+		item = normalizeRoleItem(item)
+		if item.Type == "背包" && item.Name == name && item.Count > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (store *Store) GetRoleCurrencies(playerID string, roleID string) (RoleCurrencies, bool) {

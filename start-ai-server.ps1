@@ -114,11 +114,11 @@ if (-not $started) {
   }
 
   Write-Host 'ai-server failed to start. Recent logs:'
-  if ($stdoutTail.Count -gt 0) {
+  if (@($stdoutTail).Count -gt 0) {
     Write-Host '--- stdout ---'
     $stdoutTail | ForEach-Object { Write-Host $_ }
   }
-  if ($stderrTail.Count -gt 0) {
+  if (@($stderrTail).Count -gt 0) {
     Write-Host '--- stderr ---'
     $stderrTail | ForEach-Object { Write-Host $_ }
   }

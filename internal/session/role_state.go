@@ -323,6 +323,9 @@ func filterRoleFastPanelEntries(entries []RoleFastPanelEntry, skills []RoleSkill
 
 func canSetRoleFastPanelEntry(entry RoleFastPanelEntry, skills []RoleSkill) bool {
 	entry = normalizeRoleFastPanelEntry(entry)
+	if entry.Type == "item" {
+		return true
+	}
 	if entry.Type != "skill" {
 		return false
 	}

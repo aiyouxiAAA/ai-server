@@ -28,6 +28,7 @@ const (
 	CommandKuangBao      = "skill-kuang-bao"
 	CommandEnemyAttack   = "enemy-normal-attack"
 	CommandEnemySlideCut = "enemy-slide-cut"
+	CommandEnemyShadeCut = "enemy-shade-cut"
 	CommandDefense       = "defense"
 	CommandStore         = "battle-store"
 	CommandEscape        = "battle-escape"
@@ -36,6 +37,8 @@ const (
 	maxStoredPower      = 5
 	enemySlideCutMPCost = 10
 	enemySlideCutChance = 20
+	enemyShadeCutMPCost = 40
+	enemyShadeCutChance = 30
 	defaultBattleHit    = 100
 	defaultBattleDog    = 50
 	defaultBattleFat    = 5
@@ -681,6 +684,15 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			CanDodge:          true,
 			CanFat:            true,
 		}
+	case CommandEnemyShadeCut:
+		return commandProfile{
+			ActionName:        "影刃",
+			SourceActionLabel: "shadeCut",
+			DamageMultiplier:  1,
+			MPCost:            enemyShadeCutMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
 		profile.ActionName = "普通攻击"
 	}
@@ -688,6 +700,9 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
+	if sourceEnemyCanShadeCut(enemy) && enemy.MP >= enemyShadeCutMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyShadeCut, enemyShadeCutChance) {
+		return CommandEnemyShadeCut
+	}
 	if sourceEnemyCanSlideCut(enemy) && enemy.MP >= enemySlideCutMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemySlideCut, enemySlideCutChance) {
 		return CommandEnemySlideCut
 	}
@@ -709,6 +724,13 @@ func sourceEnemyCanSlideCut(enemy *CellInfoPush) bool {
 		return false
 	}
 	return strings.TrimSpace(enemy.Name) == "盗贼" || strings.Contains(strings.ToLower(strings.TrimSpace(enemy.DisplayURL)), "monstermap/robber.swf")
+}
+
+func sourceEnemyCanShadeCut(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	return strings.TrimSpace(enemy.Name) == "单刀狼人" || strings.Contains(strings.ToLower(strings.TrimSpace(enemy.DisplayURL)), "monstermap/bigswordwolf.swf")
 }
 
 func (runtime *Runtime) isBattleCommandAllowed(commandID string) bool {
@@ -1163,9 +1185,6 @@ func (runtime *Runtime) resolveCriticalHit(actor *CellInfoPush, target *CellInfo
 	if !profile.CanFat || actor == nil || target == nil || actor.Fat <= 0 {
 		return false
 	}
-	if actor.Fat >= 100 {
-		return true
-	}
 	chance := battleCriticalChancePercent(actor.Fat, target.Dog)
 	return runtime.hashBattleRollWithSalt(actor, target, commandID, "fat") < chance
 }
@@ -1240,7 +1259,7 @@ func battleCriticalChancePercent(actorFat int, targetDog int) int {
 		return 0
 	}
 	if actorFat >= 100 {
-		return 100
+		return 50
 	}
 	chance := int(math.Round(float64(actorFat)*0.45 - float64(maxInt(0, targetDog))/25 + 4))
 	return clampInt(chance, 1, 80)
@@ -1301,7 +1320,7 @@ func (runtime *Runtime) resolveItemTarget(
 	normalizedType := strings.TrimSpace(item.ItemType)
 	switch normalizedType {
 	case "own", "all":
-		if !runtime.isSelfTarget(actor, targetHandle) {
+		if strings.TrimSpace(targetHandle) != "" && !runtime.isSelfTarget(actor, targetHandle) {
 			return nil, "invalid_target"
 		}
 		return actor, ""

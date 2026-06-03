@@ -707,8 +707,8 @@ func TestBattleChanceFormulaMatchesCapturedBaselineScale(t *testing.T) {
 	if got := battleDodgeChancePercent(0, 1); got != 100 {
 		t.Fatalf("expected zero hit to stay forced dodge for deterministic tests, got %d", got)
 	}
-	if got := battleCriticalChancePercent(100, 50); got != 100 {
-		t.Fatalf("expected fat100 to stay forced critical for deterministic tests, got %d", got)
+	if got := battleCriticalChancePercent(100, 50); got != 50 {
+		t.Fatalf("expected fat100 to use 50%% test critical chance, got %d", got)
 	}
 }
 
@@ -1056,7 +1056,7 @@ func TestResolveDuoDuanZhanUsesCapturedLevelProfileAndCanFat(t *testing.T) {
 		Fat:    100,
 	}
 	target := &CellInfoPush{
-		Handle:  "enemy_robber",
+		Handle:  "2429459987213640",
 		Camp:    CampEnemy,
 		MaxHP:   452,
 		HP:      452,
@@ -1288,6 +1288,42 @@ func TestBattleEnemySlideCutUsesCapturedLabelAndMPCost(t *testing.T) {
 	}
 }
 
+func TestBattleEnemyShadeCutUsesCapturedLabelAndMPCost(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-enemy-shadecut",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "enemy_wolf",
+		Camp:       CampEnemy,
+		Name:       "单刀狼人",
+		DisplayURL: "monstermap/bigswordwolf.swf",
+		Attack:     260,
+		MaxMP:      334,
+		MP:         334,
+	}
+	target := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		MaxHP:  725,
+		HP:     725,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandEnemyShadeCut)
+
+	if action.ActionName != "影刃" || action.SourceActionLabel != "shadeCut" {
+		t.Fatalf("expected captured enemy shadeCut action, got %+v", action)
+	}
+	if action.Damage != 260 || action.TargetHP != 465 {
+		t.Fatalf("expected shadeCut to use current physical damage path, got %+v", action)
+	}
+	if actor.MP != 294 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 294 {
+		t.Fatalf("expected shadeCut to consume captured MP cost 40, got actor=%+v action=%+v", actor, action)
+	}
+}
+
 func TestRobberEnemyTurnCanUseCapturedSlideCut(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-slide-2",
@@ -1340,5 +1376,60 @@ func TestRobberEnemyTurnCanUseCapturedSlideCut(t *testing.T) {
 	}
 	if runtime.Cells[1].MP != 184 || enemyAction.RefreshInfos[0].Handle != "enemy_robber" || enemyAction.RefreshInfos[0].MP != 184 {
 		t.Fatalf("expected enemy slideCut turn to consume MP 10, got cells=%+v action=%+v", runtime.Cells, enemyAction)
+	}
+}
+
+func TestBigSwordWolfEnemyTurnCanUseCapturedShadeCut(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-shade-2",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-shade-2",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       725,
+				MaxHP:    725,
+				Attack:   1,
+			},
+			{
+				BattleID:   "battle-shade-2",
+				Handle:     "enemy_wolf",
+				Camp:       CampEnemy,
+				Name:       "单刀狼人",
+				DisplayURL: "monstermap/bigswordwolf.swf",
+				HP:         2500,
+				MaxHP:      2500,
+				MP:         334,
+				MaxMP:      334,
+				Attack:     260,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-shade-2",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandNormalAttack,
+		TargetHandle: "enemy_wolf",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" || len(result.Actions) < 2 {
+		t.Fatalf("expected player action followed by enemy action, got %+v", result)
+	}
+	enemyAction := result.Actions[1]
+	if enemyAction.CommandID != CommandEnemyShadeCut || enemyAction.ActionName != "影刃" || enemyAction.SourceActionLabel != "shadeCut" {
+		t.Fatalf("expected wolf enemy turn to use captured shadeCut, got %+v", enemyAction)
+	}
+	if runtime.Cells[1].MP != 294 || enemyAction.RefreshInfos[0].Handle != "enemy_wolf" || enemyAction.RefreshInfos[0].MP != 294 {
+		t.Fatalf("expected enemy shadeCut turn to consume MP 40, got cells=%+v action=%+v", runtime.Cells, enemyAction)
 	}
 }

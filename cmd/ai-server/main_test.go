@@ -1376,6 +1376,69 @@ func TestHandlePacketClassicTownSetFastPanelStoresActiveSkill(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownSetFastPanelStoresBagItem(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, session.RoleItem{
+		Type:        "背包",
+		Name:        "包子",
+		ItemType:    "own",
+		Display:     "212.png",
+		Description: "f_i_包子&24@消耗品&25@99&7@600&20@带馅的包子&0;看起来非常可口&0;食用后可恢复些气力.",
+		Count:       3,
+		Index:       -1,
+		Level:       1,
+		ItemLevel:   1,
+	}); !ok {
+		t.Fatal("expected test bun to be granted")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownSetFastPanelReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownSetFastPanelRequest{
+			Index: 5,
+			Type:  "item",
+			Name:  "包子",
+		}),
+	}, socketSession)
+
+	if !result.handled || result.fastPanel == nil {
+		t.Fatalf("expected item SetFastPanel to push fast panel, got %+v", result)
+	}
+	if !fastPanelContains(result.fastPanel.Entries, 5, "item", "包子") {
+		t.Fatalf("expected slot 5 bun after SetFastPanel, got %+v", result.fastPanel.Entries)
+	}
+
+	getResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetFastPanelReq,
+		Seq:     3,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if getResult.fastPanel == nil || !fastPanelContains(getResult.fastPanel.Entries, 5, "item", "包子") {
+		t.Fatalf("expected persisted slot 5 bun after GetFastPanel, got %+v", getResult.fastPanel)
+	}
+}
+
+func TestHandlePacketClassicTownSetFastPanelRejectsMissingBagItem(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownSetFastPanelReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownSetFastPanelRequest{
+			Index: 5,
+			Type:  "item",
+			Name:  "不存在的蓝药",
+		}),
+	}, socketSession)
+
+	if !result.handled || result.fastPanel == nil {
+		t.Fatalf("expected missing item SetFastPanel to be handled with unchanged fast panel, got %+v", result)
+	}
+	if fastPanelContains(result.fastPanel.Entries, 5, "item", "不存在的蓝药") {
+		t.Fatalf("expected missing bag item not to enter fast panel, got %+v", result.fastPanel.Entries)
+	}
+}
+
 func TestHandlePacketClassicTownSetFastPanelRejectsPassiveSkill(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	_, _, found, learned := store.LearnRoleSkill(
@@ -2706,13 +2769,12 @@ func TestHandlePacketClassicBattleActiveItemConsumesAndRefreshes(t *testing.T) {
 		Cmd: cmdClassicBattleActiveItemReq,
 		Seq: 3,
 		Payload: mustJSON(t, battle.ItemActionRequest{
-			BattleID:     startResult.battleStart.BattleID,
-			ActorHandle:  socketSession.selectedRole.RoleID,
-			Type:         item.Type,
-			Index:        item.Index,
-			TargetHandle: socketSession.selectedRole.RoleID,
-			Round:        startResult.battleCommand.Round,
-			Sequence:     startResult.battleCommand.Sequence,
+			BattleID:    startResult.battleStart.BattleID,
+			ActorHandle: socketSession.selectedRole.RoleID,
+			Type:        item.Type,
+			Index:       item.Index,
+			Round:       startResult.battleCommand.Round,
+			Sequence:    startResult.battleCommand.Sequence,
 		}),
 	}, socketSession)
 
@@ -2764,13 +2826,12 @@ func TestHandlePacketClassicBattleActiveItemRestoresMP(t *testing.T) {
 		Cmd: cmdClassicBattleActiveItemReq,
 		Seq: 3,
 		Payload: mustJSON(t, battle.ItemActionRequest{
-			BattleID:     startResult.battleStart.BattleID,
-			ActorHandle:  socketSession.selectedRole.RoleID,
-			Type:         item.Type,
-			Index:        item.Index,
-			TargetHandle: socketSession.selectedRole.RoleID,
-			Round:        startResult.battleCommand.Round,
-			Sequence:     startResult.battleCommand.Sequence,
+			BattleID:    startResult.battleStart.BattleID,
+			ActorHandle: socketSession.selectedRole.RoleID,
+			Type:        item.Type,
+			Index:       item.Index,
+			Round:       startResult.battleCommand.Round,
+			Sequence:    startResult.battleCommand.Sequence,
 		}),
 	}, socketSession)
 

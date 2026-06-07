@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"ai-server/internal/session"
 )
@@ -26,22 +28,28 @@ const (
 	CommandDuoDuanZhan   = "skill-duo-duan-zhan"
 	CommandShiXueZhan    = "skill-shi-xue-zhan"
 	CommandKuangBao      = "skill-kuang-bao"
+	CommandHongYueZhan   = "skill-hong-yue-zhan"
+	CommandXueQie        = "skill-xue-qie"
 	CommandEnemyAttack   = "enemy-normal-attack"
 	CommandEnemySlideCut = "enemy-slide-cut"
 	CommandEnemyShadeCut = "enemy-shade-cut"
+	CommandEnemyHelixAtk = "enemy-helix-atk"
 	CommandDefense       = "defense"
 	CommandStore         = "battle-store"
 	CommandEscape        = "battle-escape"
 	CommandItem          = "battle-item"
 
-	maxStoredPower      = 5
-	enemySlideCutMPCost = 10
-	enemySlideCutChance = 20
-	enemyShadeCutMPCost = 40
-	enemyShadeCutChance = 30
-	defaultBattleHit    = 100
-	defaultBattleDog    = 50
-	defaultBattleFat    = 5
+	maxStoredPower                = 5
+	storedPowerDamageBonus        = 0.2
+	enemySlideCutMPCost           = 10
+	enemySlideCutChance           = 20
+	enemyShadeCutMPCost           = 40
+	enemyShadeCutChance           = 30
+	enemyHelixAtkMPCost           = 10
+	enemyHelixAtkDamageMultiplier = 1.32
+	defaultBattleHit              = 100
+	defaultBattleDog              = 50
+	defaultBattleFat              = 5
 )
 
 var sourceEncounterRoll = func(maxExclusive int) int {
@@ -51,11 +59,14 @@ var sourceEncounterRoll = func(maxExclusive int) int {
 	return rand.Intn(maxExclusive)
 }
 
+var battleIDSerial uint64
+
 type StartRequest struct {
-	MapID       string  `json:"mapId"`
-	MapName     string  `json:"mapName"`
-	StageFocusX float64 `json:"stageFocusX"`
-	ReturnRoute string  `json:"returnRoute,omitempty"`
+	MapID               string  `json:"mapId"`
+	MapName             string  `json:"mapName"`
+	StageFocusX         float64 `json:"stageFocusX"`
+	ReturnRoute         string  `json:"returnRoute,omitempty"`
+	SourceMonsterHandle string  `json:"sourceMonsterHandle,omitempty"`
 }
 
 type StartPush struct {
@@ -74,25 +85,27 @@ type StartPush struct {
 }
 
 type CellInfoPush struct {
-	BattleID     string `json:"battleId,omitempty"`
-	Camp         Camp   `json:"camp"`
-	Handle       string `json:"handle"`
-	Name         string `json:"name"`
-	DisplayURL   string `json:"displayUrl"`
-	Level        int    `json:"level,omitempty"`
-	XScale       int    `json:"xScale"`
-	YScale       int    `json:"yScale"`
-	MaxHP        int    `json:"maxHp"`
-	HP           int    `json:"hp"`
-	MaxMP        int    `json:"maxMp,omitempty"`
-	MP           int    `json:"mp,omitempty"`
-	Speed        int    `json:"speed"`
-	Attack       int    `json:"attack"`
-	Defense      int    `json:"defense"`
-	Hit          int    `json:"hit,omitempty"`
-	Dog          int    `json:"dog,omitempty"`
-	Fat          int    `json:"fat,omitempty"`
-	CommandLabel string `json:"commandLabel"`
+	BattleID          string `json:"battleId,omitempty"`
+	Camp              Camp   `json:"camp"`
+	Handle            string `json:"handle"`
+	Name              string `json:"name"`
+	DisplayURL        string `json:"displayUrl"`
+	Level             int    `json:"level,omitempty"`
+	XScale            int    `json:"xScale"`
+	YScale            int    `json:"yScale"`
+	MaxHP             int    `json:"maxHp"`
+	HP                int    `json:"hp"`
+	MaxMP             int    `json:"maxMp,omitempty"`
+	MP                int    `json:"mp,omitempty"`
+	Speed             int    `json:"speed"`
+	Attack            int    `json:"attack"`
+	Defense           int    `json:"defense"`
+	MgcDefense        int    `json:"mgcDef,omitempty"`
+	Hit               int    `json:"hit,omitempty"`
+	Dog               int    `json:"dog,omitempty"`
+	Fat               int    `json:"fat,omitempty"`
+	CommandLabel      string `json:"commandLabel"`
+	DamageDefenseType string `json:"damageDefenseType,omitempty"`
 }
 
 type StartCommandPush struct {
@@ -150,22 +163,29 @@ type ItemAction struct {
 }
 
 type ActionPush struct {
-	BattleID              string         `json:"battleId,omitempty"`
-	ActorHandle           string         `json:"actorHandle"`
-	TargetHandle          string         `json:"targetHandle"`
-	CommandID             string         `json:"commandId,omitempty"`
-	ActionName            string         `json:"actionName"`
-	SourceActionLabel     string         `json:"sourceActionLabel,omitempty"`
-	TargetInDef           bool           `json:"targetInDef,omitempty"`
-	TargetActionState     string         `json:"targetActionState,omitempty"`
-	TargetActionStateCode string         `json:"targetActionStateCode,omitempty"`
-	Damage                int            `json:"damage"`
-	TargetHP              int            `json:"targetHp"`
-	TargetMP              int            `json:"targetMp,omitempty"`
-	TargetDead            bool           `json:"targetDead"`
-	RefreshInfos          []CellInfoPush `json:"refreshInfos,omitempty"`
-	Round                 int            `json:"round,omitempty"`
-	Sequence              int            `json:"sequence,omitempty"`
+	BattleID              string                  `json:"battleId,omitempty"`
+	ActorHandle           string                  `json:"actorHandle"`
+	TargetHandle          string                  `json:"targetHandle"`
+	CommandID             string                  `json:"commandId,omitempty"`
+	ActionName            string                  `json:"actionName"`
+	SourceMode            string                  `json:"sourceMode,omitempty"`
+	SourceActionLabel     string                  `json:"sourceActionLabel,omitempty"`
+	TargetInDef           bool                    `json:"targetInDef,omitempty"`
+	TargetActionState     string                  `json:"targetActionState,omitempty"`
+	TargetActionStateCode string                  `json:"targetActionStateCode,omitempty"`
+	TargetActionResults   []ActionResultCodeEntry `json:"targetActionResults,omitempty"`
+	Damage                int                     `json:"damage"`
+	TargetHP              int                     `json:"targetHp"`
+	TargetMP              int                     `json:"targetMp,omitempty"`
+	TargetDead            bool                    `json:"targetDead"`
+	RefreshInfos          []CellInfoPush          `json:"refreshInfos,omitempty"`
+	Round                 int                     `json:"round,omitempty"`
+	Sequence              int                     `json:"sequence,omitempty"`
+}
+
+type ActionResultCodeEntry struct {
+	Handle    string `json:"handle"`
+	StateCode string `json:"stateCode"`
 }
 
 type BuffInfoPush struct {
@@ -196,21 +216,22 @@ type ResultPayload struct {
 }
 
 type Runtime struct {
-	BattleID         string
-	RoleID           string
-	MapID            string
-	RoleSkills       []session.RoleSkill
-	Phase            string
-	Round            int
-	Cells            []CellInfoPush
-	ActiveHandle     string
-	ConsumedSequence map[int]bool
-	DefendingHandles map[string]bool
-	StatusEffects    map[string]BattleStatusEffects
-	StoredPower      map[string]int
-	PendingStart     *StartCommandPush
-	PendingOver      *OverPush
-	nextSequence     int
+	BattleID            string
+	RoleID              string
+	MapID               string
+	SourceMonsterHandle string
+	RoleSkills          []session.RoleSkill
+	Phase               string
+	Round               int
+	Cells               []CellInfoPush
+	ActiveHandle        string
+	ConsumedSequence    map[int]bool
+	DefendingHandles    map[string]bool
+	StatusEffects       map[string]BattleStatusEffects
+	StoredPower         map[string]int
+	PendingStart        *StartCommandPush
+	PendingOver         *OverPush
+	nextSequence        int
 }
 
 type BattleStatusEffects struct {
@@ -233,6 +254,7 @@ type ActionResult struct {
 
 type commandProfile struct {
 	ActionName        string
+	SourceType        string
 	SourceActionLabel string
 	DamageMultiplier  float64
 	MPCost            int
@@ -240,11 +262,22 @@ type commandProfile struct {
 	CanFat            bool
 	LifeStealChance   int
 	LifeStealRatio    float64
+	DefenseType       string
 }
 
 func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, request StartRequest) (*Runtime, StartBundle, bool) {
 	mapID := strings.TrimSpace(request.MapID)
 	enemyConfigs := sourceEnemyConfigsForEncounter(mapID, request.StageFocusX)
+	encounterKind := "暗雷"
+	sourceMonsterHandle := strings.TrimSpace(request.SourceMonsterHandle)
+	if sourceMonsterHandle != "" {
+		visibleMonsters, ok := sourceVisibleMonsterConfigsForHandle(mapID, sourceMonsterHandle)
+		if !ok {
+			return nil, StartBundle{}, false
+		}
+		enemyConfigs = visibleMonsters
+		encounterKind = "明怪"
+	}
 	if len(enemyConfigs) <= 0 {
 		return nil, StartBundle{}, false
 	}
@@ -253,11 +286,10 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 	if mapName == "" {
 		mapName = "野外"
 	}
-	encounterKind := "暗雷"
 	if sourceEncounterHasBoss(enemyConfigs) {
 		encounterKind = "首领"
 	}
-	battleID := fmt.Sprintf("server-%s-map%s-r1", role.RoleID, mapID)
+	battleID := fmt.Sprintf("server-%s-map%s-%d-%d", role.RoleID, mapID, time.Now().UnixNano(), atomic.AddUint64(&battleIDSerial, 1))
 	playerLevel := maxInt(1, playerBase.Level)
 	roleState := playerBase.RoleState
 	rolePhysique := playerBase.RolePhysique
@@ -279,6 +311,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 	playerSpeed := 130
 	playerAttack := 10
 	playerDefense := 10
+	playerMgcDefense := 10
 	playerHit := defaultBattleHit
 	playerDog := defaultBattleDog
 	playerFat := defaultBattleFat
@@ -288,6 +321,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 	if rolePhysique != nil {
 		playerAttack = maxInt(1, rolePhysique.PhyAtk)
 		playerDefense = maxInt(0, rolePhysique.PhyDef)
+		playerMgcDefense = maxInt(0, rolePhysique.MgcDef)
 		playerHit = maxInt(0, rolePhysique.Hit)
 		playerDog = maxInt(0, rolePhysique.Dog)
 		playerFat = maxInt(0, rolePhysique.Fat)
@@ -309,6 +343,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			Speed:        playerSpeed,
 			Attack:       playerAttack,
 			Defense:      playerDefense,
+			MgcDefense:   playerMgcDefense,
 			Hit:          playerHit,
 			Dog:          playerDog,
 			Fat:          playerFat,
@@ -316,22 +351,27 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		},
 	}
 	for index, enemyConfig := range enemyConfigs {
+		if sourceMonsterHandle != "" {
+			cells = append(cells, enemyConfig.Cell.withBattleID(battleID))
+			continue
+		}
 		cells = append(cells, enemyConfig.Cell.withBattleIDAndSlot(battleID, index))
 	}
 	runtime := &Runtime{
-		BattleID:         battleID,
-		RoleID:           role.RoleID,
-		MapID:            mapID,
-		RoleSkills:       cloneBattleRoleSkills(role.Skills),
-		Phase:            PhaseCommand,
-		Round:            1,
-		Cells:            cells,
-		ActiveHandle:     role.RoleID,
-		ConsumedSequence: map[int]bool{},
-		DefendingHandles: map[string]bool{},
-		StatusEffects:    map[string]BattleStatusEffects{},
-		StoredPower:      map[string]int{},
-		nextSequence:     1,
+		BattleID:            battleID,
+		RoleID:              role.RoleID,
+		MapID:               mapID,
+		SourceMonsterHandle: sourceMonsterHandle,
+		RoleSkills:          cloneBattleRoleSkills(role.Skills),
+		Phase:               PhaseCommand,
+		Round:               1,
+		Cells:               cells,
+		ActiveHandle:        role.RoleID,
+		ConsumedSequence:    map[int]bool{},
+		DefendingHandles:    map[string]bool{},
+		StatusEffects:       map[string]BattleStatusEffects{},
+		StoredPower:         map[string]int{},
+		nextSequence:        1,
 	}
 	start := StartPush{
 		BattleID:        battleID,
@@ -435,14 +475,25 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return ActionResult{ErrorCode: "unsupported_command"}
 	}
 
+	if normalizeBattleCommandID(commandID) == CommandHongYueZhan {
+		targets := runtime.livingCells(CampEnemy)
+		if len(targets) == 0 {
+			return ActionResult{ErrorCode: "invalid_target"}
+		}
+		runtime.ConsumedSequence[request.Sequence] = true
+		action := runtime.resolveAllTargetAttack(actor, targets, commandID)
+		runtime.setStoredPower(actor.Handle, 0)
+		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{action})
+	}
+
 	target := runtime.cellByHandle(request.TargetHandle)
 	if target == nil || target.Camp != CampEnemy || target.HP <= 0 {
 		return ActionResult{ErrorCode: "invalid_target"}
 	}
 
 	runtime.ConsumedSequence[request.Sequence] = true
-	runtime.setStoredPower(actor.Handle, 0)
 	actions := []ActionPush{runtime.resolveAttack(actor, target, commandID)}
+	runtime.setStoredPower(actor.Handle, 0)
 	return runtime.resolveEnemyTurnAndNextCommand(actor, actions)
 }
 
@@ -547,11 +598,18 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 	}
 
 	team := runtime.firstLiving(CampTeam)
+	maxActorSingleHPLoss := 0
 	for _, enemy := range runtime.livingCells(CampEnemy) {
 		if team == nil {
 			break
 		}
+		beforeHP := team.HP
+		targetHandle := team.Handle
 		actions = append(actions, runtime.resolveAttack(enemy, team, runtime.enemyBattleCommand(enemy, team)))
+		runtime.setStoredPower(enemy.Handle, 0)
+		if targetHandle == actor.Handle {
+			maxActorSingleHPLoss = maxInt(maxActorSingleHPLoss, beforeHP-team.HP)
+		}
 		team = runtime.firstLiving(CampTeam)
 		if runtime.resolveWinner() != "" {
 			break
@@ -570,6 +628,11 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 	runtime.nextSequence += 1
 	runtime.ActiveHandle = actor.Handle
 	runtime.Phase = PhasePlaying
+	runtime.advanceKuangBaoRound(actor.Handle)
+	runtime.setStoredPower(actor.Handle, maxInt(
+		runtime.powerFor(actor.Handle),
+		storedPowerFromSingleHPLoss(maxActorSingleHPLoss, actor.MaxHP),
+	))
 	start := StartCommandPush{
 		BattleID:    runtime.BattleID,
 		ActorHandle: actor.Handle,
@@ -585,18 +648,58 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 }
 
 func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush, commandID string) ActionPush {
+	return runtime.resolveAttackWithMPCost(actor, target, commandID, true)
+}
+
+func (runtime *Runtime) resolveAllTargetAttack(actor *CellInfoPush, targets []*CellInfoPush, commandID string) ActionPush {
+	actions := make([]ActionPush, 0, len(targets))
+	refreshInfos := make([]CellInfoPush, 0, len(targets)+1)
+	results := make([]ActionResultCodeEntry, 0, len(targets))
+	actorRefreshAdded := false
+	for index := range targets {
+		target := runtime.cellByHandle(targets[index].Handle)
+		if target == nil || target.Camp != CampEnemy || target.HP <= 0 {
+			continue
+		}
+		action := runtime.resolveAttackWithMPCost(actor, target, commandID, len(actions) == 0)
+		actions = append(actions, action)
+		results = append(results, ActionResultCodeEntry{
+			Handle:    target.Handle,
+			StateCode: action.TargetActionStateCode,
+		})
+		for _, refresh := range action.RefreshInfos {
+			if refresh.Handle == actor.Handle {
+				if actorRefreshAdded {
+					continue
+				}
+				actorRefreshAdded = true
+			}
+			refreshInfos = append(refreshInfos, refresh)
+		}
+	}
+	if len(actions) == 0 {
+		return ActionPush{}
+	}
+	action := actions[0]
+	action.TargetHandle = "all"
+	action.TargetActionResults = results
+	action.RefreshInfos = refreshInfos
+	return action
+}
+
+func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *CellInfoPush, commandID string, consumeMP bool) ActionPush {
 	profile := runtime.battleCommandProfile(actor, commandID)
 	targetInDef := runtime.DefendingHandles[target.Handle]
-	defense := runtime.effectiveBattleDefense(target, targetInDef)
+	defense := runtime.effectiveBattleDefense(target, targetInDef, profile.DefenseType)
 	sourceActionLabel := profile.SourceActionLabel
 	targetActionState := "normal"
 	targetActionStateCode := "0"
 	if runtime.resolveDodge(actor, target, commandID, profile) {
-		if profile.MPCost > 0 {
+		if consumeMP && profile.MPCost > 0 {
 			actor.MP = maxInt(0, actor.MP-profile.MPCost)
 		}
 		refreshInfos := []CellInfoPush{*target}
-		if profile.MPCost > 0 {
+		if consumeMP && profile.MPCost > 0 {
 			refreshInfos = []CellInfoPush{*actor, *target}
 		}
 		return ActionPush{
@@ -605,6 +708,7 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 			TargetHandle:          target.Handle,
 			CommandID:             commandID,
 			ActionName:            profile.ActionName,
+			SourceMode:            sourceBattleActionMode(profile.SourceType),
 			SourceActionLabel:     sourceActionLabel,
 			TargetInDef:           targetInDef,
 			TargetActionState:     "dog",
@@ -617,23 +721,24 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 			Sequence:              runtime.nextSequence,
 		}
 	}
-	damage := runtime.baseBattleDamage(actor, profile, defense)
-	runtime.consumeKuangBaoAttackRound(actor.Handle)
+	damage := runtime.applyStoredPowerDamageBonus(actor, runtime.baseBattleDamage(actor, profile, defense))
 	if runtime.resolveCriticalHit(actor, target, commandID, profile) {
 		damage *= 2
 		targetActionState = "fat"
 		targetActionStateCode = "2"
 	}
+	beforeTargetHP := target.HP
 	target.HP = maxInt(0, target.HP-damage)
 	delete(runtime.DefendingHandles, target.Handle)
-	if profile.MPCost > 0 {
+	runtime.applyStoredPowerFromSingleHPLoss(target, beforeTargetHP-target.HP)
+	if consumeMP && profile.MPCost > 0 {
 		actor.MP = maxInt(0, actor.MP-profile.MPCost)
 	}
 	if profile.LifeStealChance > 0 && profile.LifeStealRatio > 0 && damage > 0 && runtime.resolveLifeSteal(actor, target, commandID, profile) {
 		actor.HP = clampInt(actor.HP+int(math.Floor(float64(damage)*profile.LifeStealRatio)), 0, actor.MaxHP)
 	}
 	refreshInfos := []CellInfoPush{*target}
-	if profile.MPCost > 0 || profile.LifeStealChance > 0 {
+	if (consumeMP && profile.MPCost > 0) || profile.LifeStealChance > 0 {
 		refreshInfos = []CellInfoPush{*actor, *target}
 	}
 	return ActionPush{
@@ -642,6 +747,7 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 		TargetHandle:          target.Handle,
 		CommandID:             commandID,
 		ActionName:            profile.ActionName,
+		SourceMode:            sourceBattleActionMode(profile.SourceType),
 		SourceActionLabel:     sourceActionLabel,
 		TargetInDef:           targetInDef,
 		TargetActionState:     targetActionState,
@@ -658,10 +764,12 @@ func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush,
 func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID string) commandProfile {
 	profile := commandProfile{
 		ActionName:        "普通攻击",
+		SourceType:        "oneE",
 		SourceActionLabel: "nomalAtk",
 		DamageMultiplier:  1,
 		CanDodge:          true,
 		CanFat:            true,
+		DefenseType:       "physical",
 	}
 	if actor != nil && strings.TrimSpace(actor.CommandLabel) != "" {
 		profile.ActionName = actor.CommandLabel
@@ -675,9 +783,14 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfile("嗜血斩", 1)
 	case CommandKuangBao:
 		return runtime.sourceSkillProfile("狂爆", 1)
+	case CommandHongYueZhan:
+		return runtime.sourceSkillProfile("红月斩", 1)
+	case CommandXueQie:
+		return runtime.sourceSkillProfile("血切", 1)
 	case CommandEnemySlideCut:
 		return commandProfile{
 			ActionName:        "滑行斩",
+			SourceType:        "oneE",
 			SourceActionLabel: "slideCut",
 			DamageMultiplier:  1,
 			MPCost:            enemySlideCutMPCost,
@@ -687,19 +800,38 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 	case CommandEnemyShadeCut:
 		return commandProfile{
 			ActionName:        "影刃",
+			SourceType:        "oneE",
 			SourceActionLabel: "shadeCut",
 			DamageMultiplier:  1,
 			MPCost:            enemyShadeCutMPCost,
 			CanDodge:          true,
 			CanFat:            true,
 		}
+	case CommandEnemyHelixAtk:
+		return commandProfile{
+			ActionName:        "螺旋锤杀",
+			SourceType:        "oneE",
+			SourceActionLabel: "helixAtk",
+			DamageMultiplier:  enemyHelixAtkDamageMultiplier,
+			MPCost:            enemyHelixAtkMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
-		profile.ActionName = "普通攻击"
+		if actor == nil || strings.TrimSpace(actor.CommandLabel) == "" {
+			profile.ActionName = "普通攻击"
+		}
+		if actor != nil && strings.TrimSpace(actor.DamageDefenseType) != "" {
+			profile.DefenseType = strings.TrimSpace(actor.DamageDefenseType)
+		}
 	}
 	return profile
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
+	if sourceEnemyCanHelixAtk(enemy) && enemy.MP >= enemyHelixAtkMPCost {
+		return CommandEnemyHelixAtk
+	}
 	if sourceEnemyCanShadeCut(enemy) && enemy.MP >= enemyShadeCutMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyShadeCut, enemyShadeCutChance) {
 		return CommandEnemyShadeCut
 	}
@@ -733,6 +865,13 @@ func sourceEnemyCanShadeCut(enemy *CellInfoPush) bool {
 	return strings.TrimSpace(enemy.Name) == "单刀狼人" || strings.Contains(strings.ToLower(strings.TrimSpace(enemy.DisplayURL)), "monstermap/bigswordwolf.swf")
 }
 
+func sourceEnemyCanHelixAtk(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	return strings.TrimSpace(enemy.Name) == "蛤蟆精" || strings.Contains(strings.ToLower(strings.TrimSpace(enemy.DisplayURL)), "monstermap/cracktoad.swf")
+}
+
 func (runtime *Runtime) isBattleCommandAllowed(commandID string) bool {
 	switch normalizeBattleCommandID(commandID) {
 	case CommandNormalAttack:
@@ -748,6 +887,10 @@ func (runtime *Runtime) isBattleCommandAllowed(commandID string) bool {
 		return runtime.hasRoleSkill("嗜血斩")
 	case CommandKuangBao:
 		return runtime.hasRoleSkill("狂爆")
+	case CommandHongYueZhan:
+		return runtime.hasRoleSkill("红月斩")
+	case CommandXueQie:
+		return runtime.hasRoleSkill("血切")
 	default:
 		return false
 	}
@@ -798,6 +941,7 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 	description := sourceBattleSkillProfileDescription(name, level, skill.Description)
 	profile := commandProfile{
 		ActionName:        name,
+		SourceType:        sourceBattleSkillSourceType(name, skill.Type),
 		SourceActionLabel: sourceBattleSkillActionLabel(name, level),
 		DamageMultiplier:  sourceBattleSkillDamageMultiplier(description),
 		MPCost:            sourceBattleSkillMPCost(description),
@@ -909,6 +1053,10 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandShiXueZhan
 	case "狂爆":
 		return CommandKuangBao
+	case "红月斩":
+		return CommandHongYueZhan
+	case "血切":
+		return CommandXueQie
 	default:
 		return ""
 	}
@@ -916,12 +1064,23 @@ func sourceBattleSkillCommandID(name string) string {
 
 func sourceBattleSkillSourceType(name string, fallbackType string) string {
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "嗜血斩":
+	case "密斩", "多段斩", "嗜血斩", "血切":
 		return "oneE"
 	case "狂爆":
 		return "own"
+	case "红月斩":
+		return "all"
 	default:
 		return defaultString(strings.TrimSpace(fallbackType), "oneE")
+	}
+}
+
+func sourceBattleActionMode(sourceType string) string {
+	switch strings.TrimSpace(sourceType) {
+	case "oneE", "all":
+		return "1"
+	default:
+		return "0"
 	}
 }
 
@@ -952,6 +1111,10 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandShiXueZhan
 	case "狂爆":
 		return CommandKuangBao
+	case "红月斩":
+		return CommandHongYueZhan
+	case "血切":
+		return CommandXueQie
 	default:
 		return strings.TrimSpace(commandID)
 	}
@@ -994,6 +1157,22 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Icon:        "646.png",
 			Description: "f_s_狂爆^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@15&4@3回合内物理攻击力翻倍&0;并降低100%的物理防御",
 		}
+	case "红月斩":
+		return session.RoleSkill{
+			Name:        "红月斩",
+			Level:       level,
+			Type:        "all",
+			Icon:        "181.png",
+			Description: fallbackHongYueDescription(level),
+		}
+	case "血切":
+		return session.RoleSkill{
+			Name:        "血切",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "182.png",
+			Description: fallbackXueQieDescription(level),
+		}
 	default:
 		return session.RoleSkill{}
 	}
@@ -1023,6 +1202,20 @@ func fallbackShiXueDescription(level int) string {
 	}
 }
 
+func fallbackHongYueDescription(level int) string {
+	switch level {
+	default:
+		return "f_s_红月斩^ffffff&9@群体·攻击&8@战士 &10@单刀&22@战斗&2@40&4@对所有敌人造成72%的物理伤害"
+	}
+}
+
+func fallbackXueQieDescription(level int) string {
+	switch level {
+	default:
+		return "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)"
+	}
+}
+
 func sourceBattleSkillActionLabel(name string, level int) string {
 	switch strings.TrimSpace(name) {
 	case "密斩":
@@ -1039,6 +1232,10 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w8/xyz1"
 	case "狂爆":
 		return "w8/kb"
+	case "红月斩":
+		return "w8/redMoonAtk"
+	case "血切":
+		return "w8/cutBlood"
 	case "普通攻击":
 		return "nomalAtk"
 	default:
@@ -1110,6 +1307,10 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		}
 	case "狂爆":
 		return 0
+	case "红月斩":
+		return 0.72
+	case "血切":
+		return 0.3
 	default:
 		return 1
 	}
@@ -1141,6 +1342,10 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		}
 	case "狂爆":
 		return 15
+	case "红月斩":
+		return 40
+	case "血切":
+		return 19
 	default:
 		return 0
 	}
@@ -1157,17 +1362,24 @@ func fallbackShiXueLifeStealChance(level int) int {
 	}
 }
 
-func (runtime *Runtime) effectiveBattleDefense(target *CellInfoPush, targetInDef bool) int {
+func (runtime *Runtime) effectiveBattleDefense(target *CellInfoPush, targetInDef bool, defenseType string) int {
 	if target == nil {
+		return 0
+	}
+	if strings.EqualFold(strings.TrimSpace(defenseType), "direct") {
 		return 0
 	}
 	if runtime.hasKuangBao(target.Handle) {
 		return 0
 	}
-	if targetInDef {
-		return target.Defense * 2
+	baseDefense := target.Defense
+	if strings.EqualFold(strings.TrimSpace(defenseType), "magic") {
+		baseDefense = target.MgcDefense
 	}
-	return target.Defense
+	if targetInDef {
+		return baseDefense * 2
+	}
+	return baseDefense
 }
 
 func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandProfile, defense int) int {
@@ -1179,6 +1391,24 @@ func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandPro
 		attack *= 2
 	}
 	return maxInt(1, int(math.Round(float64(attack)*profile.DamageMultiplier))-defense)
+}
+
+func (runtime *Runtime) applyStoredPowerDamageBonus(actor *CellInfoPush, damage int) int {
+	if runtime == nil || actor == nil || damage <= 0 {
+		return damage
+	}
+	multiplier := 1 + float64(runtime.powerFor(actor.Handle))*storedPowerDamageBonus
+	return maxInt(1, int(math.Round(float64(damage)*multiplier)))
+}
+
+func (runtime *Runtime) applyStoredPowerFromSingleHPLoss(target *CellInfoPush, hpLoss int) {
+	if runtime == nil || target == nil || hpLoss <= 0 {
+		return
+	}
+	runtime.setStoredPower(target.Handle, maxInt(
+		runtime.powerFor(target.Handle),
+		storedPowerFromSingleHPLoss(hpLoss, target.MaxHP),
+	))
 }
 
 func (runtime *Runtime) resolveCriticalHit(actor *CellInfoPush, target *CellInfoPush, commandID string, profile commandProfile) bool {
@@ -1238,7 +1468,7 @@ func (runtime *Runtime) hasKuangBao(handle string) bool {
 	return runtime.StatusEffects[handle].KuangBaoRounds > 0
 }
 
-func (runtime *Runtime) consumeKuangBaoAttackRound(handle string) {
+func (runtime *Runtime) advanceKuangBaoRound(handle string) {
 	if runtime == nil || runtime.StatusEffects == nil {
 		return
 	}
@@ -1301,6 +1531,7 @@ func (runtime *Runtime) resolveSelfAction(
 		TargetHandle:      actor.Handle,
 		CommandID:         commandID,
 		ActionName:        actionName,
+		SourceMode:        "0",
 		SourceActionLabel: sourceActionLabel,
 		Damage:            0,
 		TargetHP:          actor.HP,
@@ -1355,6 +1586,7 @@ func (runtime *Runtime) resolveItemAction(actor *CellInfoPush, target *CellInfoP
 		TargetHandle:      target.Handle,
 		CommandID:         CommandItem,
 		ActionName:        actionName,
+		SourceMode:        "0",
 		SourceActionLabel: "useItem",
 		Damage:            0,
 		TargetHP:          target.HP,
@@ -1368,7 +1600,8 @@ func (runtime *Runtime) resolveItemAction(actor *CellInfoPush, target *CellInfoP
 
 func (runtime *Runtime) buildOver(winner Camp, escaped ...bool) *OverPush {
 	isEscaped := len(escaped) > 0 && escaped[0]
-	expDelta, items := sourceBattleRewardsForMap(runtime.MapID, winner, isEscaped)
+	expDelta, items := sourceBattleRewardsForEncounter(runtime.MapID, runtime.SourceMonsterHandle, winner, isEscaped)
+	expDelta = runtime.applyExperienceLevelSuppression(expDelta, winner, isEscaped)
 	result := ResultPayload{
 		Winner:        winner,
 		Rounds:        runtime.Round,
@@ -1386,15 +1619,51 @@ func (runtime *Runtime) buildOver(winner Camp, escaped ...bool) *OverPush {
 }
 
 func sourceBattleRewardsForMap(mapID string, winner Camp, escaped bool) (int, []string) {
+	return sourceBattleRewardsForEncounter(mapID, "", winner, escaped)
+}
+
+func sourceBattleRewardsForEncounter(mapID string, sourceMonsterHandle string, winner Camp, escaped bool) (int, []string) {
 	if winner != CampTeam || escaped {
 		return 0, []string{}
 	}
 
-	reward, ok := sourceBattleRewardConfigForMap(mapID)
+	reward, ok := sourceBattleRewardConfigForEncounter(mapID, sourceMonsterHandle)
 	if !ok || reward.Status != "confirmed" {
 		return 0, []string{}
 	}
 	return reward.ExpDelta, append([]string{}, reward.Items...)
+}
+
+func (runtime *Runtime) applyExperienceLevelSuppression(expDelta int, winner Camp, escaped bool) int {
+	if runtime == nil || expDelta <= 0 || winner != CampTeam || escaped {
+		return expDelta
+	}
+	playerLevel, ok := runtime.highestCampLevel(CampTeam)
+	if !ok {
+		return expDelta
+	}
+	monsterLevel, ok := runtime.highestCampLevel(CampEnemy)
+	if !ok {
+		return expDelta
+	}
+	if playerLevel > monsterLevel+7 {
+		return 0
+	}
+	return expDelta
+}
+
+func (runtime *Runtime) highestCampLevel(camp Camp) (int, bool) {
+	if runtime == nil {
+		return 0, false
+	}
+	highest := 0
+	for _, cell := range runtime.Cells {
+		if cell.Camp != camp || cell.Level <= 0 {
+			continue
+		}
+		highest = maxInt(highest, cell.Level)
+	}
+	return highest, highest > 0
 }
 
 func (runtime *Runtime) cellByHandle(handle string) *CellInfoPush {
@@ -1433,7 +1702,7 @@ func (runtime *Runtime) powerFor(handle string) int {
 	if runtime == nil {
 		return 0
 	}
-	return clampInt(runtime.StoredPower[handle], 0, maxStoredPower)
+	return clampInt(maxInt(1, runtime.StoredPower[handle]), 1, maxStoredPower)
 }
 
 func (runtime *Runtime) setStoredPower(handle string, value int) {
@@ -1441,6 +1710,13 @@ func (runtime *Runtime) setStoredPower(handle string, value int) {
 		runtime.StoredPower = map[string]int{}
 	}
 	runtime.StoredPower[handle] = clampInt(value, 0, maxStoredPower)
+}
+
+func storedPowerFromSingleHPLoss(hpLoss int, maxHP int) int {
+	if maxHP <= 0 {
+		return 0
+	}
+	return clampInt(int(math.Floor(float64(maxInt(0, hpLoss))*10/float64(maxHP))), 1, maxStoredPower)
 }
 
 func (runtime *Runtime) resolveWinner() Camp {

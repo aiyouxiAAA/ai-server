@@ -12,6 +12,7 @@ import (
 	"ai-server/internal/battle"
 	"ai-server/internal/protocol"
 	"ai-server/internal/session"
+	"ai-server/internal/world"
 )
 
 func TestHandlePacketLoginSuccess(t *testing.T) {
@@ -611,6 +612,121 @@ func TestHandlePacketClassicBattleOverAppliesSourceResultRewards(t *testing.T) {
 	}
 	if len(socketSession.battleLoot) != 1 || socketSession.battleLoot[0].Name != "朽木" || socketSession.battleLoot[0].Type != "战斗" {
 		t.Fatalf("expected result items to enter battle loot container, got %+v", socketSession.battleLoot)
+	}
+}
+
+func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	const visibleMonsterHandle = "5172206909807859"
+	expectedRemovedHandles := []string{"5172206909807859", "5174206909807286"}
+
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "143",
+			MapName:             "水帘洞_13",
+			StageFocusX:         631,
+			ReturnRoute:         "town-placeholder",
+			SourceMonsterHandle: visibleMonsterHandle,
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || socketSession.battleRuntime == nil || socketSession.battleRuntime.SourceMonsterHandle != visibleMonsterHandle {
+		t.Fatalf("expected visible monster battle to start, got result=%+v runtime=%+v", startResult, socketSession.battleRuntime)
+	}
+	socketSession.battleRuntime.PendingOver = &battle.OverPush{
+		BattleID: startResult.battleStart.BattleID,
+		Winner:   battle.CampTeam,
+		Rounds:   1,
+		Result: battle.ResultPayload{
+			Winner: battle.CampTeam,
+			Rounds: 1,
+		},
+	}
+
+	playOver := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattlePlayOverReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.PlayOverRequest{
+			BattleID: startResult.battleStart.BattleID,
+		}),
+	}, socketSession)
+	if playOver.battleOver == nil || len(playOver.removeRoleHandles) != len(expectedRemovedHandles) {
+		t.Fatalf("expected visible monster group removeRole after BattlePlayOver, got %+v", playOver)
+	}
+	for index, expectedHandle := range expectedRemovedHandles {
+		if playOver.removeRoleHandles[index] != expectedHandle {
+			t.Fatalf("expected visible monster removeRole %d to be %s, got %+v", index, expectedHandle, playOver.removeRoleHandles)
+		}
+		if !socketSession.defeatedVisibleMonsters[expectedHandle] {
+			t.Fatalf("expected session to retain defeated visible monster handle %s, got %+v", expectedHandle, socketSession.defeatedVisibleMonsters)
+		}
+	}
+
+	transfer := buildClassicTownTransferResult(store, socketSession, "143", world.SpawnPoint{X: 1000, Y: 600})
+	if transfer.townBootstrap == nil {
+		t.Fatalf("expected map143 transfer bootstrap, got %+v", transfer)
+	}
+	for _, rolePush := range transfer.townBootstrap.CreateRoles {
+		for _, expectedHandle := range expectedRemovedHandles {
+			if rolePush.Handle == expectedHandle {
+				t.Fatalf("expected defeated visible monster group to stay removed from map143 bootstrap, got %+v", rolePush)
+			}
+		}
+	}
+
+	newSocketSession := &packetSession{}
+	selectAgain := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 4,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     socketSession.playerBase.PlayerID,
+			SessionToken: "mock-session-token-001",
+			RoleID:       socketSession.selectedRole.RoleID,
+		}),
+	}, newSocketSession)
+	if selectAgain.townBootstrap == nil {
+		t.Fatalf("expected reselect bootstrap to restore dungeon instance state, got %+v", selectAgain)
+	}
+	for _, expectedHandle := range expectedRemovedHandles {
+		if !newSocketSession.defeatedVisibleMonsters[expectedHandle] {
+			t.Fatalf("expected new socket session to restore defeated visible monster %s, got %+v", expectedHandle, newSocketSession.defeatedVisibleMonsters)
+		}
+	}
+	for _, rolePush := range selectAgain.townBootstrap.CreateRoles {
+		for _, expectedHandle := range expectedRemovedHandles {
+			if rolePush.Handle == expectedHandle {
+				t.Fatalf("expected defeated visible monster group to stay removed after reselect, got %+v", rolePush)
+			}
+		}
+	}
+
+	duplicateStart := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 5,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "143",
+			MapName:             "水帘洞_13",
+			StageFocusX:         631,
+			SourceMonsterHandle: visibleMonsterHandle,
+		}),
+	}, socketSession)
+	if duplicateStart.battleStart != nil || socketSession.battleRuntime != nil {
+		t.Fatalf("expected defeated visible monster battle to be rejected, got result=%+v runtime=%+v", duplicateStart, socketSession.battleRuntime)
+	}
+
+	groupMateStart := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 6,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "143",
+			MapName:             "水帘洞_13",
+			StageFocusX:         487,
+			SourceMonsterHandle: "5174206909807286",
+		}),
+	}, socketSession)
+	if groupMateStart.battleStart != nil || socketSession.battleRuntime != nil {
+		t.Fatalf("expected defeated visible monster group mate battle to be rejected, got result=%+v runtime=%+v", groupMateStart, socketSession.battleRuntime)
 	}
 }
 
@@ -1545,6 +1661,28 @@ func TestSourceSkillItemsAndSkillInfoUseCapturedLevelDescriptions(t *testing.T) 
 	})
 	if !strings.Contains(skillInfo.Description, "&2@28") || !strings.Contains(skillInfo.Description, "造成96%的物理伤害") || !strings.Contains(skillInfo.Description, "86%机率") {
 		t.Fatalf("expected skillInfo to use captured 嗜血斩 Lv3 description, got %+v", skillInfo)
+	}
+
+	redMoonInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "红月斩",
+		Level:       1,
+		Type:        "all",
+		Icon:        "647.png",
+		Description: "对所有敌人造成一定的物理伤害",
+	})
+	if !strings.Contains(redMoonInfo.Description, "&2@40") || !strings.Contains(redMoonInfo.Description, "对所有敌人造成72%的物理伤害") {
+		t.Fatalf("expected skillInfo to use captured 红月斩 Lv1 description, got %+v", redMoonInfo)
+	}
+
+	xueQieInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "血切",
+		Level:       1,
+		Type:        "oneE",
+		Icon:        "648.png",
+		Description: "对敌人造成一定的物理伤害",
+	})
+	if !strings.Contains(xueQieInfo.Description, "&2@19") || !strings.Contains(xueQieInfo.Description, "造成30%的物理伤害") || !strings.Contains(xueQieInfo.Description, "80%的机率") {
+		t.Fatalf("expected skillInfo to use captured 血切 Lv1 description, got %+v", xueQieInfo)
 	}
 }
 
@@ -2601,8 +2739,8 @@ func TestHandlePacketClassicBattleUtilityCommands(t *testing.T) {
 			t.Fatalf("expected self defense action, got %+v", defenseAction)
 		}
 		enemyAction := result.battleActions[1]
-		if enemyAction.Damage != 20 {
-			t.Fatalf("expected doubled defense to reduce enemy damage to 20, got %+v", enemyAction)
+		if enemyAction.Damage != 24 {
+			t.Fatalf("expected doubled defense plus enemy one stored power to reduce enemy damage to 24, got %+v", enemyAction)
 		}
 	})
 
@@ -2644,8 +2782,8 @@ func TestHandlePacketClassicBattleUtilityCommands(t *testing.T) {
 				BattleID: startResult.battleStart.BattleID,
 			}),
 		}, socketSession)
-		if playOver.battleCommand == nil || playOver.battleCommand.Power != 1 {
-			t.Fatalf("expected next startCommand power 1 after BattlePlayOver, got %+v", playOver.battleCommand)
+		if playOver.battleCommand == nil || playOver.battleCommand.Power != 2 {
+			t.Fatalf("expected next startCommand power 2 after BattlePlayOver, got %+v", playOver.battleCommand)
 		}
 	})
 

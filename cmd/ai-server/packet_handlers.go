@@ -58,6 +58,7 @@ type packetResult struct {
 	battleActions     []battle.ActionPush
 	battleBuffs       []battle.BuffInfoPush
 	battleOver        *battle.OverPush
+	removeRoleHandles []string
 	handled           bool
 }
 
@@ -66,14 +67,15 @@ type classicTownAddPointRequest struct {
 }
 
 type packetSession struct {
-	selectedRole  *session.RoleSummary
-	playerBase    *session.PlayerBaseData
-	battleRuntime *battle.Runtime
-	battleLoot    []session.RoleItem
-	removedQuests map[string]bool
-	friends       map[string]classicSocialFriendEntry
-	blackList     map[string]classicSocialBlackEntry
-	enemies       map[string]classicSocialEnemyEntry
+	selectedRole            *session.RoleSummary
+	playerBase              *session.PlayerBaseData
+	battleRuntime           *battle.Runtime
+	battleLoot              []session.RoleItem
+	defeatedVisibleMonsters map[string]bool
+	removedQuests           map[string]bool
+	friends                 map[string]classicSocialFriendEntry
+	blackList               map[string]classicSocialBlackEntry
+	enemies                 map[string]classicSocialEnemyEntry
 }
 
 func handlePacket(store *session.Store, packet protocol.Packet) packetResult {
@@ -126,7 +128,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if response.Success {
 			socketSession.selectedRole = &response.Role
 			socketSession.playerBase = &response.PlayerBase
+			loadDungeonInstanceVisibleMonsters(store, socketSession, response.Role.MapID)
 			bootstrap := world.BuildTownBootstrap(response.Role, response.PlayerBase)
+			filterDefeatedVisibleMonsters(&bootstrap, socketSession)
 			result.townBootstrap = &bootstrap
 		}
 		return result
@@ -358,7 +362,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		return buildClassicBattleStartResult(socketSession, request)
+		return buildClassicBattleStartResult(store, socketSession, request)
 	case cmdClassicBattleActionReq:
 		var request battle.ActionRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -386,9 +390,16 @@ func isClassicTownSkillTeacherRequest(request classicTownAnswerRequest) bool {
 	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle)
 }
 
-func buildClassicBattleStartResult(socketSession *packetSession, request battle.StartRequest) packetResult {
+func buildClassicBattleStartResult(store *session.Store, socketSession *packetSession, request battle.StartRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		log.Printf("[ai-server] classic battle StartBattle ignored without selected role mapId=%s", request.MapID)
+		return packetResult{handled: true}
+	}
+	if mapID, ok := battle.ParseMapID(request.MapID); ok {
+		loadDungeonInstanceVisibleMonsters(store, socketSession, mapID)
+	}
+	if isDefeatedVisibleMonster(socketSession, request.SourceMonsterHandle) {
+		log.Printf("[ai-server] classic battle StartBattle ignored defeated visible monster mapId=%s handle=%s", request.MapID, request.SourceMonsterHandle)
 		return packetResult{handled: true}
 	}
 
@@ -424,19 +435,22 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	}
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
+	var removeRoleHandles []string
 	if result.Over != nil {
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
+		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 	}
 	return packetResult{
-		battleActions: result.Actions,
-		battleBuffs:   result.BuffInfos,
-		battleCommand: result.StartCommand,
-		battleOver:    result.Over,
-		roleState:     roleState,
-		rolePhysique:  rolePhysique,
-		handled:       true,
+		battleActions:     result.Actions,
+		battleBuffs:       result.BuffInfos,
+		battleCommand:     result.StartCommand,
+		battleOver:        result.Over,
+		roleState:         roleState,
+		rolePhysique:      rolePhysique,
+		removeRoleHandles: removeRoleHandles,
+		handled:           true,
 	}
 }
 
@@ -472,20 +486,23 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 	socketSession.playerBase = &useResult.PlayerBase
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
+	var removeRoleHandles []string
 	if result.Over != nil {
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
+		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 	}
 
 	packet := packetResult{
-		battleActions: result.Actions,
-		battleCommand: result.StartCommand,
-		battleOver:    result.Over,
-		roleState:     roleState,
-		rolePhysique:  rolePhysique,
-		itemInfos:     make([]classicTownItemInfoPush, 0, 1),
-		itemClears:    make([]classicTownItemInfoClearPush, 0, len(useResult.ClearedItems)),
-		handled:       true,
+		battleActions:     result.Actions,
+		battleCommand:     result.StartCommand,
+		battleOver:        result.Over,
+		roleState:         roleState,
+		rolePhysique:      rolePhysique,
+		removeRoleHandles: removeRoleHandles,
+		itemInfos:         make([]classicTownItemInfoPush, 0, 1),
+		itemClears:        make([]classicTownItemInfoClearPush, 0, len(useResult.ClearedItems)),
+		handled:           true,
 	}
 	if useResult.UpdatedItem != nil {
 		updatedItem := *useResult.UpdatedItem
@@ -520,17 +537,107 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
+	var removeRoleHandles []string
 	if result.Over != nil {
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
+		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 	}
 	return packetResult{
-		battleCommand: result.StartCommand,
-		battleOver:    result.Over,
-		roleState:     roleState,
-		rolePhysique:  rolePhysique,
-		handled:       true,
+		battleCommand:     result.StartCommand,
+		battleOver:        result.Over,
+		roleState:         roleState,
+		rolePhysique:      rolePhysique,
+		removeRoleHandles: removeRoleHandles,
+		handled:           true,
+	}
+}
+
+func visibleMonsterRemoveHandles(runtime *battle.Runtime, over *battle.OverPush) []string {
+	if runtime == nil || over == nil || over.Result.Winner != battle.CampTeam || over.Result.Escaped {
+		return nil
+	}
+	if strings.TrimSpace(runtime.SourceMonsterHandle) == "" {
+		return nil
+	}
+	handles := make([]string, 0, len(runtime.Cells))
+	seen := map[string]bool{}
+	for _, cell := range runtime.Cells {
+		if cell.Camp != battle.CampEnemy {
+			continue
+		}
+		handle := strings.TrimSpace(cell.Handle)
+		if handle == "" || seen[handle] {
+			continue
+		}
+		seen[handle] = true
+		handles = append(handles, handle)
+	}
+	if len(handles) == 0 {
+		return []string{strings.TrimSpace(runtime.SourceMonsterHandle)}
+	}
+	return handles
+}
+
+func markDefeatedVisibleMonsterFromBattle(store *session.Store, socketSession *packetSession, over *battle.OverPush) []string {
+	if socketSession == nil || socketSession.battleRuntime == nil {
+		return nil
+	}
+	handles := visibleMonsterRemoveHandles(socketSession.battleRuntime, over)
+	if len(handles) == 0 {
+		return nil
+	}
+	mapID, ok := battle.ParseMapID(socketSession.battleRuntime.MapID)
+	if !ok || !world.IsShuiliandongMapID(mapID) {
+		for _, handle := range handles {
+			markDefeatedVisibleMonster(socketSession, handle)
+		}
+		return handles
+	}
+	for _, handle := range handles {
+		state, ok := store.MarkRoleDungeonVisibleMonsterDefeated(
+			socketSession.playerBase.PlayerID,
+			socketSession.selectedRole.RoleID,
+			session.DungeonInstanceShuiliandong,
+			handle,
+		)
+		if ok {
+			setDefeatedVisibleMonsterHandles(socketSession, state.DefeatedVisibleMonsterHandles)
+		} else {
+			markDefeatedVisibleMonster(socketSession, handle)
+		}
+	}
+	return handles
+}
+
+func markDefeatedVisibleMonster(socketSession *packetSession, handle string) {
+	handle = strings.TrimSpace(handle)
+	if socketSession == nil || handle == "" {
+		return
+	}
+	if socketSession.defeatedVisibleMonsters == nil {
+		socketSession.defeatedVisibleMonsters = map[string]bool{}
+	}
+	socketSession.defeatedVisibleMonsters[handle] = true
+}
+
+func isDefeatedVisibleMonster(socketSession *packetSession, handle string) bool {
+	handle = strings.TrimSpace(handle)
+	return socketSession != nil && handle != "" && socketSession.defeatedVisibleMonsters[handle]
+}
+
+func setDefeatedVisibleMonsterHandles(socketSession *packetSession, handles []string) {
+	if socketSession == nil {
+		return
+	}
+	socketSession.defeatedVisibleMonsters = map[string]bool{}
+	for _, handle := range handles {
+		handle = strings.TrimSpace(handle)
+		if handle == "" {
+			continue
+		}
+		socketSession.defeatedVisibleMonsters[handle] = true
 	}
 }
 
@@ -1416,13 +1523,47 @@ func buildClassicTownTransferResult(
 	}
 	socketSession.selectedRole = &role
 	socketSession.playerBase = &playerBase
+	loadDungeonInstanceVisibleMonsters(store, socketSession, mapID)
 	bootstrap, ok := world.BuildTownTransferBootstrap(role, playerBase, mapID, spawn)
 	if !ok {
 		return packetResult{handled: true}
 	}
+	filterDefeatedVisibleMonsters(&bootstrap, socketSession)
 	log.Printf("[ai-server] classic town transfer mapId=%s x=%d y=%d roleId=%s", mapIDText, spawn.X, spawn.Y, role.RoleID)
 	return packetResult{
 		townBootstrap: &bootstrap,
 		handled:       true,
 	}
+}
+
+func filterDefeatedVisibleMonsters(snapshot *world.TownBootstrapSnapshot, socketSession *packetSession) {
+	if snapshot == nil || socketSession == nil || len(socketSession.defeatedVisibleMonsters) == 0 {
+		return
+	}
+	createRoles := snapshot.CreateRoles[:0]
+	for _, rolePush := range snapshot.CreateRoles {
+		if rolePush.Kind == "monster" && socketSession.defeatedVisibleMonsters[rolePush.Handle] {
+			continue
+		}
+		createRoles = append(createRoles, rolePush)
+	}
+	snapshot.CreateRoles = createRoles
+}
+
+func loadDungeonInstanceVisibleMonsters(store *session.Store, socketSession *packetSession, mapID int) {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return
+	}
+	if !world.IsShuiliandongMapID(mapID) {
+		return
+	}
+	state, ok := store.EnsureRoleDungeonInstance(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		session.DungeonInstanceShuiliandong,
+	)
+	if !ok {
+		return
+	}
+	setDefeatedVisibleMonsterHandles(socketSession, state.DefeatedVisibleMonsterHandles)
 }

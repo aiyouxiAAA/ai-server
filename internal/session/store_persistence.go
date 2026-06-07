@@ -52,7 +52,8 @@ func (store *Store) initSchema() error {
 			currencies_json TEXT NOT NULL DEFAULT '',
 			items_json TEXT NOT NULL DEFAULT '',
 			role_state_json TEXT NOT NULL DEFAULT '',
-			role_physique_json TEXT NOT NULL DEFAULT ''
+			role_physique_json TEXT NOT NULL DEFAULT '',
+			dungeon_instances_json TEXT NOT NULL DEFAULT ''
 		)`,
 	}
 
@@ -89,6 +90,11 @@ func (store *Store) initSchema() error {
 	if _, err := store.db.Exec(`ALTER TABLE roles ADD COLUMN role_physique_json TEXT NOT NULL DEFAULT ''`); err != nil {
 		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
 			return fmt.Errorf("migrate roles role_physique_json column: %w", err)
+		}
+	}
+	if _, err := store.db.Exec(`ALTER TABLE roles ADD COLUMN dungeon_instances_json TEXT NOT NULL DEFAULT ''`); err != nil {
+		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+			return fmt.Errorf("migrate roles dungeon_instances_json column: %w", err)
 		}
 	}
 	if _, err := store.db.Exec(`ALTER TABLE roles ADD COLUMN exp INTEGER NOT NULL DEFAULT 0`); err != nil {
@@ -174,7 +180,7 @@ func (store *Store) loadFromDB() error {
 	}
 
 	roleRows, err := store.db.Query(`
-		SELECT role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json
+		SELECT role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json, dungeon_instances_json
 		FROM roles
 		ORDER BY player_id ASC, role_id ASC
 	`)
@@ -193,6 +199,7 @@ func (store *Store) loadFromDB() error {
 		var itemsJSON string
 		var roleStateJSON string
 		var rolePhysiqueJSON string
+		var dungeonInstancesJSON string
 		if err := roleRows.Scan(
 			&role.RoleID,
 			&playerID,
@@ -216,6 +223,7 @@ func (store *Store) loadFromDB() error {
 			&itemsJSON,
 			&roleStateJSON,
 			&rolePhysiqueJSON,
+			&dungeonInstancesJSON,
 		); err != nil {
 			return fmt.Errorf("scan role: %w", err)
 		}
@@ -254,6 +262,11 @@ func (store *Store) loadFromDB() error {
 			return fmt.Errorf("decode role physique for %s: %w", role.RoleID, err)
 		}
 		role.RolePhysique = rolePhysique
+		dungeonInstances, err := decodeDungeonInstances(dungeonInstancesJSON)
+		if err != nil {
+			return fmt.Errorf("decode dungeon instances for %s: %w", role.RoleID, err)
+		}
+		role.DungeonInstances = dungeonInstances
 		store.rolesByPID[playerID] = append(store.rolesByPID[playerID], role)
 	}
 	if err := roleRows.Err(); err != nil {
@@ -349,9 +362,13 @@ func (store *Store) persistPlayerStateLocked(playerID string) error {
 		if encodeErr != nil {
 			return fmt.Errorf("encode role physique for %s: %w", role.RoleID, encodeErr)
 		}
+		dungeonInstancesJSON, encodeErr := encodeDungeonInstances(role.DungeonInstances)
+		if encodeErr != nil {
+			return fmt.Errorf("encode dungeon instances for %s: %w", role.RoleID, encodeErr)
+		}
 		if _, err = tx.Exec(
-			`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json, dungeon_instances_json)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			role.RoleID,
 			playerID,
 			role.DisplayName,
@@ -374,6 +391,7 @@ func (store *Store) persistPlayerStateLocked(playerID string) error {
 			itemsJSON,
 			roleStateJSON,
 			rolePhysiqueJSON,
+			dungeonInstancesJSON,
 		); err != nil {
 			return fmt.Errorf("insert role %s: %w", role.RoleID, err)
 		}
@@ -464,8 +482,12 @@ func (store *Store) saveLocked() error {
 			if encodeErr != nil {
 				return fmt.Errorf("encode role physique for %s: %w", role.RoleID, encodeErr)
 			}
+			dungeonInstancesJSON, encodeErr := encodeDungeonInstances(role.DungeonInstances)
+			if encodeErr != nil {
+				return fmt.Errorf("encode dungeon instances for %s: %w", role.RoleID, encodeErr)
+			}
 			if _, err = tx.Exec(
-				`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json, dungeon_instances_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				role.RoleID,
 				playerID,
 				role.DisplayName,
@@ -488,6 +510,7 @@ func (store *Store) saveLocked() error {
 				itemsJSON,
 				roleStateJSON,
 				rolePhysiqueJSON,
+				dungeonInstancesJSON,
 			); err != nil {
 				return fmt.Errorf("insert role %s: %w", role.RoleID, err)
 			}

@@ -201,6 +201,155 @@ func TestResolveTownTransportAnswerUsesCapturedReturnHandleDestination(t *testin
 	}
 }
 
+func TestResolveTownTransportAnswerUsesShuiliandongDestination(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswer("transp_131", "goto")
+	if !ok {
+		t.Fatal("expected transp_131 goto answer to resolve")
+	}
+	if destination.MapID != 131 {
+		t.Fatalf("expected mapId 131, got %d", destination.MapID)
+	}
+	if destination.Spawn.X != 1000 || destination.Spawn.Y != 600 {
+		t.Fatalf("expected water cave default spawn 1000,600 got %+v", destination.Spawn)
+	}
+
+	returnDestination, ok := ResolveTownTransportAnswer("transp_127", "goto")
+	if !ok {
+		t.Fatal("expected transp_127 goto answer to resolve")
+	}
+	if returnDestination.MapID != 127 {
+		t.Fatalf("expected mapId 127, got %d", returnDestination.MapID)
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedShuiliandongVisibleMonsters(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-143",
+		DisplayName:  "测试女侠",
+		Level:        20,
+		MapID:        143,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        143,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	snapshot, ok := BuildTownTransferBootstrap(role, playerBase, 143, SpawnPoint{X: 1000, Y: 600})
+	if !ok {
+		t.Fatal("expected map143 transfer bootstrap to be supported")
+	}
+	if snapshot.LoadMap.EnemyShow {
+		t.Fatal("expected shuiliandong maps to use visible monsters instead of wild enemyShow")
+	}
+
+	var foundBoss bool
+	for _, rolePush := range snapshot.CreateRoles {
+		if rolePush.Handle != "5176206909809579" {
+			continue
+		}
+		foundBoss = true
+		if rolePush.Kind != "monster" || rolePush.RoleID != "-2" {
+			t.Fatalf("expected visible monster role, got %+v", rolePush)
+		}
+		if rolePush.DisplayName != "蛤蟆精" || rolePush.Level != 20 || rolePush.Vocation != "游侠++" {
+			t.Fatalf("expected captured boss identity, got %+v", rolePush)
+		}
+		if rolePush.SpawnFlash.X != 2070 || rolePush.SpawnFlash.Y != 464 {
+			t.Fatalf("expected captured boss spawn 2070,464 got %+v", rolePush.SpawnFlash)
+		}
+		if rolePush.Movement != nil {
+			t.Fatalf("expected captured boss to stay still without a moveRole packet, got movement %+v", rolePush.Movement)
+		}
+		if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-monstermap/cracktoad/cracktoad-movieclip-ir" {
+			t.Fatalf("expected cracktoad map movieclip visual, got %+v", rolePush.SourceNPCVisual)
+		}
+	}
+	if !foundBoss {
+		t.Fatal("expected captured map143 frog boss visible monster")
+	}
+
+	expectedSwordpandaAngles := map[string]float64{
+		"5172206909807859": 2.984785658956835,
+		"5174206909807286": 0.8709838935552793,
+	}
+	for _, rolePush := range snapshot.CreateRoles {
+		expectedAngle, ok := expectedSwordpandaAngles[rolePush.Handle]
+		if !ok {
+			continue
+		}
+		if rolePush.Movement == nil || rolePush.Movement.Speed != 130 || rolePush.Movement.Angle != expectedAngle {
+			t.Fatalf("expected map143 swordpanda %s to use first captured moveRole angle %.12f got %+v", rolePush.Handle, expectedAngle, rolePush.Movement)
+		}
+		delete(expectedSwordpandaAngles, rolePush.Handle)
+	}
+	if len(expectedSwordpandaAngles) != 0 {
+		t.Fatalf("missing captured map143 swordpanda movement checks: %+v", expectedSwordpandaAngles)
+	}
+}
+
+func TestBuildTownBootstrapOmitsMovementForCapturedStillVisibleMonsters(t *testing.T) {
+	testCases := []struct {
+		mapID   int
+		handles map[string]string
+	}{
+		{
+			mapID: 143,
+			handles: map[string]string{
+				"5168206909805631": "法术蛤蟆",
+				"5176206909809579": "蛤蟆精",
+			},
+		},
+		{
+			mapID: 144,
+			handles: map[string]string{
+				"2762206074545916": "武斗蛤蟆",
+				"2766206074547838": "武斗蛤蟆",
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-still-visible",
+			DisplayName:  "测试女侠",
+			Level:        20,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, testCase.mapID, SpawnPoint{X: 1000, Y: 600})
+		if !ok {
+			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
+		}
+		for _, rolePush := range snapshot.CreateRoles {
+			_, ok := testCase.handles[rolePush.Handle]
+			if !ok {
+				continue
+			}
+			if rolePush.Movement != nil {
+				t.Fatalf("expected captured still monster %s on map%d to omit movement, got %+v", rolePush.Handle, testCase.mapID, rolePush.Movement)
+			}
+			delete(testCase.handles, rolePush.Handle)
+		}
+		if len(testCase.handles) != 0 {
+			t.Fatalf("missing captured still monster checks for map%d: %+v", testCase.mapID, testCase.handles)
+		}
+	}
+}
+
 func TestBuildTownTransferBootstrapUsesMapFourScene(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-001",
@@ -567,16 +716,84 @@ func TestBuildTownBootstrapUsesCapturedUnderworldTransportData(t *testing.T) {
 		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != testCase.xmlURL {
 			t.Fatalf("expected map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
 		}
-		if len(snapshot.CreateRoles) != len(testCase.handles) {
-			t.Fatalf("expected map%d transport count %d got %d", testCase.mapID, len(testCase.handles), len(snapshot.CreateRoles))
+		transports := make([]RolePush, 0, len(testCase.handles))
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.RoleID == "-3" {
+				transports = append(transports, rolePush)
+			}
+		}
+		if len(transports) != len(testCase.handles) {
+			t.Fatalf("expected map%d transport count %d got %d", testCase.mapID, len(testCase.handles), len(transports))
 		}
 		for index, handle := range testCase.handles {
-			rolePush := snapshot.CreateRoles[index]
+			rolePush := transports[index]
 			if rolePush.Handle != handle {
 				t.Fatalf("expected map%d transport handle %s at index %d got %s", testCase.mapID, handle, index, rolePush.Handle)
 			}
 			if rolePush.SpawnFlash != testCase.spawns[index] {
 				t.Fatalf("expected map%d %s spawn %+v got %+v", testCase.mapID, handle, testCase.spawns[index], rolePush.SpawnFlash)
+			}
+		}
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedShuiliandongTransportData(t *testing.T) {
+	cases := []struct {
+		mapID   int
+		mapName string
+		handles []string
+		spawns  []SpawnPoint
+	}{
+		{mapID: 127, mapName: "观瀑台", handles: []string{"transp_131"}, spawns: []SpawnPoint{{X: 1020, Y: 300}}},
+		{mapID: 131, mapName: "水帘洞_1", handles: []string{"transp_132", "transp_127"}, spawns: []SpawnPoint{{X: 2950, Y: 550}, {X: 44, Y: 530}}},
+		{mapID: 133, mapName: "水帘洞_3", handles: []string{"transp_132", "transp_137"}, spawns: []SpawnPoint{{X: 44, Y: 530}, {X: 2960, Y: 530}}},
+		{mapID: 137, mapName: "水帘洞_7", handles: []string{"transp_133", "transp_144"}, spawns: []SpawnPoint{{X: 40, Y: 555}, {X: 2960, Y: 570}}},
+		{mapID: 140, mapName: "水帘洞_10", handles: []string{"transp_141", "transp_145"}, spawns: []SpawnPoint{{X: 2950, Y: 650}, {X: 40, Y: 500}}},
+		{mapID: 142, mapName: "水帘洞_12", handles: []string{"transp_141", "transp_143"}, spawns: []SpawnPoint{{X: 2780, Y: 350}, {X: 1909, Y: 720}}},
+		{mapID: 143, mapName: "水帘洞_13", handles: []string{"transp_142", "transp_127"}, spawns: []SpawnPoint{{X: 220, Y: 350}, {X: 2120, Y: 440}}},
+		{mapID: 145, mapName: "水帘洞_15", handles: []string{"transp_140", "transp_144"}, spawns: []SpawnPoint{{X: 2460, Y: 550}, {X: 200, Y: 410}}},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-shuiliandong",
+			DisplayName:  "测试女侠",
+			Level:        20,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		transports := make([]RolePush, 0, len(testCase.handles))
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.RoleID == "-3" {
+				transports = append(transports, rolePush)
+			}
+		}
+		if len(transports) != len(testCase.handles) {
+			t.Fatalf("expected map%d transport count %d got %d", testCase.mapID, len(testCase.handles), len(transports))
+		}
+		for index, handle := range testCase.handles {
+			rolePush := transports[index]
+			if rolePush.Handle != handle {
+				t.Fatalf("expected map%d transport handle %s at index %d got %s", testCase.mapID, handle, index, rolePush.Handle)
+			}
+			if rolePush.SpawnFlash != testCase.spawns[index] {
+				t.Fatalf("expected map%d %s spawn %+v got %+v", testCase.mapID, handle, testCase.spawns[index], rolePush.SpawnFlash)
+			}
+			if rolePush.RoleID != "-3" || rolePush.DisplayName != "" || rolePush.SourceQuery != "transp/flag2.swf" {
+				t.Fatalf("expected source transport role for %s, got %+v", handle, rolePush)
 			}
 		}
 	}
@@ -767,6 +984,53 @@ func TestBuildTownTransferBootstrapMarksCapturedPlainEnemyShow(t *testing.T) {
 		}
 		if !snapshot.LoadMap.EnemyShow {
 			t.Fatalf("expected captured plain map%d enemyShow to be true", testCase.mapID)
+		}
+	}
+}
+
+func TestBuildTownTransferBootstrapMarksCapturedShuiliandongEnemyShow(t *testing.T) {
+	capturedMaps := []struct {
+		mapID   int
+		mapName string
+	}{
+		{mapID: 131, mapName: "水帘洞_1"},
+		{mapID: 132, mapName: "水帘洞_2"},
+		{mapID: 133, mapName: "水帘洞_3"},
+		{mapID: 137, mapName: "水帘洞_7"},
+		{mapID: 140, mapName: "水帘洞_10"},
+		{mapID: 141, mapName: "水帘洞_11"},
+		{mapID: 142, mapName: "水帘洞_12"},
+		{mapID: 143, mapName: "水帘洞_13"},
+		{mapID: 144, mapName: "水帘洞_14"},
+		{mapID: 145, mapName: "水帘洞_15"},
+	}
+
+	for _, testCase := range capturedMaps {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-shuiliandong-enemy",
+			DisplayName:  "测试女侠",
+			Level:        20,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, testCase.mapID, SpawnPoint{X: 1000, Y: 600})
+		if !ok {
+			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
+		}
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected shuiliandong map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected captured shuiliandong map%d to use visible monsters instead of enemyShow", testCase.mapID)
 		}
 	}
 }

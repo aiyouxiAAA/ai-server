@@ -1243,6 +1243,231 @@ var map83SourceNPCs = []sourceNPCEntry{
 	},
 }
 
+var map127SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_131", 1020, 300),
+}
+
+var map131SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_132", 2950, 550),
+	buildCapturedSourceTransport("transp_127", 44, 530),
+}
+
+var map131SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("8128205778897212", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 12, "游侠", 1626, 453),
+	buildCapturedSourceMonster("8130205778898758", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 12, "游侠", 2357, 492),
+	buildCapturedSourceMonster("8132205778899676", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 12, "游侠", 1550, 607),
+}
+
+var map132SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_133", 2450, 550),
+	buildCapturedSourceTransport("transp_131", 44, 530),
+}
+
+var map132SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1656205827185847", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 13, "战士", 634, 471),
+	buildCapturedSourceMonster("1658205827186196", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 12, "游侠", 455, 387),
+	buildCapturedSourceMonster("1660205827187303", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 12, "游侠", 1500, 509),
+	buildCapturedSourceMonster("1662205827187552", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 12, "游侠", 535, 589),
+	buildCapturedSourceMonster("1664205827188995", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 13, "战士", 1980, 442),
+	buildCapturedSourceMonster("1666205827189909", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 13, "战士", 1913, 564),
+}
+
+var map133SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_132", 44, 530),
+	buildCapturedSourceTransport("transp_137", 2960, 530),
+}
+
+var map133SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("8112205902790159", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 14, "战士", 507, 438),
+	buildCapturedSourceMonster("8114205902791857", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 14, "战士", 1580, 503),
+	buildCapturedSourceMonster("8116205902792836", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 14, "战士", 434, 603),
+	buildCapturedSourceMonster("8118205902792830", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 14, "战士", 2480, 442),
+	buildCapturedSourceMonster("8120205902793205", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 14, "战士", 2423, 507),
+	buildCapturedSourceMonster("8122205902794636", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 14, "战士", 2457, 603),
+}
+
+var map137SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_133", 40, 555),
+	buildCapturedSourceTransport("transp_144", 2960, 570),
+}
+
+var map137SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("4889205982270617", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 15, "战士", 500, 423),
+	buildCapturedSourceMonster("4891205982270480", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 15, "战士", 503, 507),
+	buildCapturedSourceMonster("4893205982271973", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 15, "战士", 357, 600),
+	buildCapturedSourceMonster("4895205982272135", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 16, "术士", 1803, 423),
+	buildCapturedSourceMonster("4897205982273653", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 16, "术士", 2484, 500),
+	buildCapturedSourceMonster("4899205982273477", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 16, "术士", 1615, 588),
+}
+
+var map140SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_141", 2950, 650),
+	buildCapturedSourceTransport("transp_145", 40, 500),
+}
+
+var map140SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("8424206376338175", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1588, 611),
+	buildCapturedSourceMonster("8426206376339691", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1676, 526),
+	buildCapturedSourceMonster("8428206376340510", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1769, 453),
+	buildCapturedSourceMonster("8430206376341780", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 17, "游侠", 1273, 530),
+	buildCapturedSourceMonster("8432206376342756", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 17, "游侠", 1326, 615),
+}
+
+var map141SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_140", 170, 340),
+	buildCapturedSourceTransport("transp_142", 1800, 720),
+}
+
+var map141SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("4710206556985181", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 520, 466),
+	buildCapturedSourceMonster("4712206556985489", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 771, 566),
+	buildCapturedSourceMonster("4714206556986370", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 815, 484),
+	buildCapturedSourceMonster("4716206556987104", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 812, 553),
+	buildCapturedSourceMonster("4718206556987620", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1330, 425),
+	buildCapturedSourceMonster("4720206556988825", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1202, 535),
+}
+
+var map142SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_141", 2780, 350),
+	buildCapturedSourceTransport("transp_143", 1909, 720),
+}
+
+var map142SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("9556206735436383", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 630, 434),
+	buildCapturedSourceMonster("9558206735437433", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 600, 557),
+	buildCapturedSourceMonster("9560206735437619", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 803, 430),
+	buildCapturedSourceMonster("9562206735438199", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 742, 557),
+	buildCapturedSourceMonster("9564206735439303", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 2403, 515),
+	buildCapturedSourceMonster("9566206735440658", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 2327, 438),
+	buildCapturedSourceMonster("9568206735440182", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 2400, 592),
+}
+
+var map143SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_142", 220, 350),
+	buildCapturedSourceTransport("transp_127", 2120, 440),
+}
+
+var map143SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("5166206909805441", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 1237, 551),
+	buildCapturedSourceMonster("5168206909805631", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 2080, 506),
+	buildCapturedSourceMonster("5170206909806155", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 1951, 471),
+	buildCapturedSourceMonster("5172206909807859", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 631, 480),
+	buildCapturedSourceMonster("5174206909807286", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 487, 615),
+	buildCapturedSourceMonster("5176206909809579", "蛤蟆精", "monstermap/cracktoad.swf", "cracktoad", 20, "游侠++", 2070, 464),
+}
+
+var map144SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_145", 2800, 720),
+	buildCapturedSourceTransport("transp_137", 44, 530),
+}
+
+var map144SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("2762206074545916", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 16, "游侠", 650, 457),
+	buildCapturedSourceMonster("2764206074546810", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 16, "游侠", 680, 569),
+	buildCapturedSourceMonster("2766206074547838", "武斗蛤蟆", "monstermap/kongfupanda.swf", "kongfupanda", 16, "游侠", 2177, 419),
+	buildCapturedSourceMonster("2768206074548639", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 17, "战士", 1369, 496),
+	buildCapturedSourceMonster("2770206074548423", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 17, "战士", 1480, 561),
+}
+
+var map145SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_140", 2460, 550),
+	buildCapturedSourceTransport("transp_144", 200, 410),
+}
+
+var map145SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("2890206197338884", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 541, 474),
+	buildCapturedSourceMonster("2892206197339825", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 352, 596),
+	buildCapturedSourceMonster("2894206197340572", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 1028, 532),
+	buildCapturedSourceMonster("2896206197341225", "法术蛤蟆", "monstermap/magicpanda.swf", "magicpanda", 17, "术士", 1189, 592),
+	buildCapturedSourceMonster("2898206197342379", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1689, 483),
+	buildCapturedSourceMonster("2900206197343711", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1721, 602),
+}
+
+func buildCapturedSourceTransport(handle string, x int, y int) sourceNPCEntry {
+	return sourceNPCEntry{
+		Handle:      handle,
+		RoleID:      "-3",
+		DisplayName: "",
+		SourceQuery: "transp/flag2.swf",
+		SpriteName:  "flag2",
+		Width:       158,
+		Height:      258,
+		SpawnFlash:  SpawnPoint{X: x, Y: y},
+		QuestState:  0,
+		Dialogue:    &sourceTransportDialogue,
+	}
+}
+
+func buildCapturedSourceMonster(handle string, displayName string, sourceQuery string, spriteName string, level int, vocation string, x int, y int) sourceMonsterEntry {
+	return sourceMonsterEntry{
+		Handle:      handle,
+		DisplayName: displayName,
+		SourceQuery: sourceQuery,
+		SpriteName:  spriteName,
+		Level:       level,
+		Vocation:    vocation,
+		Width:       140,
+		Height:      140,
+		SpawnFlash:  SpawnPoint{X: x, Y: y},
+		Movement:    capturedSourceMonsterMovements[handle],
+	}
+}
+
+var capturedSourceMonsterMovements = map[string]RoleMovement{
+	"8128205778897212": {Speed: 130, Angle: 358.9376829766436, Mode: 2},
+	"8130205778898758": {Speed: 130, Angle: 177.72696898379588, Mode: 1},
+	"8132205778899676": {Speed: 130, Angle: 359.6976498989142, Mode: 1},
+	"1656205827185847": {Speed: 130, Angle: 0.17629357064717712, Mode: 1},
+	"1658205827186196": {Speed: 130, Angle: 149.96672031129458, Mode: 1},
+	"1660205827187303": {Speed: 130, Angle: 177.4266413042915, Mode: 1},
+	"1662205827187552": {Speed: 130, Angle: 0.693760266366009, Mode: 1},
+	"1664205827188995": {Speed: 130, Angle: 211.12246969276458, Mode: 1},
+	"1666205827189909": {Speed: 130, Angle: 4.739813201914896, Mode: 1},
+	"8112205902790159": {Speed: 130, Angle: 180, Mode: 1},
+	"8114205902791857": {Speed: 130, Angle: 180, Mode: 2},
+	"8116205902792836": {Speed: 130, Angle: 0, Mode: 1},
+	"8118205902792830": {Speed: 130, Angle: 178.35402271153018, Mode: 2},
+	"8120205902793205": {Speed: 130, Angle: 1.0648546391172092, Mode: 2},
+	"8122205902794636": {Speed: 130, Angle: 180.52085637447797, Mode: 2},
+	"4889205982270617": {Speed: 130, Angle: 2.640227681825575, Mode: 1},
+	"4891205982270480": {Speed: 130, Angle: 1.2310954483496047, Mode: 1},
+	"4893205982271973": {Speed: 130, Angle: 1.3236719665851033, Mode: 1},
+	"4895205982272135": {Speed: 130, Angle: 270, Mode: 1},
+	"4897205982273653": {Speed: 130, Angle: 0, Mode: 2},
+	"4899205982273477": {Speed: 130, Angle: 3.0679239161799926, Mode: 1},
+	"8424206376338175": {Speed: 130, Angle: 358.2343509018431, Mode: 2},
+	"8426206376339691": {Speed: 130, Angle: 180, Mode: 2},
+	"8428206376340510": {Speed: 130, Angle: 358.385123565852, Mode: 2},
+	"8430206376341780": {Speed: 130, Angle: 179.6390856174283, Mode: 2},
+	"8432206376342756": {Speed: 130, Angle: 180, Mode: 1},
+	"4710206556985181": {Speed: 130, Angle: 2.556150004796946, Mode: 1},
+	"4712206556985489": {Speed: 130, Angle: 178.26429541107162, Mode: 2},
+	"4714206556986370": {Speed: 130, Angle: 179.325963102015, Mode: 2},
+	"4716206556987104": {Speed: 130, Angle: 2.109942920593726, Mode: 2},
+	"4718206556987620": {Speed: 130, Angle: 359.5802582233581, Mode: 1},
+	"4720206556988825": {Speed: 130, Angle: 359.36901491791984, Mode: 2},
+	"9556206735436383": {Speed: 130, Angle: 243.43494882292202, Mode: 1},
+	"9558206735437433": {Speed: 130, Angle: 347.9885215240773, Mode: 1},
+	"9560206735437619": {Speed: 130, Angle: 4.590543012598198, Mode: 1},
+	"9562206735438199": {Speed: 130, Angle: 1.0681029719549366, Mode: 1},
+	"9564206735439303": {Speed: 130, Angle: 180, Mode: 1},
+	"9566206735440658": {Speed: 130, Angle: 181.43209618416465, Mode: 1},
+	"9568206735440182": {Speed: 130, Angle: 26.07535558394876, Mode: 1},
+	"5166206909805441": {Speed: 130, Angle: 1.780099783622664, Mode: 1},
+	"5170206909806155": {Speed: 130, Angle: 135, Mode: 1},
+	"5172206909807859": {Speed: 130, Angle: 2.984785658956835, Mode: 1},
+	"5174206909807286": {Speed: 130, Angle: 0.8709838935552793, Mode: 2},
+	"2764206074546810": {Speed: 130, Angle: 345.9637565320735, Mode: 1},
+	"2768206074548639": {Speed: 130, Angle: 183.34936774972577, Mode: 1},
+	"2770206074548423": {Speed: 130, Angle: 176.42366562500266, Mode: 1},
+	"2890206197338884": {Speed: 130, Angle: 359.65963320693706, Mode: 1},
+	"2892206197339825": {Speed: 130, Angle: 1.3726389921296542, Mode: 2},
+	"2894206197340572": {Speed: 130, Angle: 358.0079063326333, Mode: 1},
+	"2896206197341225": {Speed: 130, Angle: 177.68627791855844, Mode: 2},
+	"2898206197342379": {Speed: 130, Angle: 2.6718648202670905, Mode: 1},
+	"2900206197343711": {Speed: 130, Angle: 3.4873973083901544, Mode: 2},
+}
+
 var sourceTransportDialogue = sourceNPCDialogueEntry{
 	Message: "可以瞬间传送至该处。",
 	Answers: []AnswerOption{

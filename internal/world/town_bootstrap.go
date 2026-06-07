@@ -29,6 +29,12 @@ type SourceNPCVisual struct {
 	QuestMarkerY    int    `json:"questMarkerY"`
 }
 
+type RoleMovement struct {
+	Speed int     `json:"speed"`
+	Angle float64 `json:"angle"`
+	Mode  int     `json:"mode"`
+}
+
 type RolePush struct {
 	Handle          string                 `json:"handle"`
 	RoleID          string                 `json:"roleId"`
@@ -43,6 +49,7 @@ type RolePush struct {
 	Kind            string                 `json:"kind"`
 	SpawnFlash      SpawnPoint             `json:"spawnFlash"`
 	SourceNPCVisual *SourceNPCVisual       `json:"sourceNpcVisual,omitempty"`
+	Movement        *RoleMovement          `json:"movement,omitempty"`
 }
 
 type QuestStatePush struct {
@@ -85,6 +92,19 @@ type sourceNPCEntry struct {
 	Dialogue    *sourceNPCDialogueEntry
 }
 
+type sourceMonsterEntry struct {
+	Handle      string
+	DisplayName string
+	SourceQuery string
+	SpriteName  string
+	Level       int
+	Vocation    string
+	Width       int
+	Height      int
+	SpawnFlash  SpawnPoint
+	Movement    RoleMovement
+}
+
 type SourceCollectionPoint struct {
 	Handle           string
 	MapID            int
@@ -107,7 +127,10 @@ type sourceNPCDialogueEntry struct {
 	Answers   []AnswerOption
 }
 
-const sourceNPCMovieClipRoot = "runtime/classic-npc/movieclips"
+const (
+	sourceNPCMovieClipRoot     = "runtime/classic-npc/movieclips"
+	sourceMonsterMovieClipRoot = "runtime/classic-monstermap"
+)
 
 type sourceNPCDialogueReplyKey struct {
 	Handle       string
@@ -121,6 +144,7 @@ type townMapBootstrapDefinition struct {
 	XMLURL             string
 	DefaultSpawn       SpawnPoint
 	SourceNPCs         []sourceNPCEntry
+	SourceMonsters     []sourceMonsterEntry
 	SupportsTransferIn bool
 }
 
@@ -288,6 +312,60 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapEightyThree.SourceNPCs = map83SourceNPCs
 	definitions[83] = mapEightyThree
 
+	mapOneTwentySeven := definitions[127]
+	mapOneTwentySeven.SourceNPCs = map127SourceNPCs
+	definitions[127] = mapOneTwentySeven
+
+	mapOneThirtyOne := definitions[131]
+	mapOneThirtyOne.SourceNPCs = map131SourceNPCs
+	mapOneThirtyOne.SourceMonsters = map131SourceMonsters
+	definitions[131] = mapOneThirtyOne
+
+	mapOneThirtyTwo := definitions[132]
+	mapOneThirtyTwo.SourceNPCs = map132SourceNPCs
+	mapOneThirtyTwo.SourceMonsters = map132SourceMonsters
+	definitions[132] = mapOneThirtyTwo
+
+	mapOneThirtyThree := definitions[133]
+	mapOneThirtyThree.SourceNPCs = map133SourceNPCs
+	mapOneThirtyThree.SourceMonsters = map133SourceMonsters
+	definitions[133] = mapOneThirtyThree
+
+	mapOneThirtySeven := definitions[137]
+	mapOneThirtySeven.SourceNPCs = map137SourceNPCs
+	mapOneThirtySeven.SourceMonsters = map137SourceMonsters
+	definitions[137] = mapOneThirtySeven
+
+	mapOneForty := definitions[140]
+	mapOneForty.SourceNPCs = map140SourceNPCs
+	mapOneForty.SourceMonsters = map140SourceMonsters
+	definitions[140] = mapOneForty
+
+	mapOneFortyOne := definitions[141]
+	mapOneFortyOne.SourceNPCs = map141SourceNPCs
+	mapOneFortyOne.SourceMonsters = map141SourceMonsters
+	definitions[141] = mapOneFortyOne
+
+	mapOneFortyTwo := definitions[142]
+	mapOneFortyTwo.SourceNPCs = map142SourceNPCs
+	mapOneFortyTwo.SourceMonsters = map142SourceMonsters
+	definitions[142] = mapOneFortyTwo
+
+	mapOneFortyThree := definitions[143]
+	mapOneFortyThree.SourceNPCs = map143SourceNPCs
+	mapOneFortyThree.SourceMonsters = map143SourceMonsters
+	definitions[143] = mapOneFortyThree
+
+	mapOneFortyFour := definitions[144]
+	mapOneFortyFour.SourceNPCs = map144SourceNPCs
+	mapOneFortyFour.SourceMonsters = map144SourceMonsters
+	definitions[144] = mapOneFortyFour
+
+	mapOneFortyFive := definitions[145]
+	mapOneFortyFive.SourceNPCs = map145SourceNPCs
+	mapOneFortyFive.SourceMonsters = map145SourceMonsters
+	definitions[145] = mapOneFortyFive
+
 	for _, point := range sourceCollectionPointsByHandle {
 		mapDefinition, ok := definitions[point.MapID]
 		if !ok {
@@ -358,6 +436,7 @@ func loadTownMapIndexDefinitions() map[int]townMapBootstrapDefinition {
 			XMLURL:             normalizeTownMapXMLURL(entry.SourceXML, mapID),
 			DefaultSpawn:       resolveSourceMapDefaultSpawn(entry.Name),
 			SourceNPCs:         nil,
+			SourceMonsters:     nil,
 			SupportsTransferIn: true,
 		}
 	}
@@ -430,6 +509,11 @@ func SupportsTownTransferMap(mapID int) bool {
 	return ok && mapDefinition.SupportsTransferIn
 }
 
+func IsShuiliandongMapID(mapID int) bool {
+	mapDefinition, ok := townMapBootstrapDefinitions[mapID]
+	return ok && strings.HasPrefix(mapDefinition.Name, "水帘洞_")
+}
+
 func buildTownBootstrap(
 	role session.RoleSummary,
 	playerBase session.PlayerBaseData,
@@ -437,7 +521,7 @@ func buildTownBootstrap(
 	spawn SpawnPoint,
 ) TownBootstrapSnapshot {
 	mapID := itoa(mapDefinition.ID)
-	createRoles := make([]RolePush, 0, len(mapDefinition.SourceNPCs))
+	createRoles := make([]RolePush, 0, len(mapDefinition.SourceNPCs)+len(mapDefinition.SourceMonsters))
 	questStates := make([]QuestStatePush, 0, len(mapDefinition.SourceNPCs))
 	for _, npc := range mapDefinition.SourceNPCs {
 		roleID := npc.RoleID
@@ -463,6 +547,22 @@ func buildTownBootstrap(
 		questStates = append(questStates, QuestStatePush{
 			Handle: npc.Handle,
 			State:  npc.QuestState,
+		})
+	}
+	for _, monster := range mapDefinition.SourceMonsters {
+		createRoles = append(createRoles, RolePush{
+			Handle:          monster.Handle,
+			RoleID:          "-2",
+			DisplayName:     monster.DisplayName,
+			Level:           monster.Level,
+			Vocation:        monster.Vocation,
+			MapID:           mapID,
+			VisualRoleID:    0,
+			SourceQuery:     monster.SourceQuery,
+			Kind:            "monster",
+			SpawnFlash:      monster.SpawnFlash,
+			SourceNPCVisual: buildMonsterVisual(monster),
+			Movement:        buildMonsterMovement(monster),
 		})
 	}
 
@@ -699,6 +799,24 @@ func buildNPCVisual(npc sourceNPCEntry) *SourceNPCVisual {
 		NameY:           npc.Height + 18,
 		QuestMarkerY:    npc.Height + 62,
 	}
+}
+
+func buildMonsterVisual(monster sourceMonsterEntry) *SourceNPCVisual {
+	return &SourceNPCVisual{
+		MovieClipIRPath: sourceMonsterMovieClipRoot + "/" + monster.SpriteName + "/" + monster.SpriteName + "-movieclip-ir",
+		Width:           monster.Width,
+		Height:          monster.Height,
+		NameY:           monster.Height + 18,
+		QuestMarkerY:    monster.Height + 62,
+	}
+}
+
+func buildMonsterMovement(monster sourceMonsterEntry) *RoleMovement {
+	if monster.Movement.Speed <= 0 {
+		return nil
+	}
+	movement := monster.Movement
+	return &movement
 }
 
 func stripSourceMarkup(value string) string {

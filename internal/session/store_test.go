@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestStoreLoginAccountSuccess(t *testing.T) {
@@ -173,6 +174,37 @@ func TestStoreRoleLifecycle(t *testing.T) {
 	}
 	if selectResponse.PlayerBase.Currencies["铜钱"] != 5000 || selectResponse.PlayerBase.Currencies["银元宝"] != 1 {
 		t.Fatalf("expected default role currencies, got %+v", selectResponse.PlayerBase.Currencies)
+	}
+}
+
+func TestStoreDungeonInstancePersistsForOneHour(t *testing.T) {
+	store := NewStore()
+	now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
+	store.now = func() time.Time { return now }
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "副本女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	state, ok := store.MarkRoleDungeonVisibleMonsterDefeated(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceShuiliandong, "5172206909807859")
+	if !ok || state.CreatedAtUnix != now.Unix() || len(state.DefeatedVisibleMonsterHandles) != 1 {
+		t.Fatalf("expected dungeon instance defeat state, got ok=%v state=%+v", ok, state)
+	}
+
+	now = now.Add(59 * time.Minute)
+	state, ok = store.EnsureRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceShuiliandong)
+	if !ok || len(state.DefeatedVisibleMonsterHandles) != 1 {
+		t.Fatalf("expected dungeon instance to persist before one hour, got ok=%v state=%+v", ok, state)
+	}
+
+	now = now.Add(2 * time.Minute)
+	state, ok = store.EnsureRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceShuiliandong)
+	if !ok || state.CreatedAtUnix != now.Unix() || len(state.DefeatedVisibleMonsterHandles) != 0 {
+		t.Fatalf("expected dungeon instance to reset after one hour, got ok=%v state=%+v", ok, state)
 	}
 }
 

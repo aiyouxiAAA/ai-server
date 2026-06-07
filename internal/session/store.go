@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"ai-server/internal/guild"
 	"ai-server/internal/mall"
@@ -23,7 +24,11 @@ const (
 	defaultMallCap  = 30
 	defaultCopper   = 5000
 	defaultSilver   = 1
+
+	DungeonInstanceShuiliandong = "shuiliandong"
 )
+
+const dungeonInstanceTTL = time.Hour
 
 type RoleAppearance map[string]any
 
@@ -76,27 +81,33 @@ type LoginResponse struct {
 }
 
 type RoleSummary struct {
-	RoleID       string               `json:"roleId"`
-	DisplayName  string               `json:"displayName"`
-	Level        int                  `json:"level"`
-	Exp          int                  `json:"exp"`
-	Voc          string               `json:"voc,omitempty"`
-	AGI          int                  `json:"AGI,omitempty"`
-	STR          int                  `json:"STR,omitempty"`
-	INT          int                  `json:"INT,omitempty"`
-	CON          int                  `json:"CON,omitempty"`
-	LCK          int                  `json:"LCK,omitempty"`
-	MapID        int                  `json:"mapId"`
-	VisualRoleID int                  `json:"visualRoleId"`
-	PresetID     int                  `json:"presetId,omitempty"`
-	SourceQuery  string               `json:"sourceQuery,omitempty"`
-	Appearance   RoleAppearance       `json:"appearance,omitempty"`
-	Skills       []RoleSkill          `json:"skills,omitempty"`
-	FastPanel    []RoleFastPanelEntry `json:"fastPanel,omitempty"`
-	Currencies   RoleCurrencies       `json:"currencies,omitempty"`
-	Items        []RoleItem           `json:"items,omitempty"`
-	RoleState    *RoleState           `json:"-"`
-	RolePhysique *RolePhysique        `json:"-"`
+	RoleID           string                          `json:"roleId"`
+	DisplayName      string                          `json:"displayName"`
+	Level            int                             `json:"level"`
+	Exp              int                             `json:"exp"`
+	Voc              string                          `json:"voc,omitempty"`
+	AGI              int                             `json:"AGI,omitempty"`
+	STR              int                             `json:"STR,omitempty"`
+	INT              int                             `json:"INT,omitempty"`
+	CON              int                             `json:"CON,omitempty"`
+	LCK              int                             `json:"LCK,omitempty"`
+	MapID            int                             `json:"mapId"`
+	VisualRoleID     int                             `json:"visualRoleId"`
+	PresetID         int                             `json:"presetId,omitempty"`
+	SourceQuery      string                          `json:"sourceQuery,omitempty"`
+	Appearance       RoleAppearance                  `json:"appearance,omitempty"`
+	Skills           []RoleSkill                     `json:"skills,omitempty"`
+	FastPanel        []RoleFastPanelEntry            `json:"fastPanel,omitempty"`
+	Currencies       RoleCurrencies                  `json:"currencies,omitempty"`
+	Items            []RoleItem                      `json:"items,omitempty"`
+	RoleState        *RoleState                      `json:"-"`
+	RolePhysique     *RolePhysique                   `json:"-"`
+	DungeonInstances map[string]DungeonInstanceState `json:"-"`
+}
+
+type DungeonInstanceState struct {
+	CreatedAtUnix                 int64    `json:"createdAtUnix"`
+	DefeatedVisibleMonsterHandles []string `json:"defeatedVisibleMonsterHandles,omitempty"`
 }
 
 type RoleListRequest struct {
@@ -326,6 +337,7 @@ type Store struct {
 	nextRoleSeqByPID map[string]int
 	accountsByName   map[string]AccountRecord
 	db               *sql.DB
+	now              func() time.Time
 	Guilds           *guild.Service
 	Mall             *mall.Service
 	mallRequests     map[string]mall.PurchaseResult
@@ -358,6 +370,7 @@ func NewStore() *Store {
 				SessionToken: "mock-session-token-001",
 			},
 		},
+		now:          time.Now,
 		Guilds:       guild.NewMemoryService(),
 		Mall:         mall.NewService(),
 		mallRequests: make(map[string]mall.PurchaseResult),
@@ -601,9 +614,16 @@ func (store *Store) SelectRole(request RoleSelectRequest) RoleSelectResponse {
 			log.Printf("[session.Store] persist normalized role ids failed: %v", err)
 		}
 	}
-	for _, role := range store.rolesByPID[request.PlayerID] {
-		if role.RoleID == request.RoleID {
-			role = withRoleRuntimeDefaults(role)
+	roles := store.rolesByPID[request.PlayerID]
+	for index := range roles {
+		if roles[index].RoleID == request.RoleID {
+			if pruneExpiredDungeonInstances(&roles[index], store.now()) {
+				store.rolesByPID[request.PlayerID] = roles
+				if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
+					log.Printf("[session.Store] persist expired dungeon instances failed: %v", err)
+				}
+			}
+			role := withRoleRuntimeDefaults(roles[index])
 			return RoleSelectResponse{
 				Success:    true,
 				Role:       role,
@@ -646,6 +666,99 @@ func (store *Store) UpdateRoleMap(playerID string, roleID string, mapID int) (Ro
 	}
 
 	return RoleSummary{}, emptyPlayerBaseData(playerID), false
+}
+
+func (store *Store) EnsureRoleDungeonInstance(playerID string, roleID string, key string) (DungeonInstanceState, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return DungeonInstanceState{}, false
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		now := store.now()
+		if pruneExpiredDungeonInstances(&roles[index], now) {
+			store.rolesByPID[playerID] = roles
+		}
+		if roles[index].DungeonInstances == nil {
+			roles[index].DungeonInstances = map[string]DungeonInstanceState{}
+		}
+		state, ok := roles[index].DungeonInstances[key]
+		if !ok {
+			state = DungeonInstanceState{CreatedAtUnix: now.Unix()}
+			roles[index].DungeonInstances[key] = state
+		}
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist dungeon instance failed: %v", err)
+		}
+		return cloneDungeonInstanceState(state), true
+	}
+
+	return DungeonInstanceState{}, false
+}
+
+func (store *Store) MarkRoleDungeonVisibleMonsterDefeated(playerID string, roleID string, key string, handle string) (DungeonInstanceState, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	key = strings.TrimSpace(key)
+	handle = strings.TrimSpace(handle)
+	if key == "" || handle == "" {
+		return DungeonInstanceState{}, false
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		now := store.now()
+		pruneExpiredDungeonInstances(&roles[index], now)
+		if roles[index].DungeonInstances == nil {
+			roles[index].DungeonInstances = map[string]DungeonInstanceState{}
+		}
+		state := roles[index].DungeonInstances[key]
+		if state.CreatedAtUnix == 0 {
+			state.CreatedAtUnix = now.Unix()
+		}
+		if !containsString(state.DefeatedVisibleMonsterHandles, handle) {
+			state.DefeatedVisibleMonsterHandles = append(state.DefeatedVisibleMonsterHandles, handle)
+		}
+		roles[index].DungeonInstances[key] = state
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist defeated dungeon monster failed: %v", err)
+		}
+		return cloneDungeonInstanceState(state), true
+	}
+
+	return DungeonInstanceState{}, false
+}
+
+func pruneExpiredDungeonInstances(role *RoleSummary, now time.Time) bool {
+	if role == nil || len(role.DungeonInstances) == 0 {
+		return false
+	}
+	changed := false
+	for key, state := range role.DungeonInstances {
+		if state.CreatedAtUnix <= 0 || !now.Before(time.Unix(state.CreatedAtUnix, 0).Add(dungeonInstanceTTL)) {
+			delete(role.DungeonInstances, key)
+			changed = true
+		}
+	}
+	if len(role.DungeonInstances) == 0 {
+		role.DungeonInstances = nil
+	}
+	return changed
 }
 
 func (store *Store) GetRoleSkills(playerID string, roleID string) ([]RoleSkill, int, bool) {

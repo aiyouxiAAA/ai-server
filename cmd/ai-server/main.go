@@ -447,6 +447,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		for _, handle := range result.removeRoleHandles {
+			if err := socketWriter.writePush(cmdClassicTownRemoveRolePush, encodePayload(handle)); err != nil {
+				log.Printf("[ai-server] write classic town removeRole push failed: %v", err)
+				return
+			}
+		}
 		if result.battleStart == nil && result.battleCommand != nil {
 			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
 				log.Printf("[ai-server] write classic battle startCommand failed: %v", err)

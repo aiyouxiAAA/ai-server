@@ -224,6 +224,37 @@ func decodeRolePhysique(raw string) (*RolePhysique, error) {
 	return &rolePhysique, nil
 }
 
+func encodeDungeonInstances(instances map[string]DungeonInstanceState) (string, error) {
+	if len(instances) == 0 {
+		return "", nil
+	}
+	data, err := json.Marshal(instances)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func decodeDungeonInstances(raw string) (map[string]DungeonInstanceState, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var instances map[string]DungeonInstanceState
+	if err := json.Unmarshal([]byte(raw), &instances); err != nil {
+		return nil, err
+	}
+	result := make(map[string]DungeonInstanceState, len(instances))
+	for key, state := range instances {
+		normalizedKey := strings.TrimSpace(key)
+		if normalizedKey == "" {
+			continue
+		}
+		state.DefeatedVisibleMonsterHandles = normalizeStringList(state.DefeatedVisibleMonsterHandles)
+		result[normalizedKey] = state
+	}
+	return result, nil
+}
+
 func cloneRoleSkills(skills []RoleSkill) []RoleSkill {
 	if len(skills) == 0 {
 		return []RoleSkill{}
@@ -264,6 +295,55 @@ func cloneRoleItems(items []RoleItem) []RoleItem {
 	result := make([]RoleItem, len(items))
 	copy(result, items)
 	return result
+}
+
+func cloneDungeonInstanceState(state DungeonInstanceState) DungeonInstanceState {
+	state.DefeatedVisibleMonsterHandles = cloneStringList(state.DefeatedVisibleMonsterHandles)
+	return state
+}
+
+func cloneDungeonInstances(instances map[string]DungeonInstanceState) map[string]DungeonInstanceState {
+	if len(instances) == 0 {
+		return nil
+	}
+	result := make(map[string]DungeonInstanceState, len(instances))
+	for key, state := range instances {
+		result[key] = cloneDungeonInstanceState(state)
+	}
+	return result
+}
+
+func cloneStringList(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+	result := make([]string, len(values))
+	copy(result, values)
+	return result
+}
+
+func normalizeStringList(values []string) []string {
+	result := make([]string, 0, len(values))
+	seen := map[string]bool{}
+	for _, value := range values {
+		normalized := strings.TrimSpace(value)
+		if normalized == "" || seen[normalized] {
+			continue
+		}
+		seen[normalized] = true
+		result = append(result, normalized)
+	}
+	return result
+}
+
+func containsString(values []string, needle string) bool {
+	needle = strings.TrimSpace(needle)
+	for _, value := range values {
+		if strings.TrimSpace(value) == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeRoleSkill(skill RoleSkill) RoleSkill {
@@ -823,6 +903,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.Items = ensureStarterAxeItem(removeCapturedDefaultBagSeeds(normalizeRoleItems(role.Items)))
 	}
+	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
 	role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
 	role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
 	return role

@@ -58,6 +58,95 @@ func TestBuildOverUsesCapturedMap49RobberRewardWithExperience(t *testing.T) {
 	}
 }
 
+func TestBuildOverSuppressesExperienceWhenPlayerOutlevelsMonsterByMoreThanSeven(t *testing.T) {
+	over := (&Runtime{
+		BattleID: "battle-map49-overlevel",
+		MapID:    "49",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Handle: "player_21424", Camp: CampTeam, Level: 23},
+			{Handle: "enemy_1", Camp: CampEnemy, Level: 15},
+		},
+	}).buildOver(CampTeam)
+	if over.Result.ExpDelta != 0 {
+		t.Fatalf("expected player level 23 versus monster level 15 to suppress exp, got %d", over.Result.ExpDelta)
+	}
+	if len(over.Result.Items) != 2 || over.Result.Items[0] != "铜钱x5" || over.Result.Items[1] != "盗贼的首级x1" {
+		t.Fatalf("expected overlevel battle to keep item rewards, got %+v", over.Result.Items)
+	}
+}
+
+func TestBuildOverKeepsExperienceWhenPlayerIsOnlySevenLevelsAboveMonster(t *testing.T) {
+	over := (&Runtime{
+		BattleID: "battle-map49-boundary",
+		MapID:    "49",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Handle: "player_21424", Camp: CampTeam, Level: 22},
+			{Handle: "enemy_1", Camp: CampEnemy, Level: 15},
+		},
+	}).buildOver(CampTeam)
+	if over.Result.ExpDelta != 610 {
+		t.Fatalf("expected player level 22 versus monster level 15 to keep exp 610, got %d", over.Result.ExpDelta)
+	}
+}
+
+func TestBuildOverUsesCapturedCracktoadVisibleBossReward(t *testing.T) {
+	plainMap143 := (&Runtime{BattleID: "battle-map143", MapID: "143", Round: 1}).buildOver(CampTeam)
+	if plainMap143.Result.ExpDelta != 0 || len(plainMap143.Result.Items) != 0 {
+		t.Fatalf("expected map143 without visible boss handle to stay empty, got %+v", plainMap143.Result)
+	}
+
+	over := (&Runtime{
+		BattleID:            "battle-cracktoad",
+		MapID:               "143",
+		SourceMonsterHandle: "5176206909809579",
+		Round:               1,
+	}).buildOver(CampTeam)
+	if over == nil {
+		t.Fatal("expected OverBattle push")
+	}
+	expectedItems := []string{"毒囊x5", "肉x1", "黏液x1", "蛤蟆精战靴x1", "铜钱x50", "金元散x1"}
+	if over.Result.ExpDelta != 0 {
+		t.Fatalf("expected captured cracktoad reward exp 0, got %d", over.Result.ExpDelta)
+	}
+	if len(over.Result.Items) != len(expectedItems) {
+		t.Fatalf("expected cracktoad reward items %+v, got %+v", expectedItems, over.Result.Items)
+	}
+	for index, item := range expectedItems {
+		if over.Result.Items[index] != item {
+			t.Fatalf("expected cracktoad reward item %d to be %q, got %+v", index, item, over.Result.Items)
+		}
+	}
+}
+
+func TestBuildOverUsesCapturedShuiliandongVisibleMonsterBaseRewards(t *testing.T) {
+	testCases := []struct {
+		mapID  string
+		handle string
+		item   string
+	}{
+		{mapID: "131", handle: "8128205778897212", item: "黏液x1"},
+		{mapID: "143", handle: "5166206909805441", item: "黏液x1"},
+		{mapID: "145", handle: "2890206197338884", item: "毒囊x1"},
+	}
+
+	for _, testCase := range testCases {
+		over := (&Runtime{
+			BattleID:            "battle-shuiliandong-visible",
+			MapID:               testCase.mapID,
+			SourceMonsterHandle: testCase.handle,
+			Round:               1,
+		}).buildOver(CampTeam)
+		if over == nil {
+			t.Fatalf("expected OverBattle push for %+v", testCase)
+		}
+		if len(over.Result.Items) != 1 || over.Result.Items[0] != testCase.item {
+			t.Fatalf("expected shuiliandong visible monster %+v reward %q, got %+v", testCase, testCase.item, over.Result.Items)
+		}
+	}
+}
+
 func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	enemy, ok := sourceEnemyConfigForMap("49")
 	if !ok {
@@ -81,6 +170,53 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 		t.Fatalf("expected captured map4 queue indexes 0/0, got %+v", map4)
 	}
 
+	visibleBoss, ok := sourceVisibleMonsterConfigForHandle("143", "5176206909809579")
+	if !ok {
+		t.Fatal("expected captured shuiliandong visible boss config")
+	}
+	if visibleBoss.Cell.Name != "蛤蟆精" || visibleBoss.Cell.DisplayURL != "monstermap/cracktoad.swf" {
+		t.Fatalf("expected cracktoad visible boss config, got %+v", visibleBoss.Cell)
+	}
+	if visibleBoss.Cell.Level != 20 || visibleBoss.Cell.MaxHP != 1500 || visibleBoss.Cell.MaxMP != 564 {
+		t.Fatalf("expected captured cracktoad level/hp/mp, got %+v", visibleBoss.Cell)
+	}
+	if visibleBoss.Cell.Attack != 240 {
+		t.Fatalf("expected captured cracktoad base attack 240 from normal-attack HP deltas, got %+v", visibleBoss.Cell)
+	}
+	if visibleBoss.QueueIndexTeam != 1 || visibleBoss.QueueIndexEnemy != 4 {
+		t.Fatalf("expected visible monster queue indexes 1/4, got %+v", visibleBoss)
+	}
+
+	visibleAttackCases := []struct {
+		mapID  string
+		handle string
+		name   string
+		level  int
+		attack int
+		label  string
+	}{
+		{mapID: "131", handle: "8128205778897212", name: "武斗蛤蟆", level: 12, attack: 208, label: "普通攻击"},
+		{mapID: "132", handle: "1656205827185847", name: "武斗蛤蟆", level: 13, attack: 230, label: "普通攻击"},
+		{mapID: "133", handle: "8112205902790159", name: "武斗蛤蟆", level: 14, attack: 234, label: "普通攻击"},
+		{mapID: "144", handle: "2762206074545916", name: "武斗蛤蟆", level: 16, attack: 205, label: "普通攻击"},
+		{mapID: "140", handle: "8430206376341780", name: "武斗蛤蟆", level: 17, attack: 211, label: "普通攻击"},
+		{mapID: "137", handle: "4889205982270617", name: "剑术蛤蟆", level: 15, attack: 246, label: "普通攻击"},
+		{mapID: "144", handle: "2768206074548639", name: "剑术蛤蟆", level: 17, attack: 244, label: "普通攻击"},
+		{mapID: "145", handle: "2890206197338884", name: "剑术蛤蟆", level: 18, attack: 220, label: "普通攻击"},
+		{mapID: "143", handle: "5172206909807859", name: "剑术蛤蟆", level: 18, attack: 121, label: "普通攻击"},
+		{mapID: "137", handle: "4895205982272135", name: "法术蛤蟆", level: 16, attack: 202, label: "法术普通攻击"},
+		{mapID: "143", handle: "5166206909805441", name: "法术蛤蟆", level: 17, attack: 143, label: "法术普通攻击"},
+	}
+	for _, testCase := range visibleAttackCases {
+		config, ok := sourceVisibleMonsterConfigForHandle(testCase.mapID, testCase.handle)
+		if !ok {
+			t.Fatalf("expected captured shuiliandong visible monster config for %s/%s", testCase.mapID, testCase.handle)
+		}
+		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.Attack != testCase.attack || config.Cell.CommandLabel != testCase.label {
+			t.Fatalf("expected captured visible monster %+v, got %+v", testCase, config.Cell)
+		}
+	}
+
 	reward, ok := sourceBattleRewardConfigForMap("5")
 	if !ok {
 		t.Fatal("expected map5 battle reward config")
@@ -95,6 +231,14 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	}
 	if map49Reward.Status != "confirmed" || map49Reward.ExpDelta != 610 || len(map49Reward.Items) != 2 {
 		t.Fatalf("expected confirmed captured map49 reward config, got %+v", map49Reward)
+	}
+
+	cracktoadReward, ok := sourceBattleRewardConfigForEncounter("143", "5176206909809579")
+	if !ok {
+		t.Fatal("expected cracktoad visible boss reward config")
+	}
+	if cracktoadReward.SourceMonsterHandle != "5176206909809579" || cracktoadReward.ExpDelta != 0 || len(cracktoadReward.Items) != 6 {
+		t.Fatalf("expected captured cracktoad visible boss reward config, got %+v", cracktoadReward)
 	}
 
 	map50Configs := sourceEnemyConfigsForMap("50")
@@ -113,6 +257,109 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 				t.Fatalf("expected captured enemy attack to be filled for map %s, got %+v", mapID, config.Cell)
 			}
 		}
+	}
+}
+
+func TestVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T) {
+	cases := []struct {
+		mapID   string
+		handle  string
+		handles []string
+		names   []string
+	}{
+		{
+			mapID:   "144",
+			handle:  "2766206074547838",
+			handles: []string{"2762206074545916", "2764206074546810", "2766206074547838"},
+			names:   []string{"武斗蛤蟆", "武斗蛤蟆", "武斗蛤蟆"},
+		},
+		{
+			mapID:   "141",
+			handle:  "4716206556987104",
+			handles: []string{"4714206556986370", "4716206556987104"},
+			names:   []string{"剑术蛤蟆", "剑术蛤蟆"},
+		},
+		{
+			mapID:   "143",
+			handle:  "5176206909809579",
+			handles: []string{"5168206909805631", "5170206909806155", "5176206909809579"},
+			names:   []string{"法术蛤蟆", "法术蛤蟆", "蛤蟆精"},
+		},
+	}
+
+	for _, testCase := range cases {
+		configs, ok := sourceVisibleMonsterConfigsForHandle(testCase.mapID, testCase.handle)
+		if !ok {
+			t.Fatalf("expected captured visible encounter group for %+v", testCase)
+		}
+		if len(configs) != len(testCase.handles) {
+			t.Fatalf("expected captured visible encounter group %+v, got %+v", testCase.handles, configs)
+		}
+		for index, expectedHandle := range testCase.handles {
+			if configs[index].Cell.Handle != expectedHandle || configs[index].Cell.Name != testCase.names[index] {
+				t.Fatalf("expected captured visible encounter member %d %s/%s, got %+v", index, expectedHandle, testCase.names[index], configs[index].Cell)
+			}
+		}
+	}
+}
+
+func TestNewWildBattleUsesCapturedVisibleMonsterEncounterGroup(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "player_21424",
+		DisplayName: "恐龙抗狼1",
+		Level:       23,
+		SourceQuery: "human/human.swf?a=4&w8=42&",
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:    "player",
+		RoleID:      role.RoleID,
+		DisplayName: role.DisplayName,
+		Level:       23,
+		HP:          1045,
+		MP:          264,
+		MaxHP:       1045,
+		MaxMP:       264,
+		SourceQuery: role.SourceQuery,
+		RolePhysique: &session.RolePhysique{
+			Handle: role.RoleID,
+			MaxHP:  1045,
+			MaxMP:  264,
+			PhyAtk: 145,
+			PhyDef: 158,
+			MgcDef: 30,
+			Hit:    201,
+			Dog:    115,
+			Fat:    156,
+		},
+	}
+
+	runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{
+		MapID:               "143",
+		MapName:             "水帘洞_13",
+		SourceMonsterHandle: "5176206909809579",
+	})
+
+	if !ok || runtime == nil {
+		t.Fatalf("expected visible monster group battle runtime, got ok=%v runtime=%+v", ok, runtime)
+	}
+	if len(bundle.Cells) != 4 {
+		t.Fatalf("expected player plus captured boss encounter group, got %+v", bundle.Cells)
+	}
+	expectedEnemyHandles := []string{"5168206909805631", "5170206909806155", "5176206909809579"}
+	for index, expectedHandle := range expectedEnemyHandles {
+		cell := bundle.Cells[index+1]
+		if cell.Handle != expectedHandle {
+			t.Fatalf("expected captured enemy handle %s without synthetic suffix, got %+v", expectedHandle, cell)
+		}
+		if cell.Camp != CampEnemy {
+			t.Fatalf("expected captured enemy camp for %s, got %+v", expectedHandle, cell)
+		}
+	}
+	if bundle.Cells[1].Name != "法术蛤蟆" || bundle.Cells[3].Name != "蛤蟆精" || bundle.Cells[3].MaxHP != 1500 {
+		t.Fatalf("expected captured boss group cell stats, got %+v", bundle.Cells)
+	}
+	if bundle.Start.EncounterLabel != "水帘洞_13 首领" {
+		t.Fatalf("expected visible boss group to keep boss encounter label, got %+v", bundle.Start)
 	}
 }
 
@@ -165,13 +412,166 @@ func TestProcessEscapeQueuesSourceActionBeforeOver(t *testing.T) {
 	if runtime.PendingOver == nil || runtime.Phase != PhasePlaying {
 		t.Fatalf("expected pending over while escape animation plays, runtime=%+v", runtime)
 	}
-	if runtime.powerFor("player_21424") != 0 {
-		t.Fatalf("expected escape to clear stored power, got %d", runtime.powerFor("player_21424"))
+	if runtime.StoredPower["player_21424"] != 0 {
+		t.Fatalf("expected escape to clear stored power, got %d", runtime.StoredPower["player_21424"])
 	}
 
 	playOver := runtime.ProcessPlayOver(PlayOverRequest{BattleID: "battle-escape"})
 	if playOver.Over == nil || playOver.Over.Winner != CampEnemy || !playOver.Over.Result.Escaped {
 		t.Fatalf("expected escaped over after play over, got %+v", playOver)
+	}
+}
+
+func TestEnemyHitSetsStoredPowerFromSingleHPLossPercent(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-hit-power",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-hit-power",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   1,
+				Hit:      100,
+			},
+			{
+				BattleID: "battle-hit-power",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       120,
+				MaxHP:    120,
+				Attack:   250,
+				Hit:      100,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-hit-power",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandNormalAttack,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected normal attack to resolve, got %+v", result)
+	}
+	if runtime.PendingStart == nil || runtime.PendingStart.Power != 3 || runtime.powerFor("player_21424") != 3 {
+		t.Fatalf("expected enemy one stored power to raise 250 hit to 300 and set stored power 3, pending=%+v stored=%d", runtime.PendingStart, runtime.powerFor("player_21424"))
+	}
+}
+
+func TestEnemyHitByPlayerStoresPowerAndConsumesItOnEnemyTurn(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-enemy-hit-power",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-enemy-hit-power",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   250,
+				Hit:      100,
+			},
+			{
+				BattleID: "battle-enemy-hit-power",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   100,
+				Hit:      100,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-enemy-hit-power",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandNormalAttack,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" || len(result.Actions) < 2 {
+		t.Fatalf("expected player action followed by enemy action, got %+v", result)
+	}
+	if result.Actions[0].Damage != 300 {
+		t.Fatalf("expected player one stored power to deal 300 damage, got %+v", result.Actions[0])
+	}
+	if result.Actions[1].Damage != 160 {
+		t.Fatalf("expected enemy to use 3 stored power from 300/1000 HP loss, got %+v", result.Actions[1])
+	}
+	if runtime.StoredPower["enemy_1"] != 0 {
+		t.Fatalf("expected enemy stored power to clear after attacking, got %d", runtime.StoredPower["enemy_1"])
+	}
+}
+
+func TestStorePowerSurvivesLighterEnemyHit(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-store-hit-power",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{"player_21424": 1},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-store-hit-power",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   1,
+				Hit:      100,
+			},
+			{
+				BattleID: "battle-store-hit-power",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       120,
+				MaxHP:    120,
+				Attack:   5,
+				Hit:      100,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-store-hit-power",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandStore,
+		TargetHandle: "player_21424",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected store to resolve, got %+v", result)
+	}
+	if runtime.PendingStart == nil || runtime.PendingStart.Power != 2 || runtime.powerFor("player_21424") != 2 {
+		t.Fatalf("expected stored power 2 to survive lighter enemy hit, pending=%+v stored=%d", runtime.PendingStart, runtime.powerFor("player_21424"))
 	}
 }
 
@@ -221,6 +621,9 @@ func TestNewWildBattleUsesRoleStateAndPhysiqueForTeamCell(t *testing.T) {
 	}
 	if len(bundle.Cells) == 0 {
 		t.Fatalf("expected start cells, got %+v", bundle.Cells)
+	}
+	if bundle.StartCommand.Power != 1 {
+		t.Fatalf("expected first player command to start with one stored power, got %+v", bundle.StartCommand)
 	}
 	team := bundle.Cells[0]
 	if team.MaxHP != 225 || team.MaxMP != 64 || team.Attack != 47 || team.Defense != 24 || team.Fat != 14 || team.Speed != 130 {
@@ -498,6 +901,97 @@ func TestNewWildBattleRandomizesCapturedNormalEnemyCountButKeepsBossFixed(t *tes
 	}
 }
 
+func TestNewWildBattleUsesCapturedVisibleMonsterHandle(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "player_21424",
+		DisplayName: "恐龙抗狼1",
+		Level:       23,
+		MapID:       143,
+		SourceQuery: "human/human.swf?w1=1&",
+	}
+	playerBase := session.PlayerBaseData{
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        143,
+		SourceQuery:  role.SourceQuery,
+		MaxHP:        1045,
+		HP:           1045,
+		MaxMP:        264,
+		MP:           264,
+		RolePhysique: &session.RolePhysique{PhyAtk: 145, PhyDef: 122},
+	}
+
+	runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{
+		MapID:               "143",
+		MapName:             "水帘洞_10",
+		StageFocusX:         2070,
+		SourceMonsterHandle: "5176206909809579",
+	})
+	if !ok || runtime == nil {
+		t.Fatal("expected captured visible monster battle to start")
+	}
+	if runtime.SourceMonsterHandle != "5176206909809579" {
+		t.Fatalf("expected runtime to retain visible monster handle, got %+v", runtime)
+	}
+	if bundle.Start.EncounterLabel != "水帘洞_10 首领" {
+		t.Fatalf("expected visible boss encounter label, got %q", bundle.Start.EncounterLabel)
+	}
+	if len(bundle.Cells) != 4 {
+		t.Fatalf("expected player plus captured visible boss group cells, got %+v", bundle.Cells)
+	}
+	if bundle.Cells[1].Handle != "5168206909805631" || bundle.Cells[2].Handle != "5170206909806155" {
+		t.Fatalf("expected captured cracktoad helper cells, got %+v", bundle.Cells)
+	}
+	enemy := bundle.Cells[3]
+	if enemy.Handle != "5176206909809579" || enemy.Name != "蛤蟆精" {
+		t.Fatalf("expected captured cracktoad enemy, got %+v", enemy)
+	}
+	if enemy.MaxHP != 1500 || enemy.MaxMP != 564 || enemy.DisplayURL != "monstermap/cracktoad.swf" {
+		t.Fatalf("expected captured cracktoad stats, got %+v", enemy)
+	}
+}
+
+func TestNewWildBattleBattleIDChangesBetweenStarts(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "player_21424",
+		DisplayName: "恐龙抗狼1",
+		Level:       23,
+		MapID:       144,
+		SourceQuery: "human/human.swf?w1=1&",
+	}
+	playerBase := session.PlayerBaseData{
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        144,
+		SourceQuery:  role.SourceQuery,
+		MaxHP:        1045,
+		HP:           1045,
+		MaxMP:        264,
+		MP:           264,
+		RolePhysique: &session.RolePhysique{PhyAtk: 145, PhyDef: 122, Hit: 100},
+	}
+	request := StartRequest{
+		MapID:               "144",
+		MapName:             "水帘洞_5",
+		StageFocusX:         2070,
+		SourceMonsterHandle: "2762206074545916",
+	}
+
+	_, firstBundle, firstOK := NewWildBattle(role, playerBase, request)
+	_, secondBundle, secondOK := NewWildBattle(role, playerBase, request)
+	if !firstOK || !secondOK {
+		t.Fatalf("expected both captured visible monster battles to start, first=%v second=%v", firstOK, secondOK)
+	}
+	if firstBundle.Start.BattleID == secondBundle.Start.BattleID {
+		t.Fatalf("expected battle id to vary between repeated visible monster starts, got %q", firstBundle.Start.BattleID)
+	}
+	if firstBundle.Cells[1].Handle != secondBundle.Cells[1].Handle {
+		t.Fatalf("expected captured visible monster group to stay source-backed while battle id changes, first=%+v second=%+v", firstBundle.Cells, secondBundle.Cells)
+	}
+}
+
 func TestProcessActionQueuesAllLivingCapturedEnemies(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int {
 		return maxExclusive - 1
@@ -620,8 +1114,8 @@ func TestResolveAttackCriticalFatDoublesDamageAndSendsSourceStateCode(t *testing
 
 	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
 
-	if action.Damage != 94 || action.TargetHP != 26 {
-		t.Fatalf("expected critical to double base damage 47 to 94, got %+v", action)
+	if action.Damage != 112 || action.TargetHP != 8 {
+		t.Fatalf("expected one stored power to raise base damage 47 by 20%% before critical, got %+v", action)
 	}
 	if action.TargetActionState != "fat" || action.TargetActionStateCode != "2" {
 		t.Fatalf("expected source fat target action state code 2, got %+v", action)
@@ -652,11 +1146,38 @@ func TestResolveAttackNormalUsesSourceStateCodeZero(t *testing.T) {
 
 	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
 
-	if action.Damage != 47 || action.TargetHP != 73 {
-		t.Fatalf("expected normal damage 47, got %+v", action)
+	if action.Damage != 56 || action.TargetHP != 64 {
+		t.Fatalf("expected one stored power to raise normal damage 47 by 20%%, got %+v", action)
 	}
 	if action.TargetActionState != "normal" || action.TargetActionStateCode != "0" {
 		t.Fatalf("expected source normal target action state code 0, got %+v", action)
+	}
+}
+
+func TestResolveAttackAppliesStoredPowerDamageBonus(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-power-damage",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{"player_21424": 2},
+	}
+	actor := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		Attack: 47,
+	}
+	target := &CellInfoPush{
+		Handle: "enemy_1",
+		Camp:   CampEnemy,
+		MaxHP:  120,
+		HP:     120,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.Damage != 66 || action.TargetHP != 54 {
+		t.Fatalf("expected two stored power to raise damage 47 by 40%%, got %+v", action)
 	}
 }
 
@@ -744,8 +1265,8 @@ func TestResolveMiZhanConsumesSourceMpCostAndSendsActorRefresh(t *testing.T) {
 	if action.ActionName != "密斩" || action.SourceActionLabel != "w8/manycut" {
 		t.Fatalf("expected captured w8/manycut action for 密斩, got %+v", action)
 	}
-	if action.Damage != 66 || action.TargetHP != 54 {
-		t.Fatalf("expected captured 密斩 +40%% damage from 47 attack, got %+v", action)
+	if action.Damage != 79 || action.TargetHP != 41 {
+		t.Fatalf("expected captured 密斩 +40%% damage plus one stored power, got %+v", action)
 	}
 	if actor.MP != 59 {
 		t.Fatalf("expected 密斩 to consume source 精力 cost 5, got actor MP=%d action=%+v", actor.MP, action)
@@ -874,7 +1395,7 @@ func TestProcessActionAllowsLearnedCapturedSkill(t *testing.T) {
 	if action.ActionName != "多段斩" || action.SourceActionLabel != "w8/ddz1" {
 		t.Fatalf("expected captured 多段斩 Lv2 action, got %+v", action)
 	}
-	if action.Damage != 75 || action.TargetHP != 45 || action.RefreshInfos[0].MP != 54 {
+	if action.Damage != 90 || action.TargetHP != 30 || action.RefreshInfos[0].MP != 54 {
 		t.Fatalf("expected learned 多段斩 Lv2 to damage and consume MP, got %+v", action)
 	}
 }
@@ -923,6 +1444,22 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 0.96,
 			chance:     86,
 			ratio:      0.7,
+		},
+		{
+			name:       "红月斩",
+			level:      1,
+			desc:       "f_s_红月斩^ffffff&9@群体·攻击&8@战士 &10@单刀&22@战斗&2@40&4@对所有敌人造成72%的物理伤害",
+			label:      "w8/redMoonAtk",
+			mpCost:     40,
+			multiplier: 0.72,
+		},
+		{
+			name:       "血切",
+			level:      1,
+			desc:       "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)",
+			label:      "w8/cutBlood",
+			mpCost:     19,
+			multiplier: 0.3,
 		},
 	}
 
@@ -1000,6 +1537,18 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_狂爆^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@15&4@3回合内物理攻击力翻倍&0;并降低100%的物理防御",
 		},
 		{
+			Name:        "红月斩",
+			Level:       1,
+			Type:        "all",
+			Description: "f_s_红月斩^ffffff&9@群体·攻击&8@战士 &10@单刀&22@战斗&2@40&4@对所有敌人造成72%的物理伤害",
+		},
+		{
+			Name:        "血切",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)",
+		},
+		{
 			Name: "未抓包技能",
 			Type: "oneE",
 		},
@@ -1023,6 +1572,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if command := byID[CommandKuangBao]; command.Label != "狂爆" || command.SourceType != "own" || command.Target != "self" || command.SourceActionLabel != "w8/kb" || command.MPCost != 15 || command.DamageMultiplier != 0 {
 		t.Fatalf("expected captured 狂爆 self status command, got %+v", command)
+	}
+	if command := byID[CommandHongYueZhan]; command.Label != "红月斩" || command.SourceType != "all" || command.Target != "enemy" || command.SourceActionLabel != "w8/redMoonAtk" || command.MPCost != 40 || command.DamageMultiplier != 0.72 {
+		t.Fatalf("expected captured 红月斩 all-target command, got %+v", command)
+	}
+	if command := byID[CommandXueQie]; command.Label != "血切" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/cutBlood" || command.MPCost != 19 || command.DamageMultiplier != 0.3 {
+		t.Fatalf("expected captured 血切 single-target command, got %+v", command)
 	}
 	if _, ok := byID["未抓包技能"]; ok {
 		t.Fatalf("expected uncaptured skill to be omitted, got %+v", commands)
@@ -1068,11 +1623,102 @@ func TestResolveDuoDuanZhanUsesCapturedLevelProfileAndCanFat(t *testing.T) {
 	if action.ActionName != "多段斩" || action.SourceActionLabel != "w8/ddz2" {
 		t.Fatalf("expected captured 多段斩 Lv3 label, got %+v", action)
 	}
-	if action.Damage != 330 || action.TargetHP != 122 || action.TargetActionStateCode != "2" {
-		t.Fatalf("expected Lv3 多段斩 165 damage doubled by fat, got %+v", action)
+	if action.Damage != 396 || action.TargetHP != 56 || action.TargetActionStateCode != "2" {
+		t.Fatalf("expected Lv3 多段斩 damage to include one stored power before fat, got %+v", action)
 	}
 	if actor.MP != 182 || action.RefreshInfos[0].MP != 182 {
 		t.Fatalf("expected 多段斩 Lv3 to consume MP 12, got actor=%+v action=%+v", actor, action)
+	}
+}
+
+func TestHongYueZhanHitsAllLivingEnemiesAndConsumesMPOnce(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-hongyue",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "红月斩",
+				Level:       1,
+				Type:        "all",
+				Description: "f_s_红月斩^ffffff&9@群体·攻击&8@战士 &10@单刀&22@战斗&2@40&4@对所有敌人造成72%的物理伤害",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-hongyue",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Defense:  0,
+				Hit:      100,
+				Fat:      0,
+			},
+			{
+				BattleID: "battle-hongyue",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+			{
+				BattleID: "battle-hongyue",
+				Handle:   "enemy_2",
+				Camp:     CampEnemy,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-hongyue",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandHongYueZhan,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 红月斩 to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 红月斩 to emit one all-target action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "红月斩" || action.SourceMode != "1" || action.SourceActionLabel != "w8/redMoonAtk" || action.TargetHandle != "all" {
+		t.Fatalf("expected 红月斩 source all-target action, got %+v", action)
+	}
+	if len(action.TargetActionResults) != 2 || action.TargetActionResults[0].Handle != "enemy_1" || action.TargetActionResults[1].Handle != "enemy_2" {
+		t.Fatalf("expected 红月斩 to carry target result pairs, got %+v", action.TargetActionResults)
+	}
+	for _, expectedHandle := range []string{"enemy_1", "enemy_2"} {
+		target := runtime.cellByHandle(expectedHandle)
+		if target == nil || target.HP != 414 {
+			t.Fatalf("expected 红月斩 Lv1 captured damage against %s, got target=%+v action=%+v", expectedHandle, target, action)
+		}
+	}
+	if len(action.RefreshInfos) != 3 || action.RefreshInfos[0].Handle != "player_21424" || action.RefreshInfos[1].Handle != "enemy_1" || action.RefreshInfos[2].Handle != "enemy_2" {
+		t.Fatalf("expected 红月斩 to refresh actor once and both targets, got %+v", action.RefreshInfos)
+	}
+	actor := runtime.cellByHandle("player_21424")
+	if actor == nil || actor.MP != 60 {
+		t.Fatalf("expected 红月斩 to consume MP 40 once, got actor=%+v", actor)
 	}
 }
 
@@ -1135,8 +1781,8 @@ func TestKuangBaoUsesCapturedSelfBuffFormula(t *testing.T) {
 	if actor == nil || actor.MP != 49 {
 		t.Fatalf("expected 狂爆 to consume source MP 15, got actor=%+v", actor)
 	}
-	if !runtime.hasKuangBao("player_21424") || runtime.StatusEffects["player_21424"].KuangBaoRounds != 3 {
-		t.Fatalf("expected 狂爆 3-round status, got %+v", runtime.StatusEffects)
+	if !runtime.hasKuangBao("player_21424") || runtime.StatusEffects["player_21424"].KuangBaoRounds != 2 {
+		t.Fatalf("expected 狂爆 status to advance to 2 rounds for the next startCommand, got %+v", runtime.StatusEffects)
 	}
 	if len(result.Actions) < 1 || result.Actions[0].ActionName != "狂爆" || result.Actions[0].SourceActionLabel != "w8/kb" {
 		t.Fatalf("expected captured 狂爆 self action, got %+v", result.Actions)
@@ -1148,13 +1794,24 @@ func TestKuangBaoUsesCapturedSelfBuffFormula(t *testing.T) {
 	target := runtime.cellByHandle("enemy_1")
 	target.HP = 500
 	attack := runtime.resolveAttack(actor, target, CommandNormalAttack)
-	if attack.Damage != 100 || attack.SourceActionLabel != "nomalAtk" || runtime.StatusEffects["player_21424"].KuangBaoRounds != 2 {
-		t.Fatalf("expected 狂爆 to double attack while keeping captured normal attack label, got action=%+v effects=%+v", attack, runtime.StatusEffects)
+	if attack.Damage != 120 || attack.SourceActionLabel != "nomalAtk" || runtime.StatusEffects["player_21424"].KuangBaoRounds != 2 {
+		t.Fatalf("expected 狂爆 to double attack without consuming rounds on hit, got action=%+v effects=%+v", attack, runtime.StatusEffects)
 	}
 
 	defenseProbe := runtime.resolveAttack(target, actor, CommandEnemyAttack)
-	if defenseProbe.Damage != 30 {
-		t.Fatalf("expected 狂爆 to reduce physical defense by 100%%, got %+v", defenseProbe)
+	if defenseProbe.Damage != 42 {
+		t.Fatalf("expected enemy one stored power to apply after 狂爆 reduces physical defense by 100%%, got %+v", defenseProbe)
+	}
+
+	runtime.advanceKuangBaoRound("player_21424")
+	runtime.advanceKuangBaoRound("player_21424")
+	if runtime.hasKuangBao("player_21424") {
+		t.Fatalf("expected 狂爆 to expire on startCommand round advance, got %+v", runtime.StatusEffects)
+	}
+	target.HP = 500
+	expiredAttack := runtime.resolveAttack(actor, target, CommandNormalAttack)
+	if expiredAttack.Damage != 60 {
+		t.Fatalf("expected expired 狂爆 to stop modifying attack damage, got %+v", expiredAttack)
 	}
 }
 
@@ -1196,16 +1853,16 @@ func TestResolveShiXueZhanLifeStealUsesActualDamage(t *testing.T) {
 	if action.ActionName != "嗜血斩" || action.SourceActionLabel != "w8/xyz1" {
 		t.Fatalf("expected captured 嗜血斩 Lv1 label, got %+v", action)
 	}
-	if action.Damage != 124 || action.TargetHP != 321 {
-		t.Fatalf("expected 92%% physical damage from 135 attack, got %+v", action)
+	if action.Damage != 149 || action.TargetHP != 296 {
+		t.Fatalf("expected 92%% physical damage plus one stored power from 135 attack, got %+v", action)
 	}
 	if actor.MP != 146 {
 		t.Fatalf("expected 嗜血斩 Lv1 to consume MP 24, got actor=%+v", actor)
 	}
-	if actor.HP != 495 {
-		t.Fatalf("expected lifesteal floor(124*0.7)=86 to restore HP 409->495, got actor=%+v action=%+v", actor, action)
+	if actor.HP != 513 {
+		t.Fatalf("expected lifesteal floor(149*0.7)=104 to restore HP 409->513, got actor=%+v action=%+v", actor, action)
 	}
-	if action.RefreshInfos[0].Handle != actor.Handle || action.RefreshInfos[0].HP != 495 || action.RefreshInfos[0].MP != 146 {
+	if action.RefreshInfos[0].Handle != actor.Handle || action.RefreshInfos[0].HP != 513 || action.RefreshInfos[0].MP != 146 {
 		t.Fatalf("expected actor HP/MP refresh from 嗜血斩, got %+v", action.RefreshInfos)
 	}
 }
@@ -1280,8 +1937,8 @@ func TestBattleEnemySlideCutUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "滑行斩" || action.SourceActionLabel != "slideCut" {
 		t.Fatalf("expected captured enemy slideCut action, got %+v", action)
 	}
-	if action.Damage != 47 || action.TargetHP != 678 {
-		t.Fatalf("expected slideCut to use current physical damage path, got %+v", action)
+	if action.Damage != 56 || action.TargetHP != 669 {
+		t.Fatalf("expected slideCut to use current physical damage path plus one stored power, got %+v", action)
 	}
 	if actor.MP != 184 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 184 {
 		t.Fatalf("expected slideCut to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
@@ -1316,11 +1973,106 @@ func TestBattleEnemyShadeCutUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "影刃" || action.SourceActionLabel != "shadeCut" {
 		t.Fatalf("expected captured enemy shadeCut action, got %+v", action)
 	}
-	if action.Damage != 260 || action.TargetHP != 465 {
-		t.Fatalf("expected shadeCut to use current physical damage path, got %+v", action)
+	if action.Damage != 312 || action.TargetHP != 413 {
+		t.Fatalf("expected shadeCut to use current physical damage path plus one stored power, got %+v", action)
 	}
 	if actor.MP != 294 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 294 {
 		t.Fatalf("expected shadeCut to consume captured MP cost 40, got actor=%+v action=%+v", actor, action)
+	}
+}
+
+func TestBattleEnemyHelixAtkUsesCapturedLabelAndMPCost(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-enemy-helix",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "5176206909809579",
+		Camp:       CampEnemy,
+		Name:       "蛤蟆精",
+		DisplayURL: "monstermap/cracktoad.swf",
+		Attack:     240,
+		MaxMP:      564,
+		MP:         564,
+	}
+	target := &CellInfoPush{
+		Handle:  "player_21424",
+		Camp:    CampTeam,
+		MaxHP:   1045,
+		HP:      1045,
+		Defense: 158,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandEnemyHelixAtk)
+
+	if action.ActionName != "螺旋锤杀" || action.SourceActionLabel != "helixAtk" {
+		t.Fatalf("expected captured cracktoad helixAtk action, got %+v", action)
+	}
+	if action.Damage != 191 || action.TargetHP != 854 {
+		t.Fatalf("expected helixAtk to use captured 1.32x damage path plus one stored power, got %+v", action)
+	}
+	if actor.MP != 554 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 554 {
+		t.Fatalf("expected helixAtk to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
+	}
+}
+
+func TestMagicpandaEnemyNormalAttackUsesCapturedBroadcastName(t *testing.T) {
+	visibleMonster, ok := sourceVisibleMonsterConfigForHandle("143", "5166206909805441")
+	if !ok {
+		t.Fatal("expected captured magicpanda visible monster config")
+	}
+	runtime := &Runtime{
+		BattleID:         "battle-magicpanda-normal",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := visibleMonster.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
+	target := &CellInfoPush{
+		Handle:     "player_21424",
+		Camp:       CampTeam,
+		MaxHP:      1045,
+		HP:         1045,
+		Defense:    158,
+		MgcDefense: 30,
+	}
+
+	action := runtime.resolveAttack(&actor, target, CommandEnemyAttack)
+
+	if action.ActionName != "法术普通攻击" || action.SourceActionLabel != "nomalAtk" {
+		t.Fatalf("expected magicpanda normal attack to use CSV command_label while keeping source animation, config=%+v action=%+v", visibleMonster.Cell, action)
+	}
+	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 136 || action.TargetHP != 909 {
+		t.Fatalf("expected magicpanda normal attack to use captured magic-defense damage path plus one stored power, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
+	}
+}
+
+func TestMap143SwordpandaNormalAttackUsesCapturedDirectDamage(t *testing.T) {
+	visibleMonster, ok := sourceVisibleMonsterConfigForHandle("143", "5172206909807859")
+	if !ok {
+		t.Fatal("expected captured map143 swordpanda visible monster config")
+	}
+	runtime := &Runtime{
+		BattleID:         "battle-swordpanda-direct",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := visibleMonster.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
+	target := &CellInfoPush{
+		Handle:  "player_21424",
+		Camp:    CampTeam,
+		MaxHP:   1045,
+		HP:      1045,
+		Defense: 158,
+	}
+
+	action := runtime.resolveAttack(&actor, target, CommandEnemyAttack)
+
+	if visibleMonster.Cell.DamageDefenseType != "direct" || action.Damage != 145 || action.TargetHP != 900 {
+		t.Fatalf("expected map143 swordpanda captured HP delta plus one stored power without second defense subtraction, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
 	}
 }
 
@@ -1431,5 +2183,64 @@ func TestBigSwordWolfEnemyTurnCanUseCapturedShadeCut(t *testing.T) {
 	}
 	if runtime.Cells[1].MP != 294 || enemyAction.RefreshInfos[0].Handle != "enemy_wolf" || enemyAction.RefreshInfos[0].MP != 294 {
 		t.Fatalf("expected enemy shadeCut turn to consume MP 40, got cells=%+v action=%+v", runtime.Cells, enemyAction)
+	}
+}
+
+func TestCracktoadEnemyTurnUsesCapturedHelixAtk(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-helix-2",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-helix-2",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       1045,
+				MaxHP:    1045,
+				Attack:   1,
+				Defense:  158,
+			},
+			{
+				BattleID:   "battle-helix-2",
+				Handle:     "5176206909809579",
+				Camp:       CampEnemy,
+				Name:       "蛤蟆精",
+				DisplayURL: "monstermap/cracktoad.swf",
+				HP:         1500,
+				MaxHP:      1500,
+				MP:         564,
+				MaxMP:      564,
+				Attack:     240,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-helix-2",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandNormalAttack,
+		TargetHandle: "5176206909809579",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" || len(result.Actions) < 2 {
+		t.Fatalf("expected player action followed by enemy action, got %+v", result)
+	}
+	enemyAction := result.Actions[1]
+	if enemyAction.CommandID != CommandEnemyHelixAtk || enemyAction.ActionName != "螺旋锤杀" || enemyAction.SourceActionLabel != "helixAtk" {
+		t.Fatalf("expected cracktoad enemy turn to use captured helixAtk, got %+v", enemyAction)
+	}
+	if enemyAction.Damage != 191 || enemyAction.TargetHP != 854 {
+		t.Fatalf("expected cracktoad enemy turn to apply captured helixAtk multiplier plus one stored power, got %+v", enemyAction)
+	}
+	if runtime.Cells[1].MP != 554 || enemyAction.RefreshInfos[0].Handle != "5176206909809579" || enemyAction.RefreshInfos[0].MP != 554 {
+		t.Fatalf("expected enemy helixAtk turn to consume MP 10, got cells=%+v action=%+v", runtime.Cells, enemyAction)
 	}
 }

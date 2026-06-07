@@ -46,6 +46,7 @@ const (
 	enemyShadeCutMPCost           = 40
 	enemyShadeCutChance           = 30
 	enemyHelixAtkMPCost           = 10
+	enemyHelixAtkChance           = 23
 	enemyHelixAtkDamageMultiplier = 1.32
 	defaultBattleHit              = 100
 	defaultBattleDog              = 50
@@ -829,7 +830,7 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
-	if sourceEnemyCanHelixAtk(enemy) && enemy.MP >= enemyHelixAtkMPCost {
+	if sourceEnemyCanHelixAtk(enemy) && enemy.MP >= enemyHelixAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyHelixAtk, enemyHelixAtkChance) {
 		return CommandEnemyHelixAtk
 	}
 	if sourceEnemyCanShadeCut(enemy) && enemy.MP >= enemyShadeCutMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyShadeCut, enemyShadeCutChance) {

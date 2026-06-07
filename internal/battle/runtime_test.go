@@ -2186,9 +2186,9 @@ func TestBigSwordWolfEnemyTurnCanUseCapturedShadeCut(t *testing.T) {
 	}
 }
 
-func TestCracktoadEnemyTurnUsesCapturedHelixAtk(t *testing.T) {
+func TestCracktoadEnemyTurnCanUseCapturedHelixAtk(t *testing.T) {
 	runtime := &Runtime{
-		BattleID:         "battle-helix-2",
+		BattleID:         "battle-helix-roll-4",
 		Round:            1,
 		Phase:            PhaseCommand,
 		ActiveHandle:     "player_21424",
@@ -2207,7 +2207,7 @@ func TestCracktoadEnemyTurnUsesCapturedHelixAtk(t *testing.T) {
 				Defense:  158,
 			},
 			{
-				BattleID:   "battle-helix-2",
+				BattleID:   "battle-helix-roll-4",
 				Handle:     "5176206909809579",
 				Camp:       CampEnemy,
 				Name:       "蛤蟆精",
@@ -2222,7 +2222,7 @@ func TestCracktoadEnemyTurnUsesCapturedHelixAtk(t *testing.T) {
 	}
 
 	result := runtime.ProcessAction(ActionRequest{
-		BattleID:     "battle-helix-2",
+		BattleID:     "battle-helix-roll-4",
 		ActorHandle:  "player_21424",
 		CommandID:    CommandNormalAttack,
 		TargetHandle: "5176206909809579",
@@ -2242,5 +2242,65 @@ func TestCracktoadEnemyTurnUsesCapturedHelixAtk(t *testing.T) {
 	}
 	if runtime.Cells[1].MP != 554 || enemyAction.RefreshInfos[0].Handle != "5176206909809579" || enemyAction.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected enemy helixAtk turn to consume MP 10, got cells=%+v action=%+v", runtime.Cells, enemyAction)
+	}
+}
+
+func TestCracktoadEnemyTurnCanUseCapturedNormalAttack(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-helix-roll-0",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-helix-roll-0",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       1045,
+				MaxHP:    1045,
+				Attack:   1,
+				Defense:  158,
+			},
+			{
+				BattleID:     "battle-helix-roll-0",
+				Handle:       "5176206909809579",
+				Camp:         CampEnemy,
+				Name:         "蛤蟆精",
+				DisplayURL:   "monstermap/cracktoad.swf",
+				HP:           1500,
+				MaxHP:        1500,
+				MP:           564,
+				MaxMP:        564,
+				Attack:       240,
+				CommandLabel: "普通攻击",
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-helix-roll-0",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandNormalAttack,
+		TargetHandle: "5176206909809579",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" || len(result.Actions) < 2 {
+		t.Fatalf("expected player action followed by enemy action, got %+v", result)
+	}
+	enemyAction := result.Actions[1]
+	if enemyAction.CommandID != CommandEnemyAttack || enemyAction.ActionName != "普通攻击" || enemyAction.SourceActionLabel != "nomalAtk" {
+		t.Fatalf("expected cracktoad enemy turn to sometimes use captured normal attack, got %+v", enemyAction)
+	}
+	if enemyAction.Damage != 98 || enemyAction.TargetHP != 947 {
+		t.Fatalf("expected cracktoad normal attack to apply captured base damage plus one stored power, got %+v", enemyAction)
+	}
+	if runtime.Cells[1].MP != 564 || len(enemyAction.RefreshInfos) != 1 {
+		t.Fatalf("expected cracktoad normal attack to keep MP unchanged, got cells=%+v action=%+v", runtime.Cells, enemyAction)
 	}
 }

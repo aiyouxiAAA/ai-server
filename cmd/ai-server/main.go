@@ -86,6 +86,7 @@ const (
 	cmdClassicGuildKickReq         = 1159
 	cmdClassicGuildDismissReq      = 1160
 	cmdClassicGuildNoticeUpdateReq = 1161
+	cmdClassicTownDungeonInstance  = 1162
 	cmdClassicMallCategoryListReq  = 1170
 	cmdClassicMallCategoryListPush = 1171
 	cmdClassicMallSearchCountReq   = 1172
@@ -302,6 +303,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		for _, questState := range result.questStates {
 			if err := socketWriter.writePush(cmdClassicTownQuestStatePush, encodePayload(questState)); err != nil {
 				log.Printf("[ai-server] write classic town QuestState failed: %v", err)
+				return
+			}
+		}
+		if result.dungeonInstance != nil {
+			if err := socketWriter.writePush(cmdClassicTownDungeonInstance, encodePayload(*result.dungeonInstance)); err != nil {
+				log.Printf("[ai-server] write classic town DungeonInstance failed: %v", err)
 				return
 			}
 		}

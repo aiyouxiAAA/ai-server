@@ -799,6 +799,208 @@ func TestBuildTownBootstrapUsesCapturedShuiliandongTransportData(t *testing.T) {
 	}
 }
 
+func TestBuildTownBootstrapUsesCapturedHuangfengzhaiTransportData(t *testing.T) {
+	cases := []struct {
+		mapID         int
+		mapName       string
+		handles       []string
+		spawns        []SpawnPoint
+		sourceQueries []string
+	}{
+		{mapID: 122, mapName: "黄风寨口", handles: []string{"transp_121", "transp_146"}, spawns: []SpawnPoint{{X: 1460, Y: 520}, {X: 329, Y: 480}}, sourceQueries: []string{"transp/flag2.swf", "transp/fl.swf"}},
+		{mapID: 146, mapName: "黄风寨_1", handles: []string{"transp_122", "transp_147", "transp_152"}, spawns: []SpawnPoint{{X: 1950, Y: 488}, {X: 55, Y: 507}, {X: 409, Y: 185}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 148, mapName: "黄风寨_3", handles: []string{"transp_147", "transp_149"}, spawns: []SpawnPoint{{X: 1969, Y: 505}, {X: 424, Y: 379}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 149, mapName: "黄风寨_4", handles: []string{"transp_148", "transp_150"}, spawns: []SpawnPoint{{X: 30, Y: 550}, {X: 2280, Y: 351}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 150, mapName: "黄风寨_5", handles: []string{"transp_149", "transp_151", "transp_153"}, spawns: []SpawnPoint{{X: 1413, Y: 750}, {X: 2969, Y: 437}, {X: 151, Y: 273}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 151, mapName: "黄风寨_6", handles: []string{"transp_150", "transp_152"}, spawns: []SpawnPoint{{X: 37, Y: 688}, {X: 2463, Y: 442}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 152, mapName: "黄风寨_7", handles: []string{"transp_146", "transp_151"}, spawns: []SpawnPoint{{X: 2963, Y: 600}, {X: 37, Y: 588}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 153, mapName: "黄风寨_8", handles: []string{"transp_150", "transp_154", "transp_156"}, spawns: []SpawnPoint{{X: 2869, Y: 444}, {X: 1401, Y: 706}, {X: 32, Y: 492}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 154, mapName: "黄风寨_9", handles: []string{"transp_153", "transp_155", "transp_157"}, spawns: []SpawnPoint{{X: 2966, Y: 230}, {X: 37, Y: 513}, {X: 956, Y: 114}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 155, mapName: "黄风寨_10", handles: []string{"transp_122", "transp_154"}, spawns: []SpawnPoint{{X: 158, Y: 455}, {X: 1941, Y: 556}}, sourceQueries: []string{"transp/fl.swf", "transp/flag2.swf"}},
+		{mapID: 156, mapName: "黄风寨_11", handles: []string{"transp_153", "transp_157"}, spawns: []SpawnPoint{{X: 2466, Y: 494}, {X: 31, Y: 509}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 157, mapName: "黄风寨_12", handles: []string{"transp_154", "transp_156"}, spawns: []SpawnPoint{{X: 185, Y: 720}, {X: 2963, Y: 515}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-huangfengzhai",
+			DisplayName:  "测试女侠",
+			Level:        20,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected huangfengzhai map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected captured huangfengzhai map%d to use visible monsters instead of enemyShow", testCase.mapID)
+		}
+		transports := make([]RolePush, 0, len(testCase.handles))
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.RoleID == "-3" {
+				transports = append(transports, rolePush)
+			}
+		}
+		if len(transports) != len(testCase.handles) {
+			t.Fatalf("expected map%d transport count %d got %d", testCase.mapID, len(testCase.handles), len(transports))
+		}
+		for index, handle := range testCase.handles {
+			rolePush := transports[index]
+			if rolePush.Handle != handle {
+				t.Fatalf("expected map%d transport handle %s at index %d got %s", testCase.mapID, handle, index, rolePush.Handle)
+			}
+			if rolePush.SpawnFlash != testCase.spawns[index] {
+				t.Fatalf("expected map%d %s spawn %+v got %+v", testCase.mapID, handle, testCase.spawns[index], rolePush.SpawnFlash)
+			}
+			if rolePush.SourceQuery != testCase.sourceQueries[index] {
+				t.Fatalf("expected map%d %s sourceQuery %s got %s", testCase.mapID, handle, testCase.sourceQueries[index], rolePush.SourceQuery)
+			}
+		}
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedHuangfengzhaiVisibleMonsters(t *testing.T) {
+	cases := []struct {
+		mapID       int
+		roleCount   int
+		questCount  int
+		bossHandles map[string]RolePush
+	}{
+		{
+			mapID:      149,
+			roleCount:  10,
+			questCount: 2,
+			bossHandles: map[string]RolePush{
+				"3218685759638239": {
+					DisplayName: "黄风二寨主",
+					Level:       19,
+					Vocation:    "战士++",
+					SourceQuery: "monstermap/hfscastellan.swf",
+					SpawnFlash:  SpawnPoint{X: 1451, Y: 403},
+					SourceNPCVisual: &SourceNPCVisual{
+						MovieClipIRPath: "runtime/classic-monstermap/hfscastellan/hfscastellan-movieclip-ir",
+					},
+				},
+			},
+		},
+		{
+			mapID:      155,
+			roleCount:  8,
+			questCount: 2,
+			bossHandles: map[string]RolePush{
+				"2600686416056495": {
+					DisplayName: "黄风大寨主",
+					Level:       20,
+					Vocation:    "战士++",
+					SourceQuery: "monstermap/hfcastellan.swf",
+					SpawnFlash:  SpawnPoint{X: 292, Y: 476},
+					SourceNPCVisual: &SourceNPCVisual{
+						MovieClipIRPath: "runtime/classic-monstermap/hfcastellan/hfcastellan-movieclip-ir",
+					},
+				},
+				"2800686416057704": {
+					DisplayName: "黄风寨夫人",
+					Level:       20,
+					Vocation:    "游侠++",
+					SourceQuery: "monstermap/hflady.swf",
+					SpawnFlash:  SpawnPoint{X: 300, Y: 553},
+					SourceNPCVisual: &SourceNPCVisual{
+						MovieClipIRPath: "runtime/classic-monstermap/hflady/hflady-movieclip-ir",
+					},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-huangfengzhai-monster",
+			DisplayName:  "测试女侠",
+			Level:        20,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected captured huangfengzhai map%d visible monsters instead of enemyShow", testCase.mapID)
+		}
+		if len(snapshot.CreateRoles) != testCase.roleCount || len(snapshot.QuestStates) != testCase.questCount {
+			t.Fatalf("expected map%d roles=%d quests=%d got roles=%d quests=%d", testCase.mapID, testCase.roleCount, testCase.questCount, len(snapshot.CreateRoles), len(snapshot.QuestStates))
+		}
+
+		for _, rolePush := range snapshot.CreateRoles {
+			expected, ok := testCase.bossHandles[rolePush.Handle]
+			if !ok {
+				continue
+			}
+			if rolePush.RoleID != "-2" || rolePush.Kind != "monster" {
+				t.Fatalf("expected huangfengzhai boss %s to be visible monster, got %+v", rolePush.Handle, rolePush)
+			}
+			if rolePush.DisplayName != expected.DisplayName || rolePush.Level != expected.Level || rolePush.Vocation != expected.Vocation || rolePush.SourceQuery != expected.SourceQuery {
+				t.Fatalf("expected huangfengzhai boss identity %+v got %+v", expected, rolePush)
+			}
+			if rolePush.SpawnFlash != expected.SpawnFlash {
+				t.Fatalf("expected huangfengzhai boss spawn %+v got %+v", expected.SpawnFlash, rolePush.SpawnFlash)
+			}
+			if rolePush.Movement != nil {
+				t.Fatalf("expected huangfengzhai boss %s to stay still until a moveRole packet is captured, got %+v", rolePush.Handle, rolePush.Movement)
+			}
+			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != expected.SourceNPCVisual.MovieClipIRPath {
+				t.Fatalf("expected huangfengzhai boss visual %+v got %+v", expected.SourceNPCVisual, rolePush.SourceNPCVisual)
+			}
+			delete(testCase.bossHandles, rolePush.Handle)
+		}
+		if len(testCase.bossHandles) != 0 {
+			t.Fatalf("missing huangfengzhai boss checks for map%d: %+v", testCase.mapID, testCase.bossHandles)
+		}
+	}
+}
+
+func TestBuildTownBootstrapKeepsUncapturedHuangfengzhaiMap147Empty(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-huangfengzhai-147",
+		DisplayName:  "测试女侠",
+		Level:        20,
+		MapID:        147,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        role.MapID,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	snapshot := BuildTownBootstrap(role, playerBase)
+	if snapshot.LoadMap.MapID != "147" || snapshot.LoadMap.MapName != "黄风寨_2" {
+		t.Fatalf("expected map147 bootstrap, got %+v", snapshot.LoadMap)
+	}
+	if len(snapshot.CreateRoles) != 0 || len(snapshot.QuestStates) != 0 {
+		t.Fatalf("expected map147 to stay empty because no source roles were captured, got roles=%d quests=%d", len(snapshot.CreateRoles), len(snapshot.QuestStates))
+	}
+}
+
 func TestBuildTownBootstrapUsesCapturedMapThreeData(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-003",

@@ -178,6 +178,41 @@ func TestStoreRoleLifecycle(t *testing.T) {
 }
 
 func TestStoreDungeonInstancePersistsForOneHour(t *testing.T) {
+	for _, instanceKey := range []string{DungeonInstanceShuiliandong, DungeonInstanceHuangfengzhai} {
+		t.Run(instanceKey, func(t *testing.T) {
+			store := NewStore()
+			now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
+			store.now = func() time.Time { return now }
+			login := mustLogin(t, store, "mockuser", "magicpwd")
+			createResponse := store.CreateRole(RoleCreateRequest{
+				PlayerID:       login.PlayerID,
+				SessionToken:   login.SessionToken,
+				DisplayName:    "副本女侠",
+				Gender:         "female",
+				RoleTemplateID: 1,
+			})
+
+			state, ok := store.MarkRoleDungeonVisibleMonsterDefeated(login.PlayerID, createResponse.Role.RoleID, instanceKey, "5172206909807859")
+			if !ok || state.CreatedAtUnix != now.Unix() || DungeonInstanceExpiresAtUnix(state) != now.Unix()+DungeonInstanceTTLSeconds() || len(state.DefeatedVisibleMonsterHandles) != 1 {
+				t.Fatalf("expected dungeon instance defeat state, got ok=%v state=%+v", ok, state)
+			}
+
+			now = now.Add(59 * time.Minute)
+			state, ok = store.EnsureRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, instanceKey)
+			if !ok || len(state.DefeatedVisibleMonsterHandles) != 1 {
+				t.Fatalf("expected dungeon instance to persist before one hour, got ok=%v state=%+v", ok, state)
+			}
+
+			now = now.Add(2 * time.Minute)
+			state, ok = store.EnsureRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, instanceKey)
+			if !ok || state.CreatedAtUnix != now.Unix() || len(state.DefeatedVisibleMonsterHandles) != 0 {
+				t.Fatalf("expected dungeon instance to reset after one hour, got ok=%v state=%+v", ok, state)
+			}
+		})
+	}
+}
+
+func TestStoreGetRoleDungeonInstanceDoesNotCreateNewInstance(t *testing.T) {
 	store := NewStore()
 	now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
 	store.now = func() time.Time { return now }
@@ -185,26 +220,25 @@ func TestStoreDungeonInstancePersistsForOneHour(t *testing.T) {
 	createResponse := store.CreateRole(RoleCreateRequest{
 		PlayerID:       login.PlayerID,
 		SessionToken:   login.SessionToken,
-		DisplayName:    "副本女侠",
+		DisplayName:    "副本门票女侠",
 		Gender:         "female",
 		RoleTemplateID: 1,
 	})
 
-	state, ok := store.MarkRoleDungeonVisibleMonsterDefeated(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceShuiliandong, "5172206909807859")
-	if !ok || state.CreatedAtUnix != now.Unix() || len(state.DefeatedVisibleMonsterHandles) != 1 {
-		t.Fatalf("expected dungeon instance defeat state, got ok=%v state=%+v", ok, state)
+	if state, ok := store.GetRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceHuangfengzhai); ok || state.CreatedAtUnix != 0 {
+		t.Fatalf("expected missing instance read not to create state, got ok=%v state=%+v", ok, state)
 	}
-
-	now = now.Add(59 * time.Minute)
-	state, ok = store.EnsureRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceShuiliandong)
-	if !ok || len(state.DefeatedVisibleMonsterHandles) != 1 {
-		t.Fatalf("expected dungeon instance to persist before one hour, got ok=%v state=%+v", ok, state)
+	created, ok := store.EnsureRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceHuangfengzhai)
+	if !ok || created.CreatedAtUnix != now.Unix() {
+		t.Fatalf("expected ensure to create dungeon instance, got ok=%v state=%+v", ok, created)
 	}
-
-	now = now.Add(2 * time.Minute)
-	state, ok = store.EnsureRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceShuiliandong)
-	if !ok || state.CreatedAtUnix != now.Unix() || len(state.DefeatedVisibleMonsterHandles) != 0 {
-		t.Fatalf("expected dungeon instance to reset after one hour, got ok=%v state=%+v", ok, state)
+	state, ok := store.GetRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceHuangfengzhai)
+	if !ok || state.CreatedAtUnix != created.CreatedAtUnix {
+		t.Fatalf("expected existing instance read, got ok=%v state=%+v", ok, state)
+	}
+	now = now.Add(61 * time.Minute)
+	if state, ok := store.GetRoleDungeonInstance(login.PlayerID, createResponse.Role.RoleID, DungeonInstanceHuangfengzhai); ok || state.CreatedAtUnix != 0 {
+		t.Fatalf("expected expired instance to be pruned without creating replacement, got ok=%v state=%+v", ok, state)
 	}
 }
 

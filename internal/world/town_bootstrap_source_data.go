@@ -1383,15 +1383,180 @@ var map145SourceMonsters = []sourceMonsterEntry{
 	buildCapturedSourceMonster("2900206197343711", "剑术蛤蟆", "monstermap/swordpanda.swf", "swordpanda", 18, "战士", 1721, 602),
 }
 
+var map122SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_121", 1460, 520),
+	buildCapturedSourceTransportMovieClip("transp_146", "transp/fl.swf", "fl", 139, 147, 329, 480),
+}
+
+var map146SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_122", 1950, 488),
+	buildCapturedSourceTransport("transp_147", 55, 507),
+	buildCapturedSourceTransport("transp_152", 409, 185),
+}
+
+var map148SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_147", 1969, 505),
+	buildCapturedSourceTransport("transp_149", 424, 379),
+}
+
+var map149SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_148", 30, 550),
+	buildCapturedSourceTransport("transp_150", 2280, 351),
+}
+
+var map150SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_149", 1413, 750),
+	buildCapturedSourceTransport("transp_151", 2969, 437),
+	buildCapturedSourceTransport("transp_153", 151, 273),
+}
+
+var map151SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_150", 37, 688),
+	buildCapturedSourceTransport("transp_152", 2463, 442),
+}
+
+var map152SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_146", 2963, 600),
+	buildCapturedSourceTransport("transp_151", 37, 588),
+}
+
+var map153SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_150", 2869, 444),
+	buildCapturedSourceTransport("transp_154", 1401, 706),
+	buildCapturedSourceTransport("transp_156", 32, 492),
+}
+
+var map154SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_153", 2966, 230),
+	buildCapturedSourceTransport("transp_155", 37, 513),
+	buildCapturedSourceTransport("transp_157", 956, 114),
+}
+
+var map155SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_122", "transp/fl.swf", "fl", 139, 147, 158, 455),
+	buildCapturedSourceTransport("transp_154", 1941, 556),
+}
+
+var map156SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_153", 2466, 494),
+	buildCapturedSourceTransport("transp_157", 31, 509),
+}
+
+var map157SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_154", 185, 720),
+	buildCapturedSourceTransport("transp_156", 2963, 515),
+}
+
+var map146SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("6887685480585492", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 12, "战士", 784, 325),
+	buildCapturedSourceMonster("6889685480586263", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 12, "战士", 212, 279),
+	buildCapturedSourceMonster("6891685480586720", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 12, "战士", 348, 392),
+	buildCapturedSourceMonster("6893685480587444", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 12, "战士", 282, 546),
+}
+
+var map148SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1060685893848234", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 264, 407),
+	buildCapturedSourceMonster("1062685893848980", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 471, 412),
+	buildCapturedSourceMonster("1064685893849658", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 13, "战士", 548, 484),
+	buildCapturedSourceMonster("1066685893850755", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 13, "战士", 571, 620),
+	buildCapturedSourceMonster("1068685893850410", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 1443, 446),
+	buildCapturedSourceMonster("1070685893851339", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 1402, 576),
+}
+
+var map149SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("3206685759634939", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 695, 413),
+	buildCapturedSourceMonster("3208685759635236", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 698, 541),
+	buildCapturedSourceMonster("3210685759635176", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 1939, 455),
+	buildCapturedSourceMonster("3212685759636247", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 1977, 570),
+	buildCapturedSourceMonster("3214685759637760", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 1285, 400),
+	buildCapturedSourceMonster("3216685759637116", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 1394, 442),
+	buildCapturedSourceMonster("3218685759638239", "黄风二寨主", "monstermap/hfscastellan.swf", "hfscastellan", 19, "战士++", 1451, 403),
+	buildCapturedSourceMonster("3220685759639165", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 1605, 442),
+}
+
+var map150SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7626685662869779", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 550, 476),
+	buildCapturedSourceMonster("7628685662869126", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 519, 569),
+	buildCapturedSourceMonster("7630685662870286", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 16, "战士", 396, 400),
+	buildCapturedSourceMonster("7632685662871580", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 16, "战士", 303, 500),
+	buildCapturedSourceMonster("7634685662872533", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 16, "战士", 2423, 500),
+	buildCapturedSourceMonster("7636685662872653", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 16, "战士", 2446, 607),
+}
+
+var map151SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("3479685591196972", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 1961, 362),
+	buildCapturedSourceMonster("3481685591197274", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 2006, 442),
+	buildCapturedSourceMonster("3483685591198699", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 708, 381),
+	buildCapturedSourceMonster("3485685591198493", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 480, 451),
+}
+
+var map152SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("2200685534047114", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 1311, 476),
+	buildCapturedSourceMonster("2400685534048391", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 2496, 561),
+	buildCapturedSourceMonster("2600685534049446", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 14, "战士", 1953, 534),
+	buildCapturedSourceMonster("2800685534050729", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 361, 488),
+	buildCapturedSourceMonster("3000685534050820", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 15, "游侠", 342, 573),
+}
+
+var map153SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7486686002236449", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 16, "游侠", 1955, 390),
+	buildCapturedSourceMonster("7488686002237979", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 16, "游侠", 1918, 475),
+	buildCapturedSourceMonster("7490686002238200", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 16, "游侠", 784, 420),
+	buildCapturedSourceMonster("7492686002238537", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 16, "游侠", 910, 494),
+	buildCapturedSourceMonster("7494686002239485", "咒巫师", "monstermap/incantationshaman.swf", "incantationshaman", 16, "术士", 1282, 453),
+	buildCapturedSourceMonster("7496686002240421", "咒巫师", "monstermap/incantationshaman.swf", "incantationshaman", 16, "术士", 1587, 435),
+}
+
+var map154SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("4401686309555513", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 1796, 373),
+	buildCapturedSourceMonster("4403686309556739", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 1811, 492),
+	buildCapturedSourceMonster("4405686309557261", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 407, 411),
+	buildCapturedSourceMonster("4407686309558215", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 392, 569),
+	buildCapturedSourceMonster("4409686309558350", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 1326, 396),
+	buildCapturedSourceMonster("4411686309559260", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 1334, 565),
+}
+
+var map155SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1800686416053680", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 1271, 451),
+	buildCapturedSourceMonster("2000686416054570", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 1143, 617),
+	buildCapturedSourceMonster("2200686416054601", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 710, 464),
+	buildCapturedSourceMonster("2400686416055777", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 653, 589),
+	buildCapturedSourceMonster("2600686416056495", "黄风大寨主", "monstermap/hfcastellan.swf", "hfcastellan", 20, "战士++", 292, 476),
+	buildCapturedSourceMonster("2800686416057704", "黄风寨夫人", "monstermap/hflady.swf", "hflady", 20, "游侠++", 300, 553),
+}
+
+var map156SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1810686076568601", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 266, 432),
+	buildCapturedSourceMonster("1812686076568276", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 243, 519),
+	buildCapturedSourceMonster("1814686076569307", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 2135, 420),
+	buildCapturedSourceMonster("1816686076570599", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 2090, 509),
+	buildCapturedSourceMonster("1818686076571461", "咒巫师", "monstermap/incantationshaman.swf", "incantationshaman", 17, "术士", 961, 461),
+	buildCapturedSourceMonster("1820686076572431", "咒巫师", "monstermap/incantationshaman.swf", "incantationshaman", 17, "术士", 1090, 522),
+	buildCapturedSourceMonster("1822686076573189", "咒巫师", "monstermap/incantationshaman.swf", "incantationshaman", 17, "术士", 1282, 453),
+}
+
+var map157SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7597686175728336", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 1207, 453),
+	buildCapturedSourceMonster("7599686175728881", "蛮族弓手", "monstermap/barbarianbowman.swf", "barbarianbowman", 17, "游侠", 1161, 542),
+	buildCapturedSourceMonster("7601686175729343", "咒巫师", "monstermap/incantationshaman.swf", "incantationshaman", 17, "术士", 469, 496),
+	buildCapturedSourceMonster("7603686175731981", "咒巫师", "monstermap/incantationshaman.swf", "incantationshaman", 17, "术士", 792, 576),
+	buildCapturedSourceMonster("7605686175731943", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 2527, 438),
+	buildCapturedSourceMonster("7607686175732966", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 2477, 534),
+}
+
 func buildCapturedSourceTransport(handle string, x int, y int) sourceNPCEntry {
+	return buildCapturedSourceTransportMovieClip(handle, "transp/flag2.swf", "flag2", 158, 258, x, y)
+}
+
+func buildCapturedSourceTransportMovieClip(handle string, sourceQuery string, spriteName string, width int, height int, x int, y int) sourceNPCEntry {
 	return sourceNPCEntry{
 		Handle:      handle,
 		RoleID:      "-3",
 		DisplayName: "",
-		SourceQuery: "transp/flag2.swf",
-		SpriteName:  "flag2",
-		Width:       158,
-		Height:      258,
+		SourceQuery: sourceQuery,
+		SpriteName:  spriteName,
+		Width:       width,
+		Height:      height,
 		SpawnFlash:  SpawnPoint{X: x, Y: y},
 		QuestState:  0,
 		Dialogue:    &sourceTransportDialogue,

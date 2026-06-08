@@ -25,10 +25,22 @@ const (
 	defaultCopper   = 5000
 	defaultSilver   = 1
 
-	DungeonInstanceShuiliandong = "shuiliandong"
+	DungeonInstanceShuiliandong  = "shuiliandong"
+	DungeonInstanceHuangfengzhai = "huangfengzhai"
 )
 
 const dungeonInstanceTTL = time.Hour
+
+func DungeonInstanceTTLSeconds() int64 {
+	return int64(dungeonInstanceTTL / time.Second)
+}
+
+func DungeonInstanceExpiresAtUnix(state DungeonInstanceState) int64 {
+	if state.CreatedAtUnix <= 0 {
+		return 0
+	}
+	return state.CreatedAtUnix + DungeonInstanceTTLSeconds()
+}
 
 type RoleAppearance map[string]any
 
@@ -698,6 +710,37 @@ func (store *Store) EnsureRoleDungeonInstance(playerID string, roleID string, ke
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist dungeon instance failed: %v", err)
+		}
+		return cloneDungeonInstanceState(state), true
+	}
+
+	return DungeonInstanceState{}, false
+}
+
+func (store *Store) GetRoleDungeonInstance(playerID string, roleID string, key string) (DungeonInstanceState, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return DungeonInstanceState{}, false
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		if pruneExpiredDungeonInstances(&roles[index], store.now()) {
+			store.rolesByPID[playerID] = roles
+			if err := store.persistPlayerStateLocked(playerID); err != nil {
+				log.Printf("[session.Store] persist expired dungeon instances failed: %v", err)
+			}
+		}
+		state, ok := roles[index].DungeonInstances[key]
+		if !ok || state.CreatedAtUnix <= 0 {
+			return DungeonInstanceState{}, false
 		}
 		return cloneDungeonInstanceState(state), true
 	}

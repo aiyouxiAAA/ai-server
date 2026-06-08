@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"ai-server/internal/battle"
 	"ai-server/internal/guild"
@@ -35,6 +36,7 @@ type packetResult struct {
 	questInfos        []classicQuestInfoPush
 	questClears       []classicQuestClearPush
 	questStates       []world.QuestStatePush
+	dungeonInstance   *classicTownDungeonInstancePush
 	friendInfos       []classicSocialFriendEntry
 	friendClears      []classicSocialClearEntry
 	blackInfos        []classicSocialBlackEntry
@@ -62,8 +64,35 @@ type packetResult struct {
 	handled           bool
 }
 
+type classicTownDungeonInstancePush struct {
+	Key                           string   `json:"key"`
+	DisplayName                   string   `json:"displayName"`
+	MapID                         string   `json:"mapId"`
+	Active                        bool     `json:"active"`
+	CreatedAtUnix                 int64    `json:"createdAtUnix"`
+	ExpiresAtUnix                 int64    `json:"expiresAtUnix"`
+	DurationSeconds               int64    `json:"durationSeconds"`
+	RemainingSeconds              int64    `json:"remainingSeconds"`
+	DefeatedVisibleMonsterHandles []string `json:"defeatedVisibleMonsterHandles,omitempty"`
+}
+
 type classicTownAddPointRequest struct {
 	Stat string `json:"stat"`
+}
+
+type dungeonEntryConsumePolicy string
+
+const (
+	dungeonEntryConsumeNone          dungeonEntryConsumePolicy = "none"
+	dungeonEntryConsumeOnNewInstance dungeonEntryConsumePolicy = "on_new_instance"
+	classicTownBagContainerType      string                    = "背包"
+)
+
+type dungeonEntryRule struct {
+	InstanceKey   string
+	TicketName    string
+	TicketCount   int
+	ConsumePolicy dungeonEntryConsumePolicy
 }
 
 type packetSession struct {
@@ -128,7 +157,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if response.Success {
 			socketSession.selectedRole = &response.Role
 			socketSession.playerBase = &response.PlayerBase
-			loadDungeonInstanceVisibleMonsters(store, socketSession, response.Role.MapID)
+			result.dungeonInstance = syncDungeonInstanceState(store, socketSession, response.Role.MapID)
 			bootstrap := world.BuildTownBootstrap(response.Role, response.PlayerBase)
 			filterDefeatedVisibleMonsters(&bootstrap, socketSession)
 			result.townBootstrap = &bootstrap
@@ -396,7 +425,7 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 		return packetResult{handled: true}
 	}
 	if mapID, ok := battle.ParseMapID(request.MapID); ok {
-		loadDungeonInstanceVisibleMonsters(store, socketSession, mapID)
+		_ = syncDungeonInstanceState(store, socketSession, mapID)
 	}
 	if isDefeatedVisibleMonster(socketSession, request.SourceMonsterHandle) {
 		log.Printf("[ai-server] classic battle StartBattle ignored defeated visible monster mapId=%s handle=%s", request.MapID, request.SourceMonsterHandle)
@@ -589,7 +618,11 @@ func markDefeatedVisibleMonsterFromBattle(store *session.Store, socketSession *p
 		return nil
 	}
 	mapID, ok := battle.ParseMapID(socketSession.battleRuntime.MapID)
-	if !ok || !world.IsShuiliandongMapID(mapID) {
+	instanceKey := ""
+	if ok {
+		instanceKey, ok = world.DungeonInstanceKeyForMapID(mapID)
+	}
+	if !ok {
 		for _, handle := range handles {
 			markDefeatedVisibleMonster(socketSession, handle)
 		}
@@ -599,7 +632,7 @@ func markDefeatedVisibleMonsterFromBattle(store *session.Store, socketSession *p
 		state, ok := store.MarkRoleDungeonVisibleMonsterDefeated(
 			socketSession.playerBase.PlayerID,
 			socketSession.selectedRole.RoleID,
-			session.DungeonInstanceShuiliandong,
+			instanceKey,
 			handle,
 		)
 		if ok {
@@ -1516,6 +1549,10 @@ func buildClassicTownTransferResult(
 		log.Printf("[ai-server] classic town transfer ignored without selected role mapId=%s x=%d y=%d", mapIDText, spawn.X, spawn.Y)
 		return packetResult{handled: true}
 	}
+	entryResult, ok := consumeDungeonEntryTicketIfNeeded(store, socketSession, mapID)
+	if !ok {
+		return entryResult
+	}
 	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, mapID)
 	if !ok {
 		log.Printf("[ai-server] classic town transfer ignored missing role roleId=%s mapId=%s", socketSession.selectedRole.RoleID, mapIDText)
@@ -1523,7 +1560,7 @@ func buildClassicTownTransferResult(
 	}
 	socketSession.selectedRole = &role
 	socketSession.playerBase = &playerBase
-	loadDungeonInstanceVisibleMonsters(store, socketSession, mapID)
+	dungeonInstance := syncDungeonInstanceState(store, socketSession, mapID)
 	bootstrap, ok := world.BuildTownTransferBootstrap(role, playerBase, mapID, spawn)
 	if !ok {
 		return packetResult{handled: true}
@@ -1531,9 +1568,117 @@ func buildClassicTownTransferResult(
 	filterDefeatedVisibleMonsters(&bootstrap, socketSession)
 	log.Printf("[ai-server] classic town transfer mapId=%s x=%d y=%d roleId=%s", mapIDText, spawn.X, spawn.Y, role.RoleID)
 	return packetResult{
-		townBootstrap: &bootstrap,
-		handled:       true,
+		townBootstrap:   &bootstrap,
+		dungeonInstance: dungeonInstance,
+		itemInfos:       entryResult.itemInfos,
+		itemClears:      entryResult.itemClears,
+		chatMessages:    entryResult.chatMessages,
+		handled:         true,
 	}
+}
+
+func consumeDungeonEntryTicketIfNeeded(store *session.Store, socketSession *packetSession, targetMapID int) (packetResult, bool) {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return packetResult{handled: true}, false
+	}
+	targetInstanceKey, ok := world.DungeonInstanceKeyForMapID(targetMapID)
+	if !ok {
+		return packetResult{handled: true}, true
+	}
+	rule, ok := dungeonEntryRuleForInstance(targetInstanceKey)
+	if !ok || rule.ConsumePolicy == dungeonEntryConsumeNone || rule.TicketName == "" {
+		return packetResult{handled: true}, true
+	}
+	currentMapID := socketSession.selectedRole.MapID
+	currentInstanceKey, currentInDungeon := world.DungeonInstanceKeyForMapID(currentMapID)
+	if currentInDungeon && currentInstanceKey == targetInstanceKey {
+		return packetResult{handled: true}, true
+	}
+	if _, ok := store.GetRoleDungeonInstance(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, targetInstanceKey); ok {
+		return packetResult{handled: true}, true
+	}
+	ticket, ok := findRoleTicketItem(store, socketSession, rule.TicketName)
+	if !ok || ticket.Count < rule.TicketCount {
+		message := "进入" + dungeonInstanceDisplayName(targetInstanceKey) + "需要" + rule.TicketName + "x" + strconv.Itoa(rule.TicketCount) + "。"
+		log.Printf("[ai-server] classic town transfer rejected missing dungeon ticket roleId=%s mapId=%d ticket=%s", socketSession.selectedRole.RoleID, targetMapID, rule.TicketName)
+		return packetResult{
+			chatMessages: []classicTownChatMessagePush{classicTownSystemChatMessage(message)},
+			handled:      true,
+		}, false
+	}
+	useResult := store.ConsumeRoleItem(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		ticket.Type,
+		ticket.Index,
+		rule.TicketCount,
+	)
+	if !useResult.Found || !useResult.Used {
+		log.Printf("[ai-server] classic town transfer rejected consume dungeon ticket roleId=%s mapId=%d ticket=%s error=%s", socketSession.selectedRole.RoleID, targetMapID, rule.TicketName, useResult.ErrorCode)
+		return packetResult{
+			chatMessages: []classicTownChatMessagePush{classicTownSystemChatMessage(useResult.ErrorMessage)},
+			handled:      true,
+		}, false
+	}
+
+	socketSession.selectedRole = &useResult.Role
+	socketSession.playerBase = &useResult.PlayerBase
+	result := packetResult{
+		itemInfos:  make([]classicTownItemInfoPush, 0, len(useResult.UpdatedItems)+1),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(useResult.ClearedItems)),
+		handled:    true,
+	}
+	if useResult.UpdatedItem != nil {
+		item := *useResult.UpdatedItem
+		item.Handle = useResult.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+	}
+	for _, item := range useResult.UpdatedItems {
+		item.Handle = useResult.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+	}
+	for _, clear := range useResult.ClearedItems {
+		result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+			Handle: useResult.Role.RoleID,
+			Type:   clear.Type,
+			Index:  clear.Index,
+		})
+	}
+	return result, true
+}
+
+func dungeonEntryRuleForInstance(instanceKey string) (dungeonEntryRule, bool) {
+	switch instanceKey {
+	case session.DungeonInstanceShuiliandong:
+		return dungeonEntryRule{
+			InstanceKey:   instanceKey,
+			TicketName:    "水帘洞通行证",
+			TicketCount:   1,
+			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
+		}, true
+	case session.DungeonInstanceHuangfengzhai:
+		return dungeonEntryRule{
+			InstanceKey:   instanceKey,
+			TicketName:    "黄风寨通行证",
+			TicketCount:   1,
+			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
+		}, true
+	default:
+		return dungeonEntryRule{}, false
+	}
+}
+
+func findRoleTicketItem(store *session.Store, socketSession *packetSession, ticketName string) (session.RoleItem, bool) {
+	items, _, ok := store.GetRoleItems(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, classicTownBagContainerType)
+	if !ok {
+		return session.RoleItem{}, false
+	}
+	for _, item := range items {
+		if item.Name == ticketName && item.Count > 0 {
+			return item, true
+		}
+	}
+	return session.RoleItem{}, false
 }
 
 func filterDefeatedVisibleMonsters(snapshot *world.TownBootstrapSnapshot, socketSession *packetSession) {
@@ -1550,20 +1695,53 @@ func filterDefeatedVisibleMonsters(snapshot *world.TownBootstrapSnapshot, socket
 	snapshot.CreateRoles = createRoles
 }
 
-func loadDungeonInstanceVisibleMonsters(store *session.Store, socketSession *packetSession, mapID int) {
+func syncDungeonInstanceState(store *session.Store, socketSession *packetSession, mapID int) *classicTownDungeonInstancePush {
 	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
-		return
+		return nil
 	}
-	if !world.IsShuiliandongMapID(mapID) {
-		return
+	instanceKey, ok := world.DungeonInstanceKeyForMapID(mapID)
+	if !ok {
+		setDefeatedVisibleMonsterHandles(socketSession, nil)
+		return &classicTownDungeonInstancePush{
+			MapID:           strconv.Itoa(mapID),
+			Active:          false,
+			DurationSeconds: session.DungeonInstanceTTLSeconds(),
+		}
 	}
 	state, ok := store.EnsureRoleDungeonInstance(
 		socketSession.playerBase.PlayerID,
 		socketSession.selectedRole.RoleID,
-		session.DungeonInstanceShuiliandong,
+		instanceKey,
 	)
 	if !ok {
-		return
+		return nil
 	}
 	setDefeatedVisibleMonsterHandles(socketSession, state.DefeatedVisibleMonsterHandles)
+	expiresAtUnix := session.DungeonInstanceExpiresAtUnix(state)
+	remainingSeconds := expiresAtUnix - time.Now().Unix()
+	if remainingSeconds < 0 {
+		remainingSeconds = 0
+	}
+	return &classicTownDungeonInstancePush{
+		Key:                           instanceKey,
+		DisplayName:                   dungeonInstanceDisplayName(instanceKey),
+		MapID:                         strconv.Itoa(mapID),
+		Active:                        true,
+		CreatedAtUnix:                 state.CreatedAtUnix,
+		ExpiresAtUnix:                 expiresAtUnix,
+		DurationSeconds:               session.DungeonInstanceTTLSeconds(),
+		RemainingSeconds:              remainingSeconds,
+		DefeatedVisibleMonsterHandles: append([]string{}, state.DefeatedVisibleMonsterHandles...),
+	}
+}
+
+func dungeonInstanceDisplayName(key string) string {
+	switch key {
+	case session.DungeonInstanceShuiliandong:
+		return "水帘洞"
+	case session.DungeonInstanceHuangfengzhai:
+		return "黄风寨"
+	default:
+		return "副本"
+	}
 }

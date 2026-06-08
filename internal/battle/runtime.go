@@ -1601,7 +1601,7 @@ func (runtime *Runtime) resolveItemAction(actor *CellInfoPush, target *CellInfoP
 
 func (runtime *Runtime) buildOver(winner Camp, escaped ...bool) *OverPush {
 	isEscaped := len(escaped) > 0 && escaped[0]
-	expDelta, items := sourceBattleRewardsForEncounter(runtime.MapID, runtime.SourceMonsterHandle, winner, isEscaped)
+	expDelta, items := runtime.sourceBattleRewards(winner, isEscaped)
 	expDelta = runtime.applyExperienceLevelSuppression(expDelta, winner, isEscaped)
 	result := ResultPayload{
 		Winner:        winner,
@@ -1632,7 +1632,68 @@ func sourceBattleRewardsForEncounter(mapID string, sourceMonsterHandle string, w
 	if !ok || reward.Status != "confirmed" {
 		return 0, []string{}
 	}
-	return reward.ExpDelta, append([]string{}, reward.Items...)
+	return reward.ExpDelta, rollSourceBattleRewardItems(reward.Items, reward.DropRates)
+}
+
+func (runtime *Runtime) sourceBattleRewards(winner Camp, escaped bool) (int, []string) {
+	if runtime == nil {
+		return 0, []string{}
+	}
+	if winner != CampTeam || escaped {
+		return 0, []string{}
+	}
+
+	if reward, ok := sourceBattleRewardConfigForEncounter(runtime.MapID, runtime.SourceMonsterHandle); ok && reward.Status == "confirmed" {
+		return reward.ExpDelta, rollSourceBattleRewardItems(reward.Items, reward.DropRates)
+	}
+
+	if reward, ok := runtime.sourceBattleRewardCandidate(); ok {
+		return reward.ExpDelta, rollSourceBattleRewardItems(nil, reward.DropRates)
+	}
+	return 0, []string{}
+}
+
+func (runtime *Runtime) sourceBattleRewardCandidate() (sourceBattleRewardCandidateConfig, bool) {
+	if runtime == nil {
+		return sourceBattleRewardCandidateConfig{}, false
+	}
+	for _, cell := range runtime.Cells {
+		if cell.Camp != CampEnemy {
+			continue
+		}
+		if reward, ok := sourceBattleRewardCandidateForCell(runtime.MapID, cell.Name, cell.MaxHP); ok {
+			return reward, true
+		}
+	}
+	return sourceBattleRewardCandidateConfig{}, false
+}
+
+func rollSourceBattleRewardItems(fallbackItems []string, dropRates []sourceBattleRewardDropRate) []string {
+	if len(dropRates) == 0 {
+		return append([]string{}, fallbackItems...)
+	}
+	items := make([]string, 0, len(dropRates))
+	for _, drop := range dropRates {
+		if drop.ItemName == "" || drop.Numerator <= 0 || drop.Denominator <= 0 {
+			continue
+		}
+		if drop.Numerator < drop.Denominator && sourceEncounterRoll(drop.Denominator) >= drop.Numerator {
+			continue
+		}
+		items = append(items, formatSourceBattleRewardItemStack(drop.ItemName, drop.Quantity))
+	}
+	return items
+}
+
+func formatSourceBattleRewardItemStack(name string, quantity int) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+	if quantity <= 1 {
+		return name + "x1"
+	}
+	return fmt.Sprintf("%sx%d", name, quantity)
 }
 
 func (runtime *Runtime) applyExperienceLevelSuppression(expDelta int, winner Camp, escaped bool) int {

@@ -667,6 +667,12 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 	if transfer.townBootstrap == nil {
 		t.Fatalf("expected map143 transfer bootstrap, got %+v", transfer)
 	}
+	if transfer.dungeonInstance == nil || !transfer.dungeonInstance.Active || transfer.dungeonInstance.Key != session.DungeonInstanceShuiliandong || transfer.dungeonInstance.DisplayName != "水帘洞" {
+		t.Fatalf("expected map143 transfer to sync active shuiliandong instance, got %+v", transfer.dungeonInstance)
+	}
+	if transfer.dungeonInstance.DurationSeconds != session.DungeonInstanceTTLSeconds() || transfer.dungeonInstance.ExpiresAtUnix <= transfer.dungeonInstance.CreatedAtUnix || transfer.dungeonInstance.RemainingSeconds <= 0 {
+		t.Fatalf("expected map143 transfer to include countdown fields, got %+v", transfer.dungeonInstance)
+	}
 	for _, rolePush := range transfer.townBootstrap.CreateRoles {
 		for _, expectedHandle := range expectedRemovedHandles {
 			if rolePush.Handle == expectedHandle {
@@ -687,6 +693,9 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 	}, newSocketSession)
 	if selectAgain.townBootstrap == nil {
 		t.Fatalf("expected reselect bootstrap to restore dungeon instance state, got %+v", selectAgain)
+	}
+	if selectAgain.dungeonInstance == nil || !selectAgain.dungeonInstance.Active || selectAgain.dungeonInstance.Key != session.DungeonInstanceShuiliandong {
+		t.Fatalf("expected reselect to push active shuiliandong instance, got %+v", selectAgain.dungeonInstance)
 	}
 	for _, expectedHandle := range expectedRemovedHandles {
 		if !newSocketSession.defeatedVisibleMonsters[expectedHandle] {
@@ -727,6 +736,177 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 	}, socketSession)
 	if groupMateStart.battleStart != nil || socketSession.battleRuntime != nil {
 		t.Fatalf("expected defeated visible monster group mate battle to be rejected, got result=%+v runtime=%+v", groupMateStart, socketSession.battleRuntime)
+	}
+
+	exitTransfer := buildClassicTownTransferResult(store, socketSession, "122", world.SpawnPoint{X: 1000, Y: 600})
+	if exitTransfer.dungeonInstance == nil || exitTransfer.dungeonInstance.Active || exitTransfer.dungeonInstance.Key != "" {
+		t.Fatalf("expected non-dungeon transfer to hide dungeon countdown, got %+v", exitTransfer.dungeonInstance)
+	}
+}
+
+func TestHandlePacketClassicBattleOverRemovesHuangfengzhaiVisibleMonster(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	grantRoleItemTemplateForTest(t, store, socketSession, "黄风寨通行证", 1)
+	const visibleMonsterHandle = "3218685759638239"
+	expectedRemovedHandles := []string{"3220685759639165", "3218685759638239"}
+
+	transfer := buildClassicTownTransferResult(store, socketSession, "149", world.SpawnPoint{X: 1451, Y: 403})
+	if transfer.townBootstrap == nil {
+		t.Fatalf("expected map149 transfer bootstrap, got %+v", transfer)
+	}
+	if transfer.dungeonInstance == nil || !transfer.dungeonInstance.Active || transfer.dungeonInstance.Key != session.DungeonInstanceHuangfengzhai || transfer.dungeonInstance.DisplayName != "黄风寨" {
+		t.Fatalf("expected map149 transfer to sync active huangfengzhai instance, got %+v", transfer.dungeonInstance)
+	}
+	if transfer.dungeonInstance.DurationSeconds != session.DungeonInstanceTTLSeconds() || transfer.dungeonInstance.ExpiresAtUnix <= transfer.dungeonInstance.CreatedAtUnix || transfer.dungeonInstance.RemainingSeconds <= 0 {
+		t.Fatalf("expected map149 transfer to include countdown fields, got %+v", transfer.dungeonInstance)
+	}
+
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "149",
+			MapName:             "黄风寨_4",
+			StageFocusX:         1451,
+			ReturnRoute:         "town-placeholder",
+			SourceMonsterHandle: visibleMonsterHandle,
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || socketSession.battleRuntime == nil || socketSession.battleRuntime.SourceMonsterHandle != visibleMonsterHandle {
+		t.Fatalf("expected huangfengzhai visible monster battle to start, got result=%+v runtime=%+v", startResult, socketSession.battleRuntime)
+	}
+	socketSession.battleRuntime.PendingOver = &battle.OverPush{
+		BattleID: startResult.battleStart.BattleID,
+		Winner:   battle.CampTeam,
+		Rounds:   1,
+		Result: battle.ResultPayload{
+			Winner: battle.CampTeam,
+			Rounds: 1,
+		},
+	}
+
+	playOver := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattlePlayOverReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.PlayOverRequest{
+			BattleID: startResult.battleStart.BattleID,
+		}),
+	}, socketSession)
+	if playOver.battleOver == nil || len(playOver.removeRoleHandles) != len(expectedRemovedHandles) {
+		t.Fatalf("expected huangfengzhai visible monster group removeRole after BattlePlayOver, got %+v", playOver)
+	}
+	for index, expectedHandle := range expectedRemovedHandles {
+		if playOver.removeRoleHandles[index] != expectedHandle {
+			t.Fatalf("expected huangfengzhai visible monster removeRole %d to be %s, got %+v", index, expectedHandle, playOver.removeRoleHandles)
+		}
+		if !socketSession.defeatedVisibleMonsters[expectedHandle] {
+			t.Fatalf("expected session to retain huangfengzhai defeated visible monster handle %s, got %+v", expectedHandle, socketSession.defeatedVisibleMonsters)
+		}
+	}
+
+	reenter := buildClassicTownTransferResult(store, socketSession, "149", world.SpawnPoint{X: 1000, Y: 600})
+	if reenter.townBootstrap == nil || reenter.dungeonInstance == nil || !reenter.dungeonInstance.Active || reenter.dungeonInstance.Key != session.DungeonInstanceHuangfengzhai {
+		t.Fatalf("expected reenter map149 to keep huangfengzhai instance active, got %+v", reenter)
+	}
+	for _, rolePush := range reenter.townBootstrap.CreateRoles {
+		for _, expectedHandle := range expectedRemovedHandles {
+			if rolePush.Handle == expectedHandle {
+				t.Fatalf("expected defeated huangfengzhai visible monster group to stay removed from map149 bootstrap, got %+v", rolePush)
+			}
+		}
+	}
+
+	newSocketSession := &packetSession{}
+	selectAgain := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 4,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     socketSession.playerBase.PlayerID,
+			SessionToken: "mock-session-token-001",
+			RoleID:       socketSession.selectedRole.RoleID,
+		}),
+	}, newSocketSession)
+	if selectAgain.townBootstrap == nil || selectAgain.dungeonInstance == nil || !selectAgain.dungeonInstance.Active || selectAgain.dungeonInstance.Key != session.DungeonInstanceHuangfengzhai {
+		t.Fatalf("expected reselect to restore huangfengzhai instance state, got %+v", selectAgain)
+	}
+	for _, expectedHandle := range expectedRemovedHandles {
+		if !newSocketSession.defeatedVisibleMonsters[expectedHandle] {
+			t.Fatalf("expected new socket session to restore huangfengzhai defeated visible monster %s, got %+v", expectedHandle, newSocketSession.defeatedVisibleMonsters)
+		}
+	}
+}
+
+func TestClassicTownDungeonEntryRequiresAndConsumesTicketOncePerInstance(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 122)
+	if !ok {
+		t.Fatal("expected test role map update to huangfengzhai entrance")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+
+	rejected := buildClassicTownTransferResult(store, socketSession, "146", world.SpawnPoint{X: 329, Y: 480})
+	if rejected.townBootstrap != nil || rejected.dungeonInstance != nil {
+		t.Fatalf("expected dungeon entry without ticket to be rejected, got %+v", rejected)
+	}
+	if len(rejected.chatMessages) != 1 || !strings.Contains(rejected.chatMessages[0].Msg, "黄风寨通行证x1") {
+		t.Fatalf("expected missing ticket system message, got %+v", rejected.chatMessages)
+	}
+	role, _, ok = store.GetRoleRuntimeData(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
+	if !ok || role.MapID != 122 {
+		t.Fatalf("expected rejected entry to keep role on map122, got ok=%v role=%+v", ok, role)
+	}
+
+	granted := grantRoleItemTemplateForTest(t, store, socketSession, "黄风寨通行证", 2)
+	firstEntry := buildClassicTownTransferResult(store, socketSession, "146", world.SpawnPoint{X: 329, Y: 480})
+	if firstEntry.townBootstrap == nil || firstEntry.dungeonInstance == nil || !firstEntry.dungeonInstance.Active || firstEntry.dungeonInstance.Key != session.DungeonInstanceHuangfengzhai {
+		t.Fatalf("expected ticketed entry to enter huangfengzhai, got %+v", firstEntry)
+	}
+	if len(firstEntry.itemInfos) != 1 || firstEntry.itemInfos[0].Index != granted.Index || firstEntry.itemInfos[0].Count != 1 {
+		t.Fatalf("expected first entry to decrement ticket stack, got infos=%+v granted=%+v", firstEntry.itemInfos, granted)
+	}
+	if len(firstEntry.itemClears) != 0 {
+		t.Fatalf("expected stacked ticket not to clear slot, got %+v", firstEntry.itemClears)
+	}
+
+	exit := buildClassicTownTransferResult(store, socketSession, "122", world.SpawnPoint{X: 1000, Y: 600})
+	if exit.townBootstrap == nil || exit.dungeonInstance == nil || exit.dungeonInstance.Active {
+		t.Fatalf("expected exit to ordinary map to hide dungeon timer, got %+v", exit)
+	}
+	reentry := buildClassicTownTransferResult(store, socketSession, "146", world.SpawnPoint{X: 329, Y: 480})
+	if reentry.townBootstrap == nil || reentry.dungeonInstance == nil || !reentry.dungeonInstance.Active {
+		t.Fatalf("expected active instance reentry without extra ticket consume, got %+v", reentry)
+	}
+	if len(reentry.itemInfos) != 0 || len(reentry.itemClears) != 0 {
+		t.Fatalf("expected reentry during active instance not to consume another ticket, got infos=%+v clears=%+v", reentry.itemInfos, reentry.itemClears)
+	}
+	ticket, ok := store.GetRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "背包", granted.Index)
+	if !ok || ticket.Name != "黄风寨通行证" || ticket.Count != 1 {
+		t.Fatalf("expected one ticket to remain after reentry, got ok=%v ticket=%+v", ok, ticket)
+	}
+}
+
+func TestClassicTownShuiliandongEntryRequiresTicketAndClearsSingleTicketSlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 127)
+	if !ok {
+		t.Fatal("expected test role map update to shuiliandong entrance")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+
+	rejected := buildClassicTownTransferResult(store, socketSession, "131", world.SpawnPoint{X: 1020, Y: 300})
+	if rejected.townBootstrap != nil || len(rejected.chatMessages) != 1 || !strings.Contains(rejected.chatMessages[0].Msg, "水帘洞通行证x1") {
+		t.Fatalf("expected shuiliandong entry without ticket to be rejected, got %+v", rejected)
+	}
+
+	granted := grantRoleItemTemplateForTest(t, store, socketSession, "水帘洞通行证", 1)
+	entry := buildClassicTownTransferResult(store, socketSession, "131", world.SpawnPoint{X: 1020, Y: 300})
+	if entry.townBootstrap == nil || entry.dungeonInstance == nil || !entry.dungeonInstance.Active || entry.dungeonInstance.Key != session.DungeonInstanceShuiliandong {
+		t.Fatalf("expected ticketed shuiliandong entry, got %+v", entry)
+	}
+	if len(entry.itemClears) != 1 || entry.itemClears[0].Type != "背包" || entry.itemClears[0].Index != granted.Index {
+		t.Fatalf("expected single shuiliandong ticket slot clear, got clears=%+v granted=%+v", entry.itemClears, granted)
 	}
 }
 
@@ -3425,6 +3605,21 @@ func seedSelectedRoleSession(t *testing.T) (*session.Store, *packetSession) {
 	store := session.NewStore()
 	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "技能测试")
 	return store, socketSession
+}
+
+func grantRoleItemTemplateForTest(t *testing.T, store *session.Store, socketSession *packetSession, name string, count int) session.RoleItem {
+	t.Helper()
+
+	template, ok := session.CapturedRoleItemTemplate(name)
+	if !ok {
+		t.Fatalf("expected captured item template %s", name)
+	}
+	template.Count = count
+	granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, template)
+	if !ok {
+		t.Fatalf("expected grant item %s", name)
+	}
+	return granted
 }
 
 func startClassicBattleForTest(t *testing.T, socketSession *packetSession) packetResult {

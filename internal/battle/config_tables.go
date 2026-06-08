@@ -4,11 +4,12 @@ import (
 	"embed"
 	"encoding/csv"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-//go:embed config/classic-wild-enemy.csv config/classic-visible-monster.csv config/classic-battle-reward.csv
+//go:embed config/classic-wild-enemy.csv config/classic-visible-monster.csv config/classic-battle-reward.csv config/classic-battle-reward-candidate.csv
 var battleConfigFiles embed.FS
 
 type sourceWildEnemyConfig struct {
@@ -24,15 +25,35 @@ type sourceBattleRewardConfig struct {
 	SourceMonsterHandle string
 	ExpDelta            int
 	Items               []string
+	DropRates           []sourceBattleRewardDropRate
 	Source              string
 	Status              string
 }
 
+type sourceBattleRewardCandidateConfig struct {
+	MapID       string
+	MonsterName string
+	MaxHP       int
+	ExpDelta    int
+	DropRates   []sourceBattleRewardDropRate
+	Source      string
+	Status      string
+}
+
+type sourceBattleRewardDropRate struct {
+	ItemName    string
+	Quantity    int
+	Numerator   int
+	Denominator int
+}
+
 var (
-	sourceWildEnemyConfigByMapID    = mustLoadSourceWildEnemyConfigs()
-	sourceWildEnemyConfigsByMapID   = mustLoadSourceWildEnemyConfigLists()
-	sourceVisibleMonsterConfigByKey = mustLoadSourceVisibleMonsterConfigs()
-	sourceBattleRewardConfigByKey   = mustLoadSourceBattleRewardConfigs()
+	sourceWildEnemyConfigByMapID         = mustLoadSourceWildEnemyConfigs()
+	sourceWildEnemyConfigsByMapID        = mustLoadSourceWildEnemyConfigLists()
+	sourceVisibleMonsterConfigByKey      = mustLoadSourceVisibleMonsterConfigs()
+	sourceBattleRewardConfigByKey        = mustLoadSourceBattleRewardConfigs()
+	sourceBattleRewardCandidateByCellKey = mustLoadSourceBattleRewardCandidateConfigsByCellKey()
+	sourceBattleRewardCandidateByNameHP  = mustLoadSourceBattleRewardCandidateConfigsByNameHP()
 )
 
 func sourceEnemyConfigForMap(mapID string) (sourceWildEnemyConfig, bool) {
@@ -173,9 +194,62 @@ func mustLoadSourceBattleRewardConfigs() map[string]sourceBattleRewardConfig {
 			SourceMonsterHandle: sourceMonsterHandle,
 			ExpDelta:            requiredBattleConfigInt(row, header, "exp_delta", rowIndex),
 			Items:               splitBattleConfigList(optionalBattleConfigString(row, header, "items")),
-			Source:              optionalBattleConfigString(row, header, "source"),
-			Status:              requiredBattleConfigString(row, header, "status", rowIndex),
+			DropRates: parseSourceBattleRewardDropRates(
+				optionalBattleConfigString(row, header, "item_counts"),
+				optionalBattleConfigString(row, header, "item_drop_windows"),
+				optionalBattleConfigString(row, header, "item_observed_rates"),
+				optionalBattleConfigInt(row, header, "window_count"),
+			),
+			Source: optionalBattleConfigString(row, header, "source"),
+			Status: requiredBattleConfigString(row, header, "status", rowIndex),
 		}
+	}
+	return configs
+}
+
+func mustLoadSourceBattleRewardCandidateConfigsByCellKey() map[string]sourceBattleRewardCandidateConfig {
+	configs := map[string]sourceBattleRewardCandidateConfig{}
+	for _, config := range loadSourceBattleRewardCandidateConfigRows() {
+		configs[battleRewardCandidateCellKey(config.MapID, config.MonsterName, config.MaxHP)] = config
+	}
+	return configs
+}
+
+func mustLoadSourceBattleRewardCandidateConfigsByNameHP() map[string]sourceBattleRewardCandidateConfig {
+	configs := map[string]sourceBattleRewardCandidateConfig{}
+	for _, config := range loadSourceBattleRewardCandidateConfigRows() {
+		key := battleRewardCandidateNameHPKey(config.MonsterName, config.MaxHP)
+		if _, exists := configs[key]; exists {
+			continue
+		}
+		configs[key] = config
+	}
+	return configs
+}
+
+func loadSourceBattleRewardCandidateConfigRows() []sourceBattleRewardCandidateConfig {
+	records := mustReadBattleConfigCSV("config/classic-battle-reward-candidate.csv")
+	header := battleConfigHeader(records[0])
+	configs := []sourceBattleRewardCandidateConfig{}
+	for rowIndex, row := range records[1:] {
+		mapID := requiredBattleConfigString(row, header, "map_id", rowIndex)
+		monsterName := requiredBattleConfigString(row, header, "monster_name", rowIndex)
+		maxHP := requiredBattleConfigInt(row, header, "max_hp", rowIndex)
+		windowCount := requiredBattleConfigInt(row, header, "window_count", rowIndex)
+		configs = append(configs, sourceBattleRewardCandidateConfig{
+			MapID:       mapID,
+			MonsterName: monsterName,
+			MaxHP:       maxHP,
+			ExpDelta:    dominantSourceBattleRewardExperience(optionalBattleConfigString(row, header, "experience_counts")),
+			DropRates: parseSourceBattleRewardDropRates(
+				optionalBattleConfigString(row, header, "item_counts"),
+				optionalBattleConfigString(row, header, "item_drop_windows"),
+				optionalBattleConfigString(row, header, "item_observed_rates"),
+				windowCount,
+			),
+			Source: optionalBattleConfigString(row, header, "source"),
+			Status: optionalBattleConfigString(row, header, "status"),
+		})
 	}
 	return configs
 }
@@ -231,6 +305,18 @@ func requiredBattleConfigInt(row []string, header map[string]int, name string, r
 	return value
 }
 
+func optionalBattleConfigInt(row []string, header map[string]int, name string) int {
+	raw := optionalBattleConfigString(row, header, name)
+	if raw == "" {
+		return 0
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
 func splitBattleConfigList(value string) []string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -245,4 +331,111 @@ func splitBattleConfigList(value string) []string {
 		}
 	}
 	return items
+}
+
+func battleRewardCandidateCellKey(mapID string, monsterName string, maxHP int) string {
+	return strings.TrimSpace(mapID) + ":" + strings.TrimSpace(monsterName) + ":" + strconv.Itoa(maxHP)
+}
+
+func battleRewardCandidateNameHPKey(monsterName string, maxHP int) string {
+	return strings.TrimSpace(monsterName) + ":" + strconv.Itoa(maxHP)
+}
+
+func sourceBattleRewardCandidateForCell(mapID string, monsterName string, maxHP int) (sourceBattleRewardCandidateConfig, bool) {
+	if config, ok := sourceBattleRewardCandidateByCellKey[battleRewardCandidateCellKey(mapID, monsterName, maxHP)]; ok {
+		return config, true
+	}
+	config, ok := sourceBattleRewardCandidateByNameHP[battleRewardCandidateNameHPKey(monsterName, maxHP)]
+	return config, ok
+}
+
+func parseSourceBattleRewardDropRates(itemCounts string, itemDropWindows string, itemObservedRates string, windowCount int) []sourceBattleRewardDropRate {
+	totalCounts := parseSourceBattleRewardItemCounts(itemCounts)
+	dropWindows := parseSourceBattleRewardItemCounts(itemDropWindows)
+	rates := []sourceBattleRewardDropRate{}
+	for _, part := range splitBattleConfigList(itemObservedRates) {
+		name, numerator, denominator, ok := parseSourceBattleRewardObservedRate(part)
+		if !ok {
+			continue
+		}
+		if denominator <= 0 {
+			denominator = windowCount
+		}
+		quantity := 1
+		if windows := dropWindows[name]; windows > 0 {
+			quantity = maxInt(1, (totalCounts[name]+windows/2)/windows)
+		}
+		rates = append(rates, sourceBattleRewardDropRate{
+			ItemName:    name,
+			Quantity:    quantity,
+			Numerator:   numerator,
+			Denominator: maxInt(1, denominator),
+		})
+	}
+	return rates
+}
+
+func parseSourceBattleRewardItemCounts(value string) map[string]int {
+	counts := map[string]int{}
+	for _, item := range splitBattleConfigList(value) {
+		name, count := parseSourceBattleRewardItemStack(item)
+		if name == "" {
+			continue
+		}
+		counts[name] += count
+	}
+	return counts
+}
+
+func parseSourceBattleRewardItemStack(value string) (string, int) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", 0
+	}
+	match := regexp.MustCompile(`^(.+?)x(\d+)$`).FindStringSubmatch(value)
+	if len(match) != 3 {
+		return value, 1
+	}
+	count, err := strconv.Atoi(match[2])
+	if err != nil || count <= 0 {
+		count = 1
+	}
+	return strings.TrimSpace(match[1]), count
+}
+
+func parseSourceBattleRewardObservedRate(value string) (string, int, int, bool) {
+	parts := strings.Split(strings.TrimSpace(value), "=")
+	if len(parts) != 2 {
+		return "", 0, 0, false
+	}
+	fraction := strings.Split(strings.TrimSpace(parts[1]), "/")
+	if len(fraction) != 2 {
+		return "", 0, 0, false
+	}
+	numerator, err := strconv.Atoi(strings.TrimSpace(fraction[0]))
+	if err != nil {
+		return "", 0, 0, false
+	}
+	denominator, err := strconv.Atoi(strings.TrimSpace(fraction[1]))
+	if err != nil {
+		return "", 0, 0, false
+	}
+	return strings.TrimSpace(parts[0]), numerator, denominator, true
+}
+
+func dominantSourceBattleRewardExperience(value string) int {
+	bestExp := 0
+	bestCount := -1
+	for _, part := range splitBattleConfigList(value) {
+		name, count := parseSourceBattleRewardItemStack(part)
+		exp, err := strconv.Atoi(name)
+		if err != nil {
+			continue
+		}
+		if count > bestCount {
+			bestExp = exp
+			bestCount = count
+		}
+	}
+	return bestExp
 }

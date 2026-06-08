@@ -1,6 +1,7 @@
 package battle
 
 import (
+	"reflect"
 	"testing"
 
 	"ai-server/internal/session"
@@ -15,6 +16,7 @@ func useSourceEncounterRoll(roll func(int) int) func() {
 }
 
 func TestBuildOverUsesCapturedMap5BattleRewards(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	runtime := &Runtime{
 		BattleID: "battle-map5",
 		MapID:    "5",
@@ -28,8 +30,9 @@ func TestBuildOverUsesCapturedMap5BattleRewards(t *testing.T) {
 	if over.Result.ExpDelta != 0 {
 		t.Fatalf("expected captured map5 exp 0, got %d", over.Result.ExpDelta)
 	}
-	if len(over.Result.Items) != 1 || over.Result.Items[0] != "肉" {
-		t.Fatalf("expected captured map5 reward 肉 x1, got %+v", over.Result.Items)
+	expectedItems := []string{"肉x1", "兽牙x1"}
+	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
+		t.Fatalf("expected captured map5 low-roll reward %+v, got %+v", expectedItems, over.Result.Items)
 	}
 }
 
@@ -46,6 +49,7 @@ func TestBuildOverDoesNotInventUncapturedOrEscapedRewards(t *testing.T) {
 }
 
 func TestBuildOverUsesCapturedMap49RobberRewardWithExperience(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	over := (&Runtime{BattleID: "battle-map49", MapID: "49", Round: 1}).buildOver(CampTeam)
 	if over == nil {
 		t.Fatal("expected OverBattle push")
@@ -53,12 +57,14 @@ func TestBuildOverUsesCapturedMap49RobberRewardWithExperience(t *testing.T) {
 	if over.Result.ExpDelta != 610 {
 		t.Fatalf("expected captured map49 robber reward exp 610, got %d", over.Result.ExpDelta)
 	}
-	if len(over.Result.Items) != 2 || over.Result.Items[0] != "铜钱x5" || over.Result.Items[1] != "盗贼的首级x1" {
-		t.Fatalf("expected captured map49 reward 铜钱x5 and 盗贼的首级x1, got %+v", over.Result.Items)
+	expectedItems := []string{"铜钱x8", "盗贼的首级x1", "L小喇叭x1", "红方巾x1", "毛皮x1"}
+	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
+		t.Fatalf("expected captured map49 low-roll reward %+v, got %+v", expectedItems, over.Result.Items)
 	}
 }
 
 func TestBuildOverSuppressesExperienceWhenPlayerOutlevelsMonsterByMoreThanSeven(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	over := (&Runtime{
 		BattleID: "battle-map49-overlevel",
 		MapID:    "49",
@@ -71,8 +77,9 @@ func TestBuildOverSuppressesExperienceWhenPlayerOutlevelsMonsterByMoreThanSeven(
 	if over.Result.ExpDelta != 0 {
 		t.Fatalf("expected player level 23 versus monster level 15 to suppress exp, got %d", over.Result.ExpDelta)
 	}
-	if len(over.Result.Items) != 2 || over.Result.Items[0] != "铜钱x5" || over.Result.Items[1] != "盗贼的首级x1" {
-		t.Fatalf("expected overlevel battle to keep item rewards, got %+v", over.Result.Items)
+	expectedItems := []string{"铜钱x8", "盗贼的首级x1", "L小喇叭x1", "红方巾x1", "毛皮x1"}
+	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
+		t.Fatalf("expected overlevel battle to keep probability-rolled item rewards %+v, got %+v", expectedItems, over.Result.Items)
 	}
 }
 
@@ -92,6 +99,7 @@ func TestBuildOverKeepsExperienceWhenPlayerIsOnlySevenLevelsAboveMonster(t *test
 }
 
 func TestBuildOverUsesCapturedCracktoadVisibleBossReward(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	plainMap143 := (&Runtime{BattleID: "battle-map143", MapID: "143", Round: 1}).buildOver(CampTeam)
 	if plainMap143.Result.ExpDelta != 0 || len(plainMap143.Result.Items) != 0 {
 		t.Fatalf("expected map143 without visible boss handle to stay empty, got %+v", plainMap143.Result)
@@ -106,7 +114,7 @@ func TestBuildOverUsesCapturedCracktoadVisibleBossReward(t *testing.T) {
 	if over == nil {
 		t.Fatal("expected OverBattle push")
 	}
-	expectedItems := []string{"毒囊x5", "肉x1", "黏液x1", "蛤蟆精战靴x1", "铜钱x50", "金元散x1"}
+	expectedItems := []string{"毒囊x5", "肉x1", "黏液x1", "蛤蟆精战靴x1", "铜钱x50"}
 	if over.Result.ExpDelta != 0 {
 		t.Fatalf("expected captured cracktoad reward exp 0, got %d", over.Result.ExpDelta)
 	}
@@ -121,14 +129,15 @@ func TestBuildOverUsesCapturedCracktoadVisibleBossReward(t *testing.T) {
 }
 
 func TestBuildOverUsesCapturedShuiliandongVisibleMonsterBaseRewards(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	testCases := []struct {
 		mapID  string
 		handle string
-		item   string
+		items  []string
 	}{
-		{mapID: "131", handle: "8128205778897212", item: "黏液x1"},
-		{mapID: "143", handle: "5166206909805441", item: "黏液x1"},
-		{mapID: "145", handle: "2890206197338884", item: "毒囊x1"},
+		{mapID: "131", handle: "8128205778897212", items: []string{"毒囊x1", "黏液x1", "竹x1"}},
+		{mapID: "143", handle: "5166206909805441", items: []string{"L小喇叭x1", "黏液x1", "甘露x1", "毒囊x1"}},
+		{mapID: "145", handle: "2890206197338884", items: []string{"毒囊x2", "翠带护腰x1"}},
 	}
 
 	for _, testCase := range testCases {
@@ -141,9 +150,76 @@ func TestBuildOverUsesCapturedShuiliandongVisibleMonsterBaseRewards(t *testing.T
 		if over == nil {
 			t.Fatalf("expected OverBattle push for %+v", testCase)
 		}
-		if len(over.Result.Items) != 1 || over.Result.Items[0] != testCase.item {
-			t.Fatalf("expected shuiliandong visible monster %+v reward %q, got %+v", testCase, testCase.item, over.Result.Items)
+		if !reflect.DeepEqual(over.Result.Items, testCase.items) {
+			t.Fatalf("expected shuiliandong visible monster %+v low-roll rewards, got %+v", testCase, over.Result.Items)
 		}
+	}
+}
+
+func TestBuildOverUsesCapturedHuangfengzhaiBossRewards(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+	testCases := []struct {
+		mapID    string
+		handle   string
+		expDelta int
+		items    []string
+	}{
+		{
+			mapID:    "149",
+			handle:   "3218685759638239",
+			expDelta: 336,
+			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1"},
+		},
+		{
+			mapID:    "149",
+			handle:   "3220685759639165",
+			expDelta: 336,
+			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1"},
+		},
+		{
+			mapID:    "155",
+			handle:   "2600686416056495",
+			expDelta: 720,
+			items:    []string{"红方巾x2", "绸缎x3", "铜钱x110", "盗贼的首级x1", "呼啸战靴x1", "寨夫人上衣x1", "寨夫人护腕x1", "宝匣x1"},
+		},
+		{
+			mapID:    "155",
+			handle:   "2800686416057704",
+			expDelta: 720,
+			items:    []string{"红方巾x2", "绸缎x3", "铜钱x110", "盗贼的首级x1", "呼啸战靴x1", "寨夫人上衣x1", "寨夫人护腕x1", "宝匣x1"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		over := (&Runtime{
+			BattleID:            "battle-huangfengzhai-boss",
+			MapID:               testCase.mapID,
+			SourceMonsterHandle: testCase.handle,
+			Round:               1,
+		}).buildOver(CampTeam)
+		if over == nil {
+			t.Fatalf("expected OverBattle push for %+v", testCase)
+		}
+		if over.Result.ExpDelta != testCase.expDelta {
+			t.Fatalf("expected huangfengzhai boss reward exp %d for %+v, got %d", testCase.expDelta, testCase, over.Result.ExpDelta)
+		}
+		if len(over.Result.Items) != len(testCase.items) {
+			t.Fatalf("expected huangfengzhai boss reward items %+v for %+v, got %+v", testCase.items, testCase, over.Result.Items)
+		}
+		for index, item := range testCase.items {
+			if over.Result.Items[index] != item {
+				t.Fatalf("expected huangfengzhai boss reward item %d to be %q for %+v, got %+v", index, item, testCase, over.Result.Items)
+			}
+		}
+	}
+}
+
+func TestBuildOverRollsCapturedObservedDropRates(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
+	over := (&Runtime{BattleID: "battle-map5-high-roll", MapID: "5", Round: 1}).buildOver(CampTeam)
+	expectedItems := []string{"肉x1"}
+	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
+		t.Fatalf("expected 100%% meat to survive high roll and 50%% tooth to drop out, got %+v", over.Result.Items)
 	}
 }
 
@@ -221,7 +297,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected map5 battle reward config")
 	}
-	if reward.Status != "confirmed" || reward.ExpDelta != 0 || len(reward.Items) != 1 || reward.Items[0] != "肉" {
+	if reward.Status != "confirmed" || reward.ExpDelta != 0 || len(reward.Items) != 2 || len(reward.DropRates) != 2 {
 		t.Fatalf("expected confirmed captured map5 reward config, got %+v", reward)
 	}
 
@@ -229,7 +305,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected map49 battle reward config")
 	}
-	if map49Reward.Status != "confirmed" || map49Reward.ExpDelta != 610 || len(map49Reward.Items) != 2 {
+	if map49Reward.Status != "confirmed" || map49Reward.ExpDelta != 610 || len(map49Reward.Items) != 5 || len(map49Reward.DropRates) != 5 {
 		t.Fatalf("expected confirmed captured map49 reward config, got %+v", map49Reward)
 	}
 
@@ -237,7 +313,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected cracktoad visible boss reward config")
 	}
-	if cracktoadReward.SourceMonsterHandle != "5176206909809579" || cracktoadReward.ExpDelta != 0 || len(cracktoadReward.Items) != 6 {
+	if cracktoadReward.SourceMonsterHandle != "5176206909809579" || cracktoadReward.ExpDelta != 0 || len(cracktoadReward.Items) != 5 || len(cracktoadReward.DropRates) != 5 {
 		t.Fatalf("expected captured cracktoad visible boss reward config, got %+v", cracktoadReward)
 	}
 
@@ -285,6 +361,24 @@ func TestVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T) {
 			handles: []string{"5168206909805631", "5170206909806155", "5176206909809579"},
 			names:   []string{"法术蛤蟆", "法术蛤蟆", "蛤蟆精"},
 		},
+		{
+			mapID:   "149",
+			handle:  "3218685759638239",
+			handles: []string{"3220685759639165", "3218685759638239"},
+			names:   []string{"蛮族弓手", "黄风二寨主"},
+		},
+		{
+			mapID:   "155",
+			handle:  "2600686416056495",
+			handles: []string{"2800686416057704", "2600686416056495"},
+			names:   []string{"黄风寨夫人", "黄风大寨主"},
+		},
+		{
+			mapID:   "152",
+			handle:  "2600685534049446",
+			handles: []string{"2600685534049446", "3000685534050820", "2800685534050729"},
+			names:   []string{"蛮族刀客", "蛮族弓手", "蛮族弓手"},
+		},
 	}
 
 	for _, testCase := range cases {
@@ -300,6 +394,42 @@ func TestVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T) {
 				t.Fatalf("expected captured visible encounter member %d %s/%s, got %+v", index, expectedHandle, testCase.names[index], configs[index].Cell)
 			}
 		}
+	}
+}
+
+func TestHuangfengzhaiVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) {
+	cases := []struct {
+		mapID  string
+		handle string
+		name   string
+		level  int
+		maxHP  int
+		maxMP  int
+		attack int
+		label  string
+	}{
+		{mapID: "146", handle: "6887685480585492", name: "蛮族刀客", level: 12, maxHP: 520, maxMP: 214, attack: 208, label: "普通攻击"},
+		{mapID: "149", handle: "3218685759638239", name: "黄风二寨主", level: 19, maxHP: 1200, maxMP: 564, attack: 240, label: "普通攻击"},
+		{mapID: "153", handle: "7494686002239485", name: "咒巫师", level: 16, maxHP: 500, maxMP: 550, attack: 202, label: "法术普通攻击"},
+		{mapID: "155", handle: "2600686416056495", name: "黄风大寨主", level: 20, maxHP: 1500, maxMP: 564, attack: 260, label: "普通攻击"},
+		{mapID: "155", handle: "2800686416057704", name: "黄风寨夫人", level: 20, maxHP: 1200, maxMP: 704, attack: 240, label: "普通攻击"},
+	}
+
+	for _, testCase := range cases {
+		config, ok := sourceVisibleMonsterConfigForHandle(testCase.mapID, testCase.handle)
+		if !ok {
+			t.Fatalf("expected captured huangfengzhai visible monster config for %s/%s", testCase.mapID, testCase.handle)
+		}
+		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.MaxHP != testCase.maxHP || config.Cell.MaxMP != testCase.maxMP || config.Cell.Attack != testCase.attack || config.Cell.CommandLabel != testCase.label {
+			t.Fatalf("expected captured huangfengzhai visible monster %+v, got %+v", testCase, config.Cell)
+		}
+		if config.QueueIndexTeam != 1 || config.QueueIndexEnemy != 4 {
+			t.Fatalf("expected huangfengzhai visible monster queue indexes 1/4, got %+v", config)
+		}
+	}
+
+	if _, ok := sourceVisibleMonsterConfigForHandle("147", "6887685480585492"); ok {
+		t.Fatal("expected map147 to stay without visible monster config until source packets are captured")
 	}
 }
 
@@ -360,6 +490,73 @@ func TestNewWildBattleUsesCapturedVisibleMonsterEncounterGroup(t *testing.T) {
 	}
 	if bundle.Start.EncounterLabel != "水帘洞_13 首领" {
 		t.Fatalf("expected visible boss group to keep boss encounter label, got %+v", bundle.Start)
+	}
+}
+
+func TestNewWildBattleUsesCapturedHuangfengzhaiVisibleMonsterEncounterGroup(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "player_huangfeng",
+		DisplayName: "测试女侠",
+		Level:       23,
+		SourceQuery: "human/human.swf?a=4&w8=42&",
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:    "player",
+		RoleID:      role.RoleID,
+		DisplayName: role.DisplayName,
+		Level:       23,
+		HP:          1045,
+		MP:          264,
+		MaxHP:       1045,
+		MaxMP:       264,
+		SourceQuery: role.SourceQuery,
+		RolePhysique: &session.RolePhysique{
+			Handle: role.RoleID,
+			MaxHP:  1045,
+			MaxMP:  264,
+			PhyAtk: 145,
+			PhyDef: 158,
+			MgcDef: 30,
+			Hit:    201,
+			Dog:    115,
+			Fat:    156,
+		},
+	}
+
+	runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{
+		MapID:               "155",
+		MapName:             "黄风寨_10",
+		SourceMonsterHandle: "2600686416056495",
+	})
+
+	if !ok || runtime == nil {
+		t.Fatalf("expected huangfengzhai visible monster group battle runtime, got ok=%v runtime=%+v", ok, runtime)
+	}
+	if runtime.SourceMonsterHandle != "2600686416056495" {
+		t.Fatalf("expected runtime to retain huangfengzhai source monster handle, got %+v", runtime)
+	}
+	if len(bundle.Cells) != 3 {
+		t.Fatalf("expected player plus captured huangfengzhai boss pair, got %+v", bundle.Cells)
+	}
+	expectedEnemies := []struct {
+		handle string
+		name   string
+		maxHP  int
+	}{
+		{handle: "2800686416057704", name: "黄风寨夫人", maxHP: 1200},
+		{handle: "2600686416056495", name: "黄风大寨主", maxHP: 1500},
+	}
+	for index, expected := range expectedEnemies {
+		cell := bundle.Cells[index+1]
+		if cell.Handle != expected.handle || cell.Name != expected.name || cell.MaxHP != expected.maxHP {
+			t.Fatalf("expected captured huangfengzhai enemy %+v at index %d, got %+v", expected, index, cell)
+		}
+		if cell.Camp != CampEnemy {
+			t.Fatalf("expected huangfengzhai enemy camp for %s, got %+v", expected.handle, cell)
+		}
+	}
+	if bundle.Start.EncounterLabel != "黄风寨_10 首领" {
+		t.Fatalf("expected huangfengzhai visible boss group to keep boss encounter label, got %+v", bundle.Start)
 	}
 }
 

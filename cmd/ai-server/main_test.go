@@ -572,6 +572,98 @@ func TestHandlePacketClassicTownBattleBootyContainerAndMove(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownBattleBootyContainerMoveFiltersNames(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	socketSession.battleLoot = []session.RoleItem{{
+		Type:      "战斗",
+		Name:      "朽木",
+		ItemType:  "own",
+		Display:   "915.png",
+		Count:     2,
+		Index:     0,
+		ItemLevel: 1,
+	}, {
+		Type:      "战斗",
+		Name:      "兽牙",
+		ItemType:  "own",
+		Display:   "913.png",
+		Count:     1,
+		Index:     1,
+		ItemLevel: 2,
+	}}
+
+	moveResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType: "战斗",
+			TargetType: "背包",
+			Names:      []string{"兽牙"},
+		}),
+	}, socketSession)
+	if !moveResult.handled {
+		t.Fatal("expected battle booty filtered ContainerMove to be handled")
+	}
+	if len(moveResult.itemClears) != 1 || moveResult.itemClears[0].Index != 1 {
+		t.Fatalf("expected only filtered battle slot to clear, got %+v", moveResult.itemClears)
+	}
+	if len(moveResult.itemInfos) != 1 || moveResult.itemInfos[0].Type != "背包" || moveResult.itemInfos[0].Name != "兽牙" {
+		t.Fatalf("expected only filtered loot to move to bag, got %+v", moveResult.itemInfos)
+	}
+	if len(socketSession.battleLoot) != 1 || socketSession.battleLoot[0].Name != "朽木" || socketSession.battleLoot[0].Index != 0 {
+		t.Fatalf("expected unfiltered battle loot to remain, got %+v", socketSession.battleLoot)
+	}
+}
+
+func TestHandlePacketClassicTownBattleBootyContainerMoveExchangesBattleSlots(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	sourceIndex := 0
+	targetIndex := 1
+	socketSession.battleLoot = []session.RoleItem{{
+		Type:      "战斗",
+		Name:      "朽木",
+		ItemType:  "own",
+		Display:   "915.png",
+		Count:     2,
+		Index:     0,
+		ItemLevel: 1,
+	}, {
+		Type:      "战斗",
+		Name:      "兽牙",
+		ItemType:  "own",
+		Display:   "913.png",
+		Count:     1,
+		Index:     1,
+		ItemLevel: 2,
+	}}
+
+	moveResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  "战斗",
+			TargetType:  "战斗",
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+		}),
+	}, socketSession)
+	if !moveResult.handled {
+		t.Fatal("expected battle booty slot exchange to be handled")
+	}
+	if len(moveResult.itemClears) != 2 {
+		t.Fatalf("expected both battle slots to clear before exchange pushes, got %+v", moveResult.itemClears)
+	}
+	if len(moveResult.itemInfos) != 2 {
+		t.Fatalf("expected both exchanged battle items to be pushed, got %+v", moveResult.itemInfos)
+	}
+	if socketSession.battleLoot[0].Name != "朽木" || socketSession.battleLoot[0].Index != 1 {
+		t.Fatalf("expected source item to move to target battle slot, got %+v", socketSession.battleLoot)
+	}
+	if socketSession.battleLoot[1].Name != "兽牙" || socketSession.battleLoot[1].Index != 0 {
+		t.Fatalf("expected target item to swap into source battle slot, got %+v", socketSession.battleLoot)
+	}
+}
+
 func TestHandlePacketClassicBattleOverAppliesSourceResultRewards(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	startResult := startClassicBattleForTest(t, socketSession)
@@ -907,6 +999,30 @@ func TestClassicTownShuiliandongEntryRequiresTicketAndClearsSingleTicketSlot(t *
 	}
 	if len(entry.itemClears) != 1 || entry.itemClears[0].Type != "背包" || entry.itemClears[0].Index != granted.Index {
 		t.Fatalf("expected single shuiliandong ticket slot clear, got clears=%+v granted=%+v", entry.itemClears, granted)
+	}
+}
+
+func TestClassicTownFeixiandongEntryRequiresTicketAndClearsSingleTicketSlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 18)
+	if !ok {
+		t.Fatal("expected test role map update to feixiandong entrance")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+
+	rejected := buildClassicTownTransferResult(store, socketSession, "64", world.SpawnPoint{X: 1000, Y: 600})
+	if rejected.townBootstrap != nil || len(rejected.chatMessages) != 1 || !strings.Contains(rejected.chatMessages[0].Msg, "飞仙洞通行证x1") {
+		t.Fatalf("expected feixiandong entry without ticket to be rejected, got %+v", rejected)
+	}
+
+	granted := grantRoleItemTemplateForTest(t, store, socketSession, "飞仙洞通行证", 1)
+	entry := buildClassicTownTransferResult(store, socketSession, "64", world.SpawnPoint{X: 1000, Y: 600})
+	if entry.townBootstrap == nil || entry.dungeonInstance == nil || !entry.dungeonInstance.Active || entry.dungeonInstance.Key != session.DungeonInstanceFeixiandong || entry.dungeonInstance.DisplayName != "飞仙洞" {
+		t.Fatalf("expected ticketed feixiandong entry, got %+v", entry)
+	}
+	if len(entry.itemClears) != 1 || entry.itemClears[0].Type != "背包" || entry.itemClears[0].Index != granted.Index {
+		t.Fatalf("expected single feixiandong ticket slot clear, got clears=%+v granted=%+v", entry.itemClears, granted)
 	}
 }
 
@@ -2446,6 +2562,9 @@ func TestHandlePacketClassicTownCrossRolePushesMapBootstrap(t *testing.T) {
 	}
 	if crossResult.townBootstrap.LoadMap.MapID != "4" || crossResult.townBootstrap.LoadMap.MapName != "云隐村口" {
 		t.Fatalf("expected map4 bootstrap, got %+v", crossResult.townBootstrap.LoadMap)
+	}
+	if crossResult.townBootstrap.CreatePlayer.SpawnFlash.X != 1000 || crossResult.townBootstrap.CreatePlayer.SpawnFlash.Y != 600 {
+		t.Fatalf("expected CrossRole default spawn 1000,600 got %+v", crossResult.townBootstrap.CreatePlayer.SpawnFlash)
 	}
 }
 

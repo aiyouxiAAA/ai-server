@@ -178,7 +178,7 @@ func TestStoreRoleLifecycle(t *testing.T) {
 }
 
 func TestStoreDungeonInstancePersistsForOneHour(t *testing.T) {
-	for _, instanceKey := range []string{DungeonInstanceShuiliandong, DungeonInstanceHuangfengzhai} {
+	for _, instanceKey := range []string{DungeonInstanceShuiliandong, DungeonInstanceHuangfengzhai, DungeonInstanceFeixiandong} {
 		t.Run(instanceKey, func(t *testing.T) {
 			store := NewStore()
 			now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)

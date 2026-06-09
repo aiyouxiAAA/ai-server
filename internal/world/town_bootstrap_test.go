@@ -869,6 +869,79 @@ func TestBuildTownBootstrapUsesCapturedHuangfengzhaiTransportData(t *testing.T) 
 	}
 }
 
+func TestBuildTownBootstrapIncludesFeixiandongEntranceTransport(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-feixiandong",
+		DisplayName:  "测试女侠",
+		Level:        24,
+		MapID:        18,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        18,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	snapshot := BuildTownBootstrap(role, playerBase)
+	found := false
+	for _, rolePush := range snapshot.CreateRoles {
+		if rolePush.Handle != "transp_64" {
+			continue
+		}
+		found = true
+		if rolePush.RoleID != "-3" || rolePush.SourceQuery != "transp/flag2.swf" {
+			t.Fatalf("expected map18 transp_64 source transport, got %+v", rolePush)
+		}
+	}
+	if !found {
+		t.Fatalf("expected map18 to include transp_64 entrance into feixiandong, got %+v", snapshot.CreateRoles)
+	}
+}
+
+func TestResolveTownTransportAnswerUsesFeixiandongEntranceSpawn(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswer("transp_64", "goto")
+	if !ok {
+		t.Fatalf("expected transp_64 to resolve")
+	}
+	if destination.MapID != 64 || destination.Spawn != (SpawnPoint{X: 500, Y: 50}) {
+		t.Fatalf("expected transp_64 to land at map64 entrance, got %+v", destination)
+	}
+}
+
+func TestResolveTownTransportAnswerFromMapKeepsCapturedHandleSpawn(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswerFromMap(18, "transp_64", "goto")
+	if !ok {
+		t.Fatalf("expected map18 transp_64 to resolve")
+	}
+	if destination.MapID != 64 || destination.Spawn != (SpawnPoint{X: 500, Y: 50}) {
+		t.Fatalf("expected map18 transp_64 to keep captured handle spawn, got %+v", destination)
+	}
+}
+
+func TestResolveTownTransportAnswerFromMapUsesCapturedRouteSpawn(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswerFromMap(64, "transp_65", "goto")
+	if !ok {
+		t.Fatalf("expected map64 transp_65 to resolve")
+	}
+	if destination.MapID != 65 || destination.Spawn != (SpawnPoint{X: 125, Y: 437}) {
+		t.Fatalf("expected map64 transp_65 to land at captured map65 entrance, got %+v", destination)
+	}
+}
+
+func TestResolveTownTransportAnswerFromMapInfersSpawnNearReturnTransport(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswerFromMap(70, "transp_72", "goto")
+	if !ok {
+		t.Fatalf("expected map70 transp_72 to resolve")
+	}
+	if destination.MapID != 72 || destination.Spawn != (SpawnPoint{X: 130, Y: 584}) {
+		t.Fatalf("expected map70 transp_72 to infer spawn near map72 transp_70, got %+v", destination)
+	}
+}
+
 func TestBuildTownBootstrapUsesCapturedHuangfengzhaiVisibleMonsters(t *testing.T) {
 	cases := []struct {
 		mapID       int

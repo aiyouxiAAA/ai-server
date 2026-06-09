@@ -189,7 +189,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if result, ok := buildClassicTownCollectionResult(store, socketSession, request); ok {
 			return result
 		}
-		if destination, ok := world.ResolveTownTransportAnswer(request.Handle, "goto"); ok {
+		if destination, ok := resolveClassicTownTransportAnswer(socketSession, request.MapID, request.Handle, "goto"); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
 		answerSpeak := world.BuildAnswerSpeak(request.Handle)
@@ -203,7 +203,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		log.Printf("[ai-server] classic town CrossRole handle=%s roleId=%s kind=%s mapId=%s", request.Handle, request.RoleID, request.Kind, request.MapID)
-		if destination, ok := world.ResolveTownTransportAnswer(request.Handle, "goto"); ok {
+		if destination, ok := resolveClassicTownTransportAnswer(socketSession, request.MapID, request.Handle, "goto"); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
 		return packetResult{handled: true}
@@ -216,7 +216,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if result, ok := buildClassicTownSourceQuestRewardResult(store, socketSession, request); ok {
 			return result
 		}
-		if destination, ok := world.ResolveTownTransportAnswer(request.Handle, request.AnswerHandle); ok {
+		if destination, ok := resolveClassicTownTransportAnswer(socketSession, "", request.Handle, request.AnswerHandle); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
 		if result, ok := buildClassicTownItemShopResult(request); ok {
@@ -934,6 +934,9 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 
 	sourceType := strings.TrimSpace(request.SourceType)
 	targetType := strings.TrimSpace(request.TargetType)
+	if sourceType == classicBattleLootType && targetType == classicBattleLootType && request.SourceIndex != nil && request.TargetIndex != nil {
+		return buildClassicBattleLootExchangeResult(socketSession, *request.SourceIndex, *request.TargetIndex, request.Count)
+	}
 	if sourceType == classicBattleLootType && targetType == "背包" {
 		nameFilter := map[string]bool{}
 		for _, name := range request.Names {
@@ -1062,6 +1065,100 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 
 	log.Printf("[ai-server] classic town ContainerMove ignored unsupported source=%s target=%s", sourceType, targetType)
 	return packetResult{handled: true}
+}
+
+func buildClassicBattleLootExchangeResult(socketSession *packetSession, sourceIndex int, targetIndex int, count *int) packetResult {
+	if sourceIndex == targetIndex {
+		return packetResult{handled: true}
+	}
+
+	sourcePosition := -1
+	targetPosition := -1
+	for index, item := range socketSession.battleLoot {
+		if item.Type != classicBattleLootType {
+			continue
+		}
+		if item.Index == sourceIndex {
+			sourcePosition = index
+		}
+		if item.Index == targetIndex {
+			targetPosition = index
+		}
+	}
+	if sourcePosition < 0 {
+		return packetResult{handled: true}
+	}
+
+	sourceItem := socketSession.battleLoot[sourcePosition]
+	moveCount := sourceItem.Count
+	if count != nil && *count > 0 && *count < moveCount {
+		moveCount = *count
+	}
+	result := packetResult{
+		itemInfos:  []classicTownItemInfoPush{},
+		itemClears: []classicTownItemInfoClearPush{},
+		handled:    true,
+	}
+	pushItem := func(item session.RoleItem) {
+		item.Handle = socketSession.selectedRole.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+	}
+	clearSlot := func(index int) {
+		result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+			Handle: socketSession.selectedRole.RoleID,
+			Type:   classicBattleLootType,
+			Index:  index,
+		})
+	}
+
+	if targetPosition >= 0 {
+		targetItem := socketSession.battleLoot[targetPosition]
+		if strings.TrimSpace(sourceItem.Name) != "" && sourceItem.Name == targetItem.Name {
+			targetItem.Count += moveCount
+			socketSession.battleLoot[targetPosition] = targetItem
+			if moveCount < sourceItem.Count {
+				sourceItem.Count -= moveCount
+				socketSession.battleLoot[sourcePosition] = sourceItem
+				pushItem(sourceItem)
+			} else {
+				socketSession.battleLoot = append(socketSession.battleLoot[:sourcePosition], socketSession.battleLoot[sourcePosition+1:]...)
+				clearSlot(sourceIndex)
+			}
+			pushItem(targetItem)
+			return result
+		}
+
+		if moveCount < sourceItem.Count {
+			return packetResult{handled: true}
+		}
+		sourceItem.Index = targetIndex
+		targetItem.Index = sourceIndex
+		socketSession.battleLoot[sourcePosition] = sourceItem
+		socketSession.battleLoot[targetPosition] = targetItem
+		clearSlot(sourceIndex)
+		clearSlot(targetIndex)
+		pushItem(sourceItem)
+		pushItem(targetItem)
+		return result
+	}
+
+	if moveCount < sourceItem.Count {
+		sourceItem.Count -= moveCount
+		moved := sourceItem
+		moved.Count = moveCount
+		moved.Index = targetIndex
+		socketSession.battleLoot[sourcePosition] = sourceItem
+		socketSession.battleLoot = append(socketSession.battleLoot, moved)
+		pushItem(sourceItem)
+		pushItem(moved)
+		return result
+	}
+
+	sourceItem.Index = targetIndex
+	socketSession.battleLoot[sourcePosition] = sourceItem
+	clearSlot(sourceIndex)
+	pushItem(sourceItem)
+	return result
 }
 
 func buildClassicTownSourceQuestRewardResult(store *session.Store, socketSession *packetSession, request classicTownAnswerRequest) (packetResult, bool) {
@@ -1577,6 +1674,27 @@ func buildClassicTownTransferResult(
 	}
 }
 
+func resolveClassicTownTransportAnswer(
+	socketSession *packetSession,
+	requestMapID string,
+	handle string,
+	answerHandle string,
+) (world.TownTransportDestination, bool) {
+	fromMapID := 0
+	if requestMapID != "" {
+		if mapID, err := strconv.Atoi(requestMapID); err == nil {
+			fromMapID = mapID
+		}
+	}
+	if fromMapID == 0 && socketSession != nil && socketSession.selectedRole != nil {
+		fromMapID = socketSession.selectedRole.MapID
+	}
+	if fromMapID > 0 {
+		return world.ResolveTownTransportAnswerFromMap(fromMapID, handle, answerHandle)
+	}
+	return world.ResolveTownTransportAnswer(handle, answerHandle)
+}
+
 func consumeDungeonEntryTicketIfNeeded(store *session.Store, socketSession *packetSession, targetMapID int) (packetResult, bool) {
 	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		return packetResult{handled: true}, false
@@ -1663,6 +1781,13 @@ func dungeonEntryRuleForInstance(instanceKey string) (dungeonEntryRule, bool) {
 			TicketCount:   1,
 			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
 		}, true
+	case session.DungeonInstanceFeixiandong:
+		return dungeonEntryRule{
+			InstanceKey:   instanceKey,
+			TicketName:    "飞仙洞通行证",
+			TicketCount:   1,
+			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
+		}, true
 	default:
 		return dungeonEntryRule{}, false
 	}
@@ -1741,6 +1866,8 @@ func dungeonInstanceDisplayName(key string) string {
 		return "水帘洞"
 	case session.DungeonInstanceHuangfengzhai:
 		return "黄风寨"
+	case session.DungeonInstanceFeixiandong:
+		return "飞仙洞"
 	default:
 		return "副本"
 	}

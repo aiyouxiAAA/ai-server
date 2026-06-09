@@ -27,6 +27,7 @@ const (
 
 	DungeonInstanceShuiliandong  = "shuiliandong"
 	DungeonInstanceHuangfengzhai = "huangfengzhai"
+	DungeonInstanceFeixiandong   = "feixiandong"
 )
 
 const dungeonInstanceTTL = time.Hour

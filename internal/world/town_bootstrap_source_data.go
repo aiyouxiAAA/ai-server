@@ -1578,6 +1578,183 @@ func buildCapturedSourceMonster(handle string, displayName string, sourceQuery s
 	}
 }
 
+var map64SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_18", "transp/flag2.swf", "flag2", 158, 258, 40, 431),
+	buildCapturedSourceTransportMovieClip("transp_65", "transp/flag2.swf", "flag2", 158, 258, 950, 430),
+}
+
+var map65SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_64", "transp/flag2.swf", "flag2", 158, 258, 45, 454),
+	buildCapturedSourceTransportMovieClip("transp_66", "transp/flag2.swf", "flag2", 158, 258, 1250, 500),
+}
+
+var map66SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_65", "transp/flag2.swf", "flag2", 158, 258, 45, 454),
+	buildCapturedSourceTransportMovieClip("transp_67", "transp/flag2.swf", "flag2", 158, 258, 1450, 500),
+}
+
+var map67SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_66", "transp/flag2.swf", "flag2", 158, 258, 45, 494),
+	buildCapturedSourceTransportMovieClip("transp_68", "transp/flag2.swf", "flag2", 158, 258, 1550, 470),
+}
+
+var map68SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_67", "transp/flag2.swf", "flag2", 158, 258, 45, 494),
+	buildCapturedSourceTransportMovieClip("transp_69", "transp/flag2.swf", "flag2", 158, 258, 1380, 354),
+	buildCapturedSourceTransportMovieClip("transp_70", "transp/flag2.swf", "flag2", 158, 258, 1950, 580),
+}
+
+var map69SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_68", "transp/flag2.swf", "flag2", 158, 258, 45, 514),
+	buildCapturedSourceTransportMovieClip("transp_71", "transp/flag2.swf", "flag2", 158, 258, 2450, 440),
+}
+
+var map71SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_69", "transp/flag2.swf", "flag2", 158, 258, 45, 424),
+	buildCapturedSourceTransportMovieClip("transp_73", "transp/flag2.swf", "flag2", 158, 258, 2750, 600),
+}
+
+var map72SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_70", "transp/flag2.swf", "flag2", 158, 258, 45, 584),
+	buildCapturedSourceTransportMovieClip("transp_73", "transp/flag2.swf", "flag2", 158, 258, 2405, 423),
+	buildCapturedSourceTransportMovieClip("transp_74", "transp/flag2.swf", "flag2", 158, 258, 2798, 580),
+}
+
+var map73SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_71", "transp/flag2.swf", "flag2", 158, 258, 45, 424),
+	buildCapturedSourceTransportMovieClip("transp_72", "transp/flag2.swf", "flag2", 158, 258, 2350, 720),
+	buildCapturedSourceTransportMovieClip("transp_77", "transp/flag2.swf", "flag2", 158, 258, 2950, 550),
+}
+
+var map74SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_72", "transp/flag2.swf", "flag2", 158, 258, 2819, 340),
+	buildCapturedSourceTransportMovieClip("transp_75", "transp/flag2.swf", "flag2", 158, 258, 95, 720),
+}
+
+var map75SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_74", "transp/flag2.swf", "flag2", 158, 258, 1338, 380),
+	buildCapturedSourceTransportMovieClip("transp_76", "transp/flag2.swf", "flag2", 158, 258, 2838, 350),
+}
+
+var map76SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_18", "transp/fl.swf", "fl", 158, 258, 1590, 541),
+	buildCapturedSourceTransportMovieClip("transp_75", "transp/flag2.swf", "flag2", 158, 258, 25, 544),
+}
+
+var map77SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_73", "transp/flag2.swf", "flag2", 158, 258, 40, 431),
+	buildCapturedSourceTransportMovieClip("transp_78", "transp/flag2.swf", "flag2", 158, 258, 2611, 400),
+}
+
+var map78SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransportMovieClip("transp_77", "transp/flag2.swf", "flag2", 158, 258, 40, 550),
+}
+
+var map64SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("8216674186649650", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 12, "战士", 334, 377),
+	buildCapturedSourceMonster("8218674186650741", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 12, "战士", 756, 466),
+}
+
+var map65SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("4710674219611654", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 12, "战士", 383, 421),
+	buildCapturedSourceMonster("4730674219612608", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 12, "战士", 971, 526),
+}
+
+var map66SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("2579674249044327", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 13, "战士", 398, 434),
+	buildCapturedSourceMonster("2581674249044878", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 13, "战士", 1142, 490),
+	buildCapturedSourceMonster("2583674249045842", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 14, "战士", 430, 507),
+}
+
+var map67SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("5375674287331644", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 15, "战士", 1237, 527),
+	buildCapturedSourceMonster("5377674287332736", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 14, "战士", 334, 459),
+	buildCapturedSourceMonster("5379674287333653", "蓝咒石怪", "monstermap/bluemagicrock.swf", "bluemagicrock", 14, "战士", 313, 556),
+}
+
+var map68SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1509674533823464", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 15, "战士", 515, 412),
+	buildCapturedSourceMonster("1511674533825915", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 15, "战士", 559, 569),
+	buildCapturedSourceMonster("1513674533826981", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 15, "战士", 1484, 512),
+	buildCapturedSourceMonster("1515674533827497", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 15, "战士", 1502, 600),
+}
+
+var map69SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("4255674575781235", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 461, 442),
+	buildCapturedSourceMonster("4257674575782978", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 429, 605),
+	buildCapturedSourceMonster("4259674575784252", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "战士", 2041, 419),
+	buildCapturedSourceMonster("4261674575785819", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "战士", 2083, 519),
+}
+
+var map71SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1183674677329555", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 301, 391),
+	buildCapturedSourceMonster("1185674677330655", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 308, 473),
+	buildCapturedSourceMonster("1187674677331194", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "战士", 2376, 509),
+	buildCapturedSourceMonster("1189674677333369", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "战士", 2412, 624),
+	buildCapturedSourceMonster("1191674677334956", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 714, 455),
+	buildCapturedSourceMonster("1193674677335390", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 717, 556),
+}
+
+var map72SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("5313674881098281", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 563, 513),
+	buildCapturedSourceMonster("5315674881099944", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 1093, 608),
+	buildCapturedSourceMonster("5317674881101168", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 1403, 496),
+	buildCapturedSourceMonster("5319674881102907", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 1561, 576),
+	buildCapturedSourceMonster("5321674881103452", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 2069, 500),
+}
+
+var map73SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("5579674739334441", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 380, 373),
+	buildCapturedSourceMonster("5581674739336439", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 296, 446),
+	buildCapturedSourceMonster("5583674739338294", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 1092, 419),
+	buildCapturedSourceMonster("5585674739340680", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 1053, 507),
+	buildCapturedSourceMonster("5587674739342989", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 2667, 502),
+	buildCapturedSourceMonster("5589674739343164", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 2288, 547),
+}
+
+var map74SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("9031674933909671", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 2284, 496),
+	buildCapturedSourceMonster("9033674933911913", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "游侠", 2392, 576),
+	buildCapturedSourceMonster("9035674933912540", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "战士", 573, 515),
+	buildCapturedSourceMonster("9037674933914197", "白咒石怪", "monstermap/baimagicrock.swf", "baimagicrock", 16, "战士", 657, 603),
+	buildCapturedSourceMonster("9039674933915532", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 1480, 526),
+	buildCapturedSourceMonster("9041674933916861", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "战士", 1384, 603),
+}
+
+var map75SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("8110675527789273", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 323, 476),
+	buildCapturedSourceMonster("8130675527791587", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 350, 596),
+	buildCapturedSourceMonster("8150675527792799", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 511, 546),
+	buildCapturedSourceMonster("8170675527794372", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 1715, 492),
+	buildCapturedSourceMonster("8190675527795636", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 1676, 611),
+	buildCapturedSourceMonster("8210675527797680", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 1811, 550),
+}
+
+var map76SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1038675671970511", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 1417, 541),
+	buildCapturedSourceMonster("1040675671971889", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 1571, 592),
+	buildCapturedSourceMonster("1042675671973672", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 1761, 535),
+	buildCapturedSourceMonster("1044675671974869", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 817, 528),
+	buildCapturedSourceMonster("1046675671975970", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 1020, 615),
+	buildCapturedSourceMonster("1048675671977626", "巨岩魔", "monstermap/largerock.swf", "largerock", 20, "战士++", 1576, 515),
+}
+
+var map77SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("3028675136602500", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 711, 496),
+	buildCapturedSourceMonster("3030675136603700", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 746, 600),
+	buildCapturedSourceMonster("3032675136605872", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 1265, 538),
+	buildCapturedSourceMonster("3034675136606406", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 2230, 496),
+	buildCapturedSourceMonster("3036675136607240", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 18, "战士", 2430, 607),
+	buildCapturedSourceMonster("3038675136609295", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 2638, 573),
+}
+
+var map78SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1675675260682596", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 2588, 584),
+	buildCapturedSourceMonster("1677675260684828", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 2423, 623),
+	buildCapturedSourceMonster("1679675260685862", "晶石怪", "monstermap/crystalrock.swf", "crystalrock", 17, "游侠", 2257, 576),
+	buildCapturedSourceMonster("1681675260686878", "岩化魔人", "monstermap/magicrockman.swf", "magicrockman", 20, "游侠++", 2471, 576),
+}
+
 var capturedSourceMonsterMovements = map[string]RoleMovement{
 	"8128205778897212": {Speed: 130, Angle: 358.9376829766436, Mode: 2},
 	"8130205778898758": {Speed: 130, Angle: 177.72696898379588, Mode: 1},
@@ -1661,6 +1838,7 @@ var sourceTransportLinks = []sourceTransportLink{
 	{FromMapID: 17, ToMapID: 16, Slot: 0},
 	{FromMapID: 17, ToMapID: 18, Slot: 1},
 	{FromMapID: 18, ToMapID: 17, Slot: 0},
+	{FromMapID: 18, ToMapID: 64, Slot: 1},
 	{FromMapID: 19, ToMapID: 13, Slot: 0},
 	{FromMapID: 19, ToMapID: 20, Slot: 1},
 	{FromMapID: 20, ToMapID: 19, Slot: 0},
@@ -1686,6 +1864,9 @@ var sourceTransportLinks = []sourceTransportLink{
 	{FromMapID: 30, ToMapID: 25, Slot: 0},
 	{FromMapID: 30, ToMapID: 26, Slot: 1},
 	{FromMapID: 32, ToMapID: 28, Slot: 0},
+	// Current Feixiandong export has captured incoming links to map70, but no map70 outgoing rows.
+	{FromMapID: 70, ToMapID: 68, Slot: 0},
+	{FromMapID: 70, ToMapID: 72, Slot: 1},
 }
 
 var map1SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialogueEntry{

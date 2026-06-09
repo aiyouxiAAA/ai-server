@@ -79,17 +79,18 @@ type TownBootstrapSnapshot struct {
 }
 
 type sourceNPCEntry struct {
-	Handle      string
-	RoleID      string
-	DisplayName string
-	SourceQuery string
-	SpriteName  string
-	Width       int
-	Height      int
-	SpawnFlash  SpawnPoint
-	QuestState  int
-	Kind        string
-	Dialogue    *sourceNPCDialogueEntry
+	Handle                     string
+	RoleID                     string
+	DisplayName                string
+	SourceQuery                string
+	SpriteName                 string
+	Width                      int
+	Height                     int
+	SpawnFlash                 SpawnPoint
+	QuestState                 int
+	Kind                       string
+	IsGeneratedSourceTransport bool
+	Dialogue                   *sourceNPCDialogueEntry
 }
 
 type sourceMonsterEntry struct {
@@ -153,6 +154,11 @@ type TownTransportDestination struct {
 	Spawn SpawnPoint
 }
 
+type townTransportRouteKey struct {
+	FromMapID int
+	Handle    string
+}
+
 type sourceTransportLink struct {
 	FromMapID int
 	ToMapID   int
@@ -160,7 +166,27 @@ type sourceTransportLink struct {
 }
 
 var capturedTownTransportDestinations = map[string]TownTransportDestination{
-	"transp_0": {MapID: 3, Spawn: SpawnPoint{X: 825, Y: 624}},
+	"transp_0":  {MapID: 3, Spawn: SpawnPoint{X: 825, Y: 624}},
+	"transp_64": {MapID: 64, Spawn: SpawnPoint{X: 500, Y: 50}},
+}
+
+var capturedTownTransportRouteDestinations = map[townTransportRouteKey]TownTransportDestination{
+	{FromMapID: 64, Handle: "transp_65"}: {MapID: 65, Spawn: SpawnPoint{X: 125, Y: 437}},
+	{FromMapID: 65, Handle: "transp_66"}: {MapID: 66, Spawn: SpawnPoint{X: 126, Y: 429}},
+	{FromMapID: 66, Handle: "transp_67"}: {MapID: 67, Spawn: SpawnPoint{X: 145, Y: 494}},
+	{FromMapID: 67, Handle: "transp_68"}: {MapID: 68, Spawn: SpawnPoint{X: 129, Y: 471}},
+	{FromMapID: 68, Handle: "transp_69"}: {MapID: 69, Spawn: SpawnPoint{X: 129, Y: 497}},
+	{FromMapID: 69, Handle: "transp_71"}: {MapID: 71, Spawn: SpawnPoint{X: 129, Y: 471}},
+	{FromMapID: 71, Handle: "transp_73"}: {MapID: 73, Spawn: SpawnPoint{X: 126, Y: 394}},
+	{FromMapID: 73, Handle: "transp_72"}: {MapID: 72, Spawn: SpawnPoint{X: 2372, Y: 443}},
+	{FromMapID: 72, Handle: "transp_74"}: {MapID: 74, Spawn: SpawnPoint{X: 2809, Y: 422}},
+	{FromMapID: 73, Handle: "transp_77"}: {MapID: 77, Spawn: SpawnPoint{X: 125, Y: 450}},
+	{FromMapID: 77, Handle: "transp_78"}: {MapID: 78, Spawn: SpawnPoint{X: 88, Y: 570}},
+	{FromMapID: 78, Handle: "transp_77"}: {MapID: 77, Spawn: SpawnPoint{X: 2607, Y: 430}},
+	{FromMapID: 77, Handle: "transp_73"}: {MapID: 73, Spawn: SpawnPoint{X: 2852, Y: 529}},
+	{FromMapID: 74, Handle: "transp_75"}: {MapID: 75, Spawn: SpawnPoint{X: 1332, Y: 394}},
+	{FromMapID: 75, Handle: "transp_76"}: {MapID: 76, Spawn: SpawnPoint{X: 129, Y: 525}},
+	{FromMapID: 76, Handle: "transp_18"}: {MapID: 18, Spawn: SpawnPoint{X: 600, Y: 300}},
 }
 
 type townMapsIndexFile struct {
@@ -311,6 +337,76 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapEightyThree := definitions[83]
 	mapEightyThree.SourceNPCs = map83SourceNPCs
 	definitions[83] = mapEightyThree
+
+	mapSixtyFour := definitions[64]
+	mapSixtyFour.SourceNPCs = map64SourceNPCs
+	mapSixtyFour.SourceMonsters = map64SourceMonsters
+	definitions[64] = mapSixtyFour
+
+	mapSixtyFive := definitions[65]
+	mapSixtyFive.SourceNPCs = map65SourceNPCs
+	mapSixtyFive.SourceMonsters = map65SourceMonsters
+	definitions[65] = mapSixtyFive
+
+	mapSixtySix := definitions[66]
+	mapSixtySix.SourceNPCs = map66SourceNPCs
+	mapSixtySix.SourceMonsters = map66SourceMonsters
+	definitions[66] = mapSixtySix
+
+	mapSixtySeven := definitions[67]
+	mapSixtySeven.SourceNPCs = map67SourceNPCs
+	mapSixtySeven.SourceMonsters = map67SourceMonsters
+	definitions[67] = mapSixtySeven
+
+	mapSixtyEight := definitions[68]
+	mapSixtyEight.SourceNPCs = map68SourceNPCs
+	mapSixtyEight.SourceMonsters = map68SourceMonsters
+	definitions[68] = mapSixtyEight
+
+	mapSixtyNine := definitions[69]
+	mapSixtyNine.SourceNPCs = map69SourceNPCs
+	mapSixtyNine.SourceMonsters = map69SourceMonsters
+	definitions[69] = mapSixtyNine
+
+	mapSeventyOne := definitions[71]
+	mapSeventyOne.SourceNPCs = map71SourceNPCs
+	mapSeventyOne.SourceMonsters = map71SourceMonsters
+	definitions[71] = mapSeventyOne
+
+	mapSeventyTwo := definitions[72]
+	mapSeventyTwo.SourceNPCs = map72SourceNPCs
+	mapSeventyTwo.SourceMonsters = map72SourceMonsters
+	definitions[72] = mapSeventyTwo
+
+	mapSeventyThree := definitions[73]
+	mapSeventyThree.SourceNPCs = map73SourceNPCs
+	mapSeventyThree.SourceMonsters = map73SourceMonsters
+	definitions[73] = mapSeventyThree
+
+	mapSeventyFour := definitions[74]
+	mapSeventyFour.SourceNPCs = map74SourceNPCs
+	mapSeventyFour.SourceMonsters = map74SourceMonsters
+	definitions[74] = mapSeventyFour
+
+	mapSeventyFive := definitions[75]
+	mapSeventyFive.SourceNPCs = map75SourceNPCs
+	mapSeventyFive.SourceMonsters = map75SourceMonsters
+	definitions[75] = mapSeventyFive
+
+	mapSeventySix := definitions[76]
+	mapSeventySix.SourceNPCs = map76SourceNPCs
+	mapSeventySix.SourceMonsters = map76SourceMonsters
+	definitions[76] = mapSeventySix
+
+	mapSeventySeven := definitions[77]
+	mapSeventySeven.SourceNPCs = map77SourceNPCs
+	mapSeventySeven.SourceMonsters = map77SourceMonsters
+	definitions[77] = mapSeventySeven
+
+	mapSeventyEight := definitions[78]
+	mapSeventyEight.SourceNPCs = map78SourceNPCs
+	mapSeventyEight.SourceMonsters = map78SourceMonsters
+	definitions[78] = mapSeventyEight
 
 	mapOneTwentySeven := definitions[127]
 	mapOneTwentySeven.SourceNPCs = map127SourceNPCs
@@ -578,12 +674,19 @@ func IsHuangfengzhaiMapID(mapID int) bool {
 	return ok && strings.HasPrefix(mapDefinition.Name, "黄风寨_")
 }
 
+func IsFeixiandongMapID(mapID int) bool {
+	mapDefinition, ok := townMapBootstrapDefinitions[mapID]
+	return ok && strings.HasPrefix(mapDefinition.Name, "飞仙洞_")
+}
+
 func DungeonInstanceKeyForMapID(mapID int) (string, bool) {
 	switch {
 	case IsShuiliandongMapID(mapID):
 		return session.DungeonInstanceShuiliandong, true
 	case IsHuangfengzhaiMapID(mapID):
 		return session.DungeonInstanceHuangfengzhai, true
+	case IsFeixiandongMapID(mapID):
+		return session.DungeonInstanceFeixiandong, true
 	default:
 		return "", false
 	}
@@ -753,10 +856,42 @@ func ResolveTownTransportAnswer(handle string, answerHandle string) (TownTranspo
 	if answerHandle != "goto" && !isCapturedTownTransportConfirmAnswer(handle, answerHandle) {
 		return TownTransportDestination{}, false
 	}
+	return resolveTownTransportDestination(handle)
+}
+
+func ResolveTownTransportAnswerFromMap(fromMapID int, handle string, answerHandle string) (TownTransportDestination, bool) {
+	if answerHandle != "goto" && !isCapturedTownTransportConfirmAnswer(handle, answerHandle) {
+		return TownTransportDestination{}, false
+	}
+	if fromMapID > 0 {
+		if destination, ok := capturedTownTransportRouteDestinations[townTransportRouteKey{FromMapID: fromMapID, Handle: handle}]; ok {
+			if !SupportsTownTransferMap(destination.MapID) {
+				return TownTransportDestination{}, false
+			}
+			return destination, true
+		}
+		if destination, ok := resolveCapturedTownTransportDestination(handle); ok {
+			return destination, true
+		}
+		if destination, ok := resolveDirectionalTownTransportDestination(fromMapID, handle); ok {
+			return destination, true
+		}
+	}
+	return resolveTownTransportDestination(handle)
+}
+
+func resolveCapturedTownTransportDestination(handle string) (TownTransportDestination, bool) {
 	if destination, ok := capturedTownTransportDestinations[handle]; ok {
 		if !SupportsTownTransferMap(destination.MapID) {
 			return TownTransportDestination{}, false
 		}
+		return destination, true
+	}
+	return TownTransportDestination{}, false
+}
+
+func resolveTownTransportDestination(handle string) (TownTransportDestination, bool) {
+	if destination, ok := resolveCapturedTownTransportDestination(handle); ok {
 		return destination, true
 	}
 	mapIDText, ok := strings.CutPrefix(handle, "transp_")
@@ -775,22 +910,95 @@ func ResolveTownTransportAnswer(handle string, answerHandle string) (TownTranspo
 	}, true
 }
 
+func resolveDirectionalTownTransportDestination(fromMapID int, handle string) (TownTransportDestination, bool) {
+	mapIDText, ok := strings.CutPrefix(handle, "transp_")
+	if !ok {
+		return TownTransportDestination{}, false
+	}
+	mapID, err := strconv.Atoi(mapIDText)
+	if err != nil || !SupportsTownTransferMap(mapID) {
+		return TownTransportDestination{}, false
+	}
+
+	mapDefinition := townMapBootstrapDefinitions[mapID]
+	returnHandle := "transp_" + itoa(fromMapID)
+	for _, npc := range mapDefinition.SourceNPCs {
+		if npc.Handle == returnHandle && !npc.IsGeneratedSourceTransport {
+			return TownTransportDestination{
+				MapID: mapID,
+				Spawn: inferTransportArrivalSpawn(mapDefinition, npc.SpawnFlash),
+			}, true
+		}
+	}
+
+	return TownTransportDestination{}, false
+}
+
+func inferTransportArrivalSpawn(mapDefinition townMapBootstrapDefinition, transportSpawn SpawnPoint) SpawnPoint {
+	const (
+		horizontalOffset = 85
+		verticalOffset   = 80
+		topEdgeY         = 360
+		bottomEdgeY      = 660
+		minX             = 40
+		minY             = 40
+	)
+
+	mapWidth := observedSourceMapWidth(mapDefinition)
+	spawn := transportSpawn
+	leftEdge := mapWidth / 3
+	rightEdge := mapWidth - leftEdge
+	if transportSpawn.X <= leftEdge {
+		spawn.X += horizontalOffset
+	} else if transportSpawn.X >= rightEdge {
+		spawn.X -= horizontalOffset
+	}
+	if transportSpawn.Y <= topEdgeY {
+		spawn.Y += verticalOffset
+	} else if transportSpawn.Y >= bottomEdgeY {
+		spawn.Y -= verticalOffset
+	}
+	if spawn.X < minX {
+		spawn.X = minX
+	}
+	if spawn.Y < minY {
+		spawn.Y = minY
+	}
+	return spawn
+}
+
+func observedSourceMapWidth(mapDefinition townMapBootstrapDefinition) int {
+	mapWidth := sourceTransportMapWidth(mapDefinition.ID)
+	for _, npc := range mapDefinition.SourceNPCs {
+		if npc.SpawnFlash.X+200 > mapWidth {
+			mapWidth = npc.SpawnFlash.X + 200
+		}
+	}
+	for _, monster := range mapDefinition.SourceMonsters {
+		if monster.SpawnFlash.X+200 > mapWidth {
+			mapWidth = monster.SpawnFlash.X + 200
+		}
+	}
+	return mapWidth
+}
+
 func isCapturedTownTransportConfirmAnswer(handle string, answerHandle string) bool {
 	return handle == "transp_10" && answerHandle == "1"
 }
 
 func buildSourceTransportNPC(link sourceTransportLink) sourceNPCEntry {
 	return sourceNPCEntry{
-		Handle:      "transp_" + itoa(link.ToMapID),
-		RoleID:      "-3",
-		DisplayName: "",
-		SourceQuery: "transp/flag2.swf",
-		SpriteName:  "flag2",
-		Width:       158,
-		Height:      258,
-		SpawnFlash:  sourceTransportSlotSpawn(link.FromMapID, link.Slot),
-		QuestState:  0,
-		Dialogue:    &sourceTransportDialogue,
+		Handle:                     "transp_" + itoa(link.ToMapID),
+		RoleID:                     "-3",
+		DisplayName:                "",
+		SourceQuery:                "transp/flag2.swf",
+		SpriteName:                 "flag2",
+		Width:                      158,
+		Height:                     258,
+		SpawnFlash:                 sourceTransportSlotSpawn(link.FromMapID, link.Slot),
+		QuestState:                 0,
+		IsGeneratedSourceTransport: true,
+		Dialogue:                   &sourceTransportDialogue,
 	}
 }
 

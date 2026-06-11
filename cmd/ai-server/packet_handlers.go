@@ -230,6 +230,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if result, ok := buildClassicTownVocationResult(store, socketSession, request); ok {
 			return result
 		}
+		if result, ok := buildClassicQuestAnswerResult(store, socketSession, request); ok {
+			return result
+		}
 		answerSpeak := world.BuildAnswerReply(request.Handle, request.MsgHandle, request.AnswerHandle)
 		return packetResult{
 			answerSpeak: answerSpeak,
@@ -311,13 +314,13 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		}
 		return buildClassicTownChatSendResult(socketSession, request)
 	case cmdClassicTownGetQuestLogReq:
-		return buildClassicQuestLogResult(socketSession)
+		return buildClassicQuestLogResult(store, socketSession)
 	case cmdClassicTownRemoveQuestReq:
 		var request classicQuestRemoveRequest
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		return buildClassicQuestRemoveResult(socketSession, request)
+		return buildClassicQuestRemoveResult(store, socketSession, request)
 	case cmdClassicSocialAddFriendReq:
 		var request classicSocialMutateRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -761,7 +764,7 @@ func finalizeClassicBattleOver(store *session.Store, socketSession *packetSessio
 		socketSession.playerBase.RoleState.Lv = expResult.RoleState.Lv
 		socketSession.playerBase.RoleState.Speed = expResult.RoleState.Speed
 	}
-	return &expResult.RoleState, socketSession.playerBase.RolePhysique
+	return &expResult.RoleState, &expResult.RolePhysique
 }
 
 func classicBattleItemActionFromRoleItem(item session.RoleItem) battle.ItemAction {
@@ -1287,7 +1290,10 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 	}
 	if !useResult.Used {
 		log.Printf("[ai-server] classic town ActiveItem rejected roleId=%s type=%s index=%d error=%s", socketSession.selectedRole.RoleID, request.Type, request.Index, useResult.ErrorCode)
-		return packetResult{handled: true}
+		return packetResult{
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(useResult.ErrorMessage)},
+			handled:      true,
+		}
 	}
 
 	socketSession.selectedRole = &useResult.Role
@@ -1368,6 +1374,13 @@ func classicTownSystemChatMessage(message string) classicTownChatMessagePush {
 		Channel: "system",
 		Msg:     message,
 	}
+}
+
+func classicTownSystemWarningMessage(message string) classicTownChatMessagePush {
+	push := classicTownSystemChatMessage(message)
+	push.Color = "#ff0000"
+	push.Bold = true
+	return push
 }
 
 func normalizeClassicTownChatChannel(channel string) string {
@@ -1542,6 +1555,7 @@ func buildClassicTownBuySkillResult(
 		grantedItem := purchase.Item
 		grantedItem.Handle = purchase.Role.RoleID
 		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(grantedItem))
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("购买了【"+entry.Name+"】x1。"))
 		for _, consumedItem := range purchase.Consumed {
 			consumedItem.Handle = purchase.Role.RoleID
 			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(consumedItem))
@@ -1613,6 +1627,7 @@ func buildClassicTownBuyItemResult(
 		grantedItem := purchase.Item
 		grantedItem.Handle = purchase.Role.RoleID
 		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(grantedItem))
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("购买了【"+row.name+"】x"+strconv.Itoa(row.count)+"。"))
 		for _, consumedItem := range purchase.Consumed {
 			consumedItem.Handle = purchase.Role.RoleID
 			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(consumedItem))
@@ -1720,7 +1735,7 @@ func consumeDungeonEntryTicketIfNeeded(store *session.Store, socketSession *pack
 		message := "进入" + dungeonInstanceDisplayName(targetInstanceKey) + "需要" + rule.TicketName + "x" + strconv.Itoa(rule.TicketCount) + "。"
 		log.Printf("[ai-server] classic town transfer rejected missing dungeon ticket roleId=%s mapId=%d ticket=%s", socketSession.selectedRole.RoleID, targetMapID, rule.TicketName)
 		return packetResult{
-			chatMessages: []classicTownChatMessagePush{classicTownSystemChatMessage(message)},
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(message)},
 			handled:      true,
 		}, false
 	}
@@ -1734,7 +1749,7 @@ func consumeDungeonEntryTicketIfNeeded(store *session.Store, socketSession *pack
 	if !useResult.Found || !useResult.Used {
 		log.Printf("[ai-server] classic town transfer rejected consume dungeon ticket roleId=%s mapId=%d ticket=%s error=%s", socketSession.selectedRole.RoleID, targetMapID, rule.TicketName, useResult.ErrorCode)
 		return packetResult{
-			chatMessages: []classicTownChatMessagePush{classicTownSystemChatMessage(useResult.ErrorMessage)},
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(useResult.ErrorMessage)},
 			handled:      true,
 		}, false
 	}

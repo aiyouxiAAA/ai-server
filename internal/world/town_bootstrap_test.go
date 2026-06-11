@@ -6,6 +6,41 @@ import (
 	"ai-server/internal/session"
 )
 
+func TestTownBootstrapAppliesCapturedSourceTransportPoints(t *testing.T) {
+	checked := 0
+	for mapID, expectedTransports := range capturedSourceTransportsByMapID {
+		definition, ok := townMapBootstrapDefinitions[mapID]
+		if !ok {
+			t.Fatalf("expected captured transport map%d to exist", mapID)
+		}
+		for _, expected := range expectedTransports {
+			actual, ok := findSourceNPCInDefinition(definition, expected.Handle)
+			if !ok {
+				t.Fatalf("expected map%d captured transport %s to exist", mapID, expected.Handle)
+			}
+			if actual.SourceQuery != expected.SourceQuery {
+				t.Fatalf("expected map%d %s sourceQuery %s got %s", mapID, expected.Handle, expected.SourceQuery, actual.SourceQuery)
+			}
+			if actual.SpawnFlash != expected.SpawnFlash {
+				t.Fatalf("expected map%d %s spawn %+v got %+v", mapID, expected.Handle, expected.SpawnFlash, actual.SpawnFlash)
+			}
+			checked++
+		}
+	}
+	if checked != 297 {
+		t.Fatalf("expected 297 captured transport points, checked %d", checked)
+	}
+}
+
+func findSourceNPCInDefinition(definition townMapBootstrapDefinition, handle string) (sourceNPCEntry, bool) {
+	for _, npc := range definition.SourceNPCs {
+		if npc.Handle == handle {
+			return npc, true
+		}
+	}
+	return sourceNPCEntry{}, false
+}
+
 func TestBuildTownBootstrapUsesCapturedMapOneData(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-001",
@@ -386,11 +421,11 @@ func TestBuildTownTransferBootstrapUsesMapFourScene(t *testing.T) {
 	if snapshot.CreateRoles[0].Handle != "transp_1" || snapshot.CreateRoles[1].Handle != "transp_5" {
 		t.Fatalf("expected map4 transports to map1 and map5, got %+v", snapshot.CreateRoles)
 	}
-	if snapshot.CreateRoles[0].SpawnFlash.X != 290 || snapshot.CreateRoles[0].SpawnFlash.Y != 520 {
-		t.Fatalf("expected map4 left transport at 290,520 got %+v", snapshot.CreateRoles[0].SpawnFlash)
+	if snapshot.CreateRoles[0].SpawnFlash.X != 90 || snapshot.CreateRoles[0].SpawnFlash.Y != 300 {
+		t.Fatalf("expected map4 left transport at 90,300 got %+v", snapshot.CreateRoles[0].SpawnFlash)
 	}
-	if snapshot.CreateRoles[1].SpawnFlash.X != 2710 || snapshot.CreateRoles[1].SpawnFlash.Y != 520 {
-		t.Fatalf("expected map4 right transport at 2710,520 got %+v", snapshot.CreateRoles[1].SpawnFlash)
+	if snapshot.CreateRoles[1].SpawnFlash.X != 2908 || snapshot.CreateRoles[1].SpawnFlash.Y != 570 {
+		t.Fatalf("expected map4 right transport at 2908,570 got %+v", snapshot.CreateRoles[1].SpawnFlash)
 	}
 	for _, rolePush := range snapshot.CreateRoles {
 		if rolePush.RoleID != "-3" || rolePush.SourceNPCVisual == nil {
@@ -398,6 +433,58 @@ func TestBuildTownTransferBootstrapUsesMapFourScene(t *testing.T) {
 		}
 		if rolePush.DisplayName != "" {
 			t.Fatalf("expected source transport name to be empty, got %q", rolePush.DisplayName)
+		}
+	}
+}
+
+func TestBuildTownBootstrapDoesNotGenerateStaleYunyinRoadBranch(t *testing.T) {
+	cases := []struct {
+		mapID   int
+		mapName string
+		handles []string
+		spawns  []SpawnPoint
+	}{
+		{mapID: 13, mapName: "云隐山道_1", handles: []string{"transp_14", "transp_9"}, spawns: []SpawnPoint{{X: 1420, Y: 260}, {X: 80, Y: 560}}},
+		{mapID: 19, mapName: "树海_1", handles: []string{"transp_20", "transp_9"}, spawns: []SpawnPoint{{X: 2920, Y: 530}, {X: 67, Y: 524}}},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-yunyin-road",
+			DisplayName:  "测试女侠",
+			Level:        8,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName {
+			t.Fatalf("expected map%d %s loadMap, got %+v", testCase.mapID, testCase.mapName, snapshot.LoadMap)
+		}
+		transports := make([]RolePush, 0, len(testCase.handles))
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.RoleID == "-3" {
+				transports = append(transports, rolePush)
+			}
+		}
+		if len(transports) != len(testCase.handles) {
+			t.Fatalf("expected map%d transport count %d got %d: %+v", testCase.mapID, len(testCase.handles), len(transports), transports)
+		}
+		for index, handle := range testCase.handles {
+			if transports[index].Handle != handle {
+				t.Fatalf("expected map%d transport %d handle %s got %s", testCase.mapID, index, handle, transports[index].Handle)
+			}
+			if transports[index].SpawnFlash != testCase.spawns[index] {
+				t.Fatalf("expected map%d %s spawn %+v got %+v", testCase.mapID, handle, testCase.spawns[index], transports[index].SpawnFlash)
+			}
 		}
 	}
 }
@@ -744,14 +831,14 @@ func TestBuildTownBootstrapUsesCapturedShuiliandongTransportData(t *testing.T) {
 		handles []string
 		spawns  []SpawnPoint
 	}{
-		{mapID: 127, mapName: "观瀑台", handles: []string{"transp_131"}, spawns: []SpawnPoint{{X: 1020, Y: 300}}},
+		{mapID: 127, mapName: "观瀑台", handles: []string{"transp_131", "transp_126"}, spawns: []SpawnPoint{{X: 1020, Y: 300}, {X: 1950, Y: 570}}},
 		{mapID: 131, mapName: "水帘洞_1", handles: []string{"transp_132", "transp_127"}, spawns: []SpawnPoint{{X: 2950, Y: 550}, {X: 44, Y: 530}}},
-		{mapID: 133, mapName: "水帘洞_3", handles: []string{"transp_132", "transp_137"}, spawns: []SpawnPoint{{X: 44, Y: 530}, {X: 2960, Y: 530}}},
-		{mapID: 137, mapName: "水帘洞_7", handles: []string{"transp_133", "transp_144"}, spawns: []SpawnPoint{{X: 40, Y: 555}, {X: 2960, Y: 570}}},
-		{mapID: 140, mapName: "水帘洞_10", handles: []string{"transp_141", "transp_145"}, spawns: []SpawnPoint{{X: 2950, Y: 650}, {X: 40, Y: 500}}},
-		{mapID: 142, mapName: "水帘洞_12", handles: []string{"transp_141", "transp_143"}, spawns: []SpawnPoint{{X: 2780, Y: 350}, {X: 1909, Y: 720}}},
+		{mapID: 133, mapName: "水帘洞_3", handles: []string{"transp_132", "transp_137", "transp_134"}, spawns: []SpawnPoint{{X: 44, Y: 530}, {X: 2960, Y: 530}, {X: 1909, Y: 720}}},
+		{mapID: 137, mapName: "水帘洞_7", handles: []string{"transp_133", "transp_144", "transp_138"}, spawns: []SpawnPoint{{X: 40, Y: 555}, {X: 2960, Y: 570}, {X: 1740, Y: 380}}},
+		{mapID: 140, mapName: "水帘洞_10", handles: []string{"transp_141", "transp_145", "transp_139"}, spawns: []SpawnPoint{{X: 2950, Y: 650}, {X: 40, Y: 500}, {X: 1446, Y: 360}}},
+		{mapID: 142, mapName: "水帘洞_12", handles: []string{"transp_141", "transp_143", "transp_136"}, spawns: []SpawnPoint{{X: 2780, Y: 350}, {X: 1909, Y: 720}, {X: 40, Y: 520}}},
 		{mapID: 143, mapName: "水帘洞_13", handles: []string{"transp_142", "transp_127"}, spawns: []SpawnPoint{{X: 220, Y: 350}, {X: 2120, Y: 440}}},
-		{mapID: 145, mapName: "水帘洞_15", handles: []string{"transp_140", "transp_144"}, spawns: []SpawnPoint{{X: 2460, Y: 550}, {X: 200, Y: 410}}},
+		{mapID: 145, mapName: "水帘洞_15", handles: []string{"transp_140", "transp_144", "transp_136"}, spawns: []SpawnPoint{{X: 2460, Y: 550}, {X: 200, Y: 410}, {X: 1523, Y: 720}}},
 	}
 
 	for _, testCase := range cases {
@@ -784,15 +871,23 @@ func TestBuildTownBootstrapUsesCapturedShuiliandongTransportData(t *testing.T) {
 		if len(transports) != len(testCase.handles) {
 			t.Fatalf("expected map%d transport count %d got %d", testCase.mapID, len(testCase.handles), len(transports))
 		}
+		transportsByHandle := map[string]RolePush{}
+		for _, rolePush := range transports {
+			transportsByHandle[rolePush.Handle] = rolePush
+		}
 		for index, handle := range testCase.handles {
-			rolePush := transports[index]
-			if rolePush.Handle != handle {
-				t.Fatalf("expected map%d transport handle %s at index %d got %s", testCase.mapID, handle, index, rolePush.Handle)
+			rolePush, ok := transportsByHandle[handle]
+			if !ok {
+				t.Fatalf("expected map%d transport handle %s, got %+v", testCase.mapID, handle, transports)
 			}
 			if rolePush.SpawnFlash != testCase.spawns[index] {
 				t.Fatalf("expected map%d %s spawn %+v got %+v", testCase.mapID, handle, testCase.spawns[index], rolePush.SpawnFlash)
 			}
-			if rolePush.RoleID != "-3" || rolePush.DisplayName != "" || rolePush.SourceQuery != "transp/flag2.swf" {
+			expectedSourceQuery := "transp/flag2.swf"
+			if (testCase.mapID == 127 && handle == "transp_131") || (testCase.mapID == 143 && handle == "transp_127") {
+				expectedSourceQuery = "transp/fl.swf"
+			}
+			if rolePush.RoleID != "-3" || rolePush.DisplayName != "" || rolePush.SourceQuery != expectedSourceQuery {
 				t.Fatalf("expected source transport role for %s, got %+v", handle, rolePush)
 			}
 		}
@@ -907,7 +1002,7 @@ func TestResolveTownTransportAnswerUsesFeixiandongEntranceSpawn(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected transp_64 to resolve")
 	}
-	if destination.MapID != 64 || destination.Spawn != (SpawnPoint{X: 500, Y: 50}) {
+	if destination.MapID != 64 || destination.Spawn != (SpawnPoint{X: 125, Y: 431}) {
 		t.Fatalf("expected transp_64 to land at map64 entrance, got %+v", destination)
 	}
 }
@@ -917,8 +1012,28 @@ func TestResolveTownTransportAnswerFromMapKeepsCapturedHandleSpawn(t *testing.T)
 	if !ok {
 		t.Fatalf("expected map18 transp_64 to resolve")
 	}
-	if destination.MapID != 64 || destination.Spawn != (SpawnPoint{X: 500, Y: 50}) {
+	if destination.MapID != 64 || destination.Spawn != (SpawnPoint{X: 125, Y: 431}) {
 		t.Fatalf("expected map18 transp_64 to keep captured handle spawn, got %+v", destination)
+	}
+}
+
+func TestResolveTownTransportAnswerFromMapPrefersDirectionalSpawnOverGlobalHandle(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswerFromMap(65, "transp_64", "goto")
+	if !ok {
+		t.Fatalf("expected map65 transp_64 to resolve")
+	}
+	if destination.MapID != 64 || destination.Spawn != (SpawnPoint{X: 950, Y: 430}) {
+		t.Fatalf("expected map65 transp_64 to land near map64 return transport, got %+v", destination)
+	}
+}
+
+func TestResolveTownTransportAnswerFromMapUsesCapturedGeneratedReturnSpawn(t *testing.T) {
+	destination, ok := ResolveTownTransportAnswerFromMap(5, "transp_9", "goto")
+	if !ok {
+		t.Fatalf("expected map5 transp_9 to resolve")
+	}
+	if destination.MapID != 9 || destination.Spawn != (SpawnPoint{X: 160, Y: 512}) {
+		t.Fatalf("expected map5 transp_9 to land near captured map9 return transport, got %+v", destination)
 	}
 }
 
@@ -1349,12 +1464,18 @@ func TestBuildTownTransferBootstrapRestoresBambooCollectionPoints(t *testing.T) 
 		if snapshot.LoadMap.EnemyShow {
 			t.Fatalf("expected collection map%d enemyShow to stay false", testCase.mapID)
 		}
-		if len(snapshot.CreateRoles) != 1 || len(snapshot.QuestStates) != 1 {
-			t.Fatalf("expected one collection role and quest state on map%d, got roles=%d quests=%d", testCase.mapID, len(snapshot.CreateRoles), len(snapshot.QuestStates))
+		var rolePush *RolePush
+		for index := range snapshot.CreateRoles {
+			if snapshot.CreateRoles[index].Handle == testCase.handle {
+				rolePush = &snapshot.CreateRoles[index]
+				break
+			}
 		}
-		rolePush := snapshot.CreateRoles[0]
+		if rolePush == nil {
+			t.Fatalf("expected collection role %s on map%d, got %+v", testCase.handle, testCase.mapID, snapshot.CreateRoles)
+		}
 		if rolePush.Handle != testCase.handle || rolePush.Kind != "collection" || rolePush.DisplayName != testCase.displayName {
-			t.Fatalf("expected collection role %+v, got %+v", testCase, rolePush)
+			t.Fatalf("expected collection role %+v, got %+v", testCase, *rolePush)
 		}
 		if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-npc/movieclips/flag2/flag2-movieclip-ir" {
 			t.Fatalf("expected collection role to reuse flag2 visual, got %+v", rolePush.SourceNPCVisual)

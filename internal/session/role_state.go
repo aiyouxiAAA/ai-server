@@ -699,6 +699,25 @@ func defaultRolePhysique(role RoleSummary) RolePhysique {
 	}
 }
 
+func syncRoleProgressionRuntimeData(role RoleSummary) RoleSummary {
+	role = withRoleRuntimeDefaults(role)
+	role.Level = ClassicRoleLevelForExp(role.Exp, role.Level)
+	roleState := defaultRoleState(role.RoleID, role.Level, role.Exp)
+	if role.RoleState != nil {
+		roleState = *role.RoleState
+		if roleState.Handle == "" {
+			roleState.Handle = role.RoleID
+		}
+		roleState.Exp = role.Exp
+		roleState.Lv = role.Level
+		roleState.Speed = ClassicRoleSpeed(role.Level)
+	}
+	rolePhysique := defaultRolePhysique(role)
+	role.RoleState = &roleState
+	role.RolePhysique = &rolePhysique
+	return role
+}
+
 func normalizeRoleLevel(level int) int {
 	if level <= 0 {
 		return 1

@@ -2,19 +2,26 @@ package main
 
 import (
 	"log"
+	"strconv"
 	"strings"
 
+	"ai-server/internal/quest"
+	"ai-server/internal/session"
 	"ai-server/internal/world"
 )
 
 const sourceMainQuestTitle = "初入云隐"
 const sourceMainQuestNpcHandle = "1000542608713897"
+const classicQuestAcceptedLimit = 20
 
 type classicQuestInfoPush struct {
-	Title       string `json:"title"`
-	Level       int    `json:"level"`
-	Description string `json:"description"`
-	State       string `json:"state"`
+	QuestID     string                 `json:"questId,omitempty"`
+	Title       string                 `json:"title"`
+	Level       int                    `json:"level"`
+	Description string                 `json:"description"`
+	State       string                 `json:"state"`
+	Type        string                 `json:"type,omitempty"`
+	Reward      classicQuestRewardPush `json:"reward,omitempty"`
 }
 
 type classicQuestClearPush struct {
@@ -23,60 +30,155 @@ type classicQuestClearPush struct {
 }
 
 type classicQuestRemoveRequest struct {
-	Title   string `json:"title,omitempty"`
-	QuestID string `json:"questId,omitempty"`
+	Title    string `json:"title,omitempty"`
+	QuestID  string `json:"questId,omitempty"`
+	Complete bool   `json:"complete,omitempty"`
 }
 
-func buildClassicQuestLogResult(socketSession *packetSession) packetResult {
+type classicQuestRewardPush struct {
+	Experience    int                          `json:"experience,omitempty"`
+	Items         []classicQuestRewardItemPush `json:"items,omitempty"`
+	Skills        []string                     `json:"skills,omitempty"`
+	OptionalItems []classicQuestRewardItemPush `json:"optionalItems,omitempty"`
+}
+
+type classicQuestRewardItemPush struct {
+	Name    string `json:"name"`
+	Count   int    `json:"count"`
+	Display string `json:"display,omitempty"`
+}
+
+type classicQuestAnswerRoute struct {
+	handle       string
+	msgHandle    string
+	answerHandle string
+	title        string
+}
+
+func buildClassicQuestLogResult(store *session.Store, socketSession *packetSession) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		log.Printf("[ai-server] classic quest GetQuestLog ignored without selected role")
 		return packetResult{handled: true}
 	}
 
-	if socketSession.removedQuests != nil && socketSession.removedQuests[sourceMainQuestTitle] {
-		return packetResult{handled: true}
+	accepted := map[string]bool{}
+	if store != nil {
+		accepted = store.AcceptedQuestTitles(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
 	}
-
+	infos := make([]classicQuestInfoPush, 0, len(accepted))
+	for _, info := range quest.All() {
+		if !accepted[info.Title] {
+			continue
+		}
+		infos = append(infos, classicQuestInfoFromCatalog(info))
+	}
 	return packetResult{
-		questInfos: []classicQuestInfoPush{sourceMainQuestInfo()},
+		questInfos: infos,
 		handled:    true,
 	}
 }
 
-func buildClassicQuestRemoveResult(socketSession *packetSession, request classicQuestRemoveRequest) packetResult {
+func buildClassicQuestRemoveResult(store *session.Store, socketSession *packetSession, request classicQuestRemoveRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		log.Printf("[ai-server] classic quest RemoveQuest ignored without selected role title=%s questId=%s", request.Title, request.QuestID)
 		return packetResult{handled: true}
 	}
 
 	title := strings.TrimSpace(request.Title)
-	if title == "" && strings.TrimSpace(request.QuestID) == "main-001" {
-		title = sourceMainQuestTitle
+	info, ok := quest.Info{}, false
+	if questID := strings.TrimSpace(request.QuestID); questID != "" {
+		info, ok = quest.FindByID(questID)
+		if ok && title == "" {
+			title = info.Title
+		}
 	}
-	if title != sourceMainQuestTitle {
+	if !ok && title != "" {
+		info, ok = quest.FindByTitle(title)
+	}
+	if !ok || title == "" {
 		log.Printf("[ai-server] classic quest RemoveQuest ignored missing title=%s questId=%s", request.Title, request.QuestID)
 		return packetResult{handled: true}
 	}
 
-	if socketSession.removedQuests == nil {
-		socketSession.removedQuests = make(map[string]bool)
-	}
-	if socketSession.removedQuests[title] {
+	if request.Complete && !quest.IsCompletableState(info.State) {
+		log.Printf("[ai-server] classic quest CompleteQuest rejected incomplete title=%s questId=%s state=%s", title, info.ID, info.State)
 		return packetResult{handled: true}
 	}
-	socketSession.removedQuests[title] = true
 
-	return packetResult{
+	if store == nil || !store.MarkQuestRemoved(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, title) {
+		return packetResult{handled: true}
+	}
+
+	result := packetResult{
 		questClears: []classicQuestClearPush{{
 			Title:   title,
-			QuestID: "main-001",
-		}},
-		questStates: []world.QuestStatePush{{
-			Handle: sourceMainQuestNpcHandle,
-			State:  0,
+			QuestID: info.ID,
 		}},
 		handled: true,
 	}
+	if handle := questNpcHandleForTitle(title); handle != "" {
+		result.questStates = []world.QuestStatePush{{
+			Handle: handle,
+			State:  0,
+		}}
+	}
+	if request.Complete {
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("完成了任务【"+title+"】。"))
+		applyClassicQuestReward(store, socketSession, info, &result)
+	} else {
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("放弃了任务【"+title+"】。"))
+	}
+	return result
+}
+
+func buildClassicQuestAnswerResult(store *session.Store, socketSession *packetSession, request classicTownAnswerRequest) (packetResult, bool) {
+	route, ok := findClassicQuestAnswerRoute(request)
+	if !ok {
+		return packetResult{}, false
+	}
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic quest Answer ignored without selected role handle=%s answerHandle=%s", request.Handle, request.AnswerHandle)
+		return packetResult{handled: true}, true
+	}
+	info, ok := quest.FindByTitle(route.title)
+	if !ok {
+		log.Printf("[ai-server] classic quest Answer ignored missing catalog title=%s handle=%s answerHandle=%s", route.title, request.Handle, request.AnswerHandle)
+		return packetResult{handled: true}, true
+	}
+	if store == nil {
+		return packetResult{handled: true}, true
+	}
+
+	accepted := store.AcceptedQuestTitles(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
+	if accepted[info.Title] {
+		return packetResult{
+			questInfos: []classicQuestInfoPush{classicQuestInfoFromCatalog(info)},
+			chatMessages: []classicTownChatMessagePush{
+				classicTownSystemChatMessage("日志更新"),
+			},
+			handled: true,
+		}, true
+	}
+	if len(accepted) >= classicQuestAcceptedLimit {
+		return packetResult{
+			chatMessages: []classicTownChatMessagePush{
+				classicTownSystemWarningMessage("任务列表已满，请先放弃部分任务。"),
+			},
+			handled: true,
+		}, true
+	}
+	if !store.AcceptQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, info.Title) {
+		return packetResult{handled: true}, true
+	}
+
+	return packetResult{
+		questInfos: []classicQuestInfoPush{classicQuestInfoFromCatalog(info)},
+		chatMessages: []classicTownChatMessagePush{
+			classicTownSystemChatMessage("接受了任务【" + info.Title + "】。"),
+			classicTownSystemChatMessage("日志更新"),
+		},
+		handled: true,
+	}, true
 }
 
 func sourceMainQuestInfo() classicQuestInfoPush {
@@ -85,5 +187,179 @@ func sourceMainQuestInfo() classicQuestInfoPush {
 		Level:       1,
 		Description: "<ml>拜访一心长态<br/>[g]=前往云隐村，和一心长态交谈，熟悉江湖任务委托。",
 		State:       "进行中",
+	}
+}
+
+func classicQuestInfoFromCatalog(info quest.Info) classicQuestInfoPush {
+	return classicQuestInfoPush{
+		QuestID:     info.ID,
+		Title:       info.Title,
+		Level:       info.Level,
+		Description: info.Description,
+		State:       info.State,
+		Type:        info.Type,
+		Reward:      classicQuestRewardPushFromReward(info.Reward),
+	}
+}
+
+func questNpcHandleForTitle(title string) string {
+	if strings.TrimSpace(title) == sourceMainQuestTitle {
+		return sourceMainQuestNpcHandle
+	}
+	return ""
+}
+
+func findClassicQuestAnswerRoute(request classicTownAnswerRequest) (classicQuestAnswerRoute, bool) {
+	handle := strings.TrimSpace(request.Handle)
+	msgHandle := strings.TrimSpace(request.MsgHandle)
+	answerHandle := strings.TrimSpace(request.AnswerHandle)
+	for _, route := range classicQuestAnswerRoutes {
+		if route.handle == handle && route.msgHandle == msgHandle && route.answerHandle == answerHandle {
+			return route, true
+		}
+	}
+	return classicQuestAnswerRoute{}, false
+}
+
+var classicQuestAnswerRoutes = []classicQuestAnswerRoute{
+	{handle: "1000542608713897", msgHandle: "1", answerHandle: "1q32gs", title: "飞仙洞弑炼"},
+	{handle: "3000542609015823", msgHandle: "1", answerHandle: "1q19gs", title: "准备柴火"},
+	{handle: "5000542609232627", msgHandle: "1", answerHandle: "1q22gs", title: "消灭刺鸟"},
+	{handle: "6000542609425103", msgHandle: "1", answerHandle: "1q21gs", title: "采集草药"},
+	{handle: "7000542609490978", msgHandle: "1", answerHandle: "1q23gs", title: "丑七品的梦"},
+	{handle: "2000542608832485", msgHandle: "1q28d_1", answerHandle: "1q28a_1_1", title: "全民锻造"},
+	{handle: "4110542614676637", msgHandle: "2q21d_1", answerHandle: "2q21a_1_1", title: "山谷采药"},
+	{handle: "4110542614676637", msgHandle: "4q69d_2", answerHandle: "4q69a_2_1", title: "奇珍雪莲"},
+}
+
+func classicQuestRewardPushFromReward(reward quest.Reward) classicQuestRewardPush {
+	result := classicQuestRewardPush{
+		Experience:    reward.Experience,
+		Items:         classicQuestRewardItemPushes(reward.Items),
+		OptionalItems: classicQuestRewardItemPushes(reward.OptionalItems),
+	}
+	for _, skill := range reward.Skills {
+		if strings.TrimSpace(skill.Name) != "" {
+			result.Skills = append(result.Skills, strings.TrimSpace(skill.Name))
+		}
+	}
+	return result
+}
+
+func classicQuestRewardItemPushes(items []quest.RewardItem) []classicQuestRewardItemPush {
+	result := make([]classicQuestRewardItemPush, 0, len(items))
+	for _, item := range items {
+		result = append(result, classicQuestRewardItemPush{
+			Name:    item.Name,
+			Count:   item.Count,
+			Display: item.Display,
+		})
+	}
+	return result
+}
+
+func applyClassicQuestReward(store *session.Store, socketSession *packetSession, info quest.Info, result *packetResult) {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil || result == nil {
+		return
+	}
+	playerID := socketSession.playerBase.PlayerID
+	roleID := socketSession.selectedRole.RoleID
+
+	if info.Reward.Experience > 0 {
+		expResult := store.GrantRoleExperience(playerID, roleID, info.Reward.Experience)
+		if expResult.Granted {
+			socketSession.selectedRole = &expResult.Role
+			socketSession.playerBase = &expResult.PlayerBase
+			result.roleState = &expResult.RoleState
+			result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("获得经验:"+strconv.Itoa(info.Reward.Experience)))
+			if expResult.LevelChanged {
+				result.rolePhysique = &expResult.RolePhysique
+			}
+		}
+	}
+
+	for _, item := range info.Reward.Items {
+		if item.Name == "铜钱" || item.Name == "银元宝" {
+			if currencies, ok := store.AddRoleCurrency(playerID, roleID, item.Name, item.Count); ok {
+				result.currencyPush = buildClassicTownCurrencyPush(roleID, currencies)
+				result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(classicQuestRewardItemSystemMessage(item)))
+			}
+			continue
+		}
+		rewardItem := classicQuestRewardRoleItem(item)
+		granted, ok := store.GrantRoleItem(playerID, roleID, rewardItem)
+		if !ok {
+			log.Printf("[ai-server] classic quest reward item grant failed roleId=%s questId=%s item=%s count=%d", roleID, info.ID, item.Name, item.Count)
+			continue
+		}
+		granted.Handle = roleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(granted))
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(classicQuestRewardItemSystemMessage(item)))
+	}
+
+	for _, skill := range info.Reward.Skills {
+		roleSkill, ok := classicQuestRewardRoleSkill(skill)
+		if !ok {
+			log.Printf("[ai-server] classic quest reward skill missing template questId=%s skill=%s", info.ID, skill.Name)
+			continue
+		}
+		_, skillCap, found, learned := store.LearnRoleSkill(playerID, roleID, roleSkill)
+		if !found || !learned {
+			continue
+		}
+		result.skillCap = &classicTownSkillCapPush{Count: skillCap}
+		result.skillInfos = append(result.skillInfos, classicTownSkillInfoPushFromRoleSkill(roleID, roleSkill))
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("习得【"+roleSkill.Name+"】Lv."+strconv.Itoa(roleSkill.Level)))
+	}
+
+	if selectedRole, playerBase, ok := store.GetRoleRuntimeData(playerID, roleID); ok {
+		socketSession.selectedRole = &selectedRole
+		socketSession.playerBase = &playerBase
+	}
+}
+
+func classicQuestRewardItemSystemMessage(item quest.RewardItem) string {
+	count := item.Count
+	if count <= 0 {
+		count = 1
+	}
+	return "获得了【" + item.Name + "】x" + strconv.Itoa(count)
+}
+
+func classicQuestRewardRoleItem(item quest.RewardItem) session.RoleItem {
+	count := item.Count
+	if count <= 0 {
+		count = 1
+	}
+	if template, ok := session.CapturedRoleItemTemplate(item.Name); ok {
+		template.Type = classicTownBagContainerType
+		template.Index = -1
+		template.Count = count
+		return template
+	}
+	return session.RoleItem{
+		Type:        classicTownBagContainerType,
+		Name:        item.Name,
+		ItemType:    "null",
+		Display:     item.Display,
+		Description: item.SourceMeta,
+		Count:       count,
+		Index:       -1,
+		ItemLevel:   1,
+	}
+}
+
+func classicQuestRewardRoleSkill(skill quest.RewardSkill) (session.RoleSkill, bool) {
+	switch strings.TrimSpace(skill.Name) {
+	case "密斩":
+		return session.RoleSkill{
+			Name:        "密斩",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "426.png",
+			Description: "f_s_密斩&9@单体·攻击&7@3&10@单刀/单斧&22@战斗&2@5&4@提升40%的物理伤害",
+		}, true
+	default:
+		return session.RoleSkill{}, false
 	}
 }

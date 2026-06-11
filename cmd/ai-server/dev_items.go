@@ -392,6 +392,9 @@ func devCapturedRoleItemTemplateByID(itemID string) (session.RoleItem, bool) {
 func devCapturedRoleItemTemplates() []session.RoleItem {
 	items := session.CapturedRoleItemTemplates()
 	for _, handle := range []string{
+		"7000542609490978",
+		"4090542614314425",
+		"4960542616750900",
 		"1780542610743555",
 		"4000542609162635",
 		"1820542611400955",

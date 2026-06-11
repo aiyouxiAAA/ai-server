@@ -39,7 +39,7 @@ func buildClassicTownVocationResult(store *session.Store, socketSession *packetS
 		createPlayer: buildClassicTownCreatePlayerPush(result.Role, result.PlayerBase),
 		roleState:    &result.RoleState,
 		rolePhysique: &result.RolePhysique,
-		chatMessages: []classicTownChatMessagePush{classicTownSystemChatMessage("已转职为【" + vocation + "】。")},
+		chatMessages: []classicTownChatMessagePush{classicTownSystemChatMessage("成功转职为【" + vocation + "】。")},
 		handled:      true,
 	}, true
 }

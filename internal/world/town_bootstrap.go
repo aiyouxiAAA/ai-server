@@ -167,10 +167,11 @@ type sourceTransportLink struct {
 
 var capturedTownTransportDestinations = map[string]TownTransportDestination{
 	"transp_0":  {MapID: 3, Spawn: SpawnPoint{X: 825, Y: 624}},
-	"transp_64": {MapID: 64, Spawn: SpawnPoint{X: 500, Y: 50}},
+	"transp_64": {MapID: 64, Spawn: SpawnPoint{X: 125, Y: 431}},
 }
 
 var capturedTownTransportRouteDestinations = map[townTransportRouteKey]TownTransportDestination{
+	{FromMapID: 18, Handle: "transp_64"}: {MapID: 64, Spawn: SpawnPoint{X: 125, Y: 431}},
 	{FromMapID: 64, Handle: "transp_65"}: {MapID: 65, Spawn: SpawnPoint{X: 125, Y: 437}},
 	{FromMapID: 65, Handle: "transp_66"}: {MapID: 66, Spawn: SpawnPoint{X: 126, Y: 429}},
 	{FromMapID: 66, Handle: "transp_67"}: {MapID: 67, Spawn: SpawnPoint{X: 145, Y: 494}},
@@ -543,6 +544,8 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 		definitions[point.MapID] = mapDefinition
 	}
 
+	applyCapturedSourceTransports(definitions)
+
 	for _, link := range sourceTransportLinks {
 		mapDefinition, ok := definitions[link.FromMapID]
 		if !ok {
@@ -567,6 +570,44 @@ func hasSourceNPCHandle(npcs []sourceNPCEntry, handle string) bool {
 		}
 	}
 	return false
+}
+
+func applyCapturedSourceTransports(definitions map[int]townMapBootstrapDefinition) {
+	for mapID, capturedTransports := range capturedSourceTransportsByMapID {
+		mapDefinition, ok := definitions[mapID]
+		if !ok {
+			continue
+		}
+		for _, captured := range capturedTransports {
+			mapDefinition.SourceNPCs = upsertCapturedSourceTransport(mapDefinition.SourceNPCs, captured)
+		}
+		definitions[mapID] = mapDefinition
+	}
+}
+
+func upsertCapturedSourceTransport(npcs []sourceNPCEntry, captured sourceNPCEntry) []sourceNPCEntry {
+	captured.RoleID = "-3"
+	captured.DisplayName = ""
+	captured.QuestState = 0
+	captured.Kind = ""
+	captured.IsGeneratedSourceTransport = true
+	if captured.Dialogue == nil {
+		captured.Dialogue = &sourceTransportDialogue
+	}
+
+	for index := range npcs {
+		if npcs[index].Handle != captured.Handle {
+			continue
+		}
+		if npcs[index].Dialogue != nil {
+			captured.Dialogue = npcs[index].Dialogue
+		}
+		captured.IsGeneratedSourceTransport = npcs[index].IsGeneratedSourceTransport
+		npcs[index] = captured
+		return npcs
+	}
+
+	return append(npcs, captured)
 }
 
 func loadTownMapIndexDefinitions() map[int]townMapBootstrapDefinition {
@@ -870,10 +911,10 @@ func ResolveTownTransportAnswerFromMap(fromMapID int, handle string, answerHandl
 			}
 			return destination, true
 		}
-		if destination, ok := resolveCapturedTownTransportDestination(handle); ok {
+		if destination, ok := resolveDirectionalTownTransportDestination(fromMapID, handle); ok {
 			return destination, true
 		}
-		if destination, ok := resolveDirectionalTownTransportDestination(fromMapID, handle); ok {
+		if destination, ok := resolveCapturedTownTransportDestination(handle); ok {
 			return destination, true
 		}
 	}
@@ -923,7 +964,7 @@ func resolveDirectionalTownTransportDestination(fromMapID int, handle string) (T
 	mapDefinition := townMapBootstrapDefinitions[mapID]
 	returnHandle := "transp_" + itoa(fromMapID)
 	for _, npc := range mapDefinition.SourceNPCs {
-		if npc.Handle == returnHandle && !npc.IsGeneratedSourceTransport {
+		if npc.Handle == returnHandle {
 			return TownTransportDestination{
 				MapID: mapID,
 				Spawn: inferTransportArrivalSpawn(mapDefinition, npc.SpawnFlash),

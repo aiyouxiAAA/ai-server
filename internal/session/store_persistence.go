@@ -55,6 +55,18 @@ func (store *Store) initSchema() error {
 			role_physique_json TEXT NOT NULL DEFAULT '',
 			dungeon_instances_json TEXT NOT NULL DEFAULT ''
 		)`,
+		`CREATE TABLE IF NOT EXISTS role_removed_quests (
+			role_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			player_id TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (role_id, title)
+		)`,
+		`CREATE TABLE IF NOT EXISTS role_accepted_quests (
+			role_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			player_id TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (role_id, title)
+		)`,
 	}
 
 	for _, query := range queries {
@@ -273,6 +285,94 @@ func (store *Store) loadFromDB() error {
 		return fmt.Errorf("iterate roles: %w", err)
 	}
 
+	removedQuestRows, err := store.db.Query(`
+		SELECT role_id, title
+		FROM role_removed_quests
+	`)
+	if err != nil {
+		return fmt.Errorf("query role removed quests: %w", err)
+	}
+	defer removedQuestRows.Close()
+
+	for removedQuestRows.Next() {
+		var roleID string
+		var title string
+		if err := removedQuestRows.Scan(&roleID, &title); err != nil {
+			return fmt.Errorf("scan role removed quest: %w", err)
+		}
+		roleID = strings.TrimSpace(roleID)
+		title = strings.TrimSpace(title)
+		if roleID == "" || title == "" {
+			continue
+		}
+		if store.removedQuests[roleID] == nil {
+			store.removedQuests[roleID] = make(map[string]bool)
+		}
+		store.removedQuests[roleID][title] = true
+	}
+	if err := removedQuestRows.Err(); err != nil {
+		return fmt.Errorf("iterate role removed quests: %w", err)
+	}
+
+	acceptedQuestRows, err := store.db.Query(`
+		SELECT role_id, title
+		FROM role_accepted_quests
+	`)
+	if err != nil {
+		return fmt.Errorf("query role accepted quests: %w", err)
+	}
+	defer acceptedQuestRows.Close()
+
+	for acceptedQuestRows.Next() {
+		var roleID string
+		var title string
+		if err := acceptedQuestRows.Scan(&roleID, &title); err != nil {
+			return fmt.Errorf("scan role accepted quest: %w", err)
+		}
+		roleID = strings.TrimSpace(roleID)
+		title = strings.TrimSpace(title)
+		if roleID == "" || title == "" {
+			continue
+		}
+		if store.acceptedQuests[roleID] == nil {
+			store.acceptedQuests[roleID] = make(map[string]bool)
+		}
+		store.acceptedQuests[roleID][title] = true
+	}
+	if err := acceptedQuestRows.Err(); err != nil {
+		return fmt.Errorf("iterate role accepted quests: %w", err)
+	}
+
+	return nil
+}
+
+func (store *Store) persistAcceptedQuestLocked(playerID string, roleID string, title string) error {
+	if store.db == nil {
+		return nil
+	}
+
+	_, err := store.db.Exec(
+		`INSERT INTO role_accepted_quests (role_id, title, player_id)
+		 VALUES (?, ?, ?)
+		 ON CONFLICT(role_id, title) DO UPDATE SET player_id = excluded.player_id`,
+		roleID,
+		title,
+		playerID,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert accepted quest roleId=%s title=%s: %w", roleID, title, err)
+	}
+	return nil
+}
+
+func (store *Store) deleteAcceptedQuestLocked(roleID string, title string) error {
+	if store.db == nil {
+		return nil
+	}
+
+	if _, err := store.db.Exec(`DELETE FROM role_accepted_quests WHERE role_id = ? AND title = ?`, roleID, title); err != nil {
+		return fmt.Errorf("delete accepted quest roleId=%s title=%s: %w", roleID, title, err)
+	}
 	return nil
 }
 
@@ -299,6 +399,36 @@ func (store *Store) persistAccountLocked(account AccountRecord) error {
 		return fmt.Errorf("upsert account %s: %w", account.UserName, err)
 	}
 
+	return nil
+}
+
+func (store *Store) persistRemovedQuestLocked(playerID string, roleID string, title string) error {
+	if store.db == nil {
+		return nil
+	}
+
+	_, err := store.db.Exec(
+		`INSERT INTO role_removed_quests (role_id, title, player_id)
+		 VALUES (?, ?, ?)
+		 ON CONFLICT(role_id, title) DO UPDATE SET player_id = excluded.player_id`,
+		roleID,
+		title,
+		playerID,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert removed quest roleId=%s title=%s: %w", roleID, title, err)
+	}
+	return nil
+}
+
+func (store *Store) deleteRemovedQuestLocked(roleID string, title string) error {
+	if store.db == nil {
+		return nil
+	}
+
+	if _, err := store.db.Exec(`DELETE FROM role_removed_quests WHERE role_id = ? AND title = ?`, roleID, title); err != nil {
+		return fmt.Errorf("delete removed quest roleId=%s title=%s: %w", roleID, title, err)
+	}
 	return nil
 }
 
@@ -513,6 +643,43 @@ func (store *Store) saveLocked() error {
 				dungeonInstancesJSON,
 			); err != nil {
 				return fmt.Errorf("insert role %s: %w", role.RoleID, err)
+			}
+		}
+	}
+
+	if _, err = tx.Exec(`DELETE FROM role_accepted_quests`); err != nil {
+		return fmt.Errorf("reset role_accepted_quests table: %w", err)
+	}
+	if _, err = tx.Exec(`DELETE FROM role_removed_quests`); err != nil {
+		return fmt.Errorf("reset role_removed_quests table: %w", err)
+	}
+	for playerID, roles := range store.rolesByPID {
+		for _, role := range roles {
+			for title, accepted := range store.acceptedQuests[role.RoleID] {
+				if !accepted {
+					continue
+				}
+				if _, err = tx.Exec(
+					`INSERT INTO role_accepted_quests (role_id, title, player_id) VALUES (?, ?, ?)`,
+					role.RoleID,
+					title,
+					playerID,
+				); err != nil {
+					return fmt.Errorf("insert accepted quest roleId=%s title=%s: %w", role.RoleID, title, err)
+				}
+			}
+			for title, removed := range store.removedQuests[role.RoleID] {
+				if !removed {
+					continue
+				}
+				if _, err = tx.Exec(
+					`INSERT INTO role_removed_quests (role_id, title, player_id) VALUES (?, ?, ?)`,
+					role.RoleID,
+					title,
+					playerID,
+				); err != nil {
+					return fmt.Errorf("insert removed quest roleId=%s title=%s: %w", role.RoleID, title, err)
+				}
 			}
 		}
 	}

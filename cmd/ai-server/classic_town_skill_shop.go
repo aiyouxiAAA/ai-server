@@ -77,6 +77,7 @@ type classicTownChatMessagePush struct {
 	VIP        int    `json:"vip,omitempty"`
 	Outgoing   bool   `json:"outgoing,omitempty"`
 	Color      string `json:"color,omitempty"`
+	Bold       bool   `json:"bold,omitempty"`
 }
 
 type classicTownSkillInfoPush struct {

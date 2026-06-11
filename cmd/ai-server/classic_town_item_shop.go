@@ -170,45 +170,66 @@ func sourceItemCategory(description string) string {
 }
 
 var sourceGuangqingItemShopRoutes = map[string]sourceItemShopRoute{
+	"7000542609490978": {
+		handle:       "7000542609490978",
+		answerHandle: "1",
+		title:        "丑七品的道具商店",
+		vocation:     "道具",
+		rows:         sourceYunyinGroceryShopRows,
+	},
+	"4090542614314425": {
+		handle:       "4090542614314425",
+		answerHandle: "1",
+		title:        "丑六品的道具商店",
+		vocation:     "道具",
+		rows:         sourceDafoGroceryShopRows,
+	},
+	"4960542616750900": {
+		handle:       "4960542616750900",
+		answerHandle: "1",
+		title:        "介象的道具商店",
+		vocation:     "道具",
+		rows:         sourceJiantingGroceryShopRows,
+	},
 	"1780542610743555": {
 		handle:       "1780542610743555",
 		answerHandle: "1",
-		title:        "购买武器",
+		title:        "伏天的武器商店",
 		vocation:     "武器",
 		rows:         sourceGuangqingWeaponShopRows,
 	},
 	"4000542609162635": {
 		handle:       "4000542609162635",
 		answerHandle: "1",
-		title:        "购买护具",
+		title:        "布衣娘的护具商店",
 		vocation:     "护具",
 		rows:         sourceYunyinArmorShopRows,
 	},
 	"1820542611400955": {
 		handle:       "1820542611400955",
 		answerHandle: "1",
-		title:        "道具商店",
+		title:        "丑五品的道具商店",
 		vocation:     "道具",
 		rows:         sourceGuangqingGroceryShopRows,
 	},
 	"1830542611405809": {
 		handle:       "1830542611405809",
 		answerHandle: "1",
-		title:        "合成稀有道具",
+		title:        "八卦炉合成",
 		vocation:     "合成",
 		rows:         sourceGuangqingCraftShopRows,
 	},
 	"2500542613172144": {
 		handle:       "2500542613172144",
 		answerHandle: "1",
-		title:        "购买护具",
+		title:        "云衣娘的护具商店",
 		vocation:     "护具",
 		rows:         sourceGuangqingArmorShopRows,
 	},
 	"2520542613299551": {
 		handle:       "2520542613299551",
 		answerHandle: "1",
-		title:        "查看商店",
+		title:        "无颜的药品商店",
 		vocation:     "医疗",
 		rows:         sourceGuangqingHealerShopRows,
 	},
@@ -269,6 +290,18 @@ const sourceGuangqingGroceryShopRows = `
 8|暗之箭|null|245.png|f_i_暗之箭^ffffff&24@消耗品&25@999&20@弓系武器需要消耗的箭矢。&103@0&104@0&105@&107@&108@0|50|1|铜钱|163.png|80
 9|魔箭|null|244.png|f_i_魔箭^ffffff&24@消耗品&25@999&20@弓系武器需要消耗的箭矢。&103@0&104@0&105@&107@&108@0|50|1|铜钱|163.png|100
 10|毒箭|null|247.png|f_i_毒箭^ffffff&24@消耗品&25@999&20@弓系武器需要消耗的箭矢。&103@0&104@0&105@&107@&108@0|10|2|铜钱|163.png|100
+`
+
+const sourceYunyinGroceryShopRows = sourceGuangqingGroceryShopRows + `
+11|飞仙洞通行证|null|782.png|f_i_飞仙洞通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入飞仙洞修炼的通行证.</font>&27@sitem_book&103@0&104@0&105@&107@&108@150|1|3|铜钱|163.png|150
+`
+
+const sourceDafoGroceryShopRows = sourceGuangqingGroceryShopRows + `
+11|黄风寨通行证|null|783.png|f_i_黄风寨通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入黄风寨修炼的通行证.</font>&27@sitem_book&103@0&104@0&105@&107@&108@150|1|3|铜钱|163.png|150
+`
+
+const sourceJiantingGroceryShopRows = sourceGuangqingGroceryShopRows + `
+11|水帘洞通行证|null|781.png|f_i_水帘洞通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入水帘洞修炼的通行证.</font>&27@sitem_book&103@0&104@0&105@&107@&108@150|1|3|铜钱|163.png|150
 `
 
 const sourceGuangqingArmorShopRows = `

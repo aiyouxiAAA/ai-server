@@ -52,6 +52,10 @@ func buildClassicTownCollectionResult(
 		itemInfos: []classicTownItemInfoPush{
 			classicTownItemInfoPushFromRoleItem(rewardItem),
 		},
+		chatMessages: []classicTownChatMessagePush{
+			classicTownSystemChatMessage("获得了【" + point.RewardItemName + "】x1"),
+			classicTownSystemChatMessage("日志更新"),
+		},
 		questInfos: []classicQuestInfoPush{{
 			Title:       point.QuestTitle,
 			Level:       1,

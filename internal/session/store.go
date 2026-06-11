@@ -316,11 +316,13 @@ type RoleUseItemResult struct {
 }
 
 type RoleExpGrantResult struct {
-	Role       RoleSummary
-	PlayerBase PlayerBaseData
-	RoleState  RoleState
-	Found      bool
-	Granted    bool
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	RoleState    RoleState
+	RolePhysique RolePhysique
+	Found        bool
+	Granted      bool
+	LevelChanged bool
 }
 
 type RoleVocationResult struct {
@@ -349,6 +351,8 @@ type Store struct {
 	rolesByPID       map[string][]RoleSummary
 	nextRoleSeqByPID map[string]int
 	accountsByName   map[string]AccountRecord
+	acceptedQuests   map[string]map[string]bool
+	removedQuests    map[string]map[string]bool
 	db               *sql.DB
 	now              func() time.Time
 	Guilds           *guild.Service
@@ -383,10 +387,12 @@ func NewStore() *Store {
 				SessionToken: "mock-session-token-001",
 			},
 		},
-		now:          time.Now,
-		Guilds:       guild.NewMemoryService(),
-		Mall:         mall.NewService(),
-		mallRequests: make(map[string]mall.PurchaseResult),
+		now:            time.Now,
+		Guilds:         guild.NewMemoryService(),
+		Mall:           mall.NewService(),
+		mallRequests:   make(map[string]mall.PurchaseResult),
+		acceptedQuests: make(map[string]map[string]bool),
+		removedQuests:  make(map[string]map[string]bool),
 	}
 }
 
@@ -1006,6 +1012,107 @@ func (store *Store) GetRoleRuntimeData(playerID string, roleID string) (RoleSumm
 	return RoleSummary{}, emptyPlayerBaseData(playerID), false
 }
 
+func (store *Store) RemovedQuestTitles(playerID string, roleID string) map[string]bool {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if !store.hasRoleLocked(playerID, roleID) {
+		return map[string]bool{}
+	}
+	return cloneBoolMap(store.removedQuests[roleID])
+}
+
+func (store *Store) AcceptedQuestTitles(playerID string, roleID string) map[string]bool {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if !store.hasRoleLocked(playerID, roleID) {
+		return map[string]bool{}
+	}
+	return cloneBoolMap(store.acceptedQuests[roleID])
+}
+
+func (store *Store) AcceptQuest(playerID string, roleID string, title string) bool {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return false
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if !store.hasRoleLocked(playerID, roleID) {
+		return false
+	}
+	if store.acceptedQuests[roleID] == nil {
+		store.acceptedQuests[roleID] = make(map[string]bool)
+	}
+	if store.acceptedQuests[roleID][title] {
+		return false
+	}
+	store.acceptedQuests[roleID][title] = true
+	if store.removedQuests[roleID] != nil {
+		delete(store.removedQuests[roleID], title)
+	}
+	if err := store.persistAcceptedQuestLocked(playerID, roleID, title); err != nil {
+		log.Printf("[session.Store] persist accepted quest failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	if err := store.deleteRemovedQuestLocked(roleID, title); err != nil {
+		log.Printf("[session.Store] delete removed accepted quest failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	return true
+}
+
+func (store *Store) MarkQuestRemoved(playerID string, roleID string, title string) bool {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return false
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if !store.hasRoleLocked(playerID, roleID) {
+		return false
+	}
+	if store.removedQuests[roleID] == nil {
+		store.removedQuests[roleID] = make(map[string]bool)
+	}
+	if store.acceptedQuests[roleID] != nil {
+		delete(store.acceptedQuests[roleID], title)
+	}
+	if store.removedQuests[roleID][title] {
+		return false
+	}
+	store.removedQuests[roleID][title] = true
+	if err := store.deleteAcceptedQuestLocked(roleID, title); err != nil {
+		log.Printf("[session.Store] delete accepted removed quest failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	if err := store.persistRemovedQuestLocked(playerID, roleID, title); err != nil {
+		log.Printf("[session.Store] persist removed quest failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	return true
+}
+
+func (store *Store) RestoreQuest(playerID string, roleID string, title string) bool {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return false
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if !store.hasRoleLocked(playerID, roleID) || store.removedQuests[roleID] == nil || !store.removedQuests[roleID][title] {
+		return false
+	}
+	delete(store.removedQuests[roleID], title)
+	if err := store.deleteRemovedQuestLocked(roleID, title); err != nil {
+		log.Printf("[session.Store] delete removed quest failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	return true
+}
+
 func (store *Store) GetRoleItem(playerID string, roleID string, containerType string, itemIndex int) (RoleItem, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -1057,6 +1164,9 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 			return RoleItem{}, false
 		}
 		roles[index].Items = normalizeRoleItems(updatedItems)
+		if item.Type == "装备" {
+			roles[index] = syncRoleProgressionRuntimeData(roles[index])
+		}
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist granted item failed: %v", err)
@@ -1216,8 +1326,10 @@ func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta
 		}
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
+		previousLevel := roles[index].Level
 		roles[index].Exp += expDelta
 		roles[index].Level = ClassicRoleLevelForExp(roles[index].Exp, roles[index].Level)
+		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist granted experience failed: %v", err)
@@ -1226,12 +1338,15 @@ func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta
 		role := withRoleRuntimeDefaults(roles[index])
 		playerBase := playerBaseDataFromRole(playerID, role)
 		roleState := *playerBase.RoleState
+		rolePhysique := *playerBase.RolePhysique
 		return RoleExpGrantResult{
-			Role:       role,
-			PlayerBase: playerBase,
-			RoleState:  roleState,
-			Found:      true,
-			Granted:    true,
+			Role:         role,
+			PlayerBase:   playerBase,
+			RoleState:    roleState,
+			RolePhysique: rolePhysique,
+			Found:        true,
+			Granted:      true,
+			LevelChanged: role.Level != previousLevel,
 		}
 	}
 	return RoleExpGrantResult{}
@@ -1255,12 +1370,14 @@ func (store *Store) SetRoleLevel(playerID string, roleID string, level int) Role
 		}
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
+		previousLevel := roles[index].Level
 		roles[index].Level = level
 		if level <= 1 {
 			roles[index].Exp = 0
 		} else {
 			roles[index].Exp = ClassicRoleLevelToExp(level - 1)
 		}
+		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist set role level failed: %v", err)
@@ -1269,12 +1386,15 @@ func (store *Store) SetRoleLevel(playerID string, roleID string, level int) Role
 		role := withRoleRuntimeDefaults(roles[index])
 		playerBase := playerBaseDataFromRole(playerID, role)
 		roleState := *playerBase.RoleState
+		rolePhysique := *playerBase.RolePhysique
 		return RoleExpGrantResult{
-			Role:       role,
-			PlayerBase: playerBase,
-			RoleState:  roleState,
-			Found:      true,
-			Granted:    true,
+			Role:         role,
+			PlayerBase:   playerBase,
+			RoleState:    roleState,
+			RolePhysique: rolePhysique,
+			Found:        true,
+			Granted:      true,
+			LevelChanged: role.Level != previousLevel,
 		}
 	}
 	return RoleExpGrantResult{}
@@ -1358,6 +1478,7 @@ func (store *Store) AddRolePoint(playerID string, roleID string, statName string
 			}
 		}
 		addRolePointToStat(&roles[index], statName)
+		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist added role point failed: %v", err)
@@ -1446,6 +1567,9 @@ func (store *Store) ConsumeRoleItem(playerID string, roleID string, sourceType s
 		}
 
 		roles[index].Items = normalizeRoleItems(updatedItems)
+		if sourceType == "装备" {
+			roles[index] = syncRoleProgressionRuntimeData(roles[index])
+		}
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist consumed item failed: %v", err)
@@ -1795,6 +1919,7 @@ func (store *Store) useEquipmentItemLocked(
 	updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	roles[roleIndex].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[roleIndex].SourceQuery, roles[roleIndex].Items)
+	roles[roleIndex] = syncRoleProgressionRuntimeData(roles[roleIndex])
 	store.rolesByPID[playerID] = roles
 	if err := store.persistPlayerStateLocked(playerID); err != nil {
 		log.Printf("[session.Store] persist active equipped item failed: %v", err)
@@ -1975,6 +2100,7 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 		updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[index].SourceQuery, roles[index].Items)
+		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist equipped item failed: %v", err)
@@ -2104,6 +2230,7 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		if sourceType == "装备" || targetType == "装备" {
 			roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[index].SourceQuery, roles[index].Items)
+			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
@@ -2848,6 +2975,16 @@ func (store *Store) RemoveRole(request RoleRemoveRequest) RoleRemoveResponse {
 		updatedRoles = append(updatedRoles, role)
 	}
 	if removed {
+		delete(store.removedQuests, request.RoleID)
+		delete(store.acceptedQuests, request.RoleID)
+		if store.db != nil {
+			if _, err := store.db.Exec(`DELETE FROM role_accepted_quests WHERE role_id = ?`, request.RoleID); err != nil {
+				log.Printf("[session.Store] delete removed role accepted quest state failed roleId=%s: %v", request.RoleID, err)
+			}
+			if _, err := store.db.Exec(`DELETE FROM role_removed_quests WHERE role_id = ?`, request.RoleID); err != nil {
+				log.Printf("[session.Store] delete removed role quest state failed roleId=%s: %v", request.RoleID, err)
+			}
+		}
 		store.rolesByPID[request.PlayerID] = updatedRoles
 		store.normalizeRoleIDsLocked(request.PlayerID)
 		if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
@@ -2960,6 +3097,23 @@ func (store *Store) normalizeRoleIDsLocked(playerID string) bool {
 	}
 	store.nextRoleSeqByPID[playerID] = maxSeq
 	return changed
+}
+
+func (store *Store) hasRoleLocked(playerID string, roleID string) bool {
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID == roleID {
+			return true
+		}
+	}
+	return false
+}
+
+func cloneBoolMap(values map[string]bool) map[string]bool {
+	result := make(map[string]bool, len(values))
+	for key, value := range values {
+		result[key] = value
+	}
+	return result
 }
 
 func validateUserName(userName string) string {

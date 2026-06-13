@@ -2,3 +2,5 @@
 2026/06/14 01:03:00 [ai-server] http api listening on http://127.0.0.1:18080
 2026/06/14 01:04:14 [ai-server] websocket closed: websocket: close 1000 (normal): done
 2026/06/14 01:36:56 [session.Store] ListRoles playerId=acct-cap1366655383 roles=[{id:acct-cap1366655383-role-001,name:桥头的樵夫,level:1}]
+2026/06/14 01:38:22 [ai-server] websocket closed: websocket: close 1001 (going away)
+2026/06/14 01:38:57 [session.Store] ListRoles playerId=acct-cap1366655383 roles=[{id:acct-cap1366655383-role-001,name:桥头的樵夫,level:1}]

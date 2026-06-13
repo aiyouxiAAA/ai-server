@@ -1304,6 +1304,7 @@ func TestStoreCapturedMaterialTemplatesFillMissingIconFields(t *testing.T) {
 		{name: "宝匣", display: "596.png", itemType: "own", itemLevel: 3},
 		{name: "兽牙", display: "68.png", itemType: "null", itemLevel: 1},
 		{name: "头骨", display: "102.png", itemType: "null", itemLevel: 2},
+		{name: "雪莲花", display: "935.png", itemType: "null", itemLevel: 2},
 	}
 
 	for _, tc := range cases {

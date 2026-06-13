@@ -1210,6 +1210,16 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 		},
 		{
 			Type:        "背包",
+			Name:        "雪莲花",
+			ItemType:    "null",
+			Display:     "935.png",
+			Description: "f_i_雪莲花^5BC46D&24@材料&25@99&19@任务物品。&20@生长于高山雪原的珍贵药材。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "背包",
 			Name:        "水帘洞通行证",
 			ItemType:    "null",
 			Display:     "781.png",

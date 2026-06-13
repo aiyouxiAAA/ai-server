@@ -170,13 +170,13 @@ func TestBuildOverUsesCapturedHuangfengzhaiBossRewards(t *testing.T) {
 			mapID:    "149",
 			handle:   "3218685759638239",
 			expDelta: 336,
-			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1"},
+			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1", "雪莲花x1"},
 		},
 		{
 			mapID:    "149",
 			handle:   "3220685759639165",
 			expDelta: 336,
-			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1"},
+			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1", "雪莲花x1"},
 		},
 		{
 			mapID:    "155",
@@ -3019,6 +3019,157 @@ func TestFeixiandongBossRampagePowerUsesCapturedBuffWithoutMPCost(t *testing.T) 
 	}
 	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "暴走之力" || runtime.PendingBuffInfos[0].Display != "1595.png" || runtime.PendingBuffInfos[0].Round != 48 || !strings.Contains(runtime.PendingBuffInfos[0].Description, "还有 48 回合暴走") {
 		t.Fatalf("expected captured 暴走之力 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+}
+
+func TestHuangfengBossesUseCapturedRampagePower(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		displayURL string
+	}{
+		{name: "黄风二寨主", displayURL: "monstermap/hfscastellan.swf"},
+		{name: "黄风大寨主", displayURL: "monstermap/hfcastellan.swf"},
+		{name: "黄风寨夫人", displayURL: "monstermap/hflady.swf"},
+	} {
+		runtime := &Runtime{
+			BattleID:         "battle-huangfeng-rampage",
+			Round:            1,
+			nextSequence:     1,
+			DefendingHandles: map[string]bool{},
+		}
+		actor := &CellInfoPush{
+			Handle:     tc.name,
+			Camp:       CampEnemy,
+			Name:       tc.name,
+			DisplayURL: tc.displayURL,
+			HP:         1200,
+			MaxHP:      1200,
+			MP:         564,
+			MaxMP:      564,
+		}
+
+		actions := runtime.resolveEnemyRampageActions(actor)
+
+		if len(actions) != 1 || actions[0].ActionName != "暴走之力" || actions[0].SourceActionLabel != "battleStand" || actions[0].TargetHandle != actor.Handle {
+			t.Fatalf("expected %s to use captured 暴走之力 battleStand, got %+v", tc.name, actions)
+		}
+		if actor.MP != 564 || len(actions[0].RefreshInfos) != 1 || actions[0].RefreshInfos[0].MP != 564 {
+			t.Fatalf("expected %s 暴走之力 to keep MP unchanged, actor=%+v action=%+v", tc.name, actor, actions[0])
+		}
+	}
+}
+
+func TestHuangfengIncantationShamanRockRainUsesCapturedAllTargetSkill(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-huangfeng-rockrain",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		Cells: []CellInfoPush{
+			{
+				Handle:     "player_21424",
+				Camp:       CampTeam,
+				HP:         1085,
+				MaxHP:      1085,
+				MgcDefense: 40,
+			},
+			{
+				Handle:     "7496686002240421",
+				Camp:       CampEnemy,
+				Name:       "咒巫师",
+				DisplayURL: "monstermap/incantationshaman.swf",
+				HP:         500,
+				MaxHP:      500,
+				MP:         550,
+				MaxMP:      550,
+				Attack:     202,
+			},
+		},
+	}
+	actor := runtime.cellByHandle("7496686002240421")
+
+	action := runtime.resolveEnemyCommandActions(actor, runtime.cellByHandle("player_21424"), CommandEnemyRockRain)[0]
+
+	if action.ActionName != "落石" || action.SourceActionLabel != "rockRain" || action.TargetHandle != "all" || action.SourceMode != "1" {
+		t.Fatalf("expected captured 落石 all-target action, got %+v", action)
+	}
+	if action.Damage != 162 || runtime.Cells[0].HP != 923 || runtime.Cells[1].MP != 540 {
+		t.Fatalf("expected 落石 to use captured MP cost 10 and magic damage path, action=%+v cells=%+v", action, runtime.Cells)
+	}
+}
+
+func TestHuangfengSecondCastellanDarkMoonCutUsesCapturedLabel(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-huangfeng-darkmoon",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "3218685759638239",
+		Camp:       CampEnemy,
+		Name:       "黄风二寨主",
+		DisplayURL: "monstermap/hfscastellan.swf",
+		HP:         1200,
+		MaxHP:      1200,
+		MP:         564,
+		MaxMP:      564,
+		Attack:     240,
+	}
+	target := &CellInfoPush{
+		Handle:  "player_21424",
+		Camp:    CampTeam,
+		HP:      1085,
+		MaxHP:   1085,
+		Defense: 167,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandEnemyDarkMoon)
+
+	if action.ActionName != "暗月斩" || action.SourceActionLabel != "darkMoonCut" || action.SourceMode != "1" {
+		t.Fatalf("expected captured 暗月斩 action, got %+v", action)
+	}
+	if action.Damage != 73 || action.TargetHP != 1012 || actor.MP != 554 {
+		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and physical damage path, action=%+v actor=%+v", action, actor)
+	}
+}
+
+func TestHuangfengFirstCastellanEarthShockUsesCapturedAllTargetSkill(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-huangfeng-earthshock",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		Cells: []CellInfoPush{
+			{
+				Handle:  "player_21424",
+				Camp:    CampTeam,
+				HP:      1085,
+				MaxHP:   1085,
+				Defense: 160,
+			},
+			{
+				Handle:     "2600686416056495",
+				Camp:       CampEnemy,
+				Name:       "黄风大寨主",
+				DisplayURL: "monstermap/hfcastellan.swf",
+				HP:         1500,
+				MaxHP:      1500,
+				MP:         564,
+				MaxMP:      564,
+				Attack:     260,
+			},
+		},
+	}
+	actor := runtime.cellByHandle("2600686416056495")
+
+	action := runtime.resolveEnemyCommandActions(actor, runtime.cellByHandle("player_21424"), CommandEnemyEarthShock)[0]
+
+	if action.ActionName != "裂震击" || action.SourceActionLabel != "earthShockAtk" || action.TargetHandle != "all" || action.SourceMode != "1" {
+		t.Fatalf("expected captured 裂震击 all-target action, got %+v", action)
+	}
+	if action.Damage != 100 || runtime.Cells[0].HP != 985 || runtime.Cells[1].MP != 554 {
+		t.Fatalf("expected 裂震击 to use captured MP cost 10 and physical damage path, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
 

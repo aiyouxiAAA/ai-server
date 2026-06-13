@@ -1208,17 +1208,27 @@ func TestBuildClassicBattleLootParsesCapturedItemCounts(t *testing.T) {
 	_, socketSession := seedSelectedRoleSession(t)
 	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
 		Winner: battle.CampTeam,
-		Items:  []string{"铜钱x5", "盗贼的首级x1"},
+		Items:  []string{"铜钱x5", "盗贼的首级x1", "雪莲花x1"},
 	})
 
-	if len(loot) != 2 {
-		t.Fatalf("expected two captured reward stacks, got %+v", loot)
+	if len(loot) != 3 {
+		t.Fatalf("expected three captured reward stacks, got %+v", loot)
 	}
 	if loot[0].Name != "铜钱" || loot[0].Count != 5 || loot[0].Index != 0 || loot[0].Display != "163.png" {
 		t.Fatalf("expected captured 铜钱x5 reward stack, got %+v", loot[0])
 	}
 	if loot[1].Name != "盗贼的首级" || loot[1].Count != 1 || loot[1].Index != 1 || loot[1].Display == "" {
 		t.Fatalf("expected captured 盗贼的首级x1 reward stack, got %+v", loot[1])
+	}
+	var snowLotus *session.RoleItem
+	for index := range loot {
+		if loot[index].Name == "雪莲花" {
+			snowLotus = &loot[index]
+			break
+		}
+	}
+	if snowLotus == nil || snowLotus.Count != 1 || snowLotus.Display != "935.png" || !strings.Contains(snowLotus.Description, "任务物品") {
+		t.Fatalf("expected captured 雪莲花x1 quest item stack, got %+v", loot)
 	}
 }
 

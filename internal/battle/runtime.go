@@ -24,28 +24,31 @@ const (
 	PhasePlaying  = "playing"
 	PhaseFinished = "finished"
 
-	CommandNormalAttack   = "skill-normal-attack"
-	CommandMiZhan         = "skill-mi-zhan"
-	CommandDuoDuanZhan    = "skill-duo-duan-zhan"
-	CommandShiXueZhan     = "skill-shi-xue-zhan"
-	CommandKuangBao       = "skill-kuang-bao"
-	CommandHongYueZhan    = "skill-hong-yue-zhan"
-	CommandXueQie         = "skill-xue-qie"
-	CommandLeiHunZhan     = "skill-lei-hun-zhan"
-	CommandEnemyAttack    = "enemy-normal-attack"
-	CommandEnemySlideCut  = "enemy-slide-cut"
-	CommandEnemyShadeCut  = "enemy-shade-cut"
-	CommandEnemyHelixAtk  = "enemy-helix-atk"
-	CommandEnemyPalsyAtk  = "enemy-palsy-atk"
-	CommandEnemyRampage   = "enemy-rampage-power"
-	CommandEnemyFirePower = "enemy-fire-power"
-	CommandEnemyDeadLight = "enemy-dead-light"
-	CommandEnemyDoubleHit = "enemy-double-hit"
-	CommandEnemyRollAtk   = "enemy-roll-atk"
-	CommandDefense        = "defense"
-	CommandStore          = "battle-store"
-	CommandEscape         = "battle-escape"
-	CommandItem           = "battle-item"
+	CommandNormalAttack    = "skill-normal-attack"
+	CommandMiZhan          = "skill-mi-zhan"
+	CommandDuoDuanZhan     = "skill-duo-duan-zhan"
+	CommandShiXueZhan      = "skill-shi-xue-zhan"
+	CommandKuangBao        = "skill-kuang-bao"
+	CommandHongYueZhan     = "skill-hong-yue-zhan"
+	CommandXueQie          = "skill-xue-qie"
+	CommandLeiHunZhan      = "skill-lei-hun-zhan"
+	CommandEnemyAttack     = "enemy-normal-attack"
+	CommandEnemySlideCut   = "enemy-slide-cut"
+	CommandEnemyShadeCut   = "enemy-shade-cut"
+	CommandEnemyHelixAtk   = "enemy-helix-atk"
+	CommandEnemyPalsyAtk   = "enemy-palsy-atk"
+	CommandEnemyRampage    = "enemy-rampage-power"
+	CommandEnemyFirePower  = "enemy-fire-power"
+	CommandEnemyDeadLight  = "enemy-dead-light"
+	CommandEnemyDoubleHit  = "enemy-double-hit"
+	CommandEnemyRollAtk    = "enemy-roll-atk"
+	CommandEnemyRockRain   = "enemy-rock-rain"
+	CommandEnemyDarkMoon   = "enemy-dark-moon-cut"
+	CommandEnemyEarthShock = "enemy-earth-shock-atk"
+	CommandDefense         = "defense"
+	CommandStore           = "battle-store"
+	CommandEscape          = "battle-escape"
+	CommandItem            = "battle-item"
 
 	maxStoredPower                 = 5
 	leiHunZhanRequiredPower        = 3
@@ -72,6 +75,12 @@ const (
 	enemyRollAtkMPCost             = 10
 	enemyRollAtkChance             = 45
 	enemyRollAtkDamageMultiplier   = 1.49
+	enemyRockRainMPCost            = 10
+	enemyRockRainChance            = 10
+	enemyDarkMoonMPCost            = 10
+	enemyDarkMoonChance            = 25
+	enemyEarthShockMPCost          = 10
+	enemyEarthShockChance          = 10
 	defaultBattleHit               = 100
 	defaultBattleDog               = 50
 	defaultBattleFat               = 5
@@ -1035,6 +1044,37 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			CanDodge:          true,
 			CanFat:            true,
 		}
+	case CommandEnemyRockRain:
+		return commandProfile{
+			ActionName:        "落石",
+			SourceType:        "all",
+			SourceActionLabel: "rockRain",
+			DamageMultiplier:  1,
+			MPCost:            enemyRockRainMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+			DefenseType:       "magic",
+		}
+	case CommandEnemyDarkMoon:
+		return commandProfile{
+			ActionName:        "暗月斩",
+			SourceType:        "oneE",
+			SourceActionLabel: "darkMoonCut",
+			DamageMultiplier:  1,
+			MPCost:            enemyDarkMoonMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+		}
+	case CommandEnemyEarthShock:
+		return commandProfile{
+			ActionName:        "裂震击",
+			SourceType:        "all",
+			SourceActionLabel: "earthShockAtk",
+			DamageMultiplier:  1,
+			MPCost:            enemyEarthShockMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
 		if actor == nil || strings.TrimSpace(actor.CommandLabel) == "" {
 			profile.ActionName = "普通攻击"
@@ -1053,11 +1093,20 @@ func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfo
 	if sourceEnemyCanRollAtk(enemy) && enemy.MP >= enemyRollAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRollAtk, enemyRollAtkChance) {
 		return CommandEnemyRollAtk
 	}
+	if sourceEnemyCanEarthShock(enemy) && enemy.MP >= enemyEarthShockMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyEarthShock, enemyEarthShockChance) {
+		return CommandEnemyEarthShock
+	}
 	if sourceEnemyCanDeadLight(enemy) && enemy.MP >= enemyDeadLightMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDeadLight, enemyDeadLightChance) {
 		return CommandEnemyDeadLight
 	}
 	if sourceEnemyCanDoubleHit(enemy) && enemy.MP >= enemyDoubleHitMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDoubleHit, enemyDoubleHitChance) {
 		return CommandEnemyDoubleHit
+	}
+	if sourceEnemyCanRockRain(enemy) && enemy.MP >= enemyRockRainMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRockRain, enemyRockRainChance) {
+		return CommandEnemyRockRain
+	}
+	if sourceEnemyCanDarkMoon(enemy) && enemy.MP >= enemyDarkMoonMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDarkMoon, enemyDarkMoonChance) {
+		return CommandEnemyDarkMoon
 	}
 	if sourceEnemyCanHelixAtk(enemy) && enemy.MP >= enemyHelixAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyHelixAtk, enemyHelixAtkChance) {
 		return CommandEnemyHelixAtk
@@ -1113,6 +1162,30 @@ func sourceEnemyCanPalsyAtk(enemy *CellInfoPush) bool {
 	return strings.TrimSpace(enemy.Name) == "毒蜂" || strings.Contains(normalizedDisplay, "monstermap/drughornets.swf")
 }
 
+func sourceEnemyCanRockRain(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "咒巫师" || strings.Contains(normalizedDisplay, "monstermap/incantationshaman.swf")
+}
+
+func sourceEnemyCanDarkMoon(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "黄风二寨主" || strings.Contains(normalizedDisplay, "monstermap/hfscastellan.swf")
+}
+
+func sourceEnemyCanEarthShock(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "黄风大寨主" || strings.Contains(normalizedDisplay, "monstermap/hfcastellan.swf")
+}
+
 func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *CellInfoPush, commandID string) []ActionPush {
 	if runtime == nil || enemy == nil || target == nil {
 		return nil
@@ -1152,10 +1225,14 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	switch strings.TrimSpace(enemy.Name) {
-	case "巨岩魔", "岩化魔人":
+	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人":
 		return true
 	default:
-		return strings.Contains(normalizedDisplay, "monstermap/largerock.swf") || strings.Contains(normalizedDisplay, "monstermap/magicrockman.swf")
+		return strings.Contains(normalizedDisplay, "monstermap/largerock.swf") ||
+			strings.Contains(normalizedDisplay, "monstermap/magicrockman.swf") ||
+			strings.Contains(normalizedDisplay, "monstermap/hfscastellan.swf") ||
+			strings.Contains(normalizedDisplay, "monstermap/hfcastellan.swf") ||
+			strings.Contains(normalizedDisplay, "monstermap/hflady.swf")
 	}
 }
 

@@ -2638,7 +2638,7 @@ func TestCapturedStunOnHitAppliesBuffInfoDuringEnemyAttack(t *testing.T) {
 			Camp:   CampTeam,
 			HP:     500,
 			MaxHP:  500,
-			Dog:        0,
+			Dog:    0,
 		}
 		if candidate.hashBattleRollWithSalt(actor, target, CommandEnemyAttack, "status:眩晕") < enemyStunOnHitChance {
 			runtime = candidate

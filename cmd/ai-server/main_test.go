@@ -935,6 +935,123 @@ func TestHandlePacketClassicBattleOverRemovesHuangfengzhaiVisibleMonster(t *test
 	}
 }
 
+func TestHandlePacketClassicBattleOverRemovesFeixiandongVisibleMonster(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 18)
+	if !ok {
+		t.Fatal("expected test role map update to feixiandong entrance")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+	grantRoleItemTemplateForTest(t, store, socketSession, "飞仙洞通行证", 1)
+
+	const visibleMonsterHandle = "1048675671977626"
+	expectedRemovedHandles := []string{"1042675671973672", "1048675671977626"}
+
+	transfer := buildClassicTownTransferResult(store, socketSession, "76", world.SpawnPoint{X: 1576, Y: 515})
+	if transfer.townBootstrap == nil {
+		t.Fatalf("expected map76 transfer bootstrap, got %+v", transfer)
+	}
+	if transfer.dungeonInstance == nil || !transfer.dungeonInstance.Active || transfer.dungeonInstance.Key != session.DungeonInstanceFeixiandong || transfer.dungeonInstance.DisplayName != "飞仙洞" {
+		t.Fatalf("expected map76 transfer to sync active feixiandong instance, got %+v", transfer.dungeonInstance)
+	}
+
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "76",
+			MapName:             "飞仙洞_13",
+			StageFocusX:         1576,
+			ReturnRoute:         "town-placeholder",
+			SourceMonsterHandle: visibleMonsterHandle,
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || socketSession.battleRuntime == nil || socketSession.battleRuntime.SourceMonsterHandle != visibleMonsterHandle {
+		t.Fatalf("expected feixiandong visible monster battle to start, got result=%+v runtime=%+v", startResult, socketSession.battleRuntime)
+	}
+	socketSession.battleRuntime.PendingOver = &battle.OverPush{
+		BattleID: startResult.battleStart.BattleID,
+		Winner:   battle.CampTeam,
+		Rounds:   1,
+		Result: battle.ResultPayload{
+			Winner: battle.CampTeam,
+			Rounds: 1,
+		},
+	}
+
+	playOver := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattlePlayOverReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.PlayOverRequest{
+			BattleID: startResult.battleStart.BattleID,
+		}),
+	}, socketSession)
+	if playOver.battleOver == nil || len(playOver.removeRoleHandles) != len(expectedRemovedHandles) {
+		t.Fatalf("expected feixiandong visible monster group removeRole after BattlePlayOver, got %+v", playOver)
+	}
+	for index, expectedHandle := range expectedRemovedHandles {
+		if playOver.removeRoleHandles[index] != expectedHandle {
+			t.Fatalf("expected feixiandong visible monster removeRole %d to be %s, got %+v", index, expectedHandle, playOver.removeRoleHandles)
+		}
+		if !socketSession.defeatedVisibleMonsters[expectedHandle] {
+			t.Fatalf("expected session to retain feixiandong defeated visible monster handle %s, got %+v", expectedHandle, socketSession.defeatedVisibleMonsters)
+		}
+	}
+
+	reenter := buildClassicTownTransferResult(store, socketSession, "76", world.SpawnPoint{X: 1000, Y: 600})
+	if reenter.townBootstrap == nil || reenter.dungeonInstance == nil || !reenter.dungeonInstance.Active || reenter.dungeonInstance.Key != session.DungeonInstanceFeixiandong {
+		t.Fatalf("expected reenter map76 to keep feixiandong instance active, got %+v", reenter)
+	}
+	for _, rolePush := range reenter.townBootstrap.CreateRoles {
+		for _, expectedHandle := range expectedRemovedHandles {
+			if rolePush.Handle == expectedHandle {
+				t.Fatalf("expected defeated feixiandong visible monster group to stay removed from map76 bootstrap, got %+v", rolePush)
+			}
+		}
+	}
+
+	newSocketSession := &packetSession{}
+	selectAgain := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 4,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     socketSession.playerBase.PlayerID,
+			SessionToken: "mock-session-token-001",
+			RoleID:       socketSession.selectedRole.RoleID,
+		}),
+	}, newSocketSession)
+	if selectAgain.townBootstrap == nil || selectAgain.dungeonInstance == nil || !selectAgain.dungeonInstance.Active || selectAgain.dungeonInstance.Key != session.DungeonInstanceFeixiandong {
+		t.Fatalf("expected reselect to restore feixiandong instance state, got %+v", selectAgain)
+	}
+	for _, expectedHandle := range expectedRemovedHandles {
+		if !newSocketSession.defeatedVisibleMonsters[expectedHandle] {
+			t.Fatalf("expected new socket session to restore feixiandong defeated visible monster %s, got %+v", expectedHandle, newSocketSession.defeatedVisibleMonsters)
+		}
+	}
+	for _, rolePush := range selectAgain.townBootstrap.CreateRoles {
+		for _, expectedHandle := range expectedRemovedHandles {
+			if rolePush.Handle == expectedHandle {
+				t.Fatalf("expected defeated feixiandong visible monster group to stay removed after reselect, got %+v", rolePush)
+			}
+		}
+	}
+
+	groupMateStart := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 5,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "76",
+			MapName:             "飞仙洞_13",
+			StageFocusX:         1761,
+			SourceMonsterHandle: "1042675671973672",
+		}),
+	}, socketSession)
+	if groupMateStart.battleStart != nil || socketSession.battleRuntime != nil {
+		t.Fatalf("expected defeated feixiandong visible monster group mate battle to be rejected, got result=%+v runtime=%+v", groupMateStart, socketSession.battleRuntime)
+	}
+}
+
 func TestClassicTownDungeonEntryRequiresAndConsumesTicketOncePerInstance(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 122)
@@ -1102,6 +1219,27 @@ func TestBuildClassicBattleLootParsesCapturedItemCounts(t *testing.T) {
 	}
 	if loot[1].Name != "盗贼的首级" || loot[1].Count != 1 || loot[1].Index != 1 || loot[1].Display == "" {
 		t.Fatalf("expected captured 盗贼的首级x1 reward stack, got %+v", loot[1])
+	}
+}
+
+func TestBuildClassicBattleLootUsesFeixiandongBossItemMetadata(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
+		Winner: battle.CampTeam,
+		Items:  []string{"岩魔剑x1", "宝匣x1", "岩魔菱石x2"},
+	})
+
+	if len(loot) != 3 {
+		t.Fatalf("expected three feixiandong boss loot stacks, got %+v", loot)
+	}
+	if loot[0].Name != "岩魔剑" || loot[0].ItemType != "equip" || loot[0].Display != "606.png" || !strings.Contains(loot[0].Description, "武器·单剑系") {
+		t.Fatalf("expected captured 岩魔剑 equipment metadata, got %+v", loot[0])
+	}
+	if loot[1].Name != "宝匣" || loot[1].ItemType != "own" || loot[1].Display != "596.png" || !strings.Contains(loot[1].Description, "双击打开") {
+		t.Fatalf("expected captured 宝匣 metadata, got %+v", loot[1])
+	}
+	if loot[2].Name != "岩魔菱石" || loot[2].Count != 2 || loot[2].Display != "112.png" || loot[2].ItemLevel != 3 {
+		t.Fatalf("expected captured 岩魔菱石 material metadata, got %+v", loot[2])
 	}
 }
 

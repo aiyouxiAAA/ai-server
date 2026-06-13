@@ -24,39 +24,50 @@ const (
 	PhasePlaying  = "playing"
 	PhaseFinished = "finished"
 
-	CommandNormalAttack  = "skill-normal-attack"
-	CommandMiZhan        = "skill-mi-zhan"
-	CommandDuoDuanZhan   = "skill-duo-duan-zhan"
-	CommandShiXueZhan    = "skill-shi-xue-zhan"
-	CommandKuangBao      = "skill-kuang-bao"
-	CommandHongYueZhan   = "skill-hong-yue-zhan"
-	CommandXueQie        = "skill-xue-qie"
-	CommandLeiHunZhan    = "skill-lei-hun-zhan"
-	CommandEnemyAttack   = "enemy-normal-attack"
-	CommandEnemySlideCut = "enemy-slide-cut"
-	CommandEnemyShadeCut = "enemy-shade-cut"
-	CommandEnemyHelixAtk = "enemy-helix-atk"
-	CommandEnemyPalsyAtk = "enemy-palsy-atk"
-	CommandDefense       = "defense"
-	CommandStore         = "battle-store"
-	CommandEscape        = "battle-escape"
-	CommandItem          = "battle-item"
+	CommandNormalAttack   = "skill-normal-attack"
+	CommandMiZhan         = "skill-mi-zhan"
+	CommandDuoDuanZhan    = "skill-duo-duan-zhan"
+	CommandShiXueZhan     = "skill-shi-xue-zhan"
+	CommandKuangBao       = "skill-kuang-bao"
+	CommandHongYueZhan    = "skill-hong-yue-zhan"
+	CommandXueQie         = "skill-xue-qie"
+	CommandLeiHunZhan     = "skill-lei-hun-zhan"
+	CommandEnemyAttack    = "enemy-normal-attack"
+	CommandEnemySlideCut  = "enemy-slide-cut"
+	CommandEnemyShadeCut  = "enemy-shade-cut"
+	CommandEnemyHelixAtk  = "enemy-helix-atk"
+	CommandEnemyPalsyAtk  = "enemy-palsy-atk"
+	CommandEnemyRampage   = "enemy-rampage-power"
+	CommandEnemyFirePower = "enemy-fire-power"
+	CommandEnemyDeadLight = "enemy-dead-light"
+	CommandEnemyDoubleHit = "enemy-double-hit"
+	CommandDefense        = "defense"
+	CommandStore          = "battle-store"
+	CommandEscape         = "battle-escape"
+	CommandItem           = "battle-item"
 
-	maxStoredPower                = 5
-	leiHunZhanRequiredPower       = 3
-	enemySlideCutMPCost           = 10
-	enemySlideCutChance           = 20
-	enemyShadeCutMPCost           = 40
-	enemyShadeCutChance           = 30
-	enemyHelixAtkMPCost           = 10
-	enemyHelixAtkChance           = 23
-	enemyHelixAtkDamageMultiplier = 1.32
-	enemyPalsyAtkChance           = 40
-	enemyPalsyAtkStatusChance     = 100
-	enemyStunCounterChance        = 5
-	defaultBattleHit              = 100
-	defaultBattleDog              = 50
-	defaultBattleFat              = 5
+	maxStoredPower                 = 5
+	leiHunZhanRequiredPower        = 3
+	enemySlideCutMPCost            = 10
+	enemySlideCutChance            = 20
+	enemyShadeCutMPCost            = 40
+	enemyShadeCutChance            = 30
+	enemyHelixAtkMPCost            = 10
+	enemyHelixAtkChance            = 23
+	enemyHelixAtkDamageMultiplier  = 1.32
+	enemyPalsyAtkChance            = 40
+	enemyPalsyAtkStatusChance      = 100
+	enemyStunCounterChance         = 5
+	enemyRampageMPCost             = 10
+	enemyRampageMaxRounds          = 50
+	enemyFirePowerChance           = 60
+	enemyFirePowerDamageMultiplier = 0.3
+	enemyDeadLightChance           = 35
+	enemyDeadLightMPDamage         = 40
+	enemyDoubleHitChance           = 45
+	defaultBattleHit               = 100
+	defaultBattleDog               = 50
+	defaultBattleFat               = 5
 )
 
 var sourceEncounterRoll = func(maxExclusive int) int {
@@ -286,6 +297,7 @@ type commandProfile struct {
 	LifeStealChance   int
 	LifeStealRatio    float64
 	DefenseType       string
+	TargetMPDamage    int
 	StatusName        string
 	StatusDisplay     string
 	StatusDescription string
@@ -623,70 +635,86 @@ func (runtime *Runtime) validateActorTurn(request actionTurnRequest) (*CellInfoP
 }
 
 func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, actions []ActionPush) ActionResult {
-	if winner := runtime.resolveWinner(); winner != "" {
-		runtime.Phase = PhaseFinished
-		runtime.PendingStart = nil
-		runtime.PendingOver = runtime.buildOver(winner)
-		return ActionResult{
-			Actions:   actions,
-			BuffInfos: runtime.consumePendingBuffInfos(),
-		}
-	}
-
-	team := runtime.firstLiving(CampTeam)
 	maxActorSingleHPLoss := 0
-	for _, enemy := range runtime.livingCells(CampEnemy) {
-		if team == nil {
-			break
+	for {
+		if winner := runtime.resolveWinner(); winner != "" {
+			runtime.Phase = PhaseFinished
+			runtime.PendingStart = nil
+			runtime.PendingOver = runtime.buildOver(winner)
+			return ActionResult{
+				Actions:   actions,
+				BuffInfos: runtime.consumePendingBuffInfos(),
+			}
 		}
-		statusActions, skipTurn := runtime.resolveStatusStartActions(enemy)
-		actions = append(actions, statusActions...)
-		if runtime.resolveWinner() != "" {
-			break
-		}
-		if enemy.HP <= 0 || skipTurn {
-			team = runtime.firstLiving(CampTeam)
-			continue
-		}
-		beforeHP := team.HP
-		targetHandle := team.Handle
-		actions = append(actions, runtime.resolveAttack(enemy, team, runtime.enemyBattleCommand(enemy, team)))
-		runtime.setStoredPower(enemy.Handle, 0)
-		if targetHandle == actor.Handle {
-			maxActorSingleHPLoss = maxInt(maxActorSingleHPLoss, beforeHP-team.HP)
-		}
-		team = runtime.firstLiving(CampTeam)
-		if runtime.resolveWinner() != "" {
-			break
-		}
-	}
-	if winner := runtime.resolveWinner(); winner != "" {
-		runtime.Phase = PhaseFinished
-		runtime.PendingStart = nil
-		runtime.PendingOver = runtime.buildOver(winner)
-		return ActionResult{
-			Actions:   actions,
-			BuffInfos: runtime.consumePendingBuffInfos(),
-		}
-	}
 
-	statusActions, skipTurn := runtime.resolveStatusStartActions(actor)
-	actions = append(actions, statusActions...)
-	if winner := runtime.resolveWinner(); winner != "" {
-		runtime.Phase = PhaseFinished
-		runtime.PendingStart = nil
-		runtime.PendingOver = runtime.buildOver(winner)
-		return ActionResult{
-			Actions:   actions,
-			BuffInfos: runtime.consumePendingBuffInfos(),
+		team := runtime.firstLiving(CampTeam)
+		for _, enemy := range runtime.livingCells(CampEnemy) {
+			if team == nil {
+				break
+			}
+			statusActions, skipTurn := runtime.resolveStatusStartActions(enemy)
+			actions = append(actions, statusActions...)
+			if runtime.resolveWinner() != "" {
+				break
+			}
+			if enemy.HP <= 0 || skipTurn {
+				team = runtime.firstLiving(CampTeam)
+				continue
+			}
+			actions = append(actions, runtime.resolveEnemyRampageActions(enemy)...)
+			beforeActorHP := actor.HP
+			beforeHP := team.HP
+			targetHandle := team.Handle
+			commandID := runtime.enemyBattleCommand(enemy, team)
+			actions = append(actions, runtime.resolveEnemyCommandActions(enemy, team, commandID)...)
+			runtime.setStoredPower(enemy.Handle, 0)
+			if targetHandle == actor.Handle {
+				maxActorSingleHPLoss = maxInt(maxActorSingleHPLoss, beforeHP-team.HP)
+			}
+			if commandID == CommandEnemyFirePower || commandID == CommandEnemyDeadLight {
+				maxActorSingleHPLoss = maxInt(maxActorSingleHPLoss, beforeActorHP-actor.HP)
+			}
+			team = runtime.firstLiving(CampTeam)
+			if runtime.resolveWinner() != "" {
+				break
+			}
 		}
-	}
-	if skipTurn {
+		if winner := runtime.resolveWinner(); winner != "" {
+			runtime.Phase = PhaseFinished
+			runtime.PendingStart = nil
+			runtime.PendingOver = runtime.buildOver(winner)
+			return ActionResult{
+				Actions:   actions,
+				BuffInfos: runtime.consumePendingBuffInfos(),
+			}
+		}
+
+		statusActions, skipTurn := runtime.resolveStatusStartActions(actor)
+		actions = append(actions, statusActions...)
+		if winner := runtime.resolveWinner(); winner != "" {
+			runtime.Phase = PhaseFinished
+			runtime.PendingStart = nil
+			runtime.PendingOver = runtime.buildOver(winner)
+			return ActionResult{
+				Actions:   actions,
+				BuffInfos: runtime.consumePendingBuffInfos(),
+			}
+		}
+
 		runtime.Round += 1
 		runtime.nextSequence += 1
 		runtime.ActiveHandle = actor.Handle
 		runtime.Phase = PhasePlaying
 		runtime.advanceKuangBaoRound(actor.Handle)
+		if skipTurn && runtime.hasActiveAutoContinueSkipStatus(actor.Handle) {
+			continue
+		}
+		if !skipTurn {
+			runtime.setStoredPower(actor.Handle, maxInt(
+				runtime.powerFor(actor.Handle),
+				storedPowerFromSingleHPLoss(maxActorSingleHPLoss, actor.MaxHP),
+			))
+		}
 		start := StartCommandPush{
 			BattleID:    runtime.BattleID,
 			ActorHandle: actor.Handle,
@@ -701,29 +729,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			BuffInfos: runtime.consumePendingBuffInfos(),
 		}
 	}
-
-	runtime.Round += 1
-	runtime.nextSequence += 1
-	runtime.ActiveHandle = actor.Handle
-	runtime.Phase = PhasePlaying
-	runtime.advanceKuangBaoRound(actor.Handle)
-	runtime.setStoredPower(actor.Handle, maxInt(
-		runtime.powerFor(actor.Handle),
-		storedPowerFromSingleHPLoss(maxActorSingleHPLoss, actor.MaxHP),
-	))
-	start := StartCommandPush{
-		BattleID:    runtime.BattleID,
-		ActorHandle: actor.Handle,
-		Round:       runtime.Round,
-		Sequence:    runtime.nextSequence,
-		Power:       runtime.powerFor(actor.Handle),
-	}
-	runtime.PendingStart = &start
-	runtime.PendingOver = nil
-	return ActionResult{
-		Actions:   actions,
-		BuffInfos: runtime.consumePendingBuffInfos(),
-	}
 }
 
 func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush, commandID string) ActionPush {
@@ -735,9 +740,13 @@ func (runtime *Runtime) resolveAllTargetAttack(actor *CellInfoPush, targets []*C
 	refreshInfos := make([]CellInfoPush, 0, len(targets)+1)
 	results := make([]ActionResultCodeEntry, 0, len(targets))
 	actorRefreshAdded := false
+	targetCamp := CampEnemy
+	if actor != nil && actor.Camp == CampEnemy {
+		targetCamp = CampTeam
+	}
 	for index := range targets {
 		target := runtime.cellByHandle(targets[index].Handle)
-		if target == nil || target.Camp != CampEnemy || target.HP <= 0 {
+		if target == nil || target.Camp != targetCamp || target.HP <= 0 {
 			continue
 		}
 		action := runtime.resolveAttackWithMPCost(actor, target, commandID, len(actions) == 0)
@@ -795,6 +804,40 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			TargetActionStateCode: "1",
 			Damage:                0,
 			TargetHP:              target.HP,
+			TargetDead:            target.HP <= 0,
+			RefreshInfos:          refreshInfos,
+			Round:                 runtime.Round,
+			Sequence:              runtime.nextSequence,
+		}
+	}
+	if profile.TargetMPDamage > 0 {
+		beforeTargetMP := target.MP
+		target.MP = maxInt(0, target.MP-profile.TargetMPDamage)
+		delete(runtime.DefendingHandles, target.Handle)
+		if consumeMP && profile.MPCost > 0 {
+			actor.MP = maxInt(0, actor.MP-profile.MPCost)
+		}
+		refreshInfos := []CellInfoPush{*target}
+		if (consumeMP && profile.MPCost > 0) || beforeTargetMP != target.MP {
+			refreshInfos = []CellInfoPush{*target}
+			if consumeMP && profile.MPCost > 0 {
+				refreshInfos = []CellInfoPush{*actor, *target}
+			}
+		}
+		return ActionPush{
+			BattleID:              runtime.BattleID,
+			ActorHandle:           actor.Handle,
+			TargetHandle:          target.Handle,
+			CommandID:             commandID,
+			ActionName:            profile.ActionName,
+			SourceMode:            sourceBattleActionMode(profile.SourceType),
+			SourceActionLabel:     sourceActionLabel,
+			TargetInDef:           targetInDef,
+			TargetActionState:     targetActionState,
+			TargetActionStateCode: targetActionStateCode,
+			Damage:                0,
+			TargetHP:              target.HP,
+			TargetMP:              target.MP,
 			TargetDead:            target.HP <= 0,
 			RefreshInfos:          refreshInfos,
 			Round:                 runtime.Round,
@@ -931,6 +974,36 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			StatusDescription: "眩晕并每回合损失气力",
 			SkipTurn:          true,
 		}
+	case CommandEnemyFirePower:
+		return commandProfile{
+			ActionName:        "赤焰击",
+			SourceType:        "all",
+			SourceActionLabel: "firePower",
+			DamageMultiplier:  enemyFirePowerDamageMultiplier,
+			CanDodge:          true,
+			CanFat:            false,
+			DefenseType:       "direct",
+		}
+	case CommandEnemyDeadLight:
+		return commandProfile{
+			ActionName:        "死亡射线",
+			SourceType:        "all",
+			SourceActionLabel: "deadLight",
+			DamageMultiplier:  0,
+			CanDodge:          true,
+			CanFat:            false,
+			DefenseType:       "direct",
+			TargetMPDamage:    enemyDeadLightMPDamage,
+		}
+	case CommandEnemyDoubleHit:
+		return commandProfile{
+			ActionName:        "双锤打",
+			SourceType:        "oneE",
+			SourceActionLabel: "doubleHit",
+			DamageMultiplier:  1,
+			CanDodge:          true,
+			CanFat:            true,
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
 		if actor == nil || strings.TrimSpace(actor.CommandLabel) == "" {
 			profile.ActionName = "普通攻击"
@@ -943,6 +1016,15 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
+	if sourceEnemyCanFirePower(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyFirePower, enemyFirePowerChance) {
+		return CommandEnemyFirePower
+	}
+	if sourceEnemyCanDeadLight(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDeadLight, enemyDeadLightChance) {
+		return CommandEnemyDeadLight
+	}
+	if sourceEnemyCanDoubleHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDoubleHit, enemyDoubleHitChance) {
+		return CommandEnemyDoubleHit
+	}
 	if sourceEnemyCanHelixAtk(enemy) && enemy.MP >= enemyHelixAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyHelixAtk, enemyHelixAtkChance) {
 		return CommandEnemyHelixAtk
 	}
@@ -995,6 +1077,81 @@ func sourceEnemyCanPalsyAtk(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	return strings.TrimSpace(enemy.Name) == "毒蜂" || strings.Contains(normalizedDisplay, "monstermap/drughornets.swf")
+}
+
+func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *CellInfoPush, commandID string) []ActionPush {
+	if runtime == nil || enemy == nil || target == nil {
+		return nil
+	}
+	profile := runtime.battleCommandProfile(enemy, commandID)
+	if strings.TrimSpace(profile.SourceType) == "all" {
+		action := runtime.resolveAllTargetAttack(enemy, runtime.livingCells(CampTeam), commandID)
+		if strings.TrimSpace(action.ActionName) == "" {
+			return nil
+		}
+		return []ActionPush{action}
+	}
+	return []ActionPush{runtime.resolveAttack(enemy, target, commandID)}
+}
+
+func (runtime *Runtime) resolveEnemyRampageActions(enemy *CellInfoPush) []ActionPush {
+	if runtime == nil || enemy == nil || enemy.HP <= 0 || !sourceEnemyCanRampage(enemy) || enemy.MP < enemyRampageMPCost {
+		return nil
+	}
+	elapsed := 0
+	if enemy.MaxMP > 0 && enemy.MP <= enemy.MaxMP {
+		elapsed = (enemy.MaxMP - enemy.MP) / enemyRampageMPCost
+	}
+	remaining := maxInt(1, enemyRampageMaxRounds-elapsed)
+	roundField := maxInt(1, 9998-elapsed)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, BuffInfoPush{
+		BattleID:      runtime.BattleID,
+		ReleaseHandle: enemy.Handle,
+		TargetHandle:  enemy.Handle,
+		Name:          "暴走之力",
+		Display:       "1595.png",
+		Description:   fmt.Sprintf("命中：+0<br/><font color='#FF00FF'>还有 %d 回合暴走!</font>", remaining),
+		Round:         roundField,
+	})
+	enemy.MP = maxInt(0, enemy.MP-enemyRampageMPCost)
+	return []ActionPush{runtime.resolveSelfAction(enemy, CommandEnemyRampage, "暴走之力", "battleStand")}
+}
+
+func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	switch strings.TrimSpace(enemy.Name) {
+	case "巨岩魔", "岩化魔人":
+		return true
+	default:
+		return strings.Contains(normalizedDisplay, "monstermap/largerock.swf") || strings.Contains(normalizedDisplay, "monstermap/magicrockman.swf")
+	}
+}
+
+func sourceEnemyCanFirePower(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "巨岩魔" || strings.Contains(normalizedDisplay, "monstermap/largerock.swf")
+}
+
+func sourceEnemyCanDeadLight(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "岩化魔人" || strings.Contains(normalizedDisplay, "monstermap/magicrockman.swf")
+}
+
+func sourceEnemyCanDoubleHit(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "岩化魔人" || strings.Contains(normalizedDisplay, "monstermap/magicrockman.swf")
 }
 
 func sourceEnemyCanStunCounter(enemy *CellInfoPush) bool {
@@ -1346,6 +1503,8 @@ func fallbackDuoDuanDescription(level int) string {
 		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@12&4@提升65%的物理伤害"
 	case 4:
 		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@14&4@提升70%的物理伤害"
+	case 5:
+		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@16&4@提升75%的物理伤害"
 	default:
 		return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@8&4@提升55%的物理伤害"
 	}
@@ -1462,6 +1621,8 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 			return 1.65
 		case 4:
 			return 1.7
+		case 5:
+			return 1.75
 		default:
 			return 1.55
 		}
@@ -1499,6 +1660,8 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 			return 12
 		case 4:
 			return 14
+		case 5:
+			return 16
 		default:
 			return 8
 		}
@@ -1721,6 +1884,19 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 		runtime.StatusEffects[actor.Handle] = effects
 	}
 	return actions, skipTurn
+}
+
+func (runtime *Runtime) hasActiveAutoContinueSkipStatus(handle string) bool {
+	if runtime == nil || runtime.StatusEffects == nil {
+		return false
+	}
+	effects := runtime.StatusEffects[handle]
+	for _, effect := range effects.Effects {
+		if effect.SkipTurn && effect.Rounds > 0 && strings.TrimSpace(effect.Name) == "眩晕" {
+			return true
+		}
+	}
+	return false
 }
 
 func (runtime *Runtime) resolveWoundStatusAction(target *CellInfoPush, effect BattleStatusEffect) *ActionPush {

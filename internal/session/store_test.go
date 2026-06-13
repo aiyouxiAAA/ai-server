@@ -1289,11 +1289,21 @@ func TestStoreCapturedMaterialTemplatesFillMissingIconFields(t *testing.T) {
 	cases := []struct {
 		name      string
 		display   string
+		itemType  string
 		itemLevel int
 	}{
-		{name: "碎铁矿", display: "105.png", itemLevel: 1},
-		{name: "兽牙", display: "68.png", itemLevel: 1},
-		{name: "头骨", display: "102.png", itemLevel: 2},
+		{name: "碎铁矿", display: "105.png", itemType: "null", itemLevel: 1},
+		{name: "废渣", display: "103.png", itemType: "null", itemLevel: 1},
+		{name: "石块", display: "104.png", itemType: "null", itemLevel: 1},
+		{name: "水晶", display: "111.png", itemType: "null", itemLevel: 1},
+		{name: "碎金片", display: "106.png", itemType: "null", itemLevel: 2},
+		{name: "岩魔菱石", display: "112.png", itemType: "null", itemLevel: 3},
+		{name: "岩魔球石", display: "113.png", itemType: "own", itemLevel: 2},
+		{name: "巨岩魔的拳", display: "114.png", itemType: "own", itemLevel: 2},
+		{name: "巨岩魔的头", display: "115.png", itemType: "null", itemLevel: 3},
+		{name: "宝匣", display: "596.png", itemType: "own", itemLevel: 3},
+		{name: "兽牙", display: "68.png", itemType: "null", itemLevel: 1},
+		{name: "头骨", display: "102.png", itemType: "null", itemLevel: 2},
 	}
 
 	for _, tc := range cases {
@@ -1301,7 +1311,7 @@ func TestStoreCapturedMaterialTemplatesFillMissingIconFields(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected captured source material template for %s", tc.name)
 		}
-		if template.Display != tc.display || template.ItemType != "null" || template.ItemLevel != tc.itemLevel {
+		if template.Display != tc.display || template.ItemType != tc.itemType || template.ItemLevel != tc.itemLevel {
 			t.Fatalf("expected %s template display=%s itemLevel=%d, got %+v", tc.name, tc.display, tc.itemLevel, template)
 		}
 
@@ -1311,8 +1321,34 @@ func TestStoreCapturedMaterialTemplatesFillMissingIconFields(t *testing.T) {
 			Count: 1,
 			Index: 6,
 		})
-		if item.Display != tc.display || item.ItemType != "null" || item.Description == "" || item.ItemLevel != tc.itemLevel {
+		if item.Display != tc.display || item.ItemType != tc.itemType || item.Description == "" || item.ItemLevel != tc.itemLevel {
 			t.Fatalf("expected %s missing fields to be filled from template, got %+v", tc.name, item)
+		}
+	}
+}
+
+func TestStoreCapturedFeixiandongEquipmentTemplates(t *testing.T) {
+	cases := []struct {
+		name             string
+		display          string
+		slot             int
+		descriptionToken string
+	}{
+		{name: "岩魔剑", display: "606.png", slot: 3, descriptionToken: "武器·单剑系"},
+		{name: "岩化护腿", display: "598.png", slot: 5, descriptionToken: "护具·腿"},
+		{name: "蓝晶护肩", display: "603.png", slot: 1, descriptionToken: "护具·肩部"},
+	}
+
+	for _, tc := range cases {
+		template, ok := CapturedRoleItemTemplate(tc.name)
+		if !ok {
+			t.Fatalf("expected captured source equipment template for %s", tc.name)
+		}
+		if template.Type != "装备" || template.ItemType != "equip" || template.Display != tc.display || template.Index != tc.slot {
+			t.Fatalf("expected %s equipment template display=%s slot=%d, got %+v", tc.name, tc.display, tc.slot, template)
+		}
+		if !strings.Contains(template.Description, tc.descriptionToken) {
+			t.Fatalf("expected %s description to include %q, got %q", tc.name, tc.descriptionToken, template.Description)
 		}
 	}
 }

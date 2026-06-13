@@ -337,6 +337,71 @@ func TestBuildTownBootstrapUsesCapturedShuiliandongVisibleMonsters(t *testing.T)
 	}
 }
 
+func TestBuildTownBootstrapUsesCapturedFeixiandongVisibleMonsterMovement(t *testing.T) {
+	testCases := []struct {
+		mapID    int
+		expected map[string]RoleMovement
+	}{
+		{
+			mapID: 64,
+			expected: map[string]RoleMovement{
+				"8216674186649650": {Speed: 130, Angle: 184.32764820310817, Mode: 1},
+				"8218674186650741": {Speed: 130, Angle: 309.0118516242245, Mode: 1},
+			},
+		},
+		{
+			mapID: 76,
+			expected: map[string]RoleMovement{
+				"1044675671974869": {Speed: 130, Angle: 340.51919977172065, Mode: 1},
+				"1048675671977626": {Speed: 130, Angle: 190.4914770123316, Mode: 1},
+			},
+		},
+		{
+			mapID: 78,
+			expected: map[string]RoleMovement{
+				"1679675260685862": {Speed: 130, Angle: 359.06080905426444, Mode: 1},
+				"1681675260686878": {Speed: 130, Angle: 182.50313977958493, Mode: 1},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-feixiandong-visible",
+			DisplayName:  "测试女侠",
+			Level:        20,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, testCase.mapID, SpawnPoint{X: 1000, Y: 600})
+		if !ok {
+			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
+		}
+		for _, rolePush := range snapshot.CreateRoles {
+			expected, ok := testCase.expected[rolePush.Handle]
+			if !ok {
+				continue
+			}
+			if rolePush.Movement == nil || *rolePush.Movement != expected {
+				t.Fatalf("expected map%d monster %s to use captured movement %+v got %+v", testCase.mapID, rolePush.Handle, expected, rolePush.Movement)
+			}
+			delete(testCase.expected, rolePush.Handle)
+		}
+		if len(testCase.expected) != 0 {
+			t.Fatalf("missing captured feixiandong movement checks for map%d: %+v", testCase.mapID, testCase.expected)
+		}
+	}
+}
+
 func TestBuildTownBootstrapOmitsMovementForCapturedStillVisibleMonsters(t *testing.T) {
 	testCases := []struct {
 		mapID   int
@@ -354,6 +419,19 @@ func TestBuildTownBootstrapOmitsMovementForCapturedStillVisibleMonsters(t *testi
 			handles: map[string]string{
 				"2762206074545916": "武斗蛤蟆",
 				"2766206074547838": "武斗蛤蟆",
+			},
+		},
+		{
+			mapID: 68,
+			handles: map[string]string{
+				"1515674533827497": "白咒石怪",
+			},
+		},
+		{
+			mapID: 71,
+			handles: map[string]string{
+				"1187674677331194": "白咒石怪",
+				"1189674677333369": "白咒石怪",
 			},
 		},
 	}

@@ -3,6 +3,7 @@ package battle
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"ai-server/internal/session"
@@ -224,6 +225,58 @@ func TestBuildOverRollsCapturedObservedDropRates(t *testing.T) {
 	}
 }
 
+func TestBuildOverUsesFeixiandongBossRewardDropRates(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	largerockLowRoll := (&Runtime{
+		BattleID:            "battle-feixiandong-largerock-reward",
+		MapID:               "76",
+		SourceMonsterHandle: "1048675671977626",
+		Round:               1,
+	}).buildOver(CampTeam)
+	if largerockLowRoll == nil || largerockLowRoll.Result.ExpDelta != 682 {
+		t.Fatalf("expected captured largerock reward exp, got %+v", largerockLowRoll)
+	}
+	expectedLargerockLowRollItems := []string{"废渣x1", "石块x2", "水晶x1", "岩魔菱石x1", "岩魔球石x1", "巨岩魔的拳x1", "巨岩魔的头x1", "岩化护腿x1", "蓝晶护肩x1", "岩魔剑x1", "宝匣x1"}
+	if !reflect.DeepEqual(largerockLowRoll.Result.Items, expectedLargerockLowRollItems) {
+		t.Fatalf("expected low-roll largerock drops to include latest capture items, got %+v", largerockLowRoll.Result.Items)
+	}
+
+	magicrockmanLowRoll := (&Runtime{
+		BattleID:            "battle-feixiandong-magicrockman-reward",
+		MapID:               "78",
+		SourceMonsterHandle: "1681675260686878",
+		Round:               1,
+	}).buildOver(CampTeam)
+	expectedMagicrockmanLowRollItems := []string{"废渣x1", "碎铁矿x1", "石块x2", "岩化护腿x1", "碎金片x1", "岩魔菱石x1"}
+	if magicrockmanLowRoll == nil || magicrockmanLowRoll.Result.ExpDelta != 658 || !reflect.DeepEqual(magicrockmanLowRoll.Result.Items, expectedMagicrockmanLowRollItems) {
+		t.Fatalf("expected low-roll magicrockman drops to include latest capture items, got %+v", magicrockmanLowRoll)
+	}
+
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
+	largerockHighRoll := (&Runtime{
+		BattleID:            "battle-feixiandong-largerock-reward-high",
+		MapID:               "76",
+		SourceMonsterHandle: "1048675671977626",
+		Round:               1,
+	}).buildOver(CampTeam)
+	expectedLargerockHighRollItems := []string{"废渣x1", "石块x2", "水晶x1", "岩魔菱石x1", "岩魔球石x1", "巨岩魔的拳x1"}
+	if largerockHighRoll == nil || !reflect.DeepEqual(largerockHighRoll.Result.Items, expectedLargerockHighRollItems) {
+		t.Fatalf("expected high-roll largerock drops to exclude 20%% equipment and 1/2 items, got %+v", largerockHighRoll)
+	}
+
+	magicrockmanHighRoll := (&Runtime{
+		BattleID:            "battle-feixiandong-magicrockman-reward-high",
+		MapID:               "78",
+		SourceMonsterHandle: "1681675260686878",
+		Round:               1,
+	}).buildOver(CampTeam)
+	expectedMagicrockmanHighRollItems := []string{"石块x2"}
+	if magicrockmanHighRoll == nil || !reflect.DeepEqual(magicrockmanHighRoll.Result.Items, expectedMagicrockmanHighRollItems) {
+		t.Fatalf("expected high-roll magicrockman drops to keep only observed 2/2 material, got %+v", magicrockmanHighRoll)
+	}
+}
+
 func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	enemy, ok := sourceEnemyConfigForMap("49")
 	if !ok {
@@ -379,6 +432,84 @@ func TestVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T) {
 			handle:  "2600685534049446",
 			handles: []string{"2600685534049446", "3000685534050820", "2800685534050729"},
 			names:   []string{"蛮族刀客", "蛮族弓手", "蛮族弓手"},
+		},
+		{
+			mapID:   "69",
+			handle:  "4261674575785819",
+			handles: []string{"4261674575785819", "4255674575781235"},
+			names:   []string{"白咒石怪", "白咒石怪"},
+		},
+		{
+			mapID:   "72",
+			handle:  "5321674881103452",
+			handles: []string{"5319674881102907", "5317674881101168", "5321674881103452"},
+			names:   []string{"晶石怪", "晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "74",
+			handle:  "9041674933916861",
+			handles: []string{"9039674933915532", "9041674933916861"},
+			names:   []string{"晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "74",
+			handle:  "9033674933911913",
+			handles: []string{"9031674933909671", "9033674933911913"},
+			names:   []string{"白咒石怪", "白咒石怪"},
+		},
+		{
+			mapID:   "77",
+			handle:  "3030675136603700",
+			handles: []string{"3028675136602500", "3030675136603700"},
+			names:   []string{"晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "77",
+			handle:  "3036675136607240",
+			handles: []string{"3034675136606406", "3036675136607240"},
+			names:   []string{"晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "78",
+			handle:  "1681675260686878",
+			handles: []string{"1679675260685862", "1681675260686878"},
+			names:   []string{"晶石怪", "岩化魔人"},
+		},
+		{
+			mapID:   "78",
+			handle:  "1677675260684828",
+			handles: []string{"1675675260682596", "1677675260684828"},
+			names:   []string{"晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "75",
+			handle:  "8130675527791587",
+			handles: []string{"8110675527789273", "8130675527791587"},
+			names:   []string{"晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "75",
+			handle:  "8190675527795636",
+			handles: []string{"8150675527792799", "8170675527794372", "8190675527795636"},
+			names:   []string{"晶石怪", "晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "76",
+			handle:  "1046675671975970",
+			handles: []string{"1044675671974869", "1046675671975970"},
+			names:   []string{"晶石怪", "晶石怪"},
+		},
+		{
+			mapID:   "76",
+			handle:  "1048675671977626",
+			handles: []string{"1042675671973672", "1048675671977626"},
+			names:   []string{"晶石怪", "巨岩魔"},
+		},
+		{
+			mapID:   "76",
+			handle:  "1040675671971889",
+			handles: []string{"1038675671970511", "1040675671971889"},
+			names:   []string{"晶石怪", "晶石怪"},
 		},
 	}
 
@@ -1634,6 +1765,14 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 1.65,
 		},
 		{
+			name:       "多段斩",
+			level:      5,
+			desc:       "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@16&4@提升75%的物理伤害",
+			label:      "w8/ddz2",
+			mpCost:     16,
+			multiplier: 1.75,
+		},
+		{
 			name:       "嗜血斩",
 			level:      3,
 			desc:       "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@28&4@对敌人造成96%的物理伤害&0;并有86%机率将对敌人造成伤害的70%转换为气力</font>",
@@ -1697,6 +1836,16 @@ func TestBattleSkillProfileUsesCapturedLevelWhenStoredDescriptionIsStale(t *test
 	})
 	if duoDuan.SourceActionLabel != "w8/ddz2" || duoDuan.MPCost != 12 || duoDuan.DamageMultiplier != 1.65 {
 		t.Fatalf("expected 多段斩 Lv3 captured profile to ignore stale description, got %+v", duoDuan)
+	}
+
+	duoDuanLv5 := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "多段斩",
+		Level:       5,
+		Type:        "oneE",
+		Description: "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@8&4@提升55%的物理伤害",
+	})
+	if duoDuanLv5.SourceActionLabel != "w8/ddz2" || duoDuanLv5.MPCost != 16 || duoDuanLv5.DamageMultiplier != 1.75 {
+		t.Fatalf("expected 多段斩 Lv5 captured profile to ignore stale Lv1 description, got %+v", duoDuanLv5)
 	}
 
 	shiXue := sourceBattleSkillProfile(session.RoleSkill{
@@ -2598,22 +2747,30 @@ func TestCapturedStunCounterSkipsPlayerWithYunAction(t *testing.T) {
 	if result.ErrorCode != "" {
 		t.Fatalf("expected player attack to be accepted, got %+v", result)
 	}
-	if len(result.Actions) != 3 || result.Actions[0].ActionName != "普通攻击" || result.Actions[1].ActorHandle != "enemy_crystalrock" || result.Actions[2].ActionName != "眩晕" {
-		t.Fatalf("expected player attack -> enemy action -> 眩晕 skip sequence, got %+v", result.Actions)
+	if len(result.Actions) != 5 ||
+		result.Actions[0].ActionName != "普通攻击" ||
+		result.Actions[1].ActorHandle != "enemy_crystalrock" ||
+		result.Actions[2].ActionName != "眩晕" ||
+		result.Actions[3].ActorHandle != "enemy_crystalrock" ||
+		result.Actions[4].ActionName != "眩晕" {
+		t.Fatalf("expected player attack -> enemy action -> 眩晕 -> enemy action -> 眩晕 sequence, got %+v", result.Actions)
 	}
 	stunAction := result.Actions[2]
 	if stunAction.ActorHandle != "player_21424" || stunAction.TargetHandle != "player_21424" || stunAction.SourceMode != "0" || stunAction.SourceActionLabel != "yun" || stunAction.Damage != 0 {
 		t.Fatalf("expected captured 眩晕 yun self action, got %+v", stunAction)
 	}
+	secondStunAction := result.Actions[4]
+	if secondStunAction.ActorHandle != "player_21424" || secondStunAction.TargetHandle != "player_21424" || secondStunAction.SourceMode != "0" || secondStunAction.SourceActionLabel != "yun" || secondStunAction.Damage != 0 {
+		t.Fatalf("expected second captured 眩晕 yun self action, got %+v", secondStunAction)
+	}
 	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "眩晕" || result.BuffInfos[0].Display != "9.png" || result.BuffInfos[0].Round != 2 {
 		t.Fatalf("expected captured 眩晕 BuffInfo to be pushed, got %+v", result.BuffInfos)
 	}
-	effect := runtime.StatusEffects["player_21424"].Effects["眩晕"]
-	if effect.Rounds != 1 || !effect.SkipTurn {
-		t.Fatalf("expected first skipped command to consume one 眩晕 round, got %+v", runtime.StatusEffects)
+	if runtime.hasActiveAutoContinueSkipStatus("player_21424") {
+		t.Fatalf("expected chained 眩晕 skips to consume stun before next command, got %+v", runtime.StatusEffects)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_21424" || runtime.PendingStart.Round != 2 || runtime.PendingStart.Sequence != 2 {
-		t.Fatalf("expected 眩晕 skip to queue next player startCommand, got %+v", runtime.PendingStart)
+	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_21424" || runtime.PendingStart.Round != 3 || runtime.PendingStart.Sequence != 3 {
+		t.Fatalf("expected 眩晕 skip chain to queue player startCommand after monster continuation, got %+v", runtime.PendingStart)
 	}
 }
 
@@ -2817,6 +2974,151 @@ func TestBattleEnemyHelixAtkUsesCapturedLabelAndMPCost(t *testing.T) {
 	}
 	if actor.MP != 554 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected helixAtk to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
+	}
+}
+
+func TestFeixiandongBossRampagePowerUsesCapturedBuffAndMPCost(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-feixiandong-rampage",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "2654338502092795",
+		Camp:       CampEnemy,
+		Name:       "巨岩魔",
+		DisplayURL: "monstermap/largerock.swf",
+		HP:         1500,
+		MaxHP:      1500,
+		MP:         564,
+		MaxMP:      564,
+	}
+
+	actions := runtime.resolveEnemyRampageActions(actor)
+
+	if len(actions) != 1 || actions[0].ActionName != "暴走之力" || actions[0].SourceActionLabel != "battleStand" || actions[0].TargetHandle != actor.Handle {
+		t.Fatalf("expected captured boss 暴走之力 self action, got %+v", actions)
+	}
+	if actor.MP != 554 || len(actions[0].RefreshInfos) != 1 || actions[0].RefreshInfos[0].MP != 554 {
+		t.Fatalf("expected 暴走之力 to consume captured MP cost 10, actor=%+v action=%+v", actor, actions[0])
+	}
+	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "暴走之力" || runtime.PendingBuffInfos[0].Display != "1595.png" || runtime.PendingBuffInfos[0].Round != 9998 || !strings.Contains(runtime.PendingBuffInfos[0].Description, "还有 50 回合暴走") {
+		t.Fatalf("expected captured 暴走之力 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+}
+
+func TestFeixiandongLargerockFirePowerUsesCapturedAllTargetAction(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-feixiandong-fire-power",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		Cells: []CellInfoPush{
+			{
+				Handle: "player_21424",
+				Camp:   CampTeam,
+				HP:     1555,
+				MaxHP:  1555,
+				MP:     275,
+				MaxMP:  424,
+			},
+			{
+				Handle:     "2654338502092795",
+				Camp:       CampEnemy,
+				Name:       "巨岩魔",
+				DisplayURL: "monstermap/largerock.swf",
+				HP:         1500,
+				MaxHP:      1500,
+				MP:         554,
+				MaxMP:      564,
+				Attack:     260,
+			},
+		},
+	}
+	actor := runtime.cellByHandle("2654338502092795")
+
+	action := runtime.resolveAllTargetAttack(actor, runtime.livingCells(CampTeam), CommandEnemyFirePower)
+
+	if action.ActionName != "赤焰击" || action.SourceActionLabel != "firePower" || action.TargetHandle != "all" || action.SourceMode != "1" {
+		t.Fatalf("expected captured 赤焰击 all-target action, got %+v", action)
+	}
+	if action.Damage != 78 || action.TargetActionResults[0].Handle != "player_21424" || runtime.Cells[0].HP != 1477 {
+		t.Fatalf("expected 赤焰击 to use captured low direct damage path, action=%+v cells=%+v", action, runtime.Cells)
+	}
+}
+
+func TestFeixiandongMagicrockmanDeadLightUsesCapturedMPDamage(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-feixiandong-dead-light",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		Cells: []CellInfoPush{
+			{
+				Handle: "player_21424",
+				Camp:   CampTeam,
+				HP:     1555,
+				MaxHP:  1555,
+				MP:     304,
+				MaxMP:  424,
+			},
+			{
+				Handle:     "9141338375384737",
+				Camp:       CampEnemy,
+				Name:       "岩化魔人",
+				DisplayURL: "monstermap/magicrockman.swf",
+				HP:         1500,
+				MaxHP:      1500,
+				MP:         554,
+				MaxMP:      564,
+				Attack:     240,
+			},
+		},
+	}
+	actor := runtime.cellByHandle("9141338375384737")
+
+	action := runtime.resolveAllTargetAttack(actor, runtime.livingCells(CampTeam), CommandEnemyDeadLight)
+
+	if action.ActionName != "死亡射线" || action.SourceActionLabel != "deadLight" || action.TargetHandle != "all" || action.SourceMode != "1" {
+		t.Fatalf("expected captured 死亡射线 all-target action, got %+v", action)
+	}
+	if action.Damage != 0 || action.TargetMP != 264 || runtime.Cells[0].HP != 1555 || runtime.Cells[0].MP != 264 {
+		t.Fatalf("expected 死亡射线 to reduce MP by captured 40 without HP damage, action=%+v cells=%+v", action, runtime.Cells)
+	}
+}
+
+func TestFeixiandongMagicrockmanDoubleHitUsesCapturedLabel(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-feixiandong-double-hit",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "9141338375384737",
+		Camp:       CampEnemy,
+		Name:       "岩化魔人",
+		DisplayURL: "monstermap/magicrockman.swf",
+		Attack:     240,
+		MP:         544,
+		MaxMP:      564,
+	}
+	target := &CellInfoPush{
+		Handle:  "player_21424",
+		Camp:    CampTeam,
+		HP:      1320,
+		MaxHP:   1555,
+		Defense: 176,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandEnemyDoubleHit)
+
+	if action.ActionName != "双锤打" || action.SourceActionLabel != "doubleHit" {
+		t.Fatalf("expected captured 双锤打 action, got %+v", action)
+	}
+	if action.Damage != 64 || action.TargetHP != 1256 {
+		t.Fatalf("expected 双锤打 to use captured physical damage path, got action=%+v target=%+v", action, target)
 	}
 }
 

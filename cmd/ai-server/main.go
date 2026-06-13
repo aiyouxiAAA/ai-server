@@ -108,6 +108,7 @@ const (
 	cmdClassicBattleActionPush    = 3005
 	cmdClassicBattleOverPush      = 3006
 	cmdClassicBattleBuffInfoPush  = 3008
+	cmdClassicBattleClearBuffInfo = 3009
 	cmdClassicBattleActiveItemReq = 3011
 	cmdClassicBattlePlayOverReq   = 3012
 )
@@ -447,6 +448,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		for _, battleAction := range result.battleActions {
 			if err := socketWriter.writePush(cmdClassicBattleActionPush, encodePayload(battleAction)); err != nil {
 				log.Printf("[ai-server] write classic battle battleAction failed: %v", err)
+				return
+			}
+		}
+		for _, clearBuff := range result.battleClearBuffs {
+			if err := socketWriter.writePush(cmdClassicBattleClearBuffInfo, encodePayload(clearBuff)); err != nil {
+				log.Printf("[ai-server] write classic battle clearBuffInfo failed: %v", err)
 				return
 			}
 		}

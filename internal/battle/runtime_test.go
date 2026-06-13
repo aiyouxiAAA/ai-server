@@ -2337,7 +2337,7 @@ func TestXueQieAppliesWoundBuffInfoOnHit(t *testing.T) {
 		t.Fatalf("expected 血切 hit to push one 外伤 BuffInfo, got %+v", result.BuffInfos)
 	}
 	buff := result.BuffInfos[0]
-	if buff.Name != "外伤" || buff.TargetHandle != "enemy_1" || buff.ReleaseHandle != "player_21424" || buff.Round != 4 {
+	if buff.Name != "外伤" || buff.Display != "25.png" || buff.TargetHandle != "enemy_1" || buff.ReleaseHandle != "player_21424" || buff.Round != 4 {
 		t.Fatalf("expected source 外伤 buff metadata, got %+v", buff)
 	}
 	effect := runtime.StatusEffects["enemy_1"].Effects["外伤"]
@@ -2613,64 +2613,75 @@ func TestEnemyPalsyAtkSkipsPlayerNextCommand(t *testing.T) {
 	}
 }
 
-func TestCapturedStunCounterAppliesBuffInfoAfterPlayerAttack(t *testing.T) {
+func TestCapturedStunOnHitAppliesBuffInfoDuringEnemyAttack(t *testing.T) {
 	var runtime *Runtime
 	for index := 0; index < 300; index += 1 {
 		candidate := &Runtime{
-			BattleID:         fmt.Sprintf("battle-stun-counter-%d", index),
+			BattleID:         fmt.Sprintf("battle-stun-on-hit-%d", index),
 			Round:            1,
 			nextSequence:     1,
 			DefendingHandles: map[string]bool{},
 			StatusEffects:    map[string]BattleStatusEffects{},
 		}
 		actor := &CellInfoPush{
-			Handle: "player_21424",
-			Camp:   CampTeam,
-			Attack: 100,
-			Hit:    100,
-			HP:     500,
-			MaxHP:  500,
-		}
-		target := &CellInfoPush{
 			Handle:     "enemy_bomepig",
 			Name:       "爆骨猪",
 			DisplayURL: "monstermap/bomepig.swf",
 			Camp:       CampEnemy,
+			Attack:     30,
+			Hit:        100,
 			HP:         300,
 			MaxHP:      300,
+		}
+		target := &CellInfoPush{
+			Handle: "player_21424",
+			Camp:   CampTeam,
+			HP:     500,
+			MaxHP:  500,
 			Dog:        0,
 		}
-		if candidate.hashBattleRollWithSalt(target, actor, CommandNormalAttack, "status:眩晕") < enemyStunCounterChance {
+		if candidate.hashBattleRollWithSalt(actor, target, CommandEnemyAttack, "status:眩晕") < enemyStunOnHitChance {
 			runtime = candidate
 			break
 		}
 	}
 	if runtime == nil {
-		t.Fatal("expected to find deterministic 眩晕 counter roll")
+		t.Fatal("expected to find deterministic 眩晕 on-hit roll")
 	}
 
-	actor := &CellInfoPush{
+	player := &CellInfoPush{
 		Handle: "player_21424",
 		Camp:   CampTeam,
-		Attack: 100,
+		Attack: 20,
 		Hit:    100,
 		HP:     500,
 		MaxHP:  500,
 	}
-	target := &CellInfoPush{
+	enemy := &CellInfoPush{
 		Handle:     "enemy_bomepig",
 		Name:       "爆骨猪",
 		DisplayURL: "monstermap/bomepig.swf",
 		Camp:       CampEnemy,
+		Attack:     30,
+		Hit:        100,
 		HP:         300,
 		MaxHP:      300,
 		Dog:        0,
 	}
 
-	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+	playerAction := runtime.resolveAttack(player, enemy, CommandNormalAttack)
 
-	if action.TargetActionStateCode != "0" || target.HP >= target.MaxHP {
-		t.Fatalf("expected player attack to hit captured stun source, got action=%+v target=%+v", action, target)
+	if playerAction.TargetActionStateCode != "0" || enemy.HP >= enemy.MaxHP {
+		t.Fatalf("expected player attack to hit captured stun source, got action=%+v enemy=%+v", playerAction, enemy)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected player attack not to apply 眩晕, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+
+	action := runtime.resolveAttack(enemy, player, CommandEnemyAttack)
+
+	if action.TargetActionStateCode != "0" || player.HP >= player.MaxHP {
+		t.Fatalf("expected enemy attack to hit player, got action=%+v player=%+v", action, player)
 	}
 	if len(runtime.PendingBuffInfos) != 1 {
 		t.Fatalf("expected captured 眩晕 BuffInfo, got %+v", runtime.PendingBuffInfos)
@@ -2685,7 +2696,7 @@ func TestCapturedStunCounterAppliesBuffInfoAfterPlayerAttack(t *testing.T) {
 	}
 }
 
-func TestCapturedStunCounterSkipsPlayerWithYunAction(t *testing.T) {
+func TestCapturedStunOnHitSkipsPlayerWithYunAction(t *testing.T) {
 	var runtime *Runtime
 	for index := 0; index < 300; index += 1 {
 		candidate := &Runtime{
@@ -2724,9 +2735,9 @@ func TestCapturedStunCounterSkipsPlayerWithYunAction(t *testing.T) {
 				},
 			},
 		}
-		actor := candidate.cellByHandle("player_21424")
-		target := candidate.cellByHandle("enemy_crystalrock")
-		if candidate.hashBattleRollWithSalt(target, actor, CommandNormalAttack, "status:眩晕") < enemyStunCounterChance {
+		actor := candidate.cellByHandle("enemy_crystalrock")
+		target := candidate.cellByHandle("player_21424")
+		if candidate.hashBattleRollWithSalt(actor, target, CommandEnemyAttack, "status:眩晕") < enemyStunOnHitChance {
 			runtime = candidate
 			break
 		}
@@ -2765,6 +2776,9 @@ func TestCapturedStunCounterSkipsPlayerWithYunAction(t *testing.T) {
 	}
 	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "眩晕" || result.BuffInfos[0].Display != "9.png" || result.BuffInfos[0].Round != 2 {
 		t.Fatalf("expected captured 眩晕 BuffInfo to be pushed, got %+v", result.BuffInfos)
+	}
+	if len(result.ClearBuffInfos) != 1 || result.ClearBuffInfos[0].TargetHandle != "player_21424" || result.ClearBuffInfos[0].Name != "眩晕" {
+		t.Fatalf("expected consumed 眩晕 to push clearBuffInfo before next command, got %+v", result.ClearBuffInfos)
 	}
 	if runtime.hasActiveAutoContinueSkipStatus("player_21424") {
 		t.Fatalf("expected chained 眩晕 skips to consume stun before next command, got %+v", runtime.StatusEffects)
@@ -2977,10 +2991,10 @@ func TestBattleEnemyHelixAtkUsesCapturedLabelAndMPCost(t *testing.T) {
 	}
 }
 
-func TestFeixiandongBossRampagePowerUsesCapturedBuffAndMPCost(t *testing.T) {
+func TestFeixiandongBossRampagePowerUsesCapturedBuffWithoutMPCost(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-feixiandong-rampage",
-		Round:            1,
+		Round:            3,
 		nextSequence:     1,
 		DefendingHandles: map[string]bool{},
 	}
@@ -3000,10 +3014,10 @@ func TestFeixiandongBossRampagePowerUsesCapturedBuffAndMPCost(t *testing.T) {
 	if len(actions) != 1 || actions[0].ActionName != "暴走之力" || actions[0].SourceActionLabel != "battleStand" || actions[0].TargetHandle != actor.Handle {
 		t.Fatalf("expected captured boss 暴走之力 self action, got %+v", actions)
 	}
-	if actor.MP != 554 || len(actions[0].RefreshInfos) != 1 || actions[0].RefreshInfos[0].MP != 554 {
-		t.Fatalf("expected 暴走之力 to consume captured MP cost 10, actor=%+v action=%+v", actor, actions[0])
+	if actor.MP != 564 || len(actions[0].RefreshInfos) != 1 || actions[0].RefreshInfos[0].MP != 564 {
+		t.Fatalf("expected 暴走之力 to keep captured MP unchanged, actor=%+v action=%+v", actor, actions[0])
 	}
-	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "暴走之力" || runtime.PendingBuffInfos[0].Display != "1595.png" || runtime.PendingBuffInfos[0].Round != 9998 || !strings.Contains(runtime.PendingBuffInfos[0].Description, "还有 50 回合暴走") {
+	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "暴走之力" || runtime.PendingBuffInfos[0].Display != "1595.png" || runtime.PendingBuffInfos[0].Round != 48 || !strings.Contains(runtime.PendingBuffInfos[0].Description, "还有 48 回合暴走") {
 		t.Fatalf("expected captured 暴走之力 BuffInfo, got %+v", runtime.PendingBuffInfos)
 	}
 }
@@ -3043,12 +3057,12 @@ func TestFeixiandongLargerockFirePowerUsesCapturedAllTargetAction(t *testing.T) 
 	if action.ActionName != "赤焰击" || action.SourceActionLabel != "firePower" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 赤焰击 all-target action, got %+v", action)
 	}
-	if action.Damage != 78 || action.TargetActionResults[0].Handle != "player_21424" || runtime.Cells[0].HP != 1477 {
-		t.Fatalf("expected 赤焰击 to use captured low direct damage path, action=%+v cells=%+v", action, runtime.Cells)
+	if action.Damage != 217 || action.TargetActionResults[0].Handle != "player_21424" || runtime.Cells[0].HP != 1338 || runtime.Cells[1].MP != 544 {
+		t.Fatalf("expected 赤焰击 to use captured direct damage and MP cost, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
 
-func TestFeixiandongMagicrockmanDeadLightUsesCapturedMPDamage(t *testing.T) {
+func TestFeixiandongMagicrockmanDeadLightUsesCapturedHPDamage(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-feixiandong-dead-light",
 		Round:            1,
@@ -3083,8 +3097,8 @@ func TestFeixiandongMagicrockmanDeadLightUsesCapturedMPDamage(t *testing.T) {
 	if action.ActionName != "死亡射线" || action.SourceActionLabel != "deadLight" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 死亡射线 all-target action, got %+v", action)
 	}
-	if action.Damage != 0 || action.TargetMP != 264 || runtime.Cells[0].HP != 1555 || runtime.Cells[0].MP != 264 {
-		t.Fatalf("expected 死亡射线 to reduce MP by captured 40 without HP damage, action=%+v cells=%+v", action, runtime.Cells)
+	if action.Damage != 274 || action.TargetMP != 0 || runtime.Cells[0].HP != 1281 || runtime.Cells[0].MP != 304 || runtime.Cells[1].MP != 544 {
+		t.Fatalf("expected 死亡射线 to use captured HP damage without target MP drain, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
 
@@ -3107,9 +3121,9 @@ func TestFeixiandongMagicrockmanDoubleHitUsesCapturedLabel(t *testing.T) {
 	target := &CellInfoPush{
 		Handle:  "player_21424",
 		Camp:    CampTeam,
-		HP:      1320,
-		MaxHP:   1555,
-		Defense: 176,
+		HP:      1020,
+		MaxHP:   1075,
+		Defense: 0,
 	}
 
 	action := runtime.resolveAttack(actor, target, CommandEnemyDoubleHit)
@@ -3117,8 +3131,42 @@ func TestFeixiandongMagicrockmanDoubleHitUsesCapturedLabel(t *testing.T) {
 	if action.ActionName != "双锤打" || action.SourceActionLabel != "doubleHit" {
 		t.Fatalf("expected captured 双锤打 action, got %+v", action)
 	}
-	if action.Damage != 64 || action.TargetHP != 1256 {
+	if action.Damage != 438 || action.TargetHP != 582 || actor.MP != 534 {
 		t.Fatalf("expected 双锤打 to use captured physical damage path, got action=%+v target=%+v", action, target)
+	}
+}
+
+func TestFeixiandongLargerockRollAttackUsesCapturedDamage(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-feixiandong-roll-attack",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "2654338502092795",
+		Camp:       CampEnemy,
+		Name:       "巨岩魔",
+		DisplayURL: "monstermap/largerock.swf",
+		Attack:     260,
+		MP:         554,
+		MaxMP:      564,
+	}
+	target := &CellInfoPush{
+		Handle:  "player_21424",
+		Camp:    CampTeam,
+		HP:      773,
+		MaxHP:   1075,
+		Defense: 169,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandEnemyRollAtk)
+
+	if action.ActionName != "滑行连击" || action.SourceActionLabel != "rollAttack" {
+		t.Fatalf("expected captured 滑行连击 action, got %+v", action)
+	}
+	if action.Damage != 218 || action.TargetHP != 555 || actor.MP != 544 {
+		t.Fatalf("expected 滑行连击 to use captured damage and MP cost, got action=%+v target=%+v", action, target)
 	}
 }
 

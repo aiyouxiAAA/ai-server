@@ -3093,6 +3093,44 @@ func TestHandlePacketClassicTownCrossRolePushesMapBootstrap(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownCrossRoleStartsVisibleMonsterBattle(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 76)
+	if !ok {
+		t.Fatal("expected test role map update to feixiandong map76")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+
+	const visibleMonsterHandle = "1048675671977626"
+	crossResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownCrossRoleReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownRoleInteractionRequest{
+			Handle: visibleMonsterHandle,
+			RoleID: "-2",
+			Kind:   "monster",
+			MapID:  "76",
+		}),
+	}, socketSession)
+
+	if !crossResult.handled || crossResult.battleStart == nil || crossResult.battleCommand == nil {
+		t.Fatalf("expected monster CrossRole to start visible battle, got %+v", crossResult)
+	}
+	if socketSession.battleRuntime == nil || socketSession.battleRuntime.SourceMonsterHandle != visibleMonsterHandle {
+		t.Fatalf("expected CrossRole runtime source monster handle %s, got %+v", visibleMonsterHandle, socketSession.battleRuntime)
+	}
+	enemyNames := make([]string, 0, len(crossResult.battleCells))
+	for _, cell := range crossResult.battleCells {
+		if cell.Camp == battle.CampEnemy {
+			enemyNames = append(enemyNames, cell.Name)
+		}
+	}
+	if strings.Join(enemyNames, ",") != "晶石怪,巨岩魔" {
+		t.Fatalf("expected Feixiandong map76 boss group from CrossRole, got %v", enemyNames)
+	}
+}
+
 func TestHandlePacketClassicTownTransportActiveRolePushesMapBootstrap(t *testing.T) {
 	store := session.NewStore()
 	login := store.Login(session.LoginRequest{

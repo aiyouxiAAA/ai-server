@@ -59,6 +59,7 @@ type packetResult struct {
 	battleCommand     *battle.StartCommandPush
 	battleActions     []battle.ActionPush
 	battleBuffs       []battle.BuffInfoPush
+	battleClearBuffs  []battle.ClearBuffInfoPush
 	battleOver        *battle.OverPush
 	removeRoleHandles []string
 	handled           bool
@@ -203,6 +204,15 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		log.Printf("[ai-server] classic town CrossRole handle=%s roleId=%s kind=%s mapId=%s", request.Handle, request.RoleID, request.Kind, request.MapID)
+		if isClassicTownVisibleMonsterCrossRole(request) {
+			return buildClassicBattleStartResult(store, socketSession, battle.StartRequest{
+				MapID:               request.MapID,
+				MapName:             "m_" + strings.TrimSpace(request.MapID),
+				StageFocusX:         0,
+				ReturnRoute:         "town-placeholder",
+				SourceMonsterHandle: request.Handle,
+			})
+		}
 		if destination, ok := resolveClassicTownTransportAnswer(socketSession, request.MapID, request.Handle, "goto"); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
@@ -437,6 +447,10 @@ func isClassicTownSkillTeacherRequest(request classicTownAnswerRequest) bool {
 	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle)
 }
 
+func isClassicTownVisibleMonsterCrossRole(request classicTownRoleInteractionRequest) bool {
+	return strings.TrimSpace(request.Kind) == "monster" || strings.TrimSpace(request.RoleID) == "-2"
+}
+
 func buildClassicBattleStartResult(store *session.Store, socketSession *packetSession, request battle.StartRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		log.Printf("[ai-server] classic battle StartBattle ignored without selected role mapId=%s", request.MapID)
@@ -456,7 +470,20 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 		return packetResult{handled: true}
 	}
 	socketSession.battleRuntime = runtime
-	log.Printf("[ai-server] classic battle StartBattle battleId=%s roleId=%s mapId=%s", bundle.Start.BattleID, socketSession.selectedRole.RoleID, request.MapID)
+	enemyCells := make([]string, 0, len(bundle.Cells))
+	for _, cell := range bundle.Cells {
+		if cell.Camp == battle.CampEnemy {
+			enemyCells = append(enemyCells, cell.Handle+":"+cell.Name)
+		}
+	}
+	log.Printf(
+		"[ai-server] classic battle StartBattle battleId=%s roleId=%s mapId=%s sourceMonsterHandle=%s enemies=%v",
+		bundle.Start.BattleID,
+		socketSession.selectedRole.RoleID,
+		request.MapID,
+		request.SourceMonsterHandle,
+		enemyCells,
+	)
 	return packetResult{
 		battleStart:   &bundle.Start,
 		battleCells:   bundle.Cells,
@@ -492,6 +519,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	return packetResult{
 		battleActions:     result.Actions,
 		battleBuffs:       result.BuffInfos,
+		battleClearBuffs:  result.ClearBuffInfos,
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
 		roleState:         roleState,
@@ -542,6 +570,8 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 
 	packet := packetResult{
 		battleActions:     result.Actions,
+		battleBuffs:       result.BuffInfos,
+		battleClearBuffs:  result.ClearBuffInfos,
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
 		roleState:         roleState,

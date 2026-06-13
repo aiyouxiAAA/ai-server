@@ -41,6 +41,7 @@ const (
 	CommandEnemyFirePower = "enemy-fire-power"
 	CommandEnemyDeadLight = "enemy-dead-light"
 	CommandEnemyDoubleHit = "enemy-double-hit"
+	CommandEnemyRollAtk   = "enemy-roll-atk"
 	CommandDefense        = "defense"
 	CommandStore          = "battle-store"
 	CommandEscape         = "battle-escape"
@@ -57,14 +58,20 @@ const (
 	enemyHelixAtkDamageMultiplier  = 1.32
 	enemyPalsyAtkChance            = 40
 	enemyPalsyAtkStatusChance      = 100
-	enemyStunCounterChance         = 5
-	enemyRampageMPCost             = 10
+	enemyStunOnHitChance           = 5
 	enemyRampageMaxRounds          = 50
+	enemyFirePowerMPCost           = 10
 	enemyFirePowerChance           = 60
-	enemyFirePowerDamageMultiplier = 0.3
+	enemyFirePowerDamageMultiplier = 0.835
+	enemyDeadLightMPCost           = 10
 	enemyDeadLightChance           = 35
-	enemyDeadLightMPDamage         = 40
+	enemyDeadLightDamageMultiplier = 1.142
+	enemyDoubleHitMPCost           = 10
 	enemyDoubleHitChance           = 45
+	enemyDoubleHitDamageMultiplier = 1.825
+	enemyRollAtkMPCost             = 10
+	enemyRollAtkChance             = 45
+	enemyRollAtkDamageMultiplier   = 1.49
 	defaultBattleHit               = 100
 	defaultBattleDog               = 50
 	defaultBattleFat               = 5
@@ -217,6 +224,12 @@ type BuffInfoPush struct {
 	ActionHandle  string `json:"actionHandle,omitempty"`
 }
 
+type ClearBuffInfoPush struct {
+	BattleID     string `json:"battleId,omitempty"`
+	TargetHandle string `json:"targetHandle"`
+	Name         string `json:"name"`
+}
+
 type OverPush struct {
 	BattleID string        `json:"battleId,omitempty"`
 	Winner   Camp          `json:"winner"`
@@ -234,23 +247,24 @@ type ResultPayload struct {
 }
 
 type Runtime struct {
-	BattleID            string
-	RoleID              string
-	MapID               string
-	SourceMonsterHandle string
-	RoleSkills          []session.RoleSkill
-	Phase               string
-	Round               int
-	Cells               []CellInfoPush
-	ActiveHandle        string
-	ConsumedSequence    map[int]bool
-	DefendingHandles    map[string]bool
-	StatusEffects       map[string]BattleStatusEffects
-	StoredPower         map[string]int
-	PendingBuffInfos    []BuffInfoPush
-	PendingStart        *StartCommandPush
-	PendingOver         *OverPush
-	nextSequence        int
+	BattleID              string
+	RoleID                string
+	MapID                 string
+	SourceMonsterHandle   string
+	RoleSkills            []session.RoleSkill
+	Phase                 string
+	Round                 int
+	Cells                 []CellInfoPush
+	ActiveHandle          string
+	ConsumedSequence      map[int]bool
+	DefendingHandles      map[string]bool
+	StatusEffects         map[string]BattleStatusEffects
+	StoredPower           map[string]int
+	PendingBuffInfos      []BuffInfoPush
+	PendingClearBuffInfos []ClearBuffInfoPush
+	PendingStart          *StartCommandPush
+	PendingOver           *OverPush
+	nextSequence          int
 }
 
 type BattleStatusEffect struct {
@@ -279,11 +293,12 @@ type StartBundle struct {
 }
 
 type ActionResult struct {
-	Actions      []ActionPush
-	BuffInfos    []BuffInfoPush
-	StartCommand *StartCommandPush
-	Over         *OverPush
-	ErrorCode    string
+	Actions        []ActionPush
+	BuffInfos      []BuffInfoPush
+	ClearBuffInfos []ClearBuffInfoPush
+	StartCommand   *StartCommandPush
+	Over           *OverPush
+	ErrorCode      string
 }
 
 type commandProfile struct {
@@ -455,6 +470,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	}
 
 	runtime.PendingBuffInfos = nil
+	runtime.PendingClearBuffInfos = nil
 	commandID := strings.TrimSpace(request.CommandID)
 
 	switch commandID {
@@ -642,8 +658,9 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			runtime.PendingStart = nil
 			runtime.PendingOver = runtime.buildOver(winner)
 			return ActionResult{
-				Actions:   actions,
-				BuffInfos: runtime.consumePendingBuffInfos(),
+				Actions:        actions,
+				BuffInfos:      runtime.consumePendingBuffInfos(),
+				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
 			}
 		}
 
@@ -684,8 +701,9 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			runtime.PendingStart = nil
 			runtime.PendingOver = runtime.buildOver(winner)
 			return ActionResult{
-				Actions:   actions,
-				BuffInfos: runtime.consumePendingBuffInfos(),
+				Actions:        actions,
+				BuffInfos:      runtime.consumePendingBuffInfos(),
+				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
 			}
 		}
 
@@ -696,8 +714,9 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			runtime.PendingStart = nil
 			runtime.PendingOver = runtime.buildOver(winner)
 			return ActionResult{
-				Actions:   actions,
-				BuffInfos: runtime.consumePendingBuffInfos(),
+				Actions:        actions,
+				BuffInfos:      runtime.consumePendingBuffInfos(),
+				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
 			}
 		}
 
@@ -725,8 +744,9 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		runtime.PendingStart = &start
 		runtime.PendingOver = nil
 		return ActionResult{
-			Actions:   actions,
-			BuffInfos: runtime.consumePendingBuffInfos(),
+			Actions:        actions,
+			BuffInfos:      runtime.consumePendingBuffInfos(),
+			ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
 		}
 	}
 }
@@ -786,7 +806,6 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 		if consumeMP && profile.MPCost > 0 {
 			actor.MP = maxInt(0, actor.MP-profile.MPCost)
 		}
-		runtime.applyCapturedStunCounter(actor, target, commandID)
 		refreshInfos := []CellInfoPush{*target}
 		if consumeMP && profile.MPCost > 0 {
 			refreshInfos = []CellInfoPush{*actor, *target}
@@ -877,7 +896,7 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 		runtime.applyStatusEffect(target.Handle, effect)
 		runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
 	}
-	runtime.applyCapturedStunCounter(actor, target, commandID)
+	runtime.applyCapturedStunOnHit(actor, target, commandID)
 	refreshInfos := []CellInfoPush{*target}
 	if (consumeMP && profile.MPCost > 0) || profile.LifeStealChance > 0 {
 		refreshInfos = []CellInfoPush{*actor, *target}
@@ -980,8 +999,9 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			SourceType:        "all",
 			SourceActionLabel: "firePower",
 			DamageMultiplier:  enemyFirePowerDamageMultiplier,
+			MPCost:            enemyFirePowerMPCost,
 			CanDodge:          true,
-			CanFat:            false,
+			CanFat:            true,
 			DefenseType:       "direct",
 		}
 	case CommandEnemyDeadLight:
@@ -989,18 +1009,29 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			ActionName:        "死亡射线",
 			SourceType:        "all",
 			SourceActionLabel: "deadLight",
-			DamageMultiplier:  0,
+			DamageMultiplier:  enemyDeadLightDamageMultiplier,
+			MPCost:            enemyDeadLightMPCost,
 			CanDodge:          true,
 			CanFat:            false,
 			DefenseType:       "direct",
-			TargetMPDamage:    enemyDeadLightMPDamage,
 		}
 	case CommandEnemyDoubleHit:
 		return commandProfile{
 			ActionName:        "双锤打",
 			SourceType:        "oneE",
 			SourceActionLabel: "doubleHit",
-			DamageMultiplier:  1,
+			DamageMultiplier:  enemyDoubleHitDamageMultiplier,
+			MPCost:            enemyDoubleHitMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+		}
+	case CommandEnemyRollAtk:
+		return commandProfile{
+			ActionName:        "滑行连击",
+			SourceType:        "oneE",
+			SourceActionLabel: "rollAttack",
+			DamageMultiplier:  enemyRollAtkDamageMultiplier,
+			MPCost:            enemyRollAtkMPCost,
 			CanDodge:          true,
 			CanFat:            true,
 		}
@@ -1016,13 +1047,16 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
-	if sourceEnemyCanFirePower(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyFirePower, enemyFirePowerChance) {
+	if sourceEnemyCanFirePower(enemy) && enemy.MP >= enemyFirePowerMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyFirePower, enemyFirePowerChance) {
 		return CommandEnemyFirePower
 	}
-	if sourceEnemyCanDeadLight(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDeadLight, enemyDeadLightChance) {
+	if sourceEnemyCanRollAtk(enemy) && enemy.MP >= enemyRollAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRollAtk, enemyRollAtkChance) {
+		return CommandEnemyRollAtk
+	}
+	if sourceEnemyCanDeadLight(enemy) && enemy.MP >= enemyDeadLightMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDeadLight, enemyDeadLightChance) {
 		return CommandEnemyDeadLight
 	}
-	if sourceEnemyCanDoubleHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDoubleHit, enemyDoubleHitChance) {
+	if sourceEnemyCanDoubleHit(enemy) && enemy.MP >= enemyDoubleHitMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDoubleHit, enemyDoubleHitChance) {
 		return CommandEnemyDoubleHit
 	}
 	if sourceEnemyCanHelixAtk(enemy) && enemy.MP >= enemyHelixAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyHelixAtk, enemyHelixAtkChance) {
@@ -1095,15 +1129,11 @@ func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *
 }
 
 func (runtime *Runtime) resolveEnemyRampageActions(enemy *CellInfoPush) []ActionPush {
-	if runtime == nil || enemy == nil || enemy.HP <= 0 || !sourceEnemyCanRampage(enemy) || enemy.MP < enemyRampageMPCost {
+	if runtime == nil || enemy == nil || enemy.HP <= 0 || !sourceEnemyCanRampage(enemy) {
 		return nil
 	}
-	elapsed := 0
-	if enemy.MaxMP > 0 && enemy.MP <= enemy.MaxMP {
-		elapsed = (enemy.MaxMP - enemy.MP) / enemyRampageMPCost
-	}
+	elapsed := maxInt(0, runtime.Round-1)
 	remaining := maxInt(1, enemyRampageMaxRounds-elapsed)
-	roundField := maxInt(1, 9998-elapsed)
 	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, BuffInfoPush{
 		BattleID:      runtime.BattleID,
 		ReleaseHandle: enemy.Handle,
@@ -1111,9 +1141,8 @@ func (runtime *Runtime) resolveEnemyRampageActions(enemy *CellInfoPush) []Action
 		Name:          "暴走之力",
 		Display:       "1595.png",
 		Description:   fmt.Sprintf("命中：+0<br/><font color='#FF00FF'>还有 %d 回合暴走!</font>", remaining),
-		Round:         roundField,
+		Round:         remaining,
 	})
-	enemy.MP = maxInt(0, enemy.MP-enemyRampageMPCost)
 	return []ActionPush{runtime.resolveSelfAction(enemy, CommandEnemyRampage, "暴走之力", "battleStand")}
 }
 
@@ -1138,6 +1167,14 @@ func sourceEnemyCanFirePower(enemy *CellInfoPush) bool {
 	return strings.TrimSpace(enemy.Name) == "巨岩魔" || strings.Contains(normalizedDisplay, "monstermap/largerock.swf")
 }
 
+func sourceEnemyCanRollAtk(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "巨岩魔" || strings.Contains(normalizedDisplay, "monstermap/largerock.swf")
+}
+
 func sourceEnemyCanDeadLight(enemy *CellInfoPush) bool {
 	if enemy == nil {
 		return false
@@ -1154,7 +1191,7 @@ func sourceEnemyCanDoubleHit(enemy *CellInfoPush) bool {
 	return strings.TrimSpace(enemy.Name) == "岩化魔人" || strings.Contains(normalizedDisplay, "monstermap/magicrockman.swf")
 }
 
-func sourceEnemyCanStunCounter(enemy *CellInfoPush) bool {
+func sourceEnemyCanStunOnHit(enemy *CellInfoPush) bool {
 	if enemy == nil {
 		return false
 	}
@@ -1263,6 +1300,7 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 	}
 	if name == "血切" {
 		profile.StatusName = "外伤"
+		profile.StatusDisplay = "25.png"
 		profile.StatusRounds = 4
 		profile.StatusChance = fallbackXueQieWoundChance(level)
 		profile.StatusDescription = "每回合损失气力为角色物理攻击的25%~30%"
@@ -1803,14 +1841,14 @@ func (runtime *Runtime) applyStatusEffect(handle string, effect BattleStatusEffe
 	runtime.StatusEffects[handle] = effects
 }
 
-func (runtime *Runtime) applyCapturedStunCounter(actor *CellInfoPush, target *CellInfoPush, commandID string) bool {
-	if runtime == nil || actor == nil || target == nil || actor.Camp != CampTeam || target.Camp != CampEnemy || target.HP <= 0 {
+func (runtime *Runtime) applyCapturedStunOnHit(actor *CellInfoPush, target *CellInfoPush, commandID string) bool {
+	if runtime == nil || actor == nil || target == nil || actor.Camp != CampEnemy || target.Camp != CampTeam || target.HP <= 0 {
 		return false
 	}
-	if !sourceEnemyCanStunCounter(target) {
+	if !sourceEnemyCanStunOnHit(actor) {
 		return false
 	}
-	if runtime.hashBattleRollWithSalt(target, actor, commandID, "status:眩晕") >= enemyStunCounterChance {
+	if runtime.hashBattleRollWithSalt(actor, target, commandID, "status:眩晕") >= enemyStunOnHitChance {
 		return false
 	}
 	effect := BattleStatusEffect{
@@ -1818,13 +1856,13 @@ func (runtime *Runtime) applyCapturedStunCounter(actor *CellInfoPush, target *Ce
 		Display:       "9.png",
 		Description:   "眩晕无法行动",
 		Rounds:        2,
-		SourceHandle:  target.Handle,
+		SourceHandle:  actor.Handle,
 		SourceSkill:   "眩晕",
 		AppliedAction: "yun",
 		SkipTurn:      true,
 	}
-	runtime.applyStatusEffect(actor.Handle, effect)
-	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(target, actor, effect))
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
 	return true
 }
 
@@ -1846,6 +1884,7 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 		effect := effects.Effects[name]
 		if effect.Rounds <= 0 {
 			delete(effects.Effects, name)
+			runtime.queueClearBuffInfo(actor.Handle, effect.Name)
 			continue
 		}
 		switch strings.TrimSpace(effect.Name) {
@@ -1874,6 +1913,7 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 		effect.Rounds -= 1
 		if effect.Rounds <= 0 {
 			delete(effects.Effects, name)
+			runtime.queueClearBuffInfo(actor.Handle, effect.Name)
 		} else {
 			effects.Effects[name] = effect
 		}
@@ -2004,6 +2044,33 @@ func (runtime *Runtime) consumePendingBuffInfos() []BuffInfoPush {
 	buffInfos := append([]BuffInfoPush(nil), runtime.PendingBuffInfos...)
 	runtime.PendingBuffInfos = nil
 	return buffInfos
+}
+
+func (runtime *Runtime) queueClearBuffInfo(targetHandle string, name string) {
+	targetHandle = strings.TrimSpace(targetHandle)
+	name = strings.TrimSpace(name)
+	if runtime == nil || targetHandle == "" || name == "" {
+		return
+	}
+	for _, existing := range runtime.PendingClearBuffInfos {
+		if existing.TargetHandle == targetHandle && existing.Name == name {
+			return
+		}
+	}
+	runtime.PendingClearBuffInfos = append(runtime.PendingClearBuffInfos, ClearBuffInfoPush{
+		BattleID:     runtime.BattleID,
+		TargetHandle: targetHandle,
+		Name:         name,
+	})
+}
+
+func (runtime *Runtime) consumePendingClearBuffInfos() []ClearBuffInfoPush {
+	if len(runtime.PendingClearBuffInfos) == 0 {
+		return nil
+	}
+	clearBuffInfos := append([]ClearBuffInfoPush(nil), runtime.PendingClearBuffInfos...)
+	runtime.PendingClearBuffInfos = nil
+	return clearBuffInfos
 }
 
 func (runtime *Runtime) applyKuangBao(handle string) {

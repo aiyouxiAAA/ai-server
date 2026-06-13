@@ -150,6 +150,11 @@ func (hub *classicTeamConnectionHub) syncTransfer(store *session.Store, transfer
 			}
 		}
 		hub.broadcast(classicTeamManager.UpsertOnline(classicTeamMemberFromSession(connection.session)))
+		// world scene:队员被服务端同步切图后,同样要迁移 scene hub——给旧图(FromMapID)
+		// 邻居推 removeRole,在新图(TargetMapID)互推 createRole。否则队员会在旧图其他玩家
+		// 视角里残留,新图邻居也看不到他。同步传送的 sync plan 已校验所有成员同图,
+		// 因此 FromMapID 就是每个成员的旧 mapId。
+		announceWorldSceneTransfer(connection.writer, connection.session, member.RoleID, transfer.FromMapID)
 		log.Printf("[ai-server] classic team sync transfer actorRoleId=%s memberRoleId=%s fromMapId=%d targetMapId=%d", transfer.ActorRoleID, member.RoleID, transfer.FromMapID, transfer.TargetMapID)
 	}
 }

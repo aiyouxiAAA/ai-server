@@ -184,9 +184,15 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 	}
 	socketSession := &packetSession{}
 	registeredTeamRoleID := ""
+	registeredSceneRoleID := ""
+	registeredSceneMapID := 0
 	defer func() {
 		if registeredTeamRoleID == "" {
 			return
+		}
+		// world scene:断开连接时给原 mapId 邻居推 removeRole,避免对端留僵尸节点。
+		if oldMapID, ok := worldSceneHub.unregister(registeredSceneRoleID); ok {
+			worldSceneHub.broadcastRemoveRoleToMap(oldMapID, registeredSceneRoleID, registeredSceneRoleID)
 		}
 		classicTeamHub.unregister(registeredTeamRoleID)
 		classicTeamHub.broadcast(classicTeamManager.SetOffline(registeredTeamRoleID))
@@ -222,6 +228,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		}
 		if result.townBootstrap != nil {
 			socketWriter.writeClassicTownBootstrap(*result.townBootstrap)
+			// world scene:传送/切图成功后,把 scene 状态从旧 mapId 迁到新 mapId。
+			// sceneTransferFromMapID > 0 表示本次 townBootstrap 来自传送路径(非首次进图)。
+			// 同图传送(旧新 mapId 相同)时跳过,避免邻居收到多余的 removeRole+createRole 闪烁。
+			if result.sceneTransferFromMapID > 0 && registeredSceneRoleID != "" && socketSession.playerBase != nil && result.sceneTransferFromMapID != socketSession.playerBase.MapID {
+				registeredSceneMapID = announceWorldSceneTransfer(socketWriter, socketSession, registeredSceneRoleID, result.sceneTransferFromMapID)
+			}
 		}
 		if result.teamSyncTransfer != nil {
 			classicTeamHub.syncTransfer(store, *result.teamSyncTransfer)
@@ -526,6 +538,13 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		} else if socketSession.selectedRole != nil && socketSession.playerBase != nil {
 			classicTeamHub.register(socketSession.selectedRole.RoleID, socketWriter, socketSession)
 			classicTeamHub.broadcast(classicTeamManager.UpsertOnline(classicTeamMemberFromSession(socketSession)))
+		}
+		// world scene:只在 roleID 或 mapId 相对上次同步发生变化时才互推 createRole/removeRole,
+		// 避免同角色同地图的每个后续包(NPC 交互/背包/移动/心跳)重复互推导致前端节点重复或闪烁。
+		// 普通选角后 socketSession.selectedRole.RoleID 与 registeredSceneRoleID 相同、mapId 不变时,
+		// syncWorldScenePresence 内部幂等返回,不产生任何 push。
+		if socketSession.selectedRole != nil && socketSession.playerBase != nil {
+			registeredSceneRoleID, registeredSceneMapID = syncWorldScenePresence(socketWriter, socketSession, registeredSceneRoleID, registeredSceneMapID)
 		}
 	}
 }

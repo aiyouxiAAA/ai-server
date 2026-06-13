@@ -69,7 +69,11 @@ type packetResult struct {
 	battleClearBuffs  []battle.ClearBuffInfoPush
 	battleOver        *battle.OverPush
 	removeRoleHandles []string
-	handled           bool
+	// sceneTransferFromMapID 标记本次结果是由"传送/切图"触发的,值为玩家传送前的旧 mapId。
+	// main.go 收到 townBootstrap 后据此调用 announceWorldSceneTransfer:给旧图邻居推 removeRole,
+	// 在新图重新互推。首次进图(选角)不走这里,它的互推在 register 区的 syncWorldScenePresence 完成。
+	sceneTransferFromMapID int
+	handled                bool
 }
 
 type classicTeamSyncTransfer struct {
@@ -2064,13 +2068,14 @@ func buildClassicTownTransferResult(
 		}
 	}
 	return packetResult{
-		townBootstrap:    &bootstrap,
-		dungeonInstance:  dungeonInstance,
-		itemInfos:        entryResult.itemInfos,
-		itemClears:       entryResult.itemClears,
-		chatMessages:     entryResult.chatMessages,
-		teamSyncTransfer: teamSyncTransfer,
-		handled:          true,
+		townBootstrap:          &bootstrap,
+		dungeonInstance:        dungeonInstance,
+		itemInfos:              entryResult.itemInfos,
+		itemClears:             entryResult.itemClears,
+		chatMessages:           entryResult.chatMessages,
+		teamSyncTransfer:       teamSyncTransfer,
+		sceneTransferFromMapID: fromMapID,
+		handled:                true,
 	}
 }
 

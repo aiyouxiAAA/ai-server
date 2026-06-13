@@ -705,6 +705,40 @@ func SupportsTownTransferMap(mapID int) bool {
 	return ok && mapDefinition.SupportsTransferIn
 }
 
+// DefaultSpawnForMap 返回某 mapId 的默认出生点;找不到返回零值。
+// 用于"远程玩家互推"时给非自己的在线玩家构造 SpawnFlash:后端不持久化玩家
+// 运行时坐标,最小闭环下让远程玩家落到该地图默认出生点(原版由 AOI 按视野推
+// 真实坐标,本轮不还原)。
+func DefaultSpawnForMap(mapID int) SpawnPoint {
+	mapDefinition, ok := townMapBootstrapDefinitions[mapID]
+	if !ok {
+		return SpawnPoint{}
+	}
+	return mapDefinition.DefaultSpawn
+}
+
+// BuildPlayerRolePush 把一个在线玩家(RoleSummary + PlayerBaseData)转成 kind="player"
+// 的 RolePush,用于"同 mapId 在线玩家互推 createRole(1103)"。
+// 字段拼装与 buildTownBootstrap 的 CreatePlayer(town_bootstrap.go:795-808)一致,
+// 唯一差异是 Kind 从 "self" 改成 "player",Handle/RoleID 用玩家自己的 RoleID
+// (原版 createRole 用 handle 区分实体,本项目 handle 与 roleId 一致)。
+func BuildPlayerRolePush(role session.RoleSummary, playerBase session.PlayerBaseData, spawn SpawnPoint) RolePush {
+	return RolePush{
+		Handle:       role.RoleID,
+		RoleID:       role.RoleID,
+		DisplayName:  playerBase.DisplayName,
+		Level:        playerBase.Level,
+		Vocation:     playerBase.Voc,
+		MapID:        itoa(playerBase.MapID),
+		VisualRoleID: playerBase.VisualRoleID,
+		PresetID:     playerBase.PresetID,
+		SourceQuery:  playerBase.SourceQuery,
+		Appearance:   playerBase.Appearance,
+		Kind:         "player",
+		SpawnFlash:   spawn,
+	}
+}
+
 func IsShuiliandongMapID(mapID int) bool {
 	mapDefinition, ok := townMapBootstrapDefinitions[mapID]
 	return ok && strings.HasPrefix(mapDefinition.Name, "水帘洞_")

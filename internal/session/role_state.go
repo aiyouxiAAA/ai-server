@@ -1268,6 +1268,36 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 			Index:       0,
 			ItemLevel:   1,
 		},
+		{
+			Type:        "背包",
+			Name:        "碎铁矿",
+			ItemType:    "null",
+			Display:     "105.png",
+			Description: "f_i_碎铁矿^ffffff&24@材料&25@99&20@制造武器和护具的基本素材&101@105.png&103@0&104@0&105@&107@&108@12",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "兽牙",
+			ItemType:    "null",
+			Display:     "68.png",
+			Description: "f_i_兽牙&24@材料&25@99&20@野兽锋利的牙齿&0;看起来能做点什么.&101@68.png&103@0&104@0&105@&107@&108@15",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "头骨",
+			ItemType:    "null",
+			Display:     "102.png",
+			Description: "f_i_头骨^ffffff&24@材料&25@99&20@尸骨的头部&0;用于制造工具&0;装饰服饰.&27@sitem_wood&101@102.png&103@0&104@0&105@&107@&108@18",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   2,
+		},
 	}
 }
 

@@ -1,10 +1,20 @@
 package world
 
 import (
+	"strings"
 	"testing"
 
 	"ai-server/internal/session"
 )
+
+func hasAnswerOption(options []AnswerOption, handle string, msg string) bool {
+	for _, option := range options {
+		if option.Handle == handle && option.Msg == msg {
+			return true
+		}
+	}
+	return false
+}
 
 func TestTownBootstrapAppliesCapturedSourceTransportPoints(t *testing.T) {
 	checked := 0
@@ -1249,6 +1259,16 @@ func TestBuildTownBootstrapUsesCapturedMapThreeData(t *testing.T) {
 	assertRole("4960542616750900", "介象", "npc/介象.swf", 3051, 442)
 	assertRole("4980542616799322", "排行告示", "npc/公告牌.swf", 3325, 420)
 	assertRole("transp_10", "", "transp/flag2.swf", 3566, 522)
+}
+
+func TestBuildAnswerSpeakMap3PandaHealerIncludesTreatment(t *testing.T) {
+	speak := BuildAnswerSpeak("4950542616589339")
+	if speak.Handle != "4950542616589339" || !strings.Contains(speak.Msg, "气力和精力") {
+		t.Fatalf("expected panda healer dialogue, got %+v", speak)
+	}
+	if !hasAnswerOption(speak.Answers, "2", "进行治疗") {
+		t.Fatalf("expected panda healer treatment answer, got %+v", speak.Answers)
+	}
 }
 
 func TestBuildTownTransferBootstrapMarksCapturedWildMapEnemyShow(t *testing.T) {

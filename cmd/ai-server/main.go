@@ -64,6 +64,8 @@ const (
 	cmdClassicTownRemoveSkillReq   = 1137
 	cmdClassicTownChatMessagePush  = 1138
 	cmdClassicTownChatSendReq      = 1139
+	cmdClassicTownDestroyItemReq   = 1181
+	cmdClassicTownSaleItemReq      = 1182
 	cmdClassicSocialFriendInfo     = 1140
 	cmdClassicSocialClearFriend    = 1141
 	cmdClassicSocialBlackListInfo  = 1142

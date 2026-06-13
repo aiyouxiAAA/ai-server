@@ -272,6 +272,32 @@ type RoleItemPurchaseResult struct {
 	ErrorMessage string
 }
 
+type RoleItemSaleResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	Item         RoleItem
+	UpdatedItem  *RoleItem
+	ClearedItems []RoleItemClear
+	Currencies   RoleCurrencies
+	Found        bool
+	Sold         bool
+	Amount       int
+	ErrorCode    string
+	ErrorMessage string
+}
+
+type RoleQuestCompleteResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	UpdatedItems []RoleItem
+	ClearedItems []RoleItemClear
+	Currencies   RoleCurrencies
+	Found        bool
+	Completed    bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
 type RoleItemClear struct {
 	Type  string
 	Index int
@@ -300,17 +326,33 @@ type RoleMoveItemResult struct {
 }
 
 type RoleUseItemResult struct {
+	Role             RoleSummary
+	PlayerBase       PlayerBaseData
+	Item             RoleItem
+	LearnedSkill     *RoleSkill
+	UpdatedItem      *RoleItem
+	UpdatedItems     []RoleItem
+	ClearedItems     []RoleItemClear
+	Currencies       RoleCurrencies
+	Found            bool
+	Used             bool
+	Equipped         bool
+	RoleStateChanged bool
+	ErrorCode        string
+	ErrorMessage     string
+}
+
+type RoleTownHealResult struct {
 	Role         RoleSummary
 	PlayerBase   PlayerBaseData
-	Item         RoleItem
-	LearnedSkill *RoleSkill
-	UpdatedItem  *RoleItem
+	RoleState    RoleState
 	UpdatedItems []RoleItem
 	ClearedItems []RoleItemClear
 	Currencies   RoleCurrencies
 	Found        bool
-	Used         bool
-	Equipped     bool
+	Healed       bool
+	NearlyFull   bool
+	Cost         int
 	ErrorCode    string
 	ErrorMessage string
 }
@@ -1113,6 +1155,139 @@ func (store *Store) RestoreQuest(playerID string, roleID string, title string) b
 	return true
 }
 
+func (store *Store) CompleteQuest(playerID string, roleID string, title string, requirements []RoleItemRequirement) RoleQuestCompleteResult {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return RoleQuestCompleteResult{
+			ErrorCode:    "invalid_quest",
+			ErrorMessage: "任务不存在。",
+		}
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+		if store.acceptedQuests[roleID] == nil || !store.acceptedQuests[roleID][title] {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleQuestCompleteResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Currencies:   cloneRoleCurrencies(role.Currencies),
+				Found:        true,
+				ErrorCode:    "quest_not_accepted",
+				ErrorMessage: "尚未接受该任务。",
+			}
+		}
+
+		currentRole := withRoleRuntimeDefaults(roles[index])
+		currentBase := playerBaseDataFromRole(playerID, currentRole)
+		currentCurrencies := cloneRoleCurrencies(currentRole.Currencies)
+		updatedItems := cloneRoleItems(currentRole.Items)
+		updatedRequirementItems := []RoleItem{}
+		clearedItems := []RoleItemClear{}
+		var trimmedCurrencyItems []RoleItem
+		var trimmedClearedItems []RoleItemClear
+		var changed bool
+		updatedItems, trimmedCurrencyItems, trimmedClearedItems, changed = trimRoleCurrencyItemsToBalance(updatedItems, currentCurrencies)
+		updatedRequirementItems = append(updatedRequirementItems, trimmedCurrencyItems...)
+		clearedItems = append(clearedItems, trimmedClearedItems...)
+
+		normalizedRequirements := normalizeRoleItemRequirements(requirements)
+		for _, requirement := range normalizedRequirements {
+			if requirement.Count <= 0 {
+				continue
+			}
+			if isRoleCurrencyName(requirement.Name) {
+				if currentCurrencies[requirement.Name] < requirement.Count {
+					return RoleQuestCompleteResult{
+						Role:         currentRole,
+						PlayerBase:   currentBase,
+						Currencies:   currentCurrencies,
+						Found:        true,
+						ErrorCode:    "not_enough_currency",
+						ErrorMessage: fmt.Sprintf("%s不足。", requirement.Name),
+					}
+				}
+				continue
+			}
+			if totalRoleItemCountByName(updatedItems, "背包", requirement.Name) < requirement.Count {
+				return RoleQuestCompleteResult{
+					Role:         currentRole,
+					PlayerBase:   currentBase,
+					Currencies:   currentCurrencies,
+					Found:        true,
+					ErrorCode:    "item_not_enough",
+					ErrorMessage: fmt.Sprintf("%s不足。", requirement.Name),
+				}
+			}
+		}
+
+		for _, requirement := range normalizedRequirements {
+			if requirement.Count <= 0 {
+				continue
+			}
+			if isRoleCurrencyName(requirement.Name) {
+				currentCurrencies[requirement.Name] -= requirement.Count
+				var updated []RoleItem
+				var cleared []RoleItemClear
+				updatedItems, updated, cleared = consumeRoleItemsByName(updatedItems, "背包", requirement.Name, requirement.Count)
+				updatedRequirementItems = append(updatedRequirementItems, updated...)
+				clearedItems = append(clearedItems, cleared...)
+				changed = true
+				continue
+			}
+			var updated []RoleItem
+			var cleared []RoleItemClear
+			updatedItems, updated, cleared = consumeRoleItemsByName(updatedItems, "背包", requirement.Name, requirement.Count)
+			updatedRequirementItems = append(updatedRequirementItems, updated...)
+			clearedItems = append(clearedItems, cleared...)
+			changed = true
+		}
+
+		delete(store.acceptedQuests[roleID], title)
+		if store.removedQuests[roleID] == nil {
+			store.removedQuests[roleID] = make(map[string]bool)
+		}
+		store.removedQuests[roleID][title] = true
+		currentRole.Items = normalizeRoleItems(updatedItems)
+		currentRole.Currencies = normalizeRoleCurrencies(currentCurrencies)
+		roles[index] = currentRole
+		store.rolesByPID[playerID] = roles
+		if changed {
+			if err := store.persistPlayerStateLocked(playerID); err != nil {
+				log.Printf("[session.Store] persist completed quest item requirements failed roleId=%s title=%s: %v", roleID, title, err)
+			}
+		}
+		if err := store.deleteAcceptedQuestLocked(roleID, title); err != nil {
+			log.Printf("[session.Store] delete accepted completed quest failed roleId=%s title=%s: %v", roleID, title, err)
+		}
+		if err := store.persistRemovedQuestLocked(playerID, roleID, title); err != nil {
+			log.Printf("[session.Store] persist completed quest failed roleId=%s title=%s: %v", roleID, title, err)
+		}
+
+		completedRole := withRoleRuntimeDefaults(roles[index])
+		return RoleQuestCompleteResult{
+			Role:         completedRole,
+			PlayerBase:   playerBaseDataFromRole(playerID, completedRole),
+			UpdatedItems: normalizeRoleItems(updatedRequirementItems),
+			ClearedItems: clearedItems,
+			Currencies:   cloneRoleCurrencies(completedRole.Currencies),
+			Found:        true,
+			Completed:    true,
+		}
+	}
+
+	return RoleQuestCompleteResult{
+		ErrorCode:    "role_not_found",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
 func (store *Store) GetRoleItem(playerID string, roleID string, containerType string, itemIndex int) (RoleItem, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -1352,6 +1527,47 @@ func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta
 	return RoleExpGrantResult{}
 }
 
+func (store *Store) UpdateRoleState(playerID string, roleID string, roleState RoleState) (RoleSummary, PlayerBaseData, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		role.Level = ClassicRoleLevelForExp(role.Exp, role.Level)
+		rolePhysique := defaultRolePhysique(role)
+		if role.RolePhysique != nil {
+			rolePhysique = *role.RolePhysique
+			if rolePhysique.Handle == "" {
+				rolePhysique.Handle = role.RoleID
+			}
+		}
+		if roleState.Handle == "" {
+			roleState.Handle = role.RoleID
+		}
+		roleState.HP = clampRoleRuntimeValue(roleState.HP, 0, rolePhysique.MaxHP)
+		roleState.MP = clampRoleRuntimeValue(roleState.MP, 0, rolePhysique.MaxMP)
+		roleState.Exp = role.Exp
+		roleState.Lv = role.Level
+		roleState.Speed = ClassicRoleSpeed(role.Level)
+		role.RoleState = &roleState
+		role.RolePhysique = &rolePhysique
+		roles[index] = role
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist role state failed: %v", err)
+		}
+
+		role = withRoleRuntimeDefaults(roles[index])
+		return role, playerBaseDataFromRole(playerID, role), true
+	}
+	return RoleSummary{}, emptyPlayerBaseData(playerID), false
+}
+
 func (store *Store) SetRoleLevel(playerID string, roleID string, level int) RoleExpGrantResult {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -1588,6 +1804,194 @@ func (store *Store) ConsumeRoleItem(playerID string, roleID string, sourceType s
 	}
 }
 
+func (store *Store) SellRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, count int) RoleItemSaleResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	sourceType = strings.TrimSpace(sourceType)
+	if count <= 0 {
+		count = 1
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		sourceItem, ok := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleItemSaleResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Found:        true,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "物品不存在。",
+			}
+		}
+		if sourceItem.Count < count {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleItemSaleResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         normalizeRoleItem(sourceItem),
+				Found:        true,
+				ErrorCode:    "item_not_enough",
+				ErrorMessage: "物品数量不足。",
+			}
+		}
+		price := parseClassicDescriptionSignedInt(sourceItem.Description, "108")
+		if price <= 0 {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleItemSaleResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         normalizeRoleItem(sourceItem),
+				Found:        true,
+				ErrorCode:    "item_no_sale",
+				ErrorMessage: "该物品无法出售。",
+			}
+		}
+
+		updatedItems, updatedItem, clearedItems := consumeRoleItemBySlot(roles[index].Items, sourceType, sourceIndex, count)
+		currencies := cloneRoleCurrencies(roles[index].Currencies)
+		amount := price * count
+		currencies["铜钱"] += amount
+		roles[index].Items = normalizeRoleItems(updatedItems)
+		roles[index].Currencies = normalizeRoleCurrencies(currencies)
+		if sourceType == "装备" {
+			roles[index] = syncRoleProgressionRuntimeData(roles[index])
+		}
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist sold item failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		return RoleItemSaleResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         normalizeRoleItem(sourceItem),
+			UpdatedItem:  updatedItem,
+			ClearedItems: clearedItems,
+			Currencies:   cloneRoleCurrencies(role.Currencies),
+			Found:        true,
+			Sold:         true,
+			Amount:       amount,
+		}
+	}
+
+	return RoleItemSaleResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) HealRoleAtTown(playerID string, roleID string) RoleTownHealResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		currentRole := withRoleRuntimeDefaults(roles[index])
+		currentBase := playerBaseDataFromRole(playerID, currentRole)
+		if currentBase.RoleState == nil || currentBase.RolePhysique == nil {
+			return RoleTownHealResult{
+				Role:         currentRole,
+				PlayerBase:   currentBase,
+				Currencies:   cloneRoleCurrencies(currentRole.Currencies),
+				Found:        true,
+				ErrorCode:    "role_state_missing",
+				ErrorMessage: "角色状态不存在。",
+			}
+		}
+
+		roleState := *currentBase.RoleState
+		rolePhysique := *currentBase.RolePhysique
+		missingHP := maxInt(0, rolePhysique.MaxHP-roleState.HP)
+		missingMP := maxInt(0, rolePhysique.MaxMP-roleState.MP)
+		if missingHP == 0 && missingMP == 0 {
+			return RoleTownHealResult{
+				Role:       currentRole,
+				PlayerBase: currentBase,
+				RoleState:  roleState,
+				Currencies: cloneRoleCurrencies(currentRole.Currencies),
+				Found:      true,
+				NearlyFull: true,
+			}
+		}
+
+		cost := ClassicTownHealerCost(currentRole.Level, missingHP, missingMP)
+		currentCurrencies := cloneRoleCurrencies(currentRole.Currencies)
+		updatedItems := cloneRoleItems(currentRole.Items)
+		var updatedCurrencyItems []RoleItem
+		var clearedItems []RoleItemClear
+		updatedItems, updatedCurrencyItems, clearedItems, _ = trimRoleCurrencyItemsToBalance(updatedItems, currentCurrencies)
+		if cost > 0 && currentCurrencies["铜钱"] < cost {
+			return RoleTownHealResult{
+				Role:         currentRole,
+				PlayerBase:   currentBase,
+				RoleState:    roleState,
+				Currencies:   currentCurrencies,
+				Found:        true,
+				Cost:         cost,
+				ErrorCode:    "not_enough_currency",
+				ErrorMessage: "铜钱不足。",
+			}
+		}
+
+		if cost > 0 {
+			currentCurrencies["铜钱"] -= cost
+			var consumedCurrencyItems []RoleItem
+			var clearedCurrencyItems []RoleItemClear
+			updatedItems, consumedCurrencyItems, clearedCurrencyItems = consumeRoleItemsByName(updatedItems, "背包", "铜钱", cost)
+			updatedCurrencyItems = append(updatedCurrencyItems, consumedCurrencyItems...)
+			clearedItems = append(clearedItems, clearedCurrencyItems...)
+		}
+
+		roleState.HP = rolePhysique.MaxHP
+		roleState.MP = rolePhysique.MaxMP
+		roleState.Exp = currentRole.Exp
+		roleState.Lv = currentRole.Level
+		roleState.Speed = ClassicRoleSpeed(currentRole.Level)
+
+		currentRole.Items = normalizeRoleItems(updatedItems)
+		currentRole.Currencies = normalizeRoleCurrencies(currentCurrencies)
+		currentRole.RoleState = &roleState
+		currentRole.RolePhysique = &rolePhysique
+		roles[index] = currentRole
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist town heal failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		return RoleTownHealResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			RoleState:    roleState,
+			UpdatedItems: updatedCurrencyItems,
+			ClearedItems: clearedItems,
+			Currencies:   cloneRoleCurrencies(role.Currencies),
+			Found:        true,
+			Healed:       true,
+			Cost:         cost,
+		}
+	}
+
+	return RoleTownHealResult{
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
 func (store *Store) UseRoleItem(playerID string, roleID string, sourceType string, sourceIndex int) RoleUseItemResult {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -1648,6 +2052,9 @@ func (store *Store) UseRoleItem(playerID string, roleID string, sourceType strin
 			targetIndex, ok := roleEquipTargetIndex(sourceItem)
 			if ok {
 				return store.useEquipmentItemLocked(playerID, roles, index, sourceItem, sourceType, sourceIndex, targetIndex)
+			}
+			if healHP, healMP, ok := roleItemRecoveryAmounts(sourceItem); ok {
+				return store.useRecoveryItemLocked(playerID, roles, index, sourceItem, healHP, healMP)
 			}
 			role := withRoleRuntimeDefaults(roles[index])
 			return RoleUseItemResult{
@@ -1776,6 +2183,109 @@ func roleSkillFromItem(item RoleItem) (RoleSkill, bool) {
 		Description: strings.TrimSpace(item.Description),
 		MaxLevel:    maxLevel,
 	}, true
+}
+
+func roleItemRecoveryAmounts(item RoleItem) (int, int, bool) {
+	healHP := maxInt(0, parseClassicDescriptionSignedInt(item.Description, "7"))
+	healMP := maxInt(0, parseClassicDescriptionSignedInt(item.Description, "8"))
+	return healHP, healMP, healHP > 0 || healMP > 0
+}
+
+func (store *Store) useRecoveryItemLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+	healHP int,
+	healMP int,
+) RoleUseItemResult {
+	roleState := defaultRoleState(roles[roleIndex].RoleID, roles[roleIndex].Level, roles[roleIndex].Exp)
+	if roles[roleIndex].RoleState != nil {
+		roleState = *roles[roleIndex].RoleState
+		if roleState.Handle == "" {
+			roleState.Handle = roles[roleIndex].RoleID
+		}
+	}
+	roleState.Exp = roles[roleIndex].Exp
+	roleState.Lv = roles[roleIndex].Level
+	roleState.Speed = ClassicRoleSpeed(roles[roleIndex].Level)
+
+	rolePhysique := defaultRolePhysique(roles[roleIndex])
+	if roles[roleIndex].RolePhysique != nil {
+		rolePhysique = *roles[roleIndex].RolePhysique
+		if rolePhysique.Handle == "" {
+			rolePhysique.Handle = roles[roleIndex].RoleID
+		}
+	}
+	canRecoverHP := healHP > 0 && roleState.HP < rolePhysique.MaxHP
+	canRecoverMP := healMP > 0 && roleState.MP < rolePhysique.MaxMP
+	if !canRecoverHP && !canRecoverMP {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "role_state_full",
+			ErrorMessage: "当前状态不需要使用该物品。",
+		}
+	}
+	if healHP > 0 {
+		roleState.HP = clampRoleRuntimeValue(roleState.HP+healHP, 0, rolePhysique.MaxHP)
+	}
+	if healMP > 0 {
+		roleState.MP = clampRoleRuntimeValue(roleState.MP+healMP, 0, rolePhysique.MaxMP)
+	}
+
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	roles[roleIndex].RoleState = &roleState
+	roles[roleIndex].RolePhysique = &rolePhysique
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used recovery item failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	result := RoleUseItemResult{
+		Role:             role,
+		PlayerBase:       playerBaseDataFromRole(playerID, role),
+		Item:             sourceItem,
+		ClearedItems:     clearedItems,
+		Found:            true,
+		Used:             true,
+		RoleStateChanged: true,
+	}
+	if updatedSource != nil {
+		result.UpdatedItems = []RoleItem{*updatedSource}
+	}
+	return result
+}
+
+func clampRoleRuntimeValue(value int, minValue int, maxValue int) int {
+	if value < minValue {
+		return minValue
+	}
+	if value > maxValue {
+		return maxValue
+	}
+	return value
+}
+
+func ClassicTownHealerCost(level int, missingHP int, missingMP int) int {
+	if level < 15 {
+		return 0
+	}
+	missingTotal := maxInt(0, missingHP) + maxInt(0, missingMP)
+	if missingTotal <= 0 {
+		return 0
+	}
+	rawCost := (missingTotal*23 + 50) / 100
+	cost := ((rawCost + 2) / 5) * 5
+	if cost < 5 {
+		return 5
+	}
+	return cost
 }
 
 func (store *Store) useCurrencyExchangeItemLocked(

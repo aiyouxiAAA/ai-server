@@ -425,6 +425,258 @@ func TestStoreUseRoleItemClearsSelectedStaleCurrencyStack(t *testing.T) {
 	}
 }
 
+func TestStoreUseRoleItemRestoresTownHPFromClassicDescription(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "主城回血女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	store.rolesByPID[login.PlayerID][0].RoleState = &RoleState{
+		Handle: createResponse.Role.RoleID,
+		HP:     50,
+		MP:     20,
+		Exp:    0,
+		Lv:     1,
+		Speed:  130,
+	}
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "测试包子",
+		ItemType:    "消耗品",
+		Display:     "212.png",
+		Description: "f_i_测试包子&24@消耗品&25@99&7@60&20@恢复气力",
+		Count:       2,
+		Index:       -1,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected recovery item grant")
+	}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	if !result.Found || !result.Used || !result.RoleStateChanged {
+		t.Fatalf("expected town recovery item to be used, got %+v", result)
+	}
+	if result.PlayerBase.RoleState == nil || result.PlayerBase.RoleState.HP != 110 || result.PlayerBase.RoleState.MP != 20 {
+		t.Fatalf("expected HP to recover to 110 and MP to stay 20, got %+v", result.PlayerBase.RoleState)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Count != 1 {
+		t.Fatalf("expected stack count to decrease to 1, got %+v", result.UpdatedItems)
+	}
+	_, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || playerBase.RoleState == nil || playerBase.RoleState.HP != 110 {
+		t.Fatalf("expected recovered HP to persist, got ok=%v playerBase=%+v", ok, playerBase)
+	}
+}
+
+func TestStoreUseRoleItemRestoresSourceOwnMedicineFromDescription(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "快捷包子女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	store.rolesByPID[login.PlayerID][0].RoleState = &RoleState{
+		Handle: createResponse.Role.RoleID,
+		HP:     50,
+		MP:     20,
+		Exp:    0,
+		Lv:     1,
+		Speed:  130,
+	}
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "包子",
+		ItemType:    "own",
+		Display:     "212.png",
+		Description: "f_i_包子&24@消耗品&25@99&7@600&20@食用后可恢复些气力.",
+		Count:       1,
+		Index:       -1,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected source medicine grant")
+	}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	if !result.Found || !result.Used || result.ErrorCode != "" {
+		t.Fatalf("expected source own medicine to be usable, got %+v", result)
+	}
+	if result.PlayerBase.RoleState == nil || result.PlayerBase.RoleState.HP != result.PlayerBase.RolePhysique.MaxHP {
+		t.Fatalf("expected source own medicine to recover HP to max, got state=%+v physique=%+v", result.PlayerBase.RoleState, result.PlayerBase.RolePhysique)
+	}
+}
+
+func TestStoreUseRoleItemRejectsRecoveryItemWhenStateIsFull(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "满状态女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "包子",
+		ItemType:    "own",
+		Display:     "212.png",
+		Description: "f_i_包子&24@消耗品&25@99&7@600&20@食用后可恢复些气力.",
+		Count:       1,
+		Index:       -1,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected source medicine grant")
+	}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	if !result.Found || result.Used || result.ErrorCode != "role_state_full" {
+		t.Fatalf("expected full-state medicine use to be rejected, got %+v", result)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	for _, item := range items {
+		if item.Name == "包子" && item.Index == granted.Index && item.Count == 1 {
+			return
+		}
+	}
+	t.Fatalf("expected rejected medicine not to be consumed, got %+v", items)
+}
+
+func TestStoreUseRoleItemRestoresTownMPAndClampsToMax(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "主城回蓝女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	store.rolesByPID[login.PlayerID][0].RoleState = &RoleState{
+		Handle: createResponse.Role.RoleID,
+		HP:     80,
+		MP:     30,
+		Exp:    0,
+		Lv:     1,
+		Speed:  130,
+	}
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "测试甘露",
+		ItemType:    "材料 消耗品",
+		Display:     "214.png",
+		Description: "f_i_测试甘露&24@材料 消耗品&25@99&8@100&20@恢复精力",
+		Count:       1,
+		Index:       -1,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected recovery item grant")
+	}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	if !result.Found || !result.Used || !result.RoleStateChanged {
+		t.Fatalf("expected town recovery item to be used, got %+v", result)
+	}
+	if result.PlayerBase.RoleState == nil || result.PlayerBase.RoleState.HP != 80 || result.PlayerBase.RoleState.MP != result.PlayerBase.RolePhysique.MaxMP {
+		t.Fatalf("expected MP to clamp to max and HP to stay 80, got state=%+v physique=%+v", result.PlayerBase.RoleState, result.PlayerBase.RolePhysique)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Index != granted.Index {
+		t.Fatalf("expected single MP item to clear, got %+v", result.ClearedItems)
+	}
+}
+
+func TestStoreHealRoleAtTownRestoresHPAndMPForFreeBeforeLevel15(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "医疗女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	store.rolesByPID[login.PlayerID][0].RoleState = &RoleState{
+		Handle: createResponse.Role.RoleID,
+		HP:     50,
+		MP:     10,
+		Exp:    0,
+		Lv:     1,
+		Speed:  130,
+	}
+
+	result := store.HealRoleAtTown(login.PlayerID, createResponse.Role.RoleID)
+	if !result.Found || !result.Healed || result.Cost != 0 {
+		t.Fatalf("expected free town heal, got %+v", result)
+	}
+	if result.RoleState.HP != result.PlayerBase.RolePhysique.MaxHP || result.RoleState.MP != result.PlayerBase.RolePhysique.MaxMP {
+		t.Fatalf("expected HP/MP to restore to max, state=%+v physique=%+v", result.RoleState, result.PlayerBase.RolePhysique)
+	}
+	_, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || playerBase.RoleState == nil || playerBase.RoleState.HP != playerBase.RolePhysique.MaxHP || playerBase.RoleState.MP != playerBase.RolePhysique.MaxMP {
+		t.Fatalf("expected town heal to persist, ok=%v playerBase=%+v", ok, playerBase)
+	}
+}
+
+func TestStoreHealRoleAtTownChargesCopperAfterLevel15(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "收费医疗女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	levelResult := store.SetRoleLevel(login.PlayerID, createResponse.Role.RoleID, 19)
+	if !levelResult.Found || !levelResult.Granted {
+		t.Fatalf("expected level setup, got %+v", levelResult)
+	}
+	role := &store.rolesByPID[login.PlayerID][0]
+	role.Currencies["铜钱"] = 289
+	role.RoleState.HP = role.RolePhysique.MaxHP - 203
+	role.RoleState.MP = role.RolePhysique.MaxMP
+
+	result := store.HealRoleAtTown(login.PlayerID, createResponse.Role.RoleID)
+	if !result.Found || !result.Healed || result.Cost != 45 {
+		t.Fatalf("expected captured level 19 heal cost 45, got %+v", result)
+	}
+	if result.Currencies["铜钱"] != 244 {
+		t.Fatalf("expected copper 289 -> 244, got %+v", result.Currencies)
+	}
+	if result.RoleState.HP != result.PlayerBase.RolePhysique.MaxHP || result.RoleState.MP != result.PlayerBase.RolePhysique.MaxMP {
+		t.Fatalf("expected paid heal to restore HP/MP, state=%+v physique=%+v", result.RoleState, result.PlayerBase.RolePhysique)
+	}
+}
+
+func TestClassicTownHealerCostMatchesCapturedSamples(t *testing.T) {
+	if got := ClassicTownHealerCost(19, 203, 0); got != 45 {
+		t.Fatalf("expected captured level 19 healer cost 45, got %d", got)
+	}
+	if got := ClassicTownHealerCost(34, 263, 248); got != 120 {
+		t.Fatalf("expected captured level 34 healer cost 120, got %d", got)
+	}
+	if got := ClassicTownHealerCost(14, 999, 999); got != 0 {
+		t.Fatalf("expected healer to be free before level 15, got %d", got)
+	}
+}
+
 func TestStoreGrantRoleItemStacksCompatibleBagConsumables(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -1030,6 +1282,38 @@ func TestStoreCapturedStarterArmorTemplatesMatchSourceAndEquipStats(t *testing.T
 	}
 	if got := parseClassicDescriptionSignedInt(sourceBlueClothItem().Description, "3"); got != 6 {
 		t.Fatalf("expected repeated blue-cloth &3@ placeholder to resolve to final numeric value 6, got %d", got)
+	}
+}
+
+func TestStoreCapturedMaterialTemplatesFillMissingIconFields(t *testing.T) {
+	cases := []struct {
+		name      string
+		display   string
+		itemLevel int
+	}{
+		{name: "碎铁矿", display: "105.png", itemLevel: 1},
+		{name: "兽牙", display: "68.png", itemLevel: 1},
+		{name: "头骨", display: "102.png", itemLevel: 2},
+	}
+
+	for _, tc := range cases {
+		template, ok := CapturedRoleItemTemplate(tc.name)
+		if !ok {
+			t.Fatalf("expected captured source material template for %s", tc.name)
+		}
+		if template.Display != tc.display || template.ItemType != "null" || template.ItemLevel != tc.itemLevel {
+			t.Fatalf("expected %s template display=%s itemLevel=%d, got %+v", tc.name, tc.display, tc.itemLevel, template)
+		}
+
+		item := normalizeRoleItem(RoleItem{
+			Type:  "背包",
+			Name:  tc.name,
+			Count: 1,
+			Index: 6,
+		})
+		if item.Display != tc.display || item.ItemType != "null" || item.Description == "" || item.ItemLevel != tc.itemLevel {
+			t.Fatalf("expected %s missing fields to be filled from template, got %+v", tc.name, item)
+		}
 	}
 }
 

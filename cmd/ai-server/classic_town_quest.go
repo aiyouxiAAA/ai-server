@@ -100,9 +100,8 @@ func buildClassicQuestRemoveResult(store *session.Store, socketSession *packetSe
 		return packetResult{handled: true}
 	}
 
-	if request.Complete && !quest.IsCompletableState(info.State) {
-		log.Printf("[ai-server] classic quest CompleteQuest rejected incomplete title=%s questId=%s state=%s", title, info.ID, info.State)
-		return packetResult{handled: true}
+	if request.Complete {
+		return buildClassicQuestCompleteResult(store, socketSession, info, title)
 	}
 
 	if store == nil || !store.MarkQuestRemoved(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, title) {
@@ -151,6 +150,9 @@ func buildClassicQuestAnswerResult(store *session.Store, socketSession *packetSe
 
 	accepted := store.AcceptedQuestTitles(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
 	if accepted[info.Title] {
+		if quest.IsCompletableState(info.State) {
+			return buildClassicQuestCompleteResult(store, socketSession, info, info.Title), true
+		}
 		return packetResult{
 			questInfos: []classicQuestInfoPush{classicQuestInfoFromCatalog(info)},
 			chatMessages: []classicTownChatMessagePush{
@@ -179,6 +181,70 @@ func buildClassicQuestAnswerResult(store *session.Store, socketSession *packetSe
 		},
 		handled: true,
 	}, true
+}
+
+func buildClassicQuestCompleteResult(store *session.Store, socketSession *packetSession, info quest.Info, title string) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic quest CompleteQuest ignored without selected role title=%s questId=%s", title, info.ID)
+		return packetResult{handled: true}
+	}
+	if !quest.IsCompletableState(info.State) {
+		log.Printf("[ai-server] classic quest CompleteQuest rejected incomplete title=%s questId=%s state=%s", title, info.ID, info.State)
+		return packetResult{handled: true}
+	}
+	if store == nil {
+		return packetResult{handled: true}
+	}
+
+	completeResult := store.CompleteQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, title, classicQuestRequirementItems(info.Requirements))
+	if !completeResult.Found {
+		log.Printf("[ai-server] classic quest CompleteQuest ignored missing role title=%s questId=%s", title, info.ID)
+		return packetResult{handled: true}
+	}
+	if !completeResult.Completed {
+		log.Printf("[ai-server] classic quest CompleteQuest rejected title=%s questId=%s error=%s", title, info.ID, completeResult.ErrorCode)
+		if strings.TrimSpace(completeResult.ErrorMessage) == "" {
+			return packetResult{handled: true}
+		}
+		return packetResult{
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(completeResult.ErrorMessage)},
+			handled:      true,
+		}
+	}
+
+	socketSession.selectedRole = &completeResult.Role
+	socketSession.playerBase = &completeResult.PlayerBase
+	result := packetResult{
+		questClears: []classicQuestClearPush{{
+			Title:   title,
+			QuestID: info.ID,
+		}},
+		itemInfos:  make([]classicTownItemInfoPush, 0, len(completeResult.UpdatedItems)),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(completeResult.ClearedItems)),
+		chatMessages: []classicTownChatMessagePush{
+			classicTownSystemChatMessage("完成了任务【" + title + "】。"),
+		},
+		handled: true,
+	}
+	for _, clear := range completeResult.ClearedItems {
+		result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+			Handle: completeResult.Role.RoleID,
+			Type:   clear.Type,
+			Index:  clear.Index,
+		})
+	}
+	for _, item := range completeResult.UpdatedItems {
+		item.Handle = completeResult.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+	}
+	if handle := questNpcHandleForTitle(title); handle != "" {
+		result.questStates = []world.QuestStatePush{{
+			Handle: handle,
+			State:  0,
+		}}
+	}
+	applyClassicQuestReward(store, socketSession, info, &result)
+	return result
 }
 
 func sourceMainQuestInfo() classicQuestInfoPush {
@@ -253,6 +319,25 @@ func classicQuestRewardItemPushes(items []quest.RewardItem) []classicQuestReward
 			Name:    item.Name,
 			Count:   item.Count,
 			Display: item.Display,
+		})
+	}
+	return result
+}
+
+func classicQuestRequirementItems(items []quest.RewardItem) []session.RoleItemRequirement {
+	result := make([]session.RoleItemRequirement, 0, len(items))
+	for _, item := range items {
+		count := item.Count
+		if count <= 0 {
+			count = 1
+		}
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			continue
+		}
+		result = append(result, session.RoleItemRequirement{
+			Name:  name,
+			Count: count,
 		})
 	}
 	return result

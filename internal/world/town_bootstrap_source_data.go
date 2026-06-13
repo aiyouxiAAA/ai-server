@@ -525,6 +525,14 @@ var map3SourceNPCs = []sourceNPCEntry{
 		Height:      90,
 		SpawnFlash:  SpawnPoint{X: 2862, Y: 426},
 		QuestState:  0,
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message:   "当你的气力和精力亏损时，可找医疗师，选择【进行治疗】之后气力与精力将完全恢复。15级前在下可为你免费治疗，过后可就要收费咯。等级越高治疗的费用就越贵。",
+			Answers: []AnswerOption{
+				{Handle: "2", Msg: "进行治疗"},
+				{Handle: "0", Msg: "<c/>取消"},
+			},
+		},
 	},
 	{
 		Handle:      "4960542616750900",

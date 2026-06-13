@@ -62,6 +62,19 @@ type classicTownActiveItemRequest struct {
 	Index int    `json:"index"`
 }
 
+type classicTownDestroyItemRequest struct {
+	Type  string `json:"type"`
+	Index int    `json:"index"`
+	Count int    `json:"count"`
+}
+
+type classicTownSaleItemRequest struct {
+	ShopID string `json:"shopId"`
+	Type   string `json:"type"`
+	Index  int    `json:"index"`
+	Count  int    `json:"count"`
+}
+
 type classicTownChatSendRequest struct {
 	Channel    string `json:"channel"`
 	Msg        string `json:"msg"`
@@ -443,6 +456,8 @@ func sourceRoleSkillDescription(name string, level int, fallback string) string 
 		return "f_s_红月斩^ffffff&9@群体·攻击&8@战士 &10@单刀&22@战斗&2@40&4@对所有敌人造成72%的物理伤害"
 	case "血切":
 		return "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)"
+	case "奥义.雷魂斩":
+		return "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害"
 	default:
 		return fallback
 	}
@@ -565,7 +580,7 @@ const sourceWarriorSkillShopRows = `
 12|狂爆|646.png|技能·单刀系|单体·状态|3回合内物理攻击力翻倍 / 并降低100%的物理防御
 13|红月斩|647.png|技能·单刀系|群体·攻击|对所有敌人造成一定的物理伤害
 14|血切|648.png|技能·单刀系|单体·状态|对敌人造成一定的物理伤害 / 击中后有机率使敌人进入外伤(每回合损失气力)状态
-15|奥义.雷魂斩|649.png|技能·单刀系|单体·攻击|特殊发动条件:3格魂元 / 大幅提升对敌人造成的物理伤害
+15|奥义.雷魂斩|649.png|技能·单刀系|单体·攻击|特殊发动条件:需要3格魂元 / 提升240%的物理伤害
 16|劈山棍法|651.png|技能·棍系|单体·攻击|提升对敌人造成的物理伤害
 17|力释棍术|652.png|技能·棍系|单体·状态|提升物理攻击力
 18|盘龙棍法|654.png|技能·棍系|群体·攻击|对所有敌人造成物理伤害

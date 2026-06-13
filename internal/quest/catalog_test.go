@@ -15,6 +15,16 @@ func TestCatalogParsesCapturedQuestRewards(t *testing.T) {
 	}
 }
 
+func TestCatalogParsesQuestRequirements(t *testing.T) {
+	info, ok := FindByID("capture-032")
+	if !ok {
+		t.Fatal("expected capture-032 in catalog")
+	}
+	if len(info.Requirements) != 1 || info.Requirements[0].Name != "肉" || info.Requirements[0].Count != 5 || info.Requirements[0].Display != "70.png" {
+		t.Fatalf("expected capture-032 meat requirement, got %+v", info.Requirements)
+	}
+}
+
 func TestCatalogParsesSkillAndOptionalRewards(t *testing.T) {
 	skillInfo, ok := FindByID("capture-007")
 	if !ok {

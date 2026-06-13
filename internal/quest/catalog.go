@@ -15,13 +15,14 @@ import (
 var catalogFS embed.FS
 
 type Info struct {
-	ID          string
-	Title       string
-	Level       int
-	Type        string
-	Description string
-	State       string
-	Reward      Reward
+	ID           string
+	Title        string
+	Level        int
+	Type         string
+	Description  string
+	State        string
+	Requirements []RewardItem
+	Reward       Reward
 }
 
 type Reward struct {
@@ -121,6 +122,7 @@ func loadCatalog() ([]Info, error) {
 			Description: readField(record, "description"),
 			State:       readField(record, "state"),
 		}
+		info.Requirements = ParseRequirements(info.Description)
 		info.Reward = ParseReward(info.Description)
 		if info.ID == "" || info.Title == "" {
 			continue
@@ -146,10 +148,19 @@ func cloneInfos(infos []Info) []Info {
 }
 
 func cloneInfo(info Info) Info {
+	info.Requirements = append([]RewardItem(nil), info.Requirements...)
 	info.Reward.Items = append([]RewardItem(nil), info.Reward.Items...)
 	info.Reward.Skills = append([]RewardSkill(nil), info.Reward.Skills...)
 	info.Reward.OptionalItems = append([]RewardItem(nil), info.Reward.OptionalItems...)
 	return info
+}
+
+func ParseRequirements(description string) []RewardItem {
+	requirementText := sourceQuestRewardSection(description, "[x]=")
+	if requirementText == "" {
+		return []RewardItem{}
+	}
+	return parseSourceQuestRewardItems(requirementText)
 }
 
 func ParseReward(description string) Reward {

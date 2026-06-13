@@ -1,6 +1,7 @@
 package battle
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -663,8 +664,8 @@ func TestEnemyHitSetsStoredPowerFromSingleHPLossPercent(t *testing.T) {
 	if result.ErrorCode != "" {
 		t.Fatalf("expected normal attack to resolve, got %+v", result)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.Power != 3 || runtime.powerFor("player_21424") != 3 {
-		t.Fatalf("expected enemy one stored power to raise 250 hit to 300 and set stored power 3, pending=%+v stored=%d", runtime.PendingStart, runtime.powerFor("player_21424"))
+	if runtime.PendingStart == nil || runtime.PendingStart.Power != 2 || runtime.powerFor("player_21424") != 2 {
+		t.Fatalf("expected 250/1000 HP loss to set stored power 2 without damage bonus, pending=%+v stored=%d", runtime.PendingStart, runtime.powerFor("player_21424"))
 	}
 }
 
@@ -712,11 +713,11 @@ func TestEnemyHitByPlayerStoresPowerAndConsumesItOnEnemyTurn(t *testing.T) {
 	if result.ErrorCode != "" || len(result.Actions) < 2 {
 		t.Fatalf("expected player action followed by enemy action, got %+v", result)
 	}
-	if result.Actions[0].Damage != 300 {
-		t.Fatalf("expected player one stored power to deal 300 damage, got %+v", result.Actions[0])
+	if result.Actions[0].Damage != 250 {
+		t.Fatalf("expected stored power not to raise player damage, got %+v", result.Actions[0])
 	}
-	if result.Actions[1].Damage != 160 {
-		t.Fatalf("expected enemy to use 3 stored power from 300/1000 HP loss, got %+v", result.Actions[1])
+	if result.Actions[1].Damage != 100 {
+		t.Fatalf("expected enemy stored power not to raise enemy damage, got %+v", result.Actions[1])
 	}
 	if runtime.StoredPower["enemy_1"] != 0 {
 		t.Fatalf("expected enemy stored power to clear after attacking, got %d", runtime.StoredPower["enemy_1"])
@@ -1311,8 +1312,8 @@ func TestResolveAttackCriticalFatDoublesDamageAndSendsSourceStateCode(t *testing
 
 	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
 
-	if action.Damage != 112 || action.TargetHP != 8 {
-		t.Fatalf("expected one stored power to raise base damage 47 by 20%% before critical, got %+v", action)
+	if action.Damage != 94 || action.TargetHP != 26 {
+		t.Fatalf("expected critical to double base damage 47 without stored power damage bonus, got %+v", action)
 	}
 	if action.TargetActionState != "fat" || action.TargetActionStateCode != "2" {
 		t.Fatalf("expected source fat target action state code 2, got %+v", action)
@@ -1343,15 +1344,15 @@ func TestResolveAttackNormalUsesSourceStateCodeZero(t *testing.T) {
 
 	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
 
-	if action.Damage != 56 || action.TargetHP != 64 {
-		t.Fatalf("expected one stored power to raise normal damage 47 by 20%%, got %+v", action)
+	if action.Damage != 47 || action.TargetHP != 73 {
+		t.Fatalf("expected normal damage to use base damage 47 without stored power damage bonus, got %+v", action)
 	}
 	if action.TargetActionState != "normal" || action.TargetActionStateCode != "0" {
 		t.Fatalf("expected source normal target action state code 0, got %+v", action)
 	}
 }
 
-func TestResolveAttackAppliesStoredPowerDamageBonus(t *testing.T) {
+func TestResolveAttackDoesNotApplyStoredPowerDamageBonus(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-power-damage",
 		Round:            1,
@@ -1373,8 +1374,8 @@ func TestResolveAttackAppliesStoredPowerDamageBonus(t *testing.T) {
 
 	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
 
-	if action.Damage != 66 || action.TargetHP != 54 {
-		t.Fatalf("expected two stored power to raise damage 47 by 40%%, got %+v", action)
+	if action.Damage != 47 || action.TargetHP != 73 {
+		t.Fatalf("expected stored power to leave normal damage unchanged, got %+v", action)
 	}
 }
 
@@ -1462,8 +1463,8 @@ func TestResolveMiZhanConsumesSourceMpCostAndSendsActorRefresh(t *testing.T) {
 	if action.ActionName != "密斩" || action.SourceActionLabel != "w8/manycut" {
 		t.Fatalf("expected captured w8/manycut action for 密斩, got %+v", action)
 	}
-	if action.Damage != 79 || action.TargetHP != 41 {
-		t.Fatalf("expected captured 密斩 +40%% damage plus one stored power, got %+v", action)
+	if action.Damage != 66 || action.TargetHP != 54 {
+		t.Fatalf("expected captured 密斩 +40%% damage without stored power bonus, got %+v", action)
 	}
 	if actor.MP != 59 {
 		t.Fatalf("expected 密斩 to consume source 精力 cost 5, got actor MP=%d action=%+v", actor.MP, action)
@@ -1592,7 +1593,7 @@ func TestProcessActionAllowsLearnedCapturedSkill(t *testing.T) {
 	if action.ActionName != "多段斩" || action.SourceActionLabel != "w8/ddz1" {
 		t.Fatalf("expected captured 多段斩 Lv2 action, got %+v", action)
 	}
-	if action.Damage != 90 || action.TargetHP != 30 || action.RefreshInfos[0].MP != 54 {
+	if action.Damage != 75 || action.TargetHP != 45 || action.RefreshInfos[0].MP != 54 {
 		t.Fatalf("expected learned 多段斩 Lv2 to damage and consume MP, got %+v", action)
 	}
 }
@@ -1657,6 +1658,14 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			label:      "w8/cutBlood",
 			mpCost:     19,
 			multiplier: 0.3,
+		},
+		{
+			name:       "奥义.雷魂斩",
+			level:      1,
+			desc:       "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害",
+			label:      "w8/thunderSoulAtk",
+			mpCost:     24,
+			multiplier: 3.4,
 		},
 	}
 
@@ -1746,6 +1755,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)",
 		},
 		{
+			Name:        "奥义.雷魂斩",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害",
+		},
+		{
 			Name: "未抓包技能",
 			Type: "oneE",
 		},
@@ -1775,6 +1790,9 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if command := byID[CommandXueQie]; command.Label != "血切" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/cutBlood" || command.MPCost != 19 || command.DamageMultiplier != 0.3 {
 		t.Fatalf("expected captured 血切 single-target command, got %+v", command)
+	}
+	if command := byID[CommandLeiHunZhan]; command.Label != "奥义.雷魂斩" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/thunderSoulAtk" || command.MPCost != 24 || command.DamageMultiplier != 3.4 {
+		t.Fatalf("expected captured 奥义.雷魂斩 single-target command, got %+v", command)
 	}
 	if _, ok := byID["未抓包技能"]; ok {
 		t.Fatalf("expected uncaptured skill to be omitted, got %+v", commands)
@@ -1820,8 +1838,8 @@ func TestResolveDuoDuanZhanUsesCapturedLevelProfileAndCanFat(t *testing.T) {
 	if action.ActionName != "多段斩" || action.SourceActionLabel != "w8/ddz2" {
 		t.Fatalf("expected captured 多段斩 Lv3 label, got %+v", action)
 	}
-	if action.Damage != 396 || action.TargetHP != 56 || action.TargetActionStateCode != "2" {
-		t.Fatalf("expected Lv3 多段斩 damage to include one stored power before fat, got %+v", action)
+	if action.Damage != 330 || action.TargetHP != 122 || action.TargetActionStateCode != "2" {
+		t.Fatalf("expected Lv3 多段斩 damage without stored power bonus before fat, got %+v", action)
 	}
 	if actor.MP != 182 || action.RefreshInfos[0].MP != 182 {
 		t.Fatalf("expected 多段斩 Lv3 to consume MP 12, got actor=%+v action=%+v", actor, action)
@@ -1906,7 +1924,7 @@ func TestHongYueZhanHitsAllLivingEnemiesAndConsumesMPOnce(t *testing.T) {
 	}
 	for _, expectedHandle := range []string{"enemy_1", "enemy_2"} {
 		target := runtime.cellByHandle(expectedHandle)
-		if target == nil || target.HP != 414 {
+		if target == nil || target.HP != 428 {
 			t.Fatalf("expected 红月斩 Lv1 captured damage against %s, got target=%+v action=%+v", expectedHandle, target, action)
 		}
 	}
@@ -1916,6 +1934,91 @@ func TestHongYueZhanHitsAllLivingEnemiesAndConsumesMPOnce(t *testing.T) {
 	actor := runtime.cellByHandle("player_21424")
 	if actor == nil || actor.MP != 60 {
 		t.Fatalf("expected 红月斩 to consume MP 40 once, got actor=%+v", actor)
+	}
+}
+
+func TestLeiHunZhanRequiresCapturedSoulPowerAndUsesThunderSoulAtk(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-leihun",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "奥义.雷魂斩",
+				Level:       1,
+				Type:        "oneE",
+				Description: "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-leihun",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Defense:  0,
+				Hit:      100,
+				Fat:      0,
+			},
+			{
+				BattleID: "battle-leihun",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+		},
+	}
+
+	insufficient := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-leihun",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandLeiHunZhan,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+	if insufficient.ErrorCode != "insufficient_power" {
+		t.Fatalf("expected 奥义.雷魂斩 to require 3 soul power, got %+v", insufficient)
+	}
+
+	runtime.StoredPower["player_21424"] = 3
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-leihun",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandLeiHunZhan,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 奥义.雷魂斩 to be accepted with 3 soul power, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 奥义.雷魂斩 action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "奥义.雷魂斩" || action.SourceMode != "1" || action.SourceActionLabel != "w8/thunderSoulAtk" {
+		t.Fatalf("expected captured 奥义.雷魂斩 action label, got %+v", action)
+	}
+	if action.Damage != 340 || action.TargetHP != 660 {
+		t.Fatalf("expected 奥义.雷魂斩 Lv1 captured multiplier without soul power damage bonus, got %+v", action)
+	}
+	actor := runtime.cellByHandle("player_21424")
+	if actor == nil || actor.MP != 76 {
+		t.Fatalf("expected 奥义.雷魂斩 to consume MP 24, got actor=%+v", actor)
 	}
 }
 
@@ -1991,13 +2094,13 @@ func TestKuangBaoUsesCapturedSelfBuffFormula(t *testing.T) {
 	target := runtime.cellByHandle("enemy_1")
 	target.HP = 500
 	attack := runtime.resolveAttack(actor, target, CommandNormalAttack)
-	if attack.Damage != 120 || attack.SourceActionLabel != "nomalAtk" || runtime.StatusEffects["player_21424"].KuangBaoRounds != 2 {
+	if attack.Damage != 100 || attack.SourceActionLabel != "nomalAtk" || runtime.StatusEffects["player_21424"].KuangBaoRounds != 2 {
 		t.Fatalf("expected 狂爆 to double attack without consuming rounds on hit, got action=%+v effects=%+v", attack, runtime.StatusEffects)
 	}
 
 	defenseProbe := runtime.resolveAttack(target, actor, CommandEnemyAttack)
-	if defenseProbe.Damage != 42 {
-		t.Fatalf("expected enemy one stored power to apply after 狂爆 reduces physical defense by 100%%, got %+v", defenseProbe)
+	if defenseProbe.Damage != 30 {
+		t.Fatalf("expected enemy damage after 狂爆 defense reduction without stored power bonus, got %+v", defenseProbe)
 	}
 
 	runtime.advanceKuangBaoRound("player_21424")
@@ -2007,8 +2110,510 @@ func TestKuangBaoUsesCapturedSelfBuffFormula(t *testing.T) {
 	}
 	target.HP = 500
 	expiredAttack := runtime.resolveAttack(actor, target, CommandNormalAttack)
-	if expiredAttack.Damage != 60 {
+	if expiredAttack.Damage != 50 {
 		t.Fatalf("expected expired 狂爆 to stop modifying attack damage, got %+v", expiredAttack)
+	}
+}
+
+func TestXueQieAppliesWoundBuffInfoOnHit(t *testing.T) {
+	var runtime *Runtime
+	for index := 0; index < 200; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-xueqie-%d", index),
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_21424",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+			RoleSkills: []session.RoleSkill{
+				{
+					Name:        "血切",
+					Level:       1,
+					Type:        "oneE",
+					Description: "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)",
+				},
+			},
+			Cells: []CellInfoPush{
+				{
+					BattleID: "battle-xueqie",
+					Handle:   "player_21424",
+					Camp:     CampTeam,
+					HP:       500,
+					MaxHP:    500,
+					MP:       80,
+					MaxMP:    80,
+					Attack:   100,
+					Defense:  0,
+					Hit:      100,
+				},
+				{
+					BattleID: "battle-xueqie",
+					Handle:   "enemy_1",
+					Camp:     CampEnemy,
+					HP:       300,
+					MaxHP:    300,
+					Attack:   0,
+					Defense:  0,
+					Hit:      100,
+					Dog:      0,
+					Fat:      0,
+				},
+			},
+		}
+		actor := candidate.cellByHandle("player_21424")
+		target := candidate.cellByHandle("enemy_1")
+		if candidate.hashBattleRollWithSalt(actor, target, CommandXueQie, "status:外伤") < 80 {
+			runtime = candidate
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 血切 status roll below 80")
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21424",
+		CommandID:    CommandXueQie,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 血切 to be accepted, got %+v", result)
+	}
+	if len(result.BuffInfos) != 1 {
+		t.Fatalf("expected 血切 hit to push one 外伤 BuffInfo, got %+v", result.BuffInfos)
+	}
+	buff := result.BuffInfos[0]
+	if buff.Name != "外伤" || buff.TargetHandle != "enemy_1" || buff.ReleaseHandle != "player_21424" || buff.Round != 4 {
+		t.Fatalf("expected source 外伤 buff metadata, got %+v", buff)
+	}
+	effect := runtime.StatusEffects["enemy_1"].Effects["外伤"]
+	if effect.Name != "外伤" || effect.Rounds != 3 || effect.SourceHandle != "player_21424" || effect.SourceSkill != "血切" || effect.SourceAttack != 100 || effect.TickMinPercent != 25 || effect.TickMaxPercent != 30 {
+		t.Fatalf("expected runtime 外伤 status to be recorded, got %+v", runtime.StatusEffects)
+	}
+	if len(result.Actions) < 2 || result.Actions[0].ActionName != "血切" || result.Actions[0].SourceActionLabel != "w8/cutBlood" {
+		t.Fatalf("expected 血切 action to keep captured source label, got %+v", result.Actions)
+	}
+	woundAction := result.Actions[1]
+	if woundAction.ActionName != "外伤" || woundAction.ActorHandle != "enemy_1" || woundAction.TargetHandle != "enemy_1" || woundAction.SourceMode != "0" || woundAction.SourceActionLabel != "battleStand" || woundAction.TargetActionStateCode != "3" {
+		t.Fatalf("expected captured 外伤 battleStand self action before enemy attack, got %+v", result.Actions)
+	}
+	if woundAction.Damage < 25 || woundAction.Damage > 30 || woundAction.TargetHP != runtime.cellByHandle("enemy_1").HP {
+		t.Fatalf("expected 外伤 tick to use 25%%-30%% source attack damage, got action=%+v enemy=%+v", woundAction, runtime.cellByHandle("enemy_1"))
+	}
+}
+
+func TestWoundTickCanKillEnemyBeforeEnemyAttack(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-wound-kill",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"enemy_1": {
+				Effects: map[string]BattleStatusEffect{
+					"外伤": {
+						Name:           "外伤",
+						Rounds:         1,
+						SourceHandle:   "player_21424",
+						SourceSkill:    "血切",
+						SourceAttack:   100,
+						TickMinPercent: 25,
+						TickMaxPercent: 30,
+					},
+				},
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-wound-kill",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   10,
+				Defense:  0,
+			},
+			{
+				BattleID: "battle-wound-kill",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       20,
+				MaxHP:    300,
+				Attack:   999,
+				Defense:  0,
+				Hit:      100,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-wound-kill",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandDefense,
+		TargetHandle: "player_21424",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected defense to be accepted, got %+v", result)
+	}
+	if len(result.Actions) != 2 || result.Actions[0].ActionName != "防御" || result.Actions[1].ActionName != "外伤" {
+		t.Fatalf("expected 外伤 tick to replace killed enemy attack, got %+v", result.Actions)
+	}
+	if result.Actions[1].Damage < 25 || !result.Actions[1].TargetDead {
+		t.Fatalf("expected 外伤 tick to kill enemy, got %+v", result.Actions[1])
+	}
+	if runtime.cellByHandle("enemy_1").HP != 0 || runtime.StatusEffects["enemy_1"].Effects != nil {
+		t.Fatalf("expected killed enemy wound status to expire, got enemy=%+v effects=%+v", runtime.cellByHandle("enemy_1"), runtime.StatusEffects)
+	}
+	if runtime.PendingOver == nil || runtime.PendingOver.Winner != CampTeam {
+		t.Fatalf("expected wound kill to queue battle over for team, got result=%+v pendingOver=%+v", result, runtime.PendingOver)
+	}
+}
+
+func TestXueQieDoesNotApplyWoundOnDodge(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-xueqie-dodge",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+	}
+	actor := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		Attack: 100,
+		MP:     80,
+		MaxMP:  80,
+		Hit:    0,
+	}
+	target := &CellInfoPush{
+		Handle: "enemy_1",
+		Camp:   CampEnemy,
+		HP:     300,
+		MaxHP:  300,
+		Dog:    1,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandXueQie)
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected 血切 dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 {
+		t.Fatalf("expected dodge to suppress 外伤 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	if len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to leave status effects empty, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestEnemyPalsyAtkAppliesParalysisOnHit(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-palsy-hit",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+	}
+	enemy := &CellInfoPush{
+		Handle: "enemy_bee",
+		Name:   "毒蜂",
+		Camp:   CampEnemy,
+		Attack: 80,
+		Hit:    100,
+	}
+	target := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		HP:     500,
+		MaxHP:  500,
+		Dog:    0,
+	}
+
+	action := runtime.resolveAttack(enemy, target, CommandEnemyPalsyAtk)
+
+	if action.ActionName != "蜂刺" || action.SourceActionLabel != "palsyAtk" || action.TargetActionStateCode != "0" {
+		t.Fatalf("expected captured 毒蜂 palsy action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "麻痹" || runtime.PendingBuffInfos[0].TargetHandle != "player_21424" || runtime.PendingBuffInfos[0].Round != 2 {
+		t.Fatalf("expected 蜂刺 hit to push 麻痹 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	effect := runtime.StatusEffects["player_21424"].Effects["麻痹"]
+	if effect.Name != "麻痹" || effect.Rounds != 2 || effect.SourceHandle != "enemy_bee" || effect.SourceSkill != "蜂刺" || !effect.SkipTurn {
+		t.Fatalf("expected 麻痹 skip-turn status, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestEnemyPalsyAtkDoesNotApplyParalysisOnDodge(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-palsy-dodge",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+	}
+	enemy := &CellInfoPush{
+		Handle: "enemy_bee",
+		Name:   "毒蜂",
+		Camp:   CampEnemy,
+		Attack: 80,
+		Hit:    0,
+	}
+	target := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		HP:     500,
+		MaxHP:  500,
+		Dog:    1,
+	}
+
+	action := runtime.resolveAttack(enemy, target, CommandEnemyPalsyAtk)
+
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected 蜂刺 dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to suppress 麻痹 status, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+}
+
+func TestEnemyPalsyAtkSkipsPlayerNextCommand(t *testing.T) {
+	var runtime *Runtime
+	for index := 0; index < 300; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-palsy-flow-%d", index),
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_21424",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+			Cells: []CellInfoPush{
+				{
+					BattleID: "battle-palsy-flow",
+					Handle:   "player_21424",
+					Camp:     CampTeam,
+					HP:       500,
+					MaxHP:    500,
+					Attack:   10,
+					Defense:  0,
+					Dog:      0,
+				},
+				{
+					BattleID:   "battle-palsy-flow",
+					Handle:     "enemy_bee",
+					Name:       "毒蜂",
+					DisplayURL: "monstermap/drughornets.swf",
+					Camp:       CampEnemy,
+					HP:         300,
+					MaxHP:      300,
+					Attack:     50,
+					Defense:    0,
+					Hit:        100,
+				},
+			},
+		}
+		actor := candidate.cellByHandle("enemy_bee")
+		target := candidate.cellByHandle("player_21424")
+		if candidate.resolveEnemySkillUse(actor, target, CommandEnemyPalsyAtk, enemyPalsyAtkChance) {
+			runtime = candidate
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 毒蜂 palsy skill roll")
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21424",
+		CommandID:    CommandDefense,
+		TargetHandle: "player_21424",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected defense turn to be accepted, got %+v", result)
+	}
+	if len(result.Actions) != 3 || result.Actions[0].ActionName != "防御" || result.Actions[1].ActionName != "蜂刺" || result.Actions[2].ActionName != "麻痹" {
+		t.Fatalf("expected 防御 -> 蜂刺 -> 麻痹 skip sequence, got %+v", result.Actions)
+	}
+	if result.Actions[2].ActorHandle != "player_21424" || result.Actions[2].TargetHandle != "player_21424" || result.Actions[2].SourceMode != "0" || result.Actions[2].SourceActionLabel != "battleStand" || result.Actions[2].Damage != 0 {
+		t.Fatalf("expected 麻痹 battleStand self action, got %+v", result.Actions[2])
+	}
+	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "麻痹" || result.BuffInfos[0].Round != 2 {
+		t.Fatalf("expected 麻痹 BuffInfo to be pushed with source round, got %+v", result.BuffInfos)
+	}
+	effect := runtime.StatusEffects["player_21424"].Effects["麻痹"]
+	if effect.Rounds != 1 || !effect.SkipTurn {
+		t.Fatalf("expected first skipped command to consume one 麻痹 round, got %+v", runtime.StatusEffects)
+	}
+	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_21424" || runtime.PendingStart.Round != 2 || runtime.PendingStart.Sequence != 2 {
+		t.Fatalf("expected skipped turn to queue the next player startCommand, got %+v", runtime.PendingStart)
+	}
+}
+
+func TestCapturedStunCounterAppliesBuffInfoAfterPlayerAttack(t *testing.T) {
+	var runtime *Runtime
+	for index := 0; index < 300; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-stun-counter-%d", index),
+			Round:            1,
+			nextSequence:     1,
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+		}
+		actor := &CellInfoPush{
+			Handle: "player_21424",
+			Camp:   CampTeam,
+			Attack: 100,
+			Hit:    100,
+			HP:     500,
+			MaxHP:  500,
+		}
+		target := &CellInfoPush{
+			Handle:     "enemy_bomepig",
+			Name:       "爆骨猪",
+			DisplayURL: "monstermap/bomepig.swf",
+			Camp:       CampEnemy,
+			HP:         300,
+			MaxHP:      300,
+			Dog:        0,
+		}
+		if candidate.hashBattleRollWithSalt(target, actor, CommandNormalAttack, "status:眩晕") < enemyStunCounterChance {
+			runtime = candidate
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 眩晕 counter roll")
+	}
+
+	actor := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		Attack: 100,
+		Hit:    100,
+		HP:     500,
+		MaxHP:  500,
+	}
+	target := &CellInfoPush{
+		Handle:     "enemy_bomepig",
+		Name:       "爆骨猪",
+		DisplayURL: "monstermap/bomepig.swf",
+		Camp:       CampEnemy,
+		HP:         300,
+		MaxHP:      300,
+		Dog:        0,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.TargetActionStateCode != "0" || target.HP >= target.MaxHP {
+		t.Fatalf("expected player attack to hit captured stun source, got action=%+v target=%+v", action, target)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected captured 眩晕 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "眩晕" || buff.Display != "9.png" || buff.Description != "眩晕无法行动" || buff.Round != 2 || buff.ReleaseHandle != "enemy_bomepig" || buff.TargetHandle != "player_21424" {
+		t.Fatalf("expected captured 眩晕 BuffInfo metadata, got %+v", buff)
+	}
+	effect := runtime.StatusEffects["player_21424"].Effects["眩晕"]
+	if effect.Name != "眩晕" || effect.Rounds != 2 || effect.SourceHandle != "enemy_bomepig" || effect.AppliedAction != "yun" || !effect.SkipTurn {
+		t.Fatalf("expected 眩晕 skip-turn status, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestCapturedStunCounterSkipsPlayerWithYunAction(t *testing.T) {
+	var runtime *Runtime
+	for index := 0; index < 300; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-stun-flow-%d", index),
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_21424",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+			Cells: []CellInfoPush{
+				{
+					BattleID: "battle-stun-flow",
+					Handle:   "player_21424",
+					Camp:     CampTeam,
+					HP:       500,
+					MaxHP:    500,
+					Attack:   20,
+					Defense:  0,
+					Hit:      100,
+					Dog:      0,
+				},
+				{
+					BattleID:   "battle-stun-flow",
+					Handle:     "enemy_crystalrock",
+					Name:       "晶石怪",
+					DisplayURL: "monstermap/crystalrock.swf",
+					Camp:       CampEnemy,
+					HP:         300,
+					MaxHP:      300,
+					Attack:     10,
+					Defense:    0,
+					Hit:        100,
+					Dog:        0,
+				},
+			},
+		}
+		actor := candidate.cellByHandle("player_21424")
+		target := candidate.cellByHandle("enemy_crystalrock")
+		if candidate.hashBattleRollWithSalt(target, actor, CommandNormalAttack, "status:眩晕") < enemyStunCounterChance {
+			runtime = candidate
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 眩晕 flow roll")
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21424",
+		CommandID:    CommandNormalAttack,
+		TargetHandle: "enemy_crystalrock",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected player attack to be accepted, got %+v", result)
+	}
+	if len(result.Actions) != 3 || result.Actions[0].ActionName != "普通攻击" || result.Actions[1].ActorHandle != "enemy_crystalrock" || result.Actions[2].ActionName != "眩晕" {
+		t.Fatalf("expected player attack -> enemy action -> 眩晕 skip sequence, got %+v", result.Actions)
+	}
+	stunAction := result.Actions[2]
+	if stunAction.ActorHandle != "player_21424" || stunAction.TargetHandle != "player_21424" || stunAction.SourceMode != "0" || stunAction.SourceActionLabel != "yun" || stunAction.Damage != 0 {
+		t.Fatalf("expected captured 眩晕 yun self action, got %+v", stunAction)
+	}
+	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "眩晕" || result.BuffInfos[0].Display != "9.png" || result.BuffInfos[0].Round != 2 {
+		t.Fatalf("expected captured 眩晕 BuffInfo to be pushed, got %+v", result.BuffInfos)
+	}
+	effect := runtime.StatusEffects["player_21424"].Effects["眩晕"]
+	if effect.Rounds != 1 || !effect.SkipTurn {
+		t.Fatalf("expected first skipped command to consume one 眩晕 round, got %+v", runtime.StatusEffects)
+	}
+	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_21424" || runtime.PendingStart.Round != 2 || runtime.PendingStart.Sequence != 2 {
+		t.Fatalf("expected 眩晕 skip to queue next player startCommand, got %+v", runtime.PendingStart)
 	}
 }
 
@@ -2050,16 +2655,16 @@ func TestResolveShiXueZhanLifeStealUsesActualDamage(t *testing.T) {
 	if action.ActionName != "嗜血斩" || action.SourceActionLabel != "w8/xyz1" {
 		t.Fatalf("expected captured 嗜血斩 Lv1 label, got %+v", action)
 	}
-	if action.Damage != 149 || action.TargetHP != 296 {
-		t.Fatalf("expected 92%% physical damage plus one stored power from 135 attack, got %+v", action)
+	if action.Damage != 124 || action.TargetHP != 321 {
+		t.Fatalf("expected 92%% physical damage without stored power bonus from 135 attack, got %+v", action)
 	}
 	if actor.MP != 146 {
 		t.Fatalf("expected 嗜血斩 Lv1 to consume MP 24, got actor=%+v", actor)
 	}
-	if actor.HP != 513 {
-		t.Fatalf("expected lifesteal floor(149*0.7)=104 to restore HP 409->513, got actor=%+v action=%+v", actor, action)
+	if actor.HP != 495 {
+		t.Fatalf("expected lifesteal floor(124*0.7)=86 to restore HP 409->495, got actor=%+v action=%+v", actor, action)
 	}
-	if action.RefreshInfos[0].Handle != actor.Handle || action.RefreshInfos[0].HP != 513 || action.RefreshInfos[0].MP != 146 {
+	if action.RefreshInfos[0].Handle != actor.Handle || action.RefreshInfos[0].HP != 495 || action.RefreshInfos[0].MP != 146 {
 		t.Fatalf("expected actor HP/MP refresh from 嗜血斩, got %+v", action.RefreshInfos)
 	}
 }
@@ -2134,8 +2739,8 @@ func TestBattleEnemySlideCutUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "滑行斩" || action.SourceActionLabel != "slideCut" {
 		t.Fatalf("expected captured enemy slideCut action, got %+v", action)
 	}
-	if action.Damage != 56 || action.TargetHP != 669 {
-		t.Fatalf("expected slideCut to use current physical damage path plus one stored power, got %+v", action)
+	if action.Damage != 47 || action.TargetHP != 678 {
+		t.Fatalf("expected slideCut to use current physical damage path without stored power bonus, got %+v", action)
 	}
 	if actor.MP != 184 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 184 {
 		t.Fatalf("expected slideCut to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
@@ -2170,8 +2775,8 @@ func TestBattleEnemyShadeCutUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "影刃" || action.SourceActionLabel != "shadeCut" {
 		t.Fatalf("expected captured enemy shadeCut action, got %+v", action)
 	}
-	if action.Damage != 312 || action.TargetHP != 413 {
-		t.Fatalf("expected shadeCut to use current physical damage path plus one stored power, got %+v", action)
+	if action.Damage != 260 || action.TargetHP != 465 {
+		t.Fatalf("expected shadeCut to use current physical damage path without stored power bonus, got %+v", action)
 	}
 	if actor.MP != 294 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 294 {
 		t.Fatalf("expected shadeCut to consume captured MP cost 40, got actor=%+v action=%+v", actor, action)
@@ -2207,8 +2812,8 @@ func TestBattleEnemyHelixAtkUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "螺旋锤杀" || action.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected captured cracktoad helixAtk action, got %+v", action)
 	}
-	if action.Damage != 191 || action.TargetHP != 854 {
-		t.Fatalf("expected helixAtk to use captured 1.32x damage path plus one stored power, got %+v", action)
+	if action.Damage != 159 || action.TargetHP != 886 {
+		t.Fatalf("expected helixAtk to use captured 1.32x damage path without stored power bonus, got %+v", action)
 	}
 	if actor.MP != 554 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected helixAtk to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
@@ -2241,8 +2846,8 @@ func TestMagicpandaEnemyNormalAttackUsesCapturedBroadcastName(t *testing.T) {
 	if action.ActionName != "法术普通攻击" || action.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected magicpanda normal attack to use CSV command_label while keeping source animation, config=%+v action=%+v", visibleMonster.Cell, action)
 	}
-	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 136 || action.TargetHP != 909 {
-		t.Fatalf("expected magicpanda normal attack to use captured magic-defense damage path plus one stored power, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
+	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 113 || action.TargetHP != 932 {
+		t.Fatalf("expected magicpanda normal attack to use captured magic-defense damage path without stored power bonus, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
 	}
 }
 
@@ -2268,8 +2873,8 @@ func TestMap143SwordpandaNormalAttackUsesCapturedDirectDamage(t *testing.T) {
 
 	action := runtime.resolveAttack(&actor, target, CommandEnemyAttack)
 
-	if visibleMonster.Cell.DamageDefenseType != "direct" || action.Damage != 145 || action.TargetHP != 900 {
-		t.Fatalf("expected map143 swordpanda captured HP delta plus one stored power without second defense subtraction, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
+	if visibleMonster.Cell.DamageDefenseType != "direct" || action.Damage != 121 || action.TargetHP != 924 {
+		t.Fatalf("expected map143 swordpanda captured HP delta without stored power bonus or second defense subtraction, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
 	}
 }
 
@@ -2434,8 +3039,8 @@ func TestCracktoadEnemyTurnCanUseCapturedHelixAtk(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyHelixAtk || enemyAction.ActionName != "螺旋锤杀" || enemyAction.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected cracktoad enemy turn to use captured helixAtk, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 191 || enemyAction.TargetHP != 854 {
-		t.Fatalf("expected cracktoad enemy turn to apply captured helixAtk multiplier plus one stored power, got %+v", enemyAction)
+	if enemyAction.Damage != 159 || enemyAction.TargetHP != 886 {
+		t.Fatalf("expected cracktoad enemy turn to apply captured helixAtk multiplier without stored power bonus, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 554 || enemyAction.RefreshInfos[0].Handle != "5176206909809579" || enemyAction.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected enemy helixAtk turn to consume MP 10, got cells=%+v action=%+v", runtime.Cells, enemyAction)
@@ -2494,8 +3099,8 @@ func TestCracktoadEnemyTurnCanUseCapturedNormalAttack(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyAttack || enemyAction.ActionName != "普通攻击" || enemyAction.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected cracktoad enemy turn to sometimes use captured normal attack, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 98 || enemyAction.TargetHP != 947 {
-		t.Fatalf("expected cracktoad normal attack to apply captured base damage plus one stored power, got %+v", enemyAction)
+	if enemyAction.Damage != 82 || enemyAction.TargetHP != 963 {
+		t.Fatalf("expected cracktoad normal attack to apply captured base damage without stored power bonus, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 564 || len(enemyAction.RefreshInfos) != 1 {
 		t.Fatalf("expected cracktoad normal attack to keep MP unchanged, got cells=%+v action=%+v", runtime.Cells, enemyAction)

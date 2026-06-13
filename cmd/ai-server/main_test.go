@@ -46,6 +46,25 @@ func TestHandlePacketLoginSuccess(t *testing.T) {
 	}
 }
 
+func TestHandlePacketHeartbeatIsOneWayKeepAlive(t *testing.T) {
+	store := session.NewStore()
+
+	result := handlePacket(store, protocol.Packet{
+		Cmd: cmdHeartbeat,
+		Seq: 1,
+	})
+
+	if !result.handled {
+		t.Fatal("expected heartbeat packet to be handled")
+	}
+	if result.responseCmd != 0 {
+		t.Fatalf("expected heartbeat to be one-way without response, got response cmd %d", result.responseCmd)
+	}
+	if len(result.responsePayload) != 0 {
+		t.Fatalf("expected heartbeat response payload to be empty, got %d bytes", len(result.responsePayload))
+	}
+}
+
 func TestHandlePacketRoleSelectPushesTownRoleStats(t *testing.T) {
 	store := session.NewStore()
 	login := store.Login(session.LoginRequest{

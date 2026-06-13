@@ -50,6 +50,82 @@ func TestBuildOverDoesNotInventUncapturedOrEscapedRewards(t *testing.T) {
 	}
 }
 
+func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	leader := TeamActor{
+		Role: session.RoleSummary{
+			RoleID:      "role_leader",
+			DisplayName: "队长",
+			Level:       12,
+		},
+		PlayerBase: session.PlayerBaseData{
+			PlayerID:    "player_leader",
+			DisplayName: "队长",
+			Level:       12,
+			MapID:       4,
+			HP:          300,
+			MaxHP:       300,
+			MP:          80,
+			MaxMP:       80,
+		},
+	}
+	member := TeamActor{
+		Role: session.RoleSummary{
+			RoleID:      "role_member",
+			DisplayName: "队员",
+			Level:       12,
+		},
+		PlayerBase: session.PlayerBaseData{
+			PlayerID:    "player_member",
+			DisplayName: "队员",
+			Level:       12,
+			MapID:       4,
+			HP:          280,
+			MaxHP:       280,
+			MP:          70,
+			MaxMP:       70,
+		},
+	}
+	runtime, bundle, ok := NewTeamWildBattle([]TeamActor{leader, member}, StartRequest{
+		MapID:       "4",
+		MapName:     "云隐村口",
+		StageFocusX: 120,
+	})
+	if !ok {
+		t.Fatal("expected team battle to start")
+	}
+	if len(runtime.livingCells(CampTeam)) != 2 || bundle.StartCommand.ActorHandle != leader.Role.RoleID {
+		t.Fatalf("expected leader to act first in two-player team battle, got cells=%+v start=%+v", runtime.Cells, bundle.StartCommand)
+	}
+	target := runtime.firstLiving(CampEnemy)
+	if target == nil {
+		t.Fatal("expected enemy target")
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     bundle.Start.BattleID,
+		ActorHandle:  leader.Role.RoleID,
+		CommandID:    CommandNormalAttack,
+		TargetHandle: target.Handle,
+		Round:        bundle.StartCommand.Round,
+		Sequence:     bundle.StartCommand.Sequence,
+	})
+	if result.ErrorCode != "" {
+		t.Fatalf("expected leader action to succeed, got %s", result.ErrorCode)
+	}
+	if result.StartCommand != nil || runtime.PendingStart == nil {
+		t.Fatalf("expected action to queue pending startCommand, got result=%+v pending=%+v", result.StartCommand, runtime.PendingStart)
+	}
+	playOver := runtime.ProcessPlayOver(PlayOverRequest{BattleID: bundle.Start.BattleID})
+	if playOver.ErrorCode != "" {
+		t.Fatalf("expected playOver to succeed, got %s", playOver.ErrorCode)
+	}
+	if playOver.StartCommand == nil || playOver.StartCommand.ActorHandle != member.Role.RoleID {
+		t.Fatalf("expected next startCommand for member, got %+v", playOver.StartCommand)
+	}
+}
+
 func TestBuildOverUsesCapturedMap49RobberRewardWithExperience(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	over := (&Runtime{BattleID: "battle-map49", MapID: "49", Round: 1}).buildOver(CampTeam)

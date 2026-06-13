@@ -255,12 +255,18 @@ type ResultPayload struct {
 	Escaped       bool     `json:"escaped,omitempty"`
 }
 
+type TeamActor struct {
+	Role       session.RoleSummary
+	PlayerBase session.PlayerBaseData
+}
+
 type Runtime struct {
 	BattleID              string
 	RoleID                string
 	MapID                 string
 	SourceMonsterHandle   string
 	RoleSkills            []session.RoleSkill
+	RoleSkillsByHandle    map[string][]session.RoleSkill
 	Phase                 string
 	Round                 int
 	Cells                 []CellInfoPush
@@ -430,6 +436,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		MapID:               mapID,
 		SourceMonsterHandle: sourceMonsterHandle,
 		RoleSkills:          cloneBattleRoleSkills(role.Skills),
+		RoleSkillsByHandle:  map[string][]session.RoleSkill{role.RoleID: cloneBattleRoleSkills(role.Skills)},
 		Phase:               PhaseCommand,
 		Round:               1,
 		Cells:               cells,
@@ -465,6 +472,92 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			Power:       runtime.powerFor(role.RoleID),
 		},
 	}, true
+}
+
+func NewTeamWildBattle(actors []TeamActor, request StartRequest) (*Runtime, StartBundle, bool) {
+	if len(actors) == 0 {
+		return nil, StartBundle{}, false
+	}
+	runtime, bundle, ok := NewWildBattle(actors[0].Role, actors[0].PlayerBase, request)
+	if !ok {
+		return nil, StartBundle{}, false
+	}
+	if runtime.RoleSkillsByHandle == nil {
+		runtime.RoleSkillsByHandle = map[string][]session.RoleSkill{}
+	}
+	for index := 1; index < len(actors); index++ {
+		actor := actors[index]
+		roleID := strings.TrimSpace(actor.Role.RoleID)
+		if roleID == "" || runtime.cellByHandle(roleID) != nil {
+			continue
+		}
+		cell := buildTeamActorCell(runtime.BattleID, actor.Role, actor.PlayerBase)
+		runtime.Cells = append(runtime.Cells, cell)
+		runtime.RoleSkillsByHandle[roleID] = cloneBattleRoleSkills(actor.Role.Skills)
+	}
+	bundle.Cells = append([]CellInfoPush(nil), runtime.Cells...)
+	return runtime, bundle, true
+}
+
+func buildTeamActorCell(battleID string, role session.RoleSummary, playerBase session.PlayerBaseData) CellInfoPush {
+	playerLevel := maxInt(1, playerBase.Level)
+	roleState := playerBase.RoleState
+	rolePhysique := playerBase.RolePhysique
+	if roleState != nil && roleState.Lv > 0 {
+		playerLevel = roleState.Lv
+	}
+	playerMaxHP := maxInt(1, playerBase.MaxHP)
+	playerMaxMP := maxInt(1, playerBase.MaxMP)
+	if rolePhysique != nil {
+		playerMaxHP = maxInt(1, rolePhysique.MaxHP)
+		playerMaxMP = maxInt(1, rolePhysique.MaxMP)
+	}
+	playerHP := clampInt(defaultNonZero(playerBase.HP, playerMaxHP), 1, playerMaxHP)
+	playerMP := clampInt(defaultNonZero(playerBase.MP, playerMaxMP), 0, playerMaxMP)
+	if roleState != nil {
+		playerHP = clampInt(defaultNonZero(roleState.HP, playerHP), 1, playerMaxHP)
+		playerMP = clampInt(defaultNonZero(roleState.MP, playerMP), 0, playerMaxMP)
+	}
+	playerSpeed := 130
+	playerAttack := 10
+	playerDefense := 10
+	playerMgcDefense := 10
+	playerHit := defaultBattleHit
+	playerDog := defaultBattleDog
+	playerFat := defaultBattleFat
+	if roleState != nil && roleState.Speed > 0 {
+		playerSpeed = roleState.Speed
+	}
+	if rolePhysique != nil {
+		playerAttack = maxInt(1, rolePhysique.PhyAtk)
+		playerDefense = maxInt(0, rolePhysique.PhyDef)
+		playerMgcDefense = maxInt(0, rolePhysique.MgcDef)
+		playerHit = maxInt(0, rolePhysique.Hit)
+		playerDog = maxInt(0, rolePhysique.Dog)
+		playerFat = maxInt(0, rolePhysique.Fat)
+	}
+	return CellInfoPush{
+		BattleID:     battleID,
+		Camp:         CampTeam,
+		Handle:       role.RoleID,
+		Name:         defaultString(playerBase.DisplayName, role.DisplayName),
+		DisplayURL:   defaultString(playerBase.SourceQuery, defaultString(role.SourceQuery, "human/human.swf?w1=1&")),
+		Level:        playerLevel,
+		XScale:       100,
+		YScale:       100,
+		MaxHP:        playerMaxHP,
+		HP:           playerHP,
+		MaxMP:        playerMaxMP,
+		MP:           playerMP,
+		Speed:        playerSpeed,
+		Attack:       playerAttack,
+		Defense:      playerDefense,
+		MgcDefense:   playerMgcDefense,
+		Hit:          playerHit,
+		Dog:          playerDog,
+		Fat:          playerFat,
+		CommandLabel: "普通攻击",
+	}
 }
 
 func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
@@ -520,7 +613,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 			runtime.resolveSelfAction(actor, commandID, "蓄力", "def"),
 		})
 	case CommandKuangBao:
-		if !runtime.isBattleCommandAllowed(commandID) {
+		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
 			return ActionResult{ErrorCode: "unsupported_command"}
 		}
 		if !runtime.isSelfTarget(actor, request.TargetHandle) {
@@ -528,7 +621,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		}
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.sourceSkillProfile("狂爆", 1)
+		profile := runtime.sourceSkillProfileForActor(actor.Handle, "狂爆", 1)
 		if profile.MPCost > 0 {
 			actor.MP = maxInt(0, actor.MP-profile.MPCost)
 		}
@@ -540,7 +633,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return result
 	}
 
-	if !runtime.isBattleCommandAllowed(commandID) {
+	if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
 		return ActionResult{ErrorCode: "unsupported_command"}
 	}
 
@@ -660,7 +753,12 @@ func (runtime *Runtime) validateActorTurn(request actionTurnRequest) (*CellInfoP
 }
 
 func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, actions []ActionPush) ActionResult {
-	maxActorSingleHPLoss := 0
+	teamHPBeforeEnemyTurn := map[string]int{}
+	for _, cell := range runtime.Cells {
+		if cell.Camp == CampTeam {
+			teamHPBeforeEnemyTurn[cell.Handle] = cell.HP
+		}
+	}
 	for {
 		if winner := runtime.resolveWinner(); winner != "" {
 			runtime.Phase = PhaseFinished
@@ -688,17 +786,12 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 				continue
 			}
 			actions = append(actions, runtime.resolveEnemyRampageActions(enemy)...)
-			beforeActorHP := actor.HP
-			beforeHP := team.HP
 			targetHandle := team.Handle
 			commandID := runtime.enemyBattleCommand(enemy, team)
 			actions = append(actions, runtime.resolveEnemyCommandActions(enemy, team, commandID)...)
 			runtime.setStoredPower(enemy.Handle, 0)
-			if targetHandle == actor.Handle {
-				maxActorSingleHPLoss = maxInt(maxActorSingleHPLoss, beforeHP-team.HP)
-			}
-			if commandID == CommandEnemyFirePower || commandID == CommandEnemyDeadLight {
-				maxActorSingleHPLoss = maxInt(maxActorSingleHPLoss, beforeActorHP-actor.HP)
+			if _, ok := teamHPBeforeEnemyTurn[targetHandle]; !ok {
+				teamHPBeforeEnemyTurn[targetHandle] = team.HP
 			}
 			team = runtime.firstLiving(CampTeam)
 			if runtime.resolveWinner() != "" {
@@ -716,7 +809,18 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			}
 		}
 
-		statusActions, skipTurn := runtime.resolveStatusStartActions(actor)
+		nextActor := runtime.nextLivingTeamActorAfter(actor.Handle)
+		if nextActor == nil {
+			runtime.Phase = PhaseFinished
+			runtime.PendingStart = nil
+			runtime.PendingOver = runtime.buildOver(CampEnemy)
+			return ActionResult{
+				Actions:        actions,
+				BuffInfos:      runtime.consumePendingBuffInfos(),
+				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
+			}
+		}
+		statusActions, skipTurn := runtime.resolveStatusStartActions(nextActor)
 		actions = append(actions, statusActions...)
 		if winner := runtime.resolveWinner(); winner != "" {
 			runtime.Phase = PhaseFinished
@@ -731,24 +835,28 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 
 		runtime.Round += 1
 		runtime.nextSequence += 1
-		runtime.ActiveHandle = actor.Handle
+		runtime.ActiveHandle = nextActor.Handle
 		runtime.Phase = PhasePlaying
-		runtime.advanceKuangBaoRound(actor.Handle)
-		if skipTurn && runtime.hasActiveAutoContinueSkipStatus(actor.Handle) {
+		runtime.advanceKuangBaoRound(nextActor.Handle)
+		if skipTurn && runtime.hasActiveAutoContinueSkipStatus(nextActor.Handle) {
 			continue
 		}
 		if !skipTurn {
-			runtime.setStoredPower(actor.Handle, maxInt(
-				runtime.powerFor(actor.Handle),
-				storedPowerFromSingleHPLoss(maxActorSingleHPLoss, actor.MaxHP),
+			hpBefore, ok := teamHPBeforeEnemyTurn[nextActor.Handle]
+			if !ok {
+				hpBefore = nextActor.HP
+			}
+			runtime.setStoredPower(nextActor.Handle, maxInt(
+				runtime.powerFor(nextActor.Handle),
+				storedPowerFromSingleHPLoss(maxInt(0, hpBefore-nextActor.HP), nextActor.MaxHP),
 			))
 		}
 		start := StartCommandPush{
 			BattleID:    runtime.BattleID,
-			ActorHandle: actor.Handle,
+			ActorHandle: nextActor.Handle,
 			Round:       runtime.Round,
 			Sequence:    runtime.nextSequence,
-			Power:       runtime.powerFor(actor.Handle),
+			Power:       runtime.powerFor(nextActor.Handle),
 		}
 		runtime.PendingStart = &start
 		runtime.PendingOver = nil
@@ -945,19 +1053,19 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 	}
 	switch normalizeBattleCommandID(commandID) {
 	case CommandMiZhan:
-		return runtime.sourceSkillProfile("密斩", 1)
+		return runtime.sourceSkillProfileForActor(actor.Handle, "密斩", 1)
 	case CommandDuoDuanZhan:
-		return runtime.sourceSkillProfile("多段斩", 1)
+		return runtime.sourceSkillProfileForActor(actor.Handle, "多段斩", 1)
 	case CommandShiXueZhan:
-		return runtime.sourceSkillProfile("嗜血斩", 1)
+		return runtime.sourceSkillProfileForActor(actor.Handle, "嗜血斩", 1)
 	case CommandKuangBao:
-		return runtime.sourceSkillProfile("狂爆", 1)
+		return runtime.sourceSkillProfileForActor(actor.Handle, "狂爆", 1)
 	case CommandHongYueZhan:
-		return runtime.sourceSkillProfile("红月斩", 1)
+		return runtime.sourceSkillProfileForActor(actor.Handle, "红月斩", 1)
 	case CommandXueQie:
-		return runtime.sourceSkillProfile("血切", 1)
+		return runtime.sourceSkillProfileForActor(actor.Handle, "血切", 1)
 	case CommandLeiHunZhan:
-		return runtime.sourceSkillProfile("奥义.雷魂斩", 1)
+		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
 	case CommandEnemySlideCut:
 		return commandProfile{
 			ActionName:        "滑行斩",
@@ -1282,33 +1390,41 @@ func sourceEnemyCanStunOnHit(enemy *CellInfoPush) bool {
 }
 
 func (runtime *Runtime) isBattleCommandAllowed(commandID string) bool {
+	return runtime.isBattleCommandAllowedForActor("", commandID)
+}
+
+func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID string) bool {
 	switch normalizeBattleCommandID(commandID) {
 	case CommandNormalAttack:
 		return true
 	case CommandMiZhan:
-		if len(runtime.RoleSkills) == 0 {
+		if len(runtime.skillsForHandle(handle)) == 0 {
 			return true
 		}
-		return runtime.hasRoleSkill("密斩")
+		return runtime.hasRoleSkillForActor(handle, "密斩")
 	case CommandDuoDuanZhan:
-		return runtime.hasRoleSkill("多段斩")
+		return runtime.hasRoleSkillForActor(handle, "多段斩")
 	case CommandShiXueZhan:
-		return runtime.hasRoleSkill("嗜血斩")
+		return runtime.hasRoleSkillForActor(handle, "嗜血斩")
 	case CommandKuangBao:
-		return runtime.hasRoleSkill("狂爆")
+		return runtime.hasRoleSkillForActor(handle, "狂爆")
 	case CommandHongYueZhan:
-		return runtime.hasRoleSkill("红月斩")
+		return runtime.hasRoleSkillForActor(handle, "红月斩")
 	case CommandXueQie:
-		return runtime.hasRoleSkill("血切")
+		return runtime.hasRoleSkillForActor(handle, "血切")
 	case CommandLeiHunZhan:
-		return runtime.hasRoleSkill("奥义.雷魂斩")
+		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
 	default:
 		return false
 	}
 }
 
 func (runtime *Runtime) sourceSkillProfile(name string, fallbackLevel int) commandProfile {
-	skill, ok := runtime.roleSkillByName(name)
+	return runtime.sourceSkillProfileForActor("", name, fallbackLevel)
+}
+
+func (runtime *Runtime) sourceSkillProfileForActor(handle string, name string, fallbackLevel int) commandProfile {
+	skill, ok := runtime.roleSkillByNameForActor(handle, name)
 	if !ok {
 		skill = fallbackSourceBattleSkill(name, fallbackLevel)
 	}
@@ -1326,21 +1442,42 @@ func (runtime *Runtime) sourceSkillProfile(name string, fallbackLevel int) comma
 }
 
 func (runtime *Runtime) hasRoleSkill(name string) bool {
-	_, ok := runtime.roleSkillByName(name)
+	return runtime.hasRoleSkillForActor("", name)
+}
+
+func (runtime *Runtime) hasRoleSkillForActor(handle string, name string) bool {
+	_, ok := runtime.roleSkillByNameForActor(handle, name)
 	return ok
 }
 
 func (runtime *Runtime) roleSkillByName(name string) (session.RoleSkill, bool) {
+	return runtime.roleSkillByNameForActor("", name)
+}
+
+func (runtime *Runtime) roleSkillByNameForActor(handle string, name string) (session.RoleSkill, bool) {
 	if runtime == nil {
 		return session.RoleSkill{}, false
 	}
 	normalizedName := strings.TrimSpace(name)
-	for _, skill := range runtime.RoleSkills {
+	for _, skill := range runtime.skillsForHandle(handle) {
 		if strings.TrimSpace(skill.Name) == normalizedName {
 			return skill, true
 		}
 	}
 	return session.RoleSkill{}, false
+}
+
+func (runtime *Runtime) skillsForHandle(handle string) []session.RoleSkill {
+	if runtime == nil {
+		return nil
+	}
+	handle = strings.TrimSpace(handle)
+	if handle != "" && runtime.RoleSkillsByHandle != nil {
+		if skills, ok := runtime.RoleSkillsByHandle[handle]; ok {
+			return skills
+		}
+	}
+	return runtime.RoleSkills
 }
 
 func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
@@ -2487,6 +2624,37 @@ func (runtime *Runtime) livingCells(camp Camp) []*CellInfoPush {
 		}
 	}
 	return cells
+}
+
+func (runtime *Runtime) nextLivingTeamActorAfter(handle string) *CellInfoPush {
+	if runtime == nil {
+		return nil
+	}
+	teamIndexes := make([]int, 0, len(runtime.Cells))
+	currentTeamIndex := -1
+	for index := range runtime.Cells {
+		if runtime.Cells[index].Camp != CampTeam {
+			continue
+		}
+		if runtime.Cells[index].Handle == handle {
+			currentTeamIndex = len(teamIndexes)
+		}
+		teamIndexes = append(teamIndexes, index)
+	}
+	if len(teamIndexes) == 0 {
+		return nil
+	}
+	start := 0
+	if currentTeamIndex >= 0 {
+		start = (currentTeamIndex + 1) % len(teamIndexes)
+	}
+	for offset := 0; offset < len(teamIndexes); offset++ {
+		index := teamIndexes[(start+offset)%len(teamIndexes)]
+		if runtime.Cells[index].HP > 0 {
+			return &runtime.Cells[index]
+		}
+	}
+	return nil
 }
 
 func (runtime *Runtime) isSelfTarget(actor *CellInfoPush, targetHandle string) bool {

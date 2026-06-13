@@ -11,6 +11,7 @@ import (
 	"ai-server/internal/mall"
 	"ai-server/internal/protocol"
 	"ai-server/internal/session"
+	"ai-server/internal/team"
 	"ai-server/internal/world"
 )
 
@@ -23,6 +24,7 @@ type packetResult struct {
 	roleState         *session.RoleState
 	rolePhysique      *session.RolePhysique
 	chatMessages      []classicTownChatMessagePush
+	chatBroadcasts    []classicTownChatBroadcast
 	skillCap          *classicTownSkillCapPush
 	skillInfos        []classicTownSkillInfoPush
 	skillClears       []classicTownClearSkillInfoPush
@@ -54,6 +56,11 @@ type packetResult struct {
 	mallSearchPage    *mall.SearchPagePush
 	mallCurrency      *mall.CurrencyPush
 	mallPurchase      *mall.PurchaseResult
+	teamEvents        []team.Event
+	teamSyncTransfer  *classicTeamSyncTransfer
+	teamDungeonReset  *classicTeamDungeonReset
+	teamBattleStart   *classicTeamBattleStart
+	teamBattleSync    *classicTeamBattleSync
 	battleStart       *battle.StartPush
 	battleCells       []battle.CellInfoPush
 	battleCommand     *battle.StartCommandPush
@@ -63,6 +70,33 @@ type packetResult struct {
 	battleOver        *battle.OverPush
 	removeRoleHandles []string
 	handled           bool
+}
+
+type classicTeamSyncTransfer struct {
+	ActorRoleID string
+	FromMapID   int
+	TargetMapID int
+	Spawn       world.SpawnPoint
+	Members     []team.Member
+}
+
+type classicTeamDungeonReset struct {
+	ActorRoleID string
+	InstanceKey string
+	MapID       int
+	Members     []team.Member
+}
+
+type classicTeamBattleStart struct {
+	ActorRoleID string
+	Runtime     *battle.Runtime
+	Bundle      battle.StartBundle
+	Members     []team.Member
+}
+
+type classicTeamBattleSync struct {
+	ActorRoleID string
+	Result      packetResult
 }
 
 type classicTownDungeonInstancePush struct {
@@ -114,6 +148,8 @@ func handlePacket(store *session.Store, packet protocol.Packet) packetResult {
 
 func handlePacketWithSession(store *session.Store, packet protocol.Packet, socketSession *packetSession) packetResult {
 	switch packet.Cmd {
+	case cmdHeartbeat:
+		return packetResult{handled: true}
 	case cmdAuthLoginRequest:
 		var request session.LoginRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -394,6 +430,40 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicGuildNoticeUpdateResult(store, socketSession, request)
+	case cmdClassicTeamInviteReq:
+		var request classicTeamInviteRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTeamInviteResult(socketSession, request)
+	case cmdClassicTeamInviteReplyReq:
+		var request classicTeamInviteReplyRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTeamInviteReplyResult(socketSession, request)
+	case cmdClassicTeamLeaveReq:
+		return buildClassicTeamLeaveResult(socketSession)
+	case cmdClassicTeamKickReq:
+		var request classicTeamMemberTargetRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTeamKickResult(socketSession, request)
+	case cmdClassicTeamTransferLeaderReq:
+		var request classicTeamMemberTargetRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTeamTransferLeaderResult(socketSession, request)
+	case cmdClassicTeamSyncChangeMapReq:
+		var request classicTeamSyncChangeMapRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTeamSyncChangeMapResult(socketSession, request)
+	case cmdClassicTeamResetDungeonReq:
+		return buildClassicTeamResetDungeonResult(store, socketSession)
 	case cmdClassicMallCategoryListReq:
 		return buildClassicMallCategoryListResult(store, socketSession)
 	case cmdClassicMallSearchCountReq:
@@ -464,7 +534,12 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 		return packetResult{handled: true}
 	}
 
-	runtime, bundle, ok := battle.NewWildBattle(*socketSession.selectedRole, *socketSession.playerBase, request)
+	teamPlan := classicTeamManager.BuildBattleMemberPlan(socketSession.selectedRole.RoleID, request.MapID)
+	actors, sharedMembers := classicTeamHub.buildBattleActors(battle.TeamActor{
+		Role:       *socketSession.selectedRole,
+		PlayerBase: *socketSession.playerBase,
+	}, teamPlan.Members, request.MapID)
+	runtime, bundle, ok := battle.NewTeamWildBattle(actors, request)
 	if !ok {
 		log.Printf("[ai-server] classic battle StartBattle ignored unsupported mapId=%s", request.MapID)
 		return packetResult{handled: true}
@@ -485,10 +560,22 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 		enemyCells,
 	)
 	return packetResult{
-		battleStart:   &bundle.Start,
-		battleCells:   bundle.Cells,
-		battleCommand: &bundle.StartCommand,
-		handled:       true,
+		battleStart: &bundle.Start,
+		battleCells: bundle.Cells,
+		battleCommand: &battle.StartCommandPush{
+			BattleID:    bundle.StartCommand.BattleID,
+			ActorHandle: bundle.StartCommand.ActorHandle,
+			Round:       bundle.StartCommand.Round,
+			Sequence:    bundle.StartCommand.Sequence,
+			Power:       bundle.StartCommand.Power,
+		},
+		teamBattleStart: &classicTeamBattleStart{
+			ActorRoleID: socketSession.selectedRole.RoleID,
+			Runtime:     runtime,
+			Bundle:      bundle,
+			Members:     sharedMembers,
+		},
+		handled: true,
 	}
 }
 
@@ -502,6 +589,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		return packetResult{handled: true}
 	}
 
+	sharedBattle := shouldBroadcastTeamBattle(socketSession)
 	result := socketSession.battleRuntime.ProcessAction(request)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle battleAction rejected battleId=%s actor=%s target=%s error=%s", request.BattleID, request.ActorHandle, request.TargetHandle, result.ErrorCode)
@@ -516,7 +604,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 	}
-	return packetResult{
+	packet := packetResult{
 		battleActions:     result.Actions,
 		battleBuffs:       result.BuffInfos,
 		battleClearBuffs:  result.ClearBuffInfos,
@@ -527,6 +615,13 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		removeRoleHandles: removeRoleHandles,
 		handled:           true,
 	}
+	if sharedBattle {
+		packet.teamBattleSync = &classicTeamBattleSync{
+			ActorRoleID: socketSession.selectedRole.RoleID,
+			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver},
+		}
+	}
+	return packet
 }
 
 func buildClassicBattleItemActionResult(store *session.Store, socketSession *packetSession, request battle.ItemActionRequest) packetResult {
@@ -545,6 +640,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		return packetResult{handled: true}
 	}
 
+	sharedBattle := shouldBroadcastTeamBattle(socketSession)
 	result := socketSession.battleRuntime.ProcessItemAction(request, classicBattleItemActionFromRoleItem(item))
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle ActiveItem rejected battleId=%s actor=%s type=%s index=%d error=%s", request.BattleID, request.ActorHandle, request.Type, request.Index, result.ErrorCode)
@@ -593,6 +689,12 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 			Index:  clear.Index,
 		})
 	}
+	if sharedBattle {
+		packet.teamBattleSync = &classicTeamBattleSync{
+			ActorRoleID: socketSession.selectedRole.RoleID,
+			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver},
+		}
+	}
 	return packet
 }
 
@@ -606,6 +708,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		return packetResult{handled: true}
 	}
 
+	sharedBattle := shouldBroadcastTeamBattle(socketSession)
 	result := socketSession.battleRuntime.ProcessPlayOver(request)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle BattlePlayOver rejected battleId=%s error=%s", request.BattleID, result.ErrorCode)
@@ -621,7 +724,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 	}
-	return packetResult{
+	packet := packetResult{
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
 		roleState:         roleState,
@@ -629,6 +732,30 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		removeRoleHandles: removeRoleHandles,
 		handled:           true,
 	}
+	if sharedBattle {
+		packet.teamBattleSync = &classicTeamBattleSync{
+			ActorRoleID: socketSession.selectedRole.RoleID,
+			Result:      packetResult{battleCommand: packet.battleCommand, battleOver: packet.battleOver},
+		}
+	}
+	return packet
+}
+
+func shouldBroadcastTeamBattle(socketSession *packetSession) bool {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.battleRuntime == nil {
+		return false
+	}
+	teamCells := 0
+	for _, cell := range socketSession.battleRuntime.Cells {
+		if cell.Camp == battle.CampTeam {
+			teamCells += 1
+		}
+	}
+	if teamCells <= 1 {
+		return false
+	}
+	recipients, ok := classicTeamManager.RecipientsForTeam(socketSession.selectedRole.RoleID)
+	return ok && len(recipients) > 1
 }
 
 func visibleMonsterRemoveHandles(runtime *battle.Runtime, over *battle.OverPush) []string {
@@ -1503,6 +1630,20 @@ func buildClassicTownChatSendResult(socketSession *packetSession, request classi
 		push.TargetName = targetName
 		push.Outgoing = true
 	}
+	if channel == "team" {
+		chatMessages, recipients, ok := buildClassicTeamChatEvents(socketSession, push)
+		if !ok {
+			return packetResult{
+				chatMessages: chatMessages,
+				handled:      true,
+			}
+		}
+		log.Printf("[ai-server] classic town TeamSpeak roleId=%s msg=%s recipients=%d", role.RoleID, message, len(recipients))
+		return packetResult{
+			chatBroadcasts: []classicTownChatBroadcast{{Recipients: recipients, Message: push}},
+			handled:        true,
+		}
+	}
 
 	log.Printf("[ai-server] classic town Speak roleId=%s channel=%s msg=%s", role.RoleID, channel, message)
 	return packetResult{
@@ -1875,6 +2016,21 @@ func buildClassicTownTransferResult(
 		log.Printf("[ai-server] classic town transfer ignored without selected role mapId=%s x=%d y=%d", mapIDText, spawn.X, spawn.Y)
 		return packetResult{handled: true}
 	}
+	fromMapID := socketSession.playerBase.MapID
+	if fromMapID <= 0 {
+		fromMapID = socketSession.selectedRole.MapID
+	}
+	syncPlan := classicTeamManager.BuildSyncTransferPlan(socketSession.selectedRole.RoleID, strconv.Itoa(fromMapID))
+	if syncPlan.Enabled && syncPlan.ErrorMessage == "" {
+		if _, isDungeonTarget := world.DungeonInstanceKeyForMapID(mapID); isDungeonTarget {
+			if warningMessage, ok := classicTeamHub.preflightDungeonSyncTransfer(store, syncPlan.Members, mapID); !ok {
+				return packetResult{
+					chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(warningMessage)},
+					handled:      true,
+				}
+			}
+		}
+	}
 	entryResult, ok := consumeDungeonEntryTicketIfNeeded(store, socketSession, mapID)
 	if !ok {
 		return entryResult
@@ -1893,13 +2049,28 @@ func buildClassicTownTransferResult(
 	}
 	filterDefeatedVisibleMonsters(&bootstrap, socketSession)
 	log.Printf("[ai-server] classic town transfer mapId=%s x=%d y=%d roleId=%s", mapIDText, spawn.X, spawn.Y, role.RoleID)
+	var teamSyncTransfer *classicTeamSyncTransfer
+	if syncPlan.Enabled {
+		if syncPlan.ErrorMessage != "" {
+			entryResult.chatMessages = append(entryResult.chatMessages, classicTownSystemWarningMessage(syncPlan.ErrorMessage))
+		} else if len(syncPlan.Members) > 0 {
+			teamSyncTransfer = &classicTeamSyncTransfer{
+				ActorRoleID: role.RoleID,
+				FromMapID:   fromMapID,
+				TargetMapID: mapID,
+				Spawn:       spawn,
+				Members:     syncPlan.Members,
+			}
+		}
+	}
 	return packetResult{
-		townBootstrap:   &bootstrap,
-		dungeonInstance: dungeonInstance,
-		itemInfos:       entryResult.itemInfos,
-		itemClears:      entryResult.itemClears,
-		chatMessages:    entryResult.chatMessages,
-		handled:         true,
+		townBootstrap:    &bootstrap,
+		dungeonInstance:  dungeonInstance,
+		itemInfos:        entryResult.itemInfos,
+		itemClears:       entryResult.itemClears,
+		chatMessages:     entryResult.chatMessages,
+		teamSyncTransfer: teamSyncTransfer,
+		handled:          true,
 	}
 }
 
@@ -1994,6 +2165,33 @@ func consumeDungeonEntryTicketIfNeeded(store *session.Store, socketSession *pack
 	return result, true
 }
 
+func checkDungeonEntryTicketIfNeeded(store *session.Store, socketSession *packetSession, targetMapID int) (string, bool) {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return "队员连接状态异常，队伍同步取消。", false
+	}
+	targetInstanceKey, ok := world.DungeonInstanceKeyForMapID(targetMapID)
+	if !ok {
+		return "", true
+	}
+	rule, ok := dungeonEntryRuleForInstance(targetInstanceKey)
+	if !ok || rule.ConsumePolicy == dungeonEntryConsumeNone || rule.TicketName == "" {
+		return "", true
+	}
+	currentMapID := socketSession.selectedRole.MapID
+	currentInstanceKey, currentInDungeon := world.DungeonInstanceKeyForMapID(currentMapID)
+	if currentInDungeon && currentInstanceKey == targetInstanceKey {
+		return "", true
+	}
+	if _, ok := store.GetRoleDungeonInstance(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, targetInstanceKey); ok {
+		return "", true
+	}
+	ticket, ok := findRoleTicketItem(store, socketSession, rule.TicketName)
+	if !ok || ticket.Count < rule.TicketCount {
+		return "队员【" + socketSession.selectedRole.DisplayName + "】进入" + dungeonInstanceDisplayName(targetInstanceKey) + "需要" + rule.TicketName + "x" + strconv.Itoa(rule.TicketCount) + "，队伍同步取消。", false
+	}
+	return "", true
+}
+
 func dungeonEntryRuleForInstance(instanceKey string) (dungeonEntryRule, bool) {
 	switch instanceKey {
 	case session.DungeonInstanceShuiliandong:
@@ -2047,6 +2245,16 @@ func filterDefeatedVisibleMonsters(snapshot *world.TownBootstrapSnapshot, socket
 		createRoles = append(createRoles, rolePush)
 	}
 	snapshot.CreateRoles = createRoles
+}
+
+func inactiveDungeonInstancePush(instanceKey string, mapID int) *classicTownDungeonInstancePush {
+	return &classicTownDungeonInstancePush{
+		Key:             instanceKey,
+		DisplayName:     dungeonInstanceDisplayName(instanceKey),
+		MapID:           strconv.Itoa(mapID),
+		Active:          false,
+		DurationSeconds: session.DungeonInstanceTTLSeconds(),
+	}
 }
 
 func syncDungeonInstanceState(store *session.Store, socketSession *packetSession, mapID int) *classicTownDungeonInstancePush {

@@ -93,6 +93,11 @@ type classicTownChatMessagePush struct {
 	Bold       bool   `json:"bold,omitempty"`
 }
 
+type classicTownChatBroadcast struct {
+	Recipients []string
+	Message    classicTownChatMessagePush
+}
+
 type classicTownSkillInfoPush struct {
 	Handle      string `json:"handle"`
 	Name        string `json:"name"`

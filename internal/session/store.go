@@ -797,6 +797,33 @@ func (store *Store) GetRoleDungeonInstance(playerID string, roleID string, key s
 	return DungeonInstanceState{}, false
 }
 
+func (store *Store) ResetRoleDungeonInstance(playerID string, roleID string, key string) bool {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return false
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+		if len(roles[index].DungeonInstances) > 0 {
+			delete(roles[index].DungeonInstances, key)
+		}
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist reset dungeon instance failed: %v", err)
+		}
+		return true
+	}
+
+	return false
+}
+
 func (store *Store) MarkRoleDungeonVisibleMonsterDefeated(playerID string, roleID string, key string, handle string) (DungeonInstanceState, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()

@@ -253,6 +253,27 @@ func TestHandlePacketClassicTownActiveRolePushesAnswerSpeak(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownActiveRolePlayerDoesNotOpenAnswerSpeak(t *testing.T) {
+	store := session.NewStore()
+	result := handlePacket(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveRoleReq,
+		Seq: 1,
+		Payload: mustJSON(t, classicTownRoleInteractionRequest{
+			Handle: "acct-cap1366655383-role-222",
+			RoleID: "acct-cap1366655383-role-222",
+			Kind:   "player",
+			MapID:  "1",
+		}),
+	})
+
+	if !result.handled {
+		t.Fatal("expected player activeRole to be handled")
+	}
+	if result.responseCmd != 0 || result.answerSpeak != nil {
+		t.Fatalf("expected player activeRole to stay fire-and-forget, got response cmd %d answerSpeak=%+v", result.responseCmd, result.answerSpeak)
+	}
+}
+
 func TestHandlePacketClassicTownActiveCollectionGrantsRewardAndQuest(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	gloves, ok := session.CapturedRoleItemTemplate("普通采集手套")

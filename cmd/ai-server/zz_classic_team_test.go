@@ -432,12 +432,12 @@ type classicCapturedTeamRoleFixture struct {
 var capturedClassicTeamRoleBridgeWoodcutter = classicCapturedTeamRoleFixture{
 	UserName:       "capture21432",
 	Password:       "local-test-only",
-	DisplayName:    "桥头的樵夫",
+	DisplayName:    "222",
 	Gender:         "male",
 	RoleTemplateID: 1,
 	PresetID:       1,
 	// D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260611_222123_073_session_33544/connections/20260611_222129_098_conn_0002/derived/traffic-preview-0001.log:6
-	// createRole player_21432, name=桥头的樵夫, vocation=游侠, level=18.
+	// createRole player_21432, name=222, vocation=游侠, level=18.
 	SourceQuery:        "human/human.swf?a=5&b=7&c=9&e=6&sex=1&h=7&hr=12&co=5&m=0&n=0&p=30&se=6&wr=6&w3=25&",
 	RuntimeSourceQuery: "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&",
 }

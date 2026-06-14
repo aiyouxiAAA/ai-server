@@ -227,6 +227,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		log.Printf("[ai-server] classic town activeRole handle=%s roleId=%s kind=%s mapId=%s", request.Handle, request.RoleID, request.Kind, request.MapID)
+		if strings.TrimSpace(request.Kind) == "player" {
+			return packetResult{handled: true}
+		}
 		if result, ok := buildClassicTownCollectionResult(store, socketSession, request); ok {
 			return result
 		}

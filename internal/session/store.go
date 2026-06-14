@@ -178,6 +178,10 @@ type PlayerBaseData struct {
 	Currencies   RoleCurrencies `json:"currencies,omitempty"`
 	RoleState    *RoleState     `json:"roleState,omitempty"`
 	RolePhysique *RolePhysique  `json:"rolePhysique,omitempty"`
+	PK           int            `json:"pk,omitempty"`
+	State        int            `json:"state,omitempty"`
+	GuildName    string         `json:"guildName,omitempty"`
+	GuildPic     string         `json:"guildPic,omitempty"`
 }
 
 type RoleState struct {

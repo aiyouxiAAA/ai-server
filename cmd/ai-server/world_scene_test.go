@@ -192,6 +192,20 @@ func TestWorldSceneBuildPlayerRolePushFields(t *testing.T) {
 	if push.SpawnFlash.X != 100 || push.SpawnFlash.Y != 200 {
 		t.Errorf("SpawnFlash = %+v, want {100 200}", push.SpawnFlash)
 	}
+	// 默认零值断言:BuildPlayerRolePush 必须透传 PlayerBaseData 的 PK/State/GuildName/GuildPic,
+	// 当前业务系统未填值,前端按字段渲染缺失优雅隐藏。详见 ClassicTownEntityPresenter.attachNameLabel。
+	if push.PK != 0 {
+		t.Errorf("PK = %d, want 0 (default)", push.PK)
+	}
+	if push.State != 0 {
+		t.Errorf("State = %d, want 0 (default)", push.State)
+	}
+	if push.GuildName != "" {
+		t.Errorf("GuildName = %s, want empty (default)", push.GuildName)
+	}
+	if push.GuildPic != "" {
+		t.Errorf("GuildPic = %s, want empty (default)", push.GuildPic)
+	}
 }
 
 // TestWorldSceneDefaultSpawnForMap 验证 DefaultSpawnForMap 对已知地图返回非零出生点,

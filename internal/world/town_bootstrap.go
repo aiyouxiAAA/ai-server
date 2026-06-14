@@ -50,6 +50,10 @@ type RolePush struct {
 	SpawnFlash      SpawnPoint             `json:"spawnFlash"`
 	SourceNPCVisual *SourceNPCVisual       `json:"sourceNpcVisual,omitempty"`
 	Movement        *RoleMovement          `json:"movement,omitempty"`
+	PK              int                    `json:"pk,omitempty"`
+	State           int                    `json:"state,omitempty"`
+	GuildName       string                 `json:"guildName,omitempty"`
+	GuildPic        string                 `json:"guildPic,omitempty"`
 }
 
 type QuestStatePush struct {
@@ -736,6 +740,10 @@ func BuildPlayerRolePush(role session.RoleSummary, playerBase session.PlayerBase
 		Appearance:   playerBase.Appearance,
 		Kind:         "player",
 		SpawnFlash:   spawn,
+		PK:           playerBase.PK,
+		State:        playerBase.State,
+		GuildName:    playerBase.GuildName,
+		GuildPic:     playerBase.GuildPic,
 	}
 }
 
@@ -839,6 +847,10 @@ func buildTownBootstrap(
 			Appearance:   playerBase.Appearance,
 			Kind:         "self",
 			SpawnFlash:   spawn,
+			PK:           playerBase.PK,
+			State:        playerBase.State,
+			GuildName:    playerBase.GuildName,
+			GuildPic:     playerBase.GuildPic,
 		},
 		CreateRoles:  createRoles,
 		QuestStates:  questStates,

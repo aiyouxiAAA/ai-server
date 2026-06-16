@@ -607,10 +607,30 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	if sharedBattle {
 		beforeTeamMember = classicTeamMemberFromSession(socketSession)
 	}
+	requiredItemName := classicBattleActionRequiredItemName(request.CommandID)
+	requiredItem := session.RoleItem{}
+	if requiredItemName != "" {
+		item, ok := findClassicBattleRequiredBagItem(store, socketSession, requiredItemName)
+		if !ok {
+			log.Printf("[ai-server] classic battle battleAction rejected missing required item battleId=%s actor=%s command=%s item=%s", request.BattleID, request.ActorHandle, request.CommandID, requiredItemName)
+			return packetResult{handled: true}
+		}
+		requiredItem = item
+	}
 	result := socketSession.battleRuntime.ProcessAction(request)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle battleAction rejected battleId=%s actor=%s target=%s error=%s", request.BattleID, request.ActorHandle, request.TargetHandle, result.ErrorCode)
 		return packetResult{handled: true}
+	}
+	var consumedRequiredItem session.RoleUseItemResult
+	if requiredItemName != "" {
+		consumedRequiredItem = store.ConsumeRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, requiredItem.Type, requiredItem.Index, 1)
+		if !consumedRequiredItem.Found || !consumedRequiredItem.Used {
+			log.Printf("[ai-server] classic battle battleAction required item consume failed roleId=%s command=%s item=%s type=%s index=%d error=%s", socketSession.selectedRole.RoleID, request.CommandID, requiredItemName, requiredItem.Type, requiredItem.Index, consumedRequiredItem.ErrorCode)
+			return packetResult{handled: true}
+		}
+		socketSession.selectedRole = &consumedRequiredItem.Role
+		socketSession.playerBase = &consumedRequiredItem.PlayerBase
 	}
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
@@ -632,8 +652,11 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		roleState:         roleState,
 		rolePhysique:      rolePhysique,
 		removeRoleHandles: removeRoleHandles,
+		itemInfos:         make([]classicTownItemInfoPush, 0, 1),
+		itemClears:        make([]classicTownItemInfoClearPush, 0, 1),
 		handled:           true,
 	}
+	appendConsumedRequiredBattleItemPushes(&packet, consumedRequiredItem)
 	if sharedBattle {
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
@@ -642,6 +665,49 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		}
 	}
 	return packet
+}
+
+func classicBattleActionRequiredItemName(commandID string) string {
+	switch strings.TrimSpace(commandID) {
+	case battle.CommandQiangLiFeiBiao, "强力飞镖":
+		return "飞镖"
+	default:
+		return ""
+	}
+}
+
+func findClassicBattleRequiredBagItem(store *session.Store, socketSession *packetSession, name string) (session.RoleItem, bool) {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return session.RoleItem{}, false
+	}
+	items, _, ok := store.GetRoleItems(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "背包")
+	if !ok {
+		return session.RoleItem{}, false
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.Name) == name && item.Count > 0 {
+			return item, true
+		}
+	}
+	return session.RoleItem{}, false
+}
+
+func appendConsumedRequiredBattleItemPushes(packet *packetResult, useResult session.RoleUseItemResult) {
+	if packet == nil || !useResult.Used {
+		return
+	}
+	if useResult.UpdatedItem != nil {
+		updatedItem := *useResult.UpdatedItem
+		updatedItem.Handle = useResult.Role.RoleID
+		packet.itemInfos = append(packet.itemInfos, classicTownItemInfoPushFromRoleItem(updatedItem))
+	}
+	for _, clear := range useResult.ClearedItems {
+		packet.itemClears = append(packet.itemClears, classicTownItemInfoClearPush{
+			Handle: useResult.Role.RoleID,
+			Type:   clear.Type,
+			Index:  clear.Index,
+		})
+	}
 }
 
 func buildClassicBattleItemActionResult(store *session.Store, socketSession *packetSession, request battle.ItemActionRequest) packetResult {

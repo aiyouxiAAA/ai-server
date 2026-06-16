@@ -1433,6 +1433,9 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 
 func removeCapturedDefaultBagSeeds(items []RoleItem) []RoleItem {
 	capturedSeeds := capturedDefaultRoleItems()
+	if !shouldRemoveCapturedDefaultBagSeeds(items, capturedSeeds) {
+		return items
+	}
 	result := make([]RoleItem, 0, len(items))
 	for _, item := range items {
 		if isCapturedDefaultBagSeed(item, capturedSeeds) {
@@ -1441,6 +1444,21 @@ func removeCapturedDefaultBagSeeds(items []RoleItem) []RoleItem {
 		result = append(result, item)
 	}
 	return result
+}
+
+func shouldRemoveCapturedDefaultBagSeeds(items []RoleItem, capturedSeeds []RoleItem) bool {
+	seedCount := 0
+	for _, item := range items {
+		if item.Name == "铁斧" {
+			continue
+		}
+		if isCapturedDefaultBagSeed(item, capturedSeeds) {
+			seedCount += 1
+			continue
+		}
+		return false
+	}
+	return seedCount > 0
 }
 
 func isCapturedDefaultBagSeed(item RoleItem, capturedSeeds []RoleItem) bool {
@@ -1463,6 +1481,9 @@ func ensureStarterAxeItem(items []RoleItem) []RoleItem {
 		if item.Name == "铁斧" {
 			return items
 		}
+	}
+	if len(items) > 0 {
+		return items
 	}
 	return append(items, starterAxeItem())
 }

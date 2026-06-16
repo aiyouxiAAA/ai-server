@@ -38,6 +38,59 @@ func TestBuildOverUsesCapturedMap5BattleRewards(t *testing.T) {
 	}
 }
 
+func TestRerollBattleRewardItemsUsesSameBattleSource(t *testing.T) {
+	rolls := []int{0, 99}
+	rollIndex := 0
+	defer useSourceEncounterRoll(func(maxExclusive int) int {
+		value := rolls[rollIndex]
+		if rollIndex < len(rolls)-1 {
+			rollIndex++
+		}
+		if value >= maxExclusive {
+			return maxExclusive - 1
+		}
+		return value
+	})()
+
+	runtime := &Runtime{
+		BattleID: "battle-map5",
+		MapID:    "5",
+		Round:    2,
+	}
+
+	leaderResult := runtime.buildOver(CampTeam).Result
+	if !reflect.DeepEqual(leaderResult.Items, []string{"肉x1", "兽牙x1"}) {
+		t.Fatalf("expected first participant low-roll rewards, got %+v", leaderResult.Items)
+	}
+
+	memberResult := runtime.RerollBattleRewardItems(leaderResult)
+	if !reflect.DeepEqual(memberResult.Items, []string{"肉x1"}) {
+		t.Fatalf("expected second participant reroll to keep guaranteed item only, got %+v", memberResult.Items)
+	}
+	if memberResult.ExpDelta != leaderResult.ExpDelta || memberResult.Winner != leaderResult.Winner || memberResult.Rounds != leaderResult.Rounds {
+		t.Fatalf("expected reroll to preserve non-item result fields, got leader=%+v member=%+v", leaderResult, memberResult)
+	}
+}
+
+func TestRerollBattleRewardItemsKeepsManualResultWithoutSourceReward(t *testing.T) {
+	runtime := &Runtime{
+		BattleID: "battle-map4",
+		MapID:    "4",
+		Round:    1,
+	}
+	result := ResultPayload{
+		Winner:   CampTeam,
+		Rounds:   1,
+		ExpDelta: 37,
+		Items:    []string{"朽木x1"},
+	}
+
+	reroll := runtime.RerollBattleRewardItems(result)
+	if !reflect.DeepEqual(reroll.Items, result.Items) {
+		t.Fatalf("expected manual result without source reward config to stay unchanged, got %+v", reroll.Items)
+	}
+}
+
 func TestBuildOverDoesNotInventUncapturedOrEscapedRewards(t *testing.T) {
 	map4 := (&Runtime{BattleID: "battle-map4", MapID: "4", Round: 1}).buildOver(CampTeam)
 	if map4.Result.ExpDelta != 0 || len(map4.Result.Items) != 0 {
@@ -1805,6 +1858,98 @@ func TestProcessActionAllowsLearnedCapturedSkill(t *testing.T) {
 	}
 }
 
+func TestProcessActionAllowsCapturedDaggerSkills(t *testing.T) {
+	cases := []struct {
+		name           string
+		level          int
+		description    string
+		commandID      string
+		label          string
+		expectedDamage int
+		expectedMP     int
+	}{
+		{
+			name:           "多段刺",
+			level:          5,
+			description:    "f_s_多段刺^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@18&4@提升45%的物理伤害",
+			commandID:      CommandDuoDuanCi,
+			label:          "w3/ddCut",
+			expectedDamage: 105,
+			expectedMP:     82,
+		},
+		{
+			name:           "强力飞镖",
+			level:          2,
+			description:    "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
+			commandID:      CommandQiangLiFeiBiao,
+			label:          "w3/powerDart",
+			expectedDamage: 148,
+			expectedMP:     80,
+		},
+	}
+
+	for _, testCase := range cases {
+		runtime := &Runtime{
+			BattleID:         "battle-command-dagger-" + testCase.name,
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_21432",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StoredPower:      map[string]int{},
+			RoleSkills: []session.RoleSkill{
+				{
+					Name:        testCase.name,
+					Level:       testCase.level,
+					Type:        "oneE",
+					Description: testCase.description,
+				},
+			},
+			Cells: []CellInfoPush{
+				{
+					BattleID: "battle-command-dagger-" + testCase.name,
+					Handle:   "player_21432",
+					Camp:     CampTeam,
+					HP:       300,
+					MaxHP:    300,
+					MP:       100,
+					MaxMP:    100,
+					Attack:   100,
+				},
+				{
+					BattleID: "battle-command-dagger-" + testCase.name,
+					Handle:   "enemy_1",
+					Camp:     CampEnemy,
+					HP:       220,
+					MaxHP:    220,
+					Defense:  40,
+				},
+			},
+		}
+
+		result := runtime.ProcessAction(ActionRequest{
+			BattleID:     runtime.BattleID,
+			ActorHandle:  "player_21432",
+			CommandID:    testCase.commandID,
+			TargetHandle: "enemy_1",
+			Round:        1,
+			Sequence:     1,
+		})
+
+		if result.ErrorCode != "" || len(result.Actions) == 0 {
+			t.Fatalf("expected learned %s action, got %+v", testCase.name, result)
+		}
+		action := result.Actions[0]
+		if action.ActionName != testCase.name || action.SourceActionLabel != testCase.label {
+			t.Fatalf("expected captured %s action label %s, got %+v", testCase.name, testCase.label, action)
+		}
+		if action.Damage != testCase.expectedDamage || action.TargetHP != 220-testCase.expectedDamage || action.RefreshInfos[0].MP != testCase.expectedMP {
+			t.Fatalf("expected captured %s damage/mp, got %+v", testCase.name, action)
+		}
+	}
+}
+
 func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -1849,6 +1994,14 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 1.75,
 		},
 		{
+			name:       "多段刺",
+			level:      5,
+			desc:       "f_s_多段刺^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@18&4@提升45%的物理伤害",
+			label:      "w3/ddCut",
+			mpCost:     18,
+			multiplier: 1.45,
+		},
+		{
 			name:       "嗜血斩",
 			level:      3,
 			desc:       "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@28&4@对敌人造成96%的物理伤害&0;并有86%机率将对敌人造成伤害的70%转换为气力</font>",
@@ -1873,6 +2026,14 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			label:      "w8/cutBlood",
 			mpCost:     19,
 			multiplier: 0.3,
+		},
+		{
+			name:       "强力飞镖",
+			level:      2,
+			desc:       "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
+			label:      "w3/powerDart",
+			mpCost:     20,
+			multiplier: 1.48,
 		},
 		{
 			name:       "奥义.雷魂斩",
@@ -1900,6 +2061,9 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 		if profile.LifeStealChance != testCase.chance || profile.LifeStealRatio != testCase.ratio {
 			t.Fatalf("expected %s Lv%d lifesteal %d/%v, got %+v", testCase.name, testCase.level, testCase.chance, testCase.ratio, profile)
 		}
+		if testCase.name == "强力飞镖" && profile.DefenseType != "direct" {
+			t.Fatalf("expected 强力飞镖 to ignore defense from captured description, got %+v", profile)
+		}
 	}
 }
 
@@ -1924,6 +2088,16 @@ func TestBattleSkillProfileUsesCapturedLevelWhenStoredDescriptionIsStale(t *test
 		t.Fatalf("expected 多段斩 Lv5 captured profile to ignore stale Lv1 description, got %+v", duoDuanLv5)
 	}
 
+	duoDuanCi := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "多段刺",
+		Level:       5,
+		Type:        "oneE",
+		Description: "提高对敌人造成的物理伤害",
+	})
+	if duoDuanCi.SourceActionLabel != "w3/ddCut" || duoDuanCi.MPCost != 18 || duoDuanCi.DamageMultiplier != 1.45 {
+		t.Fatalf("expected 多段刺 Lv5 captured profile to ignore stale description, got %+v", duoDuanCi)
+	}
+
 	shiXue := sourceBattleSkillProfile(session.RoleSkill{
 		Name:        "嗜血斩",
 		Level:       3,
@@ -1932,6 +2106,16 @@ func TestBattleSkillProfileUsesCapturedLevelWhenStoredDescriptionIsStale(t *test
 	})
 	if shiXue.SourceActionLabel != "w8/xyz2" || shiXue.MPCost != 28 || shiXue.DamageMultiplier != 0.96 || shiXue.LifeStealChance != 86 || shiXue.LifeStealRatio != 0.7 {
 		t.Fatalf("expected 嗜血斩 Lv3 captured profile to ignore stale Lv1 description, got %+v", shiXue)
+	}
+
+	qiangLiFeiBiao := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "强力飞镖",
+		Level:       2,
+		Type:        "oneE",
+		Description: "对敌人造成物理伤害 / 进攻时候提升一定的物理攻击力",
+	})
+	if qiangLiFeiBiao.SourceActionLabel != "w3/powerDart" || qiangLiFeiBiao.MPCost != 20 || qiangLiFeiBiao.DamageMultiplier != 1.48 || qiangLiFeiBiao.DefenseType != "direct" {
+		t.Fatalf("expected 强力飞镖 Lv2 captured profile to ignore stale description, got %+v", qiangLiFeiBiao)
 	}
 }
 
@@ -1954,6 +2138,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Level:       3,
 			Type:        "oneE",
 			Description: "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@12&4@提升65%的物理伤害",
+		},
+		{
+			Name:        "多段刺",
+			Level:       5,
+			Type:        "oneE",
+			Description: "f_s_多段刺^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@18&4@提升45%的物理伤害",
 		},
 		{
 			Name:        "嗜血斩",
@@ -1980,6 +2170,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)",
 		},
 		{
+			Name:        "强力飞镖",
+			Level:       2,
+			Type:        "oneE",
+			Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
+		},
+		{
 			Name:        "奥义.雷魂斩",
 			Level:       1,
 			Type:        "oneE",
@@ -2004,6 +2200,9 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	if command := byID[CommandDuoDuanZhan]; command.Label != "多段斩" || command.SourceActionLabel != "w8/ddz2" || command.MPCost != 12 || command.DamageMultiplier != 1.65 {
 		t.Fatalf("expected captured 多段斩 Lv3 command, got %+v", command)
 	}
+	if command := byID[CommandDuoDuanCi]; command.Label != "多段刺" || command.SourceActionLabel != "w3/ddCut" || command.MPCost != 18 || command.DamageMultiplier != 1.45 {
+		t.Fatalf("expected captured 多段刺 Lv5 command, got %+v", command)
+	}
 	if command := byID[CommandShiXueZhan]; command.Label != "嗜血斩" || command.SourceActionLabel != "w8/xyz1" || command.MPCost != 26 || command.DamageMultiplier != 0.94 {
 		t.Fatalf("expected captured 嗜血斩 Lv2 command, got %+v", command)
 	}
@@ -2015,6 +2214,9 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if command := byID[CommandXueQie]; command.Label != "血切" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/cutBlood" || command.MPCost != 19 || command.DamageMultiplier != 0.3 {
 		t.Fatalf("expected captured 血切 single-target command, got %+v", command)
+	}
+	if command := byID[CommandQiangLiFeiBiao]; command.Label != "强力飞镖" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/powerDart" || command.MPCost != 20 || command.DamageMultiplier != 1.48 {
+		t.Fatalf("expected captured 强力飞镖 Lv2 command, got %+v", command)
 	}
 	if command := byID[CommandLeiHunZhan]; command.Label != "奥义.雷魂斩" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/thunderSoulAtk" || command.MPCost != 24 || command.DamageMultiplier != 3.4 {
 		t.Fatalf("expected captured 奥义.雷魂斩 single-target command, got %+v", command)

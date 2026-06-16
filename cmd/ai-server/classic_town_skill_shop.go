@@ -460,6 +460,11 @@ func sourceRoleSkillDescription(name string, level int, fallback string) string 
 		default:
 			return "f_s_多段斩^ffffff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@8&4@提升55%的物理伤害"
 		}
+	case "多段刺":
+		if level == 5 {
+			return "f_s_多段刺^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@18&4@提升45%的物理伤害"
+		}
+		return fallback
 	case "嗜血斩":
 		switch level {
 		case 2:
@@ -475,6 +480,11 @@ func sourceRoleSkillDescription(name string, level int, fallback string) string 
 		return "f_s_红月斩^ffffff&9@群体·攻击&8@战士 &10@单刀&22@战斗&2@40&4@对所有敌人造成72%的物理伤害"
 	case "血切":
 		return "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)"
+	case "强力飞镖":
+		if level == 2 {
+			return "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力"
+		}
+		return fallback
 	case "奥义.雷魂斩":
 		return "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害"
 	default:

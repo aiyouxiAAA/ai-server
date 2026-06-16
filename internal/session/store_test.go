@@ -329,6 +329,57 @@ func TestStoreRoleInventoryRemovesOldCapturedBagSeeds(t *testing.T) {
 	}
 }
 
+func TestStoreRoleInventoryPreservesCapturedFullInventoryDefaultLikeSlots(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "抓包背包女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	seedItems := capturedDefaultRoleItems()
+	var defaultLike RoleItem
+	for _, item := range seedItems {
+		if item.Name == "L避怪符" {
+			defaultLike = item
+			break
+		}
+	}
+	if defaultLike.Name == "" {
+		t.Fatal("expected L避怪符 seed item")
+	}
+	fullInventoryItem := RoleItem{
+		Type:        "背包",
+		Name:        "王花花蕾",
+		ItemType:    "null",
+		Display:     "143.png",
+		Description: "f_i_王花花蕾^ffffff&24@材料&25@99&20@花蕾&103@0&104@0&105@&107@&108@0",
+		Count:       1,
+		Index:       36,
+		ItemLevel:   1,
+	}
+	store.rolesByPID[login.PlayerID][0].Items = []RoleItem{defaultLike, fullInventoryItem}
+
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	if _, ok := findRoleItem(items, "背包", defaultLike.Index); !ok {
+		t.Fatalf("expected default-like item in captured full inventory to remain, got %+v", items)
+	}
+	if item, ok := findRoleItem(items, "背包", fullInventoryItem.Index); !ok || item.Name != fullInventoryItem.Name {
+		t.Fatalf("expected full inventory item to remain, ok=%v item=%+v", ok, item)
+	}
+	for _, item := range items {
+		if item.Name == "铁斧" {
+			t.Fatalf("expected captured full inventory without starter axe pollution, got %+v", items)
+		}
+	}
+}
+
 func TestStoreGetRoleItemsTrimsStaleCurrencyStacks(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")

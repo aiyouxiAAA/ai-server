@@ -77,8 +77,13 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 		beforeMember := classicTeamMemberFromSession(connection.session)
 		result := sync.Result
 		if result.battleOver != nil {
-			roleState, rolePhysique := finalizeClassicBattleOver(store, connection.session, result.battleOver.Result)
-			connection.session.battleLoot = buildClassicBattleLoot(connection.session, result.battleOver.Result)
+			memberBattleOver := *result.battleOver
+			if connection.session.battleRuntime != nil {
+				memberBattleOver.Result = connection.session.battleRuntime.RerollBattleRewardItems(memberBattleOver.Result)
+			}
+			result.battleOver = &memberBattleOver
+			roleState, rolePhysique := finalizeClassicBattleOver(store, connection.session, memberBattleOver.Result)
+			connection.session.battleLoot = buildClassicBattleLoot(connection.session, memberBattleOver.Result)
 			result.roleState = roleState
 			result.rolePhysique = rolePhysique
 			result.removeRoleHandles = markDefeatedVisibleMonsterFromBattle(store, connection.session, result.battleOver)

@@ -2415,6 +2415,28 @@ func TestSourceSkillItemsAndSkillInfoUseCapturedLevelDescriptions(t *testing.T) 
 		t.Fatalf("expected skillInfo to use captured 血切 Lv1 description, got %+v", xueQieInfo)
 	}
 
+	duoDuanCiInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "多段刺",
+		Level:       5,
+		Type:        "oneE",
+		Icon:        "257.png",
+		Description: "提高对敌人造成的物理伤害",
+	})
+	if !strings.Contains(duoDuanCiInfo.Description, "&2@18") || !strings.Contains(duoDuanCiInfo.Description, "提升45%的物理伤害") {
+		t.Fatalf("expected skillInfo to use captured 多段刺 Lv5 description, got %+v", duoDuanCiInfo)
+	}
+
+	qiangLiFeiBiaoInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "强力飞镖",
+		Level:       2,
+		Type:        "oneE",
+		Icon:        "261.png",
+		Description: "对敌人造成物理伤害 / 进攻时候提升一定的物理攻击力",
+	})
+	if !strings.Contains(qiangLiFeiBiaoInfo.Description, "&2@20") || !strings.Contains(qiangLiFeiBiaoInfo.Description, "需要【飞镖x1】") || !strings.Contains(qiangLiFeiBiaoInfo.Description, "提高48%") || !strings.Contains(qiangLiFeiBiaoInfo.Description, "无视防御") {
+		t.Fatalf("expected skillInfo to use captured 强力飞镖 Lv2 description, got %+v", qiangLiFeiBiaoInfo)
+	}
+
 	leiHunEntry, ok := findSourceSkillShopEntry("skill1", 15)
 	if !ok {
 		t.Fatal("expected captured 奥义.雷魂斩 shop entry")
@@ -3622,6 +3644,136 @@ func TestHandlePacketClassicBattleActionResolvesAndRejectsConsumedSequence(t *te
 	}
 	if len(duplicate.battleActions) != 0 || duplicate.battleCommand != nil || duplicate.battleOver != nil {
 		t.Fatalf("expected consumed sequence to be rejected without pushes, got %+v", duplicate)
+	}
+}
+
+func TestHandlePacketClassicBattleQiangLiFeiBiaoConsumesDart(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || startResult.battleCommand == nil {
+		t.Fatalf("expected battle start result, got %+v", startResult)
+	}
+
+	dart := session.RoleItem{
+		Type:        "背包",
+		Name:        "飞镖",
+		ItemType:    "null",
+		Display:     "241.png",
+		Description: "f_i_飞镖^ffffff&24@材料 消耗品&25@9999&20@铁制三刃飞镖&0;具有杀伤力&0;一般配合技能使用.&27@sitem_jwep&103@0&104@0&105@&107@&108@0",
+		Count:       2,
+		Index:       -1,
+		ItemLevel:   1,
+	}
+	grantedDart, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, dart)
+	if !ok {
+		t.Fatal("expected grant 飞镖")
+	}
+
+	qiangLiFeiBiaoSkill := []session.RoleSkill{
+		{
+			Name:        "强力飞镖",
+			Level:       2,
+			Type:        "oneE",
+			Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
+		},
+	}
+	socketSession.battleRuntime.RoleSkills = qiangLiFeiBiaoSkill
+	socketSession.battleRuntime.RoleSkillsByHandle[socketSession.selectedRole.RoleID] = qiangLiFeiBiaoSkill
+	socketSession.battleRuntime.Cells[0].Attack = 100
+	socketSession.battleRuntime.Cells[0].MP = 100
+	socketSession.battleRuntime.Cells[0].MaxMP = 100
+	socketSession.battleRuntime.Cells[0].Fat = 0
+	socketSession.battleRuntime.Cells[1].HP = 300
+	socketSession.battleRuntime.Cells[1].Defense = 40
+	socketSession.battleRuntime.Cells[1].Dog = 0
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleActionReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.ActionRequest{
+			BattleID:     startResult.battleStart.BattleID,
+			ActorHandle:  socketSession.selectedRole.RoleID,
+			CommandID:    battle.CommandQiangLiFeiBiao,
+			TargetHandle: socketSession.battleRuntime.Cells[1].Handle,
+			Round:        startResult.battleCommand.Round,
+			Sequence:     startResult.battleCommand.Sequence,
+		}),
+	}, socketSession)
+
+	if !result.handled || len(result.battleActions) == 0 {
+		t.Fatalf("expected 强力飞镖 battleAction, got %+v", result)
+	}
+	action := result.battleActions[0]
+	if action.ActionName != "强力飞镖" || action.SourceActionLabel != "w3/powerDart" || action.Damage != 148 || action.RefreshInfos[0].MP != 80 {
+		t.Fatalf("expected captured 强力飞镖 action and MP cost, got %+v", action)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Name != "飞镖" || result.itemInfos[0].Index != grantedDart.Index || result.itemInfos[0].Count != 1 {
+		t.Fatalf("expected 飞镖 itemInfo count 1 after skill use, got %+v", result.itemInfos)
+	}
+	persisted, ok := store.GetRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, grantedDart.Type, grantedDart.Index)
+	if !ok || persisted.Count != 1 {
+		t.Fatalf("expected persisted 飞镖 count 1, ok=%v item=%+v", ok, persisted)
+	}
+}
+
+func TestHandlePacketClassicBattleQiangLiFeiBiaoRejectsMissingDart(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || startResult.battleCommand == nil {
+		t.Fatalf("expected battle start result, got %+v", startResult)
+	}
+
+	qiangLiFeiBiaoSkill := []session.RoleSkill{
+		{
+			Name:        "强力飞镖",
+			Level:       2,
+			Type:        "oneE",
+			Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
+		},
+	}
+	socketSession.battleRuntime.RoleSkills = qiangLiFeiBiaoSkill
+	socketSession.battleRuntime.RoleSkillsByHandle[socketSession.selectedRole.RoleID] = qiangLiFeiBiaoSkill
+	enemyHP := socketSession.battleRuntime.Cells[1].HP
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleActionReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.ActionRequest{
+			BattleID:     startResult.battleStart.BattleID,
+			ActorHandle:  socketSession.selectedRole.RoleID,
+			CommandID:    battle.CommandQiangLiFeiBiao,
+			TargetHandle: socketSession.battleRuntime.Cells[1].Handle,
+			Round:        startResult.battleCommand.Round,
+			Sequence:     startResult.battleCommand.Sequence,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected missing 飞镖 request to be handled")
+	}
+	if len(result.battleActions) != 0 || len(result.itemInfos) != 0 || len(result.itemClears) != 0 {
+		t.Fatalf("expected missing 飞镖 to reject without pushes, got %+v", result)
+	}
+	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
+		t.Fatalf("expected missing 飞镖 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)
 	}
 }
 

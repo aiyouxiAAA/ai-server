@@ -27,10 +27,12 @@ const (
 	CommandNormalAttack    = "skill-normal-attack"
 	CommandMiZhan          = "skill-mi-zhan"
 	CommandDuoDuanZhan     = "skill-duo-duan-zhan"
+	CommandDuoDuanCi       = "skill-duo-duan-ci"
 	CommandShiXueZhan      = "skill-shi-xue-zhan"
 	CommandKuangBao        = "skill-kuang-bao"
 	CommandHongYueZhan     = "skill-hong-yue-zhan"
 	CommandXueQie          = "skill-xue-qie"
+	CommandQiangLiFeiBiao  = "skill-qiang-li-fei-biao"
 	CommandLeiHunZhan      = "skill-lei-hun-zhan"
 	CommandEnemyAttack     = "enemy-normal-attack"
 	CommandEnemySlideCut   = "enemy-slide-cut"
@@ -1059,6 +1061,8 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "密斩", 1)
 	case CommandDuoDuanZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "多段斩", 1)
+	case CommandDuoDuanCi:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "多段刺", 5)
 	case CommandShiXueZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "嗜血斩", 1)
 	case CommandKuangBao:
@@ -1067,6 +1071,8 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "红月斩", 1)
 	case CommandXueQie:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "血切", 1)
+	case CommandQiangLiFeiBiao:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "强力飞镖", 2)
 	case CommandLeiHunZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
 	case CommandEnemySlideCut:
@@ -1407,6 +1413,8 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "密斩")
 	case CommandDuoDuanZhan:
 		return runtime.hasRoleSkillForActor(handle, "多段斩")
+	case CommandDuoDuanCi:
+		return runtime.hasRoleSkillForActor(handle, "多段刺")
 	case CommandShiXueZhan:
 		return runtime.hasRoleSkillForActor(handle, "嗜血斩")
 	case CommandKuangBao:
@@ -1415,6 +1423,8 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "红月斩")
 	case CommandXueQie:
 		return runtime.hasRoleSkillForActor(handle, "血切")
+	case CommandQiangLiFeiBiao:
+		return runtime.hasRoleSkillForActor(handle, "强力飞镖")
 	case CommandLeiHunZhan:
 		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
 	default:
@@ -1524,6 +1534,9 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusTickMin = 25
 		profile.StatusTickMax = 30
 	}
+	if name == "强力飞镖" {
+		profile.DefenseType = "direct"
+	}
 	return profile
 }
 
@@ -1609,6 +1622,8 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandMiZhan
 	case "多段斩":
 		return CommandDuoDuanZhan
+	case "多段刺":
+		return CommandDuoDuanCi
 	case "嗜血斩":
 		return CommandShiXueZhan
 	case "狂爆":
@@ -1617,6 +1632,8 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandHongYueZhan
 	case "血切":
 		return CommandXueQie
+	case "强力飞镖":
+		return CommandQiangLiFeiBiao
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	default:
@@ -1626,7 +1643,7 @@ func sourceBattleSkillCommandID(name string) string {
 
 func sourceBattleSkillSourceType(name string, fallbackType string) string {
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "嗜血斩", "血切", "奥义.雷魂斩":
+	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "奥义.雷魂斩":
 		return "oneE"
 	case "狂爆":
 		return "own"
@@ -1669,6 +1686,8 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandMiZhan
 	case "多段斩":
 		return CommandDuoDuanZhan
+	case "多段刺":
+		return CommandDuoDuanCi
 	case "嗜血斩":
 		return CommandShiXueZhan
 	case "狂爆":
@@ -1677,6 +1696,8 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandHongYueZhan
 	case "血切":
 		return CommandXueQie
+	case "强力飞镖":
+		return CommandQiangLiFeiBiao
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	default:
@@ -1704,6 +1725,14 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Type:        "oneE",
 			Icon:        "178.png",
 			Description: fallbackDuoDuanDescription(level),
+		}
+	case "多段刺":
+		return session.RoleSkill{
+			Name:        "多段刺",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "257.png",
+			Description: fallbackDuoDuanCiDescription(level),
 		}
 	case "嗜血斩":
 		return session.RoleSkill{
@@ -1737,6 +1766,14 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Icon:        "182.png",
 			Description: fallbackXueQieDescription(level),
 		}
+	case "强力飞镖":
+		return session.RoleSkill{
+			Name:        "强力飞镖",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "261.png",
+			Description: fallbackQiangLiFeiBiaoDescription(level),
+		}
 	case "奥义.雷魂斩":
 		return session.RoleSkill{
 			Name:        "奥义.雷魂斩",
@@ -1765,6 +1802,15 @@ func fallbackDuoDuanDescription(level int) string {
 	}
 }
 
+func fallbackDuoDuanCiDescription(level int) string {
+	switch level {
+	case 5:
+		return "f_s_多段刺^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@18&4@提升45%的物理伤害"
+	default:
+		return ""
+	}
+}
+
 func fallbackShiXueDescription(level int) string {
 	switch level {
 	case 2:
@@ -1790,6 +1836,15 @@ func fallbackXueQieDescription(level int) string {
 	}
 }
 
+func fallbackQiangLiFeiBiaoDescription(level int) string {
+	switch level {
+	case 2:
+		return "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力"
+	default:
+		return ""
+	}
+}
+
 func fallbackLeiHunZhanDescription(level int) string {
 	switch level {
 	default:
@@ -1806,6 +1861,8 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 			return "w8/ddz2"
 		}
 		return "w8/ddz1"
+	case "多段刺":
+		return "w3/ddCut"
 	case "嗜血斩":
 		if level >= 3 {
 			return "w8/xyz2"
@@ -1817,6 +1874,8 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w8/redMoonAtk"
 	case "血切":
 		return "w8/cutBlood"
+	case "强力飞镖":
+		return "w3/powerDart"
 	case "奥义.雷魂斩":
 		return "w8/thunderSoulAtk"
 	case "普通攻击":
@@ -1881,6 +1940,11 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		default:
 			return 1.55
 		}
+	case "多段刺":
+		if level == 5 {
+			return 1.45
+		}
+		return 1
 	case "嗜血斩":
 		switch level {
 		case 2:
@@ -1896,6 +1960,11 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		return 0.72
 	case "血切":
 		return 0.3
+	case "强力飞镖":
+		if level == 2 {
+			return 1.48
+		}
+		return 1
 	case "奥义.雷魂斩":
 		return 3.4
 	default:
@@ -1920,6 +1989,11 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		default:
 			return 8
 		}
+	case "多段刺":
+		if level == 5 {
+			return 18
+		}
+		return 0
 	case "嗜血斩":
 		switch level {
 		case 2:
@@ -1935,6 +2009,11 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		return 40
 	case "血切":
 		return 19
+	case "强力飞镖":
+		if level == 2 {
+			return 20
+		}
+		return 0
 	case "奥义.雷魂斩":
 		return 24
 	default:
@@ -2524,6 +2603,27 @@ func (runtime *Runtime) sourceBattleRewards(winner Camp, escaped bool) (int, []s
 		return reward.ExpDelta, rollSourceBattleRewardItems(nil, reward.DropRates)
 	}
 	return 0, []string{}
+}
+
+func (runtime *Runtime) RerollBattleRewardItems(result ResultPayload) ResultPayload {
+	if runtime == nil || result.Winner != CampTeam || result.Escaped || !runtime.hasSourceBattleRewardSource() {
+		return result
+	}
+	_, items := runtime.sourceBattleRewards(result.Winner, result.Escaped)
+	reroll := result
+	reroll.Items = items
+	return reroll
+}
+
+func (runtime *Runtime) hasSourceBattleRewardSource() bool {
+	if runtime == nil {
+		return false
+	}
+	if reward, ok := sourceBattleRewardConfigForEncounter(runtime.MapID, runtime.SourceMonsterHandle); ok && reward.Status == "confirmed" {
+		return true
+	}
+	_, ok := runtime.sourceBattleRewardCandidate()
+	return ok
 }
 
 func (runtime *Runtime) sourceBattleRewardCandidate() (sourceBattleRewardCandidateConfig, bool) {

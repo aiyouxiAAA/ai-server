@@ -154,8 +154,7 @@ func (hub *classicTeamConnectionHub) syncTransfer(store *session.Store, transfer
 		// 邻居推 removeRole,在新图(TargetMapID)互推 createRole。否则队员会在旧图其他玩家
 		// 视角里残留,新图邻居也看不到他。同步传送的 sync plan 已校验所有成员同图,
 		// 因此 FromMapID 就是每个成员的旧 mapId。
-		announceWorldSceneTransfer(connection.writer, connection.session, member.RoleID, transfer.FromMapID)
-		log.Printf("[ai-server] classic team sync transfer actorRoleId=%s memberRoleId=%s fromMapId=%d targetMapId=%d", transfer.ActorRoleID, member.RoleID, transfer.FromMapID, transfer.TargetMapID)
+		announceWorldSceneTransfer(connection.writer, connection.session, member.RoleID, transfer.FromMapID, transfer.Spawn)
 	}
 }
 
@@ -183,7 +182,6 @@ func (hub *classicTeamConnectionHub) resetDungeonInstances(store *session.Store,
 		if err := connection.writer.writePush(cmdClassicTownDungeonInstance, encodePayload(*inactiveDungeonInstancePush(reset.InstanceKey, reset.MapID))); err != nil {
 			log.Printf("[ai-server] write classic team reset dungeon failed roleId=%s: %v", member.RoleID, err)
 		}
-		log.Printf("[ai-server] classic team reset dungeon actorRoleId=%s memberRoleId=%s key=%s", reset.ActorRoleID, member.RoleID, reset.InstanceKey)
 	}
 }
 

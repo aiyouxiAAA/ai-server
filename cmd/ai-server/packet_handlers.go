@@ -69,10 +69,12 @@ type packetResult struct {
 	battleClearBuffs  []battle.ClearBuffInfoPush
 	battleOver        *battle.OverPush
 	removeRoleHandles []string
+	moveRole          *world.RoleMovePush
 	// sceneTransferFromMapID 标记本次结果是由"传送/切图"触发的,值为玩家传送前的旧 mapId。
 	// main.go 收到 townBootstrap 后据此调用 announceWorldSceneTransfer:给旧图邻居推 removeRole,
 	// 在新图重新互推。首次进图(选角)不走这里,它的互推在 register 区的 syncWorldScenePresence 完成。
 	sceneTransferFromMapID int
+	sceneTransferSpawn     world.SpawnPoint
 	handled                bool
 }
 
@@ -219,14 +221,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		log.Printf("[ai-server] classic town targetRole handle=%s roleId=%s kind=%s mapId=%s", request.Handle, request.RoleID, request.Kind, request.MapID)
 		return packetResult{handled: true}
 	case cmdClassicTownActiveRoleReq:
 		var request classicTownRoleInteractionRequest
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		log.Printf("[ai-server] classic town activeRole handle=%s roleId=%s kind=%s mapId=%s", request.Handle, request.RoleID, request.Kind, request.MapID)
 		if strings.TrimSpace(request.Kind) == "player" {
 			return packetResult{handled: true}
 		}
@@ -305,6 +305,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{handled: true}
 		}
 		return buildClassicTownTransferResult(store, socketSession, request.MapID, world.SpawnPoint{X: request.X, Y: request.Y})
+	case cmdClassicTownMoveRoleReq:
+		var request classicTownMoveRoleRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownMoveRoleResult(socketSession, request)
 	case cmdClassicTownGetSkillListReq:
 		return buildClassicTownSkillListResult(store, socketSession)
 	case cmdClassicTownGetFastPanelReq:
@@ -597,6 +603,10 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	}
 
 	sharedBattle := shouldBroadcastTeamBattle(socketSession)
+	beforeTeamMember := team.Member{}
+	if sharedBattle {
+		beforeTeamMember = classicTeamMemberFromSession(socketSession)
+	}
 	result := socketSession.battleRuntime.ProcessAction(request)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle battleAction rejected battleId=%s actor=%s target=%s error=%s", request.BattleID, request.ActorHandle, request.TargetHandle, result.ErrorCode)
@@ -610,6 +620,8 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
+	} else if sharedBattle {
+		updatePlayerBaseRoleStateFromBattle(socketSession)
 	}
 	packet := packetResult{
 		battleActions:     result.Actions,
@@ -623,6 +635,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		handled:           true,
 	}
 	if sharedBattle {
+		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
 			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver},
@@ -648,6 +661,10 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 	}
 
 	sharedBattle := shouldBroadcastTeamBattle(socketSession)
+	beforeTeamMember := team.Member{}
+	if sharedBattle {
+		beforeTeamMember = classicTeamMemberFromSession(socketSession)
+	}
 	result := socketSession.battleRuntime.ProcessItemAction(request, classicBattleItemActionFromRoleItem(item))
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle ActiveItem rejected battleId=%s actor=%s type=%s index=%d error=%s", request.BattleID, request.ActorHandle, request.Type, request.Index, result.ErrorCode)
@@ -667,8 +684,11 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 	var removeRoleHandles []string
 	if result.Over != nil {
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
+		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
+	} else if sharedBattle {
+		updatePlayerBaseRoleStateFromBattle(socketSession)
 	}
 
 	packet := packetResult{
@@ -697,6 +717,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		})
 	}
 	if sharedBattle {
+		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
 			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver},
@@ -716,6 +737,10 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 	}
 
 	sharedBattle := shouldBroadcastTeamBattle(socketSession)
+	beforeTeamMember := team.Member{}
+	if sharedBattle {
+		beforeTeamMember = classicTeamMemberFromSession(socketSession)
+	}
 	result := socketSession.battleRuntime.ProcessPlayOver(request)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle BattlePlayOver rejected battleId=%s error=%s", request.BattleID, result.ErrorCode)
@@ -730,6 +755,8 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
+	} else if sharedBattle {
+		updatePlayerBaseRoleStateFromBattle(socketSession)
 	}
 	packet := packetResult{
 		battleCommand:     result.StartCommand,
@@ -740,6 +767,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		handled:           true,
 	}
 	if sharedBattle {
+		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
 			Result:      packetResult{battleCommand: packet.battleCommand, battleOver: packet.battleOver},
@@ -1513,7 +1541,6 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 	if useResult.RoleStateChanged {
 		result.roleState = useResult.PlayerBase.RoleState
 	}
-	log.Printf("[ai-server] classic town ActiveItem roleId=%s type=%s index=%d item=%s", useResult.Role.RoleID, request.Type, request.Index, useResult.Item.Name)
 	return result
 }
 
@@ -1645,7 +1672,6 @@ func buildClassicTownChatSendResult(socketSession *packetSession, request classi
 				handled:      true,
 			}
 		}
-		log.Printf("[ai-server] classic town TeamSpeak roleId=%s msg=%s recipients=%d", role.RoleID, message, len(recipients))
 		return packetResult{
 			chatBroadcasts: []classicTownChatBroadcast{{Recipients: recipients, Message: push}},
 			handled:        true,
@@ -2008,6 +2034,54 @@ func buildClassicTownBuyItemResult(
 	return result
 }
 
+func buildClassicTownMoveRoleResult(socketSession *packetSession, request classicTownMoveRoleRequest) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return packetResult{handled: true}
+	}
+	roleID := socketSession.selectedRole.RoleID
+	if roleID == "" {
+		return packetResult{handled: true}
+	}
+	mapID := socketSession.playerBase.MapID
+	if mapID <= 0 {
+		mapID = socketSession.selectedRole.MapID
+	}
+	if request.MapID != "" {
+		requestMapID, err := strconv.Atoi(strings.TrimSpace(request.MapID))
+		if err != nil || requestMapID != mapID {
+			return packetResult{handled: true}
+		}
+	}
+
+	push := world.RoleMovePush{
+		Handle: roleID,
+		Type:   normalizeClassicTownMoveRoleType(request.Type),
+		X:      request.X,
+		Y:      request.Y,
+		Z:      request.Z,
+		TX:     request.TX,
+		TY:     request.TY,
+		TZ:     request.TZ,
+		MapID:  strconv.Itoa(mapID),
+	}
+	worldSceneHub.updatePosition(roleID, mapID, world.SpawnPoint{X: request.X, Y: request.Y})
+	return packetResult{
+		moveRole: &push,
+		handled:  true,
+	}
+}
+
+func normalizeClassicTownMoveRoleType(value string) string {
+	switch strings.TrimSpace(value) {
+	case "Run":
+		return "Run"
+	case "Flash":
+		return "Flash"
+	default:
+		return "Move"
+	}
+}
+
 func buildClassicTownTransferResult(
 	store *session.Store,
 	socketSession *packetSession,
@@ -2078,6 +2152,7 @@ func buildClassicTownTransferResult(
 		chatMessages:           entryResult.chatMessages,
 		teamSyncTransfer:       teamSyncTransfer,
 		sceneTransferFromMapID: fromMapID,
+		sceneTransferSpawn:     spawn,
 		handled:                true,
 	}
 }

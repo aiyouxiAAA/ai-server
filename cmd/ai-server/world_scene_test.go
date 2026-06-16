@@ -4,12 +4,50 @@ import (
 	"testing"
 
 	"ai-server/internal/session"
+	"ai-server/internal/team"
 	"ai-server/internal/world"
 )
 
 // resetWorldSceneHub 重建一个干净的 scene hub,避免测试间互相污染。
 func resetWorldSceneHub() *worldSceneConnectionHub {
 	return newWorldSceneConnectionHub()
+}
+
+func resetClassicTeamManagerForWorldSceneTest(t *testing.T) {
+	t.Helper()
+	classicTeamManager.Reset()
+	t.Cleanup(func() {
+		classicTeamManager.Reset()
+	})
+}
+
+func seedWorldSceneTeam(t *testing.T, leaderID string, memberID string, mapID string) {
+	t.Helper()
+	for _, roleID := range []string{leaderID, memberID} {
+		classicTeamManager.UpsertOnline(team.Member{
+			RoleID:   roleID,
+			Name:     roleID,
+			Level:    1,
+			Vocation: "测试",
+			HP:       100,
+			MaxHP:    100,
+			MP:       50,
+			MaxMP:    50,
+			MapID:    mapID,
+			Online:   true,
+		})
+	}
+	events := classicTeamManager.Invite(leaderID, memberID, "")
+	inviteID := ""
+	for _, event := range events {
+		if event.Invite != nil {
+			inviteID = event.Invite.InviteID
+		}
+	}
+	if inviteID == "" {
+		t.Fatalf("expected invite id when seeding team, got %+v", events)
+	}
+	classicTeamManager.ReplyInvite(memberID, inviteID, true)
 }
 
 // stubSceneSession 构造一个最小可用的 packetSession,带 selectedRole + playerBase,
@@ -31,13 +69,17 @@ func stubSceneSession(roleID string, mapID int) *packetSession {
 	}
 }
 
+func stubSceneSpawn(x int, y int) world.SpawnPoint {
+	return world.SpawnPoint{X: x, Y: y}
+}
+
 // TestWorldSceneRoleIDsForMapFiltersByMapIDAndExcludesSelf 验证 hub 按 mapId 过滤在线玩家
 // 的核心路由逻辑:同图返回、异图不返回、排除自己。
 func TestWorldSceneRoleIDsForMapFiltersByMapIDAndExcludesSelf(t *testing.T) {
 	hub := resetWorldSceneHub()
-	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1))
-	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1))
-	hub.register("C", 2, &websocketWriter{}, stubSceneSession("C", 2))
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(100, 200))
+	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1), stubSceneSpawn(300, 400))
+	hub.register("C", 2, &websocketWriter{}, stubSceneSession("C", 2), stubSceneSpawn(500, 600))
 
 	// A 视角:同图(1)应返回 B,排除自己,排除异图 C。
 	got := hub.roleIDsForMap(1, "A")
@@ -62,8 +104,8 @@ func TestWorldSceneRoleIDsForMapFiltersByMapIDAndExcludesSelf(t *testing.T) {
 // 供调用方广播 removeRole 给原 mapId 邻居。
 func TestWorldSceneUnregisterReturnsOldMapID(t *testing.T) {
 	hub := resetWorldSceneHub()
-	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1))
-	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1))
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(100, 200))
+	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1), stubSceneSpawn(300, 400))
 
 	oldMapID, ok := hub.unregister("A")
 	if !ok || oldMapID != 1 {
@@ -87,9 +129,9 @@ func TestWorldSceneUnregisterReturnsOldMapID(t *testing.T) {
 // 能拿到邻居的 session(含 selectedRole + playerBase),用于构造 RolePush。
 func TestWorldSceneNeighborsInMapReturnsSessionsForRolePush(t *testing.T) {
 	hub := resetWorldSceneHub()
-	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1))
-	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1))
-	hub.register("C", 2, &websocketWriter{}, stubSceneSession("C", 2))
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(100, 200))
+	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1), stubSceneSpawn(300, 400))
+	hub.register("C", 2, &websocketWriter{}, stubSceneSession("C", 2), stubSceneSpawn(500, 600))
 
 	// A 进图时,应拿到同图(1)的 B,排除自己,排除异图 C。
 	neighbors := hub.neighborsInMap(1, "A")
@@ -121,11 +163,11 @@ func TestWorldSceneNeighborsInMapReturnsSessionsForRolePush(t *testing.T) {
 // 跳过 session 不完整的连接(防止构造 RolePush 时 nil 解引用)。
 func TestWorldSceneNeighborsInMapSkipsIncompleteSessions(t *testing.T) {
 	hub := resetWorldSceneHub()
-	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1))
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(100, 200))
 	// B 的 session 缺 playerBase(模拟异常状态)。
 	hub.register("B", 1, &websocketWriter{}, &packetSession{
 		selectedRole: &session.RoleSummary{RoleID: "B", MapID: 1},
-	})
+	}, stubSceneSpawn(300, 400))
 
 	neighbors := hub.neighborsInMap(1, "A")
 	// B 因 session 不完整应被跳过,只剩 0 个有效邻居。
@@ -344,7 +386,7 @@ func TestWorldSceneSyncRoleChangeDoesNotEarlyReturnWhenTargetAlreadyRegistered(t
 	sessA := stubSceneSession("A", 2)
 	syncWorldScenePresence(writer, sessA, "", 0)
 	sessBExisting := stubSceneSession("B", 1)
-	worldSceneHub.register("B", 1, writer, sessBExisting)
+	worldSceneHub.register("B", 1, writer, sessBExisting, stubSceneSpawn(300, 400))
 
 	sessB := stubSceneSession("B", 1)
 	roleID, mapID := syncWorldScenePresence(writer, sessB, "A", 2)
@@ -371,13 +413,16 @@ func TestWorldSceneAnnounceTransferUpdatesMapID(t *testing.T) {
 	sess.playerBase.MapID = 2
 	sess.selectedRole.MapID = 2
 
-	newMapID := announceWorldSceneTransfer(writer, sess, "A", 1)
+	newMapID := announceWorldSceneTransfer(writer, sess, "A", 1, stubSceneSpawn(333, 444))
 	if newMapID != 2 {
 		t.Fatalf("announceWorldSceneTransfer returned %d, want 2", newMapID)
 	}
 	conn, ok := worldSceneHub.connectionFor("A")
 	if !ok || conn.mapID != 2 {
 		t.Errorf("after transfer, A registered mapID = %d (ok=%v), want 2", conn.mapID, ok)
+	}
+	if conn.spawn.X != 333 || conn.spawn.Y != 444 {
+		t.Errorf("after transfer, A spawn = %+v, want {333 444}", conn.spawn)
 	}
 }
 
@@ -399,7 +444,7 @@ func TestWorldSceneSyncEarlyReturnsWhenHubAlreadyAtCurrentMap(t *testing.T) {
 	// 模拟 syncTransfer 帮队员迁图:session 改 map2,announceWorldSceneTransfer 把 hub 迁到 map2。
 	sess.playerBase.MapID = 2
 	sess.selectedRole.MapID = 2
-	announceWorldSceneTransfer(writer, sess, "A", 1)
+	announceWorldSceneTransfer(writer, sess, "A", 1, stubSceneSpawn(333, 444))
 
 	// 此时 hub 里 A 在 map2(正确)。但队员自己的 registeredSceneMapID 还是旧值 1(stale)。
 	// 队员发下一包,main.go 用 stale oldMapID=1 调 sync——必须早退,不能误迁。
@@ -411,5 +456,215 @@ func TestWorldSceneSyncEarlyReturnsWhenHubAlreadyAtCurrentMap(t *testing.T) {
 	conn, ok := worldSceneHub.connectionFor("A")
 	if !ok || conn.mapID != 2 {
 		t.Errorf("after stale-oldMapID sync, A hub mapID = %d (ok=%v), want 2 (no re-migration)", conn.mapID, ok)
+	}
+}
+
+func TestWorldSceneUpdatePositionStoresLatestSpawn(t *testing.T) {
+	hub := resetWorldSceneHub()
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(100, 200))
+
+	if !hub.updatePosition("A", 1, stubSceneSpawn(777, 888)) {
+		t.Fatal("updatePosition(A, map1) should return true")
+	}
+
+	conn, ok := hub.connectionFor("A")
+	if !ok {
+		t.Fatal("after updatePosition, A should still be registered")
+	}
+	if conn.spawn.X != 777 || conn.spawn.Y != 888 {
+		t.Fatalf("after updatePosition, spawn = %+v, want {777 888}", conn.spawn)
+	}
+	if hub.updatePosition("A", 2, stubSceneSpawn(1, 2)) {
+		t.Fatal("updatePosition with mismatched map should return false")
+	}
+	conn, _ = hub.connectionFor("A")
+	if conn.spawn.X != 777 || conn.spawn.Y != 888 {
+		t.Fatalf("mismatched map update changed spawn to %+v, want {777 888}", conn.spawn)
+	}
+}
+
+func TestWorldSceneVisibilityUsesHeroSpace(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	hub := resetWorldSceneHub()
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(0, 0))
+	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1), stubSceneSpawn(449, 0))
+	hub.register("C", 1, &websocketWriter{}, stubSceneSession("C", 1), stubSceneSpawn(450, 0))
+
+	hub.syncMapVisibility(1)
+	connA, ok := hub.connectionFor("A")
+	if !ok {
+		t.Fatal("A should remain registered")
+	}
+	if _, ok := connA.visible["B"]; !ok {
+		t.Fatal("A should see B inside heroSpace")
+	}
+	if _, ok := connA.visible["C"]; ok {
+		t.Fatal("A should not see C at heroSpace boundary")
+	}
+}
+
+func TestWorldSceneVisibilityCapsScreenRoleToTwentyNearest(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	hub := resetWorldSceneHub()
+	hub.register("observer", 1, &websocketWriter{}, stubSceneSession("observer", 1), stubSceneSpawn(0, 0))
+	for index := 1; index <= 22; index += 1 {
+		roleID := "R" + string(rune('A'+index-1))
+		hub.register(roleID, 1, &websocketWriter{}, stubSceneSession(roleID, 1), stubSceneSpawn(index*10, 0))
+	}
+
+	hub.syncMapVisibility(1)
+	observer, ok := hub.connectionFor("observer")
+	if !ok {
+		t.Fatal("observer should remain registered")
+	}
+	if len(observer.visible) != worldSceneScreenRoleLimit {
+		t.Fatalf("observer visible count = %d, want %d", len(observer.visible), worldSceneScreenRoleLimit)
+	}
+	if _, ok := observer.visible["RU"]; ok {
+		t.Fatal("observer should not see the 21st nearest role")
+	}
+	if _, ok := observer.visible["RV"]; ok {
+		t.Fatal("observer should not see the 22nd nearest role")
+	}
+}
+
+func TestWorldSceneVisibilityKeepsSameMapTeammateOutsideHeroSpace(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	seedWorldSceneTeam(t, "observer", "teammate", "1")
+
+	hub := resetWorldSceneHub()
+	hub.register("observer", 1, &websocketWriter{}, stubSceneSession("observer", 1), stubSceneSpawn(0, 0))
+	hub.register("teammate", 1, &websocketWriter{}, stubSceneSession("teammate", 1), stubSceneSpawn(1000, 0))
+	hub.register("stranger", 1, &websocketWriter{}, stubSceneSession("stranger", 1), stubSceneSpawn(1000, 0))
+
+	hub.syncMapVisibility(1)
+	observer, ok := hub.connectionFor("observer")
+	if !ok {
+		t.Fatal("observer should remain registered")
+	}
+	if _, ok := observer.visible["teammate"]; !ok {
+		t.Fatal("observer should see same-map teammate outside heroSpace")
+	}
+	if _, ok := observer.visible["stranger"]; ok {
+		t.Fatal("observer should not see stranger outside heroSpace")
+	}
+}
+
+func TestWorldSceneVisibilityKeepsSameMapTeammateBeyondScreenRoleLimit(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	seedWorldSceneTeam(t, "observer", "teammate", "1")
+
+	hub := resetWorldSceneHub()
+	hub.register("observer", 1, &websocketWriter{}, stubSceneSession("observer", 1), stubSceneSpawn(0, 0))
+	for index := 1; index <= 22; index += 1 {
+		roleID := "R" + string(rune('A'+index-1))
+		hub.register(roleID, 1, &websocketWriter{}, stubSceneSession(roleID, 1), stubSceneSpawn(index*10, 0))
+	}
+	hub.register("teammate", 1, &websocketWriter{}, stubSceneSession("teammate", 1), stubSceneSpawn(430, 0))
+
+	hub.syncMapVisibility(1)
+	observer, ok := hub.connectionFor("observer")
+	if !ok {
+		t.Fatal("observer should remain registered")
+	}
+	if _, ok := observer.visible["teammate"]; !ok {
+		t.Fatal("observer should keep same-map teammate beyond screenRole cap")
+	}
+	if len(observer.visible) != worldSceneScreenRoleLimit+1 {
+		t.Fatalf("observer visible count = %d, want %d", len(observer.visible), worldSceneScreenRoleLimit+1)
+	}
+	if _, ok := observer.visible["RU"]; ok {
+		t.Fatal("observer should still cap the 21st nearest non-team role")
+	}
+}
+
+func TestWorldSceneMoveRoleRemovesWhenActorLeavesHeroSpace(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	hub := resetWorldSceneHub()
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(0, 0))
+	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1), stubSceneSpawn(100, 0))
+	hub.syncMapVisibility(1)
+
+	hub.updatePosition("B", 1, stubSceneSpawn(1000, 0))
+	actions := hub.moveRoleActions(1, "B", world.RoleMovePush{Handle: "B", X: 1000, Y: 0, TX: 1000, TY: 0, MapID: "1"})
+	sawRemove := false
+	sawMove := false
+	for _, action := range actions {
+		if action.recipientID == "A" && action.removeHandle == "B" {
+			sawRemove = true
+		}
+		if action.recipientID == "A" && action.moveRole != nil && action.moveRole.Handle == "B" {
+			sawMove = true
+		}
+	}
+	if !sawRemove {
+		t.Fatal("A should receive removeRole for B after B leaves heroSpace")
+	}
+	if sawMove {
+		t.Fatal("A should not receive moveRole for B after B leaves heroSpace")
+	}
+}
+
+func TestBuildClassicTownMoveRoleResultUsesSessionRoleAndUpdatesHub(t *testing.T) {
+	swapWorldSceneHub(t)
+	sess := stubSceneSession("real-role", 45)
+	worldSceneHub.register("real-role", 45, &websocketWriter{}, sess, stubSceneSpawn(100, 200))
+
+	result := buildClassicTownMoveRoleResult(sess, classicTownMoveRoleRequest{
+		Handle: "spoofed-role",
+		Type:   "Run",
+		X:      1231,
+		Y:      490,
+		Z:      0,
+		TX:     1075,
+		TY:     490,
+		TZ:     0,
+		MapID:  "45",
+	})
+
+	if !result.handled || result.moveRole == nil {
+		t.Fatalf("moveRole request should be handled with push, got %+v", result)
+	}
+	if result.moveRole.Handle != "real-role" {
+		t.Fatalf("moveRole handle = %s, want session role real-role", result.moveRole.Handle)
+	}
+	if result.moveRole.Type != "Run" || result.moveRole.X != 1231 || result.moveRole.Y != 490 || result.moveRole.TX != 1075 || result.moveRole.TY != 490 || result.moveRole.MapID != "45" {
+		t.Fatalf("unexpected moveRole payload: %+v", result.moveRole)
+	}
+	conn, ok := worldSceneHub.connectionFor("real-role")
+	if !ok {
+		t.Fatal("real-role should remain registered after moveRole")
+	}
+	if conn.spawn.X != 1231 || conn.spawn.Y != 490 {
+		t.Fatalf("hub spawn after moveRole = %+v, want {1231 490}", conn.spawn)
+	}
+}
+
+func TestBuildClassicTownMoveRoleResultIgnoresMismatchedMap(t *testing.T) {
+	swapWorldSceneHub(t)
+	sess := stubSceneSession("A", 45)
+	worldSceneHub.register("A", 45, &websocketWriter{}, sess, stubSceneSpawn(100, 200))
+
+	result := buildClassicTownMoveRoleResult(sess, classicTownMoveRoleRequest{
+		Type:  "Run",
+		X:     999,
+		Y:     999,
+		TX:    999,
+		TY:    999,
+		MapID: "46",
+	})
+
+	if !result.handled {
+		t.Fatal("mismatched map moveRole should still be handled")
+	}
+	if result.moveRole != nil {
+		t.Fatalf("mismatched map moveRole should not broadcast, got %+v", result.moveRole)
+	}
+	conn, ok := worldSceneHub.connectionFor("A")
+	if !ok {
+		t.Fatal("A should remain registered after mismatched map moveRole")
+	}
+	if conn.spawn.X != 100 || conn.spawn.Y != 200 {
+		t.Fatalf("mismatched map moveRole changed spawn to %+v, want {100 200}", conn.spawn)
 	}
 }

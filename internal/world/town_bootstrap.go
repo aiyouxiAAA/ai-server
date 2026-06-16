@@ -35,6 +35,18 @@ type RoleMovement struct {
 	Mode  int     `json:"mode"`
 }
 
+type RoleMovePush struct {
+	Handle string `json:"handle"`
+	Type   string `json:"type"`
+	X      int    `json:"x"`
+	Y      int    `json:"y"`
+	Z      int    `json:"z"`
+	TX     int    `json:"tx"`
+	TY     int    `json:"ty"`
+	TZ     int    `json:"tz"`
+	MapID  string `json:"mapId,omitempty"`
+}
+
 type RolePush struct {
 	Handle          string                 `json:"handle"`
 	RoleID          string                 `json:"roleId"`

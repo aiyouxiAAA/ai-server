@@ -58,7 +58,6 @@ func (hub *classicTeamConnectionHub) startSharedBattle(start classicTeamBattleSt
 		if err := connection.writer.writePush(cmdClassicBattleStartCommand, encodePayload(start.Bundle.StartCommand)); err != nil {
 			log.Printf("[ai-server] write classic team battle startCommand failed roleId=%s: %v", member.RoleID, err)
 		}
-		log.Printf("[ai-server] classic team battle start actorRoleId=%s memberRoleId=%s battleId=%s", start.ActorRoleID, member.RoleID, start.Bundle.Start.BattleID)
 	}
 }
 
@@ -72,9 +71,10 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 			continue
 		}
 		connection := hub.connectionFor(roleID)
-		if connection.writer == nil || connection.session == nil {
+		if connection.session == nil {
 			continue
 		}
+		beforeMember := classicTeamMemberFromSession(connection.session)
 		result := sync.Result
 		if result.battleOver != nil {
 			roleState, rolePhysique := finalizeClassicBattleOver(store, connection.session, result.battleOver.Result)
@@ -83,9 +83,34 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 			result.rolePhysique = rolePhysique
 			result.removeRoleHandles = markDefeatedVisibleMonsterFromBattle(store, connection.session, result.battleOver)
 			connection.session.battleRuntime = nil
+		} else {
+			updatePlayerBaseRoleStateFromBattle(connection.session)
 		}
-		writeClassicTeamBattleResult(connection.writer, result)
+		if connection.writer != nil {
+			writeClassicTeamBattleResult(connection.writer, result)
+		}
+		hub.broadcast(classicTeamMemberSnapshotEventsIfChanged(beforeMember, connection.session))
 	}
+}
+
+func classicTeamMemberSnapshotEventsIfChanged(before team.Member, socketSession *packetSession) []team.Event {
+	after := classicTeamMemberFromSession(socketSession)
+	if after.RoleID == "" || after.Name == "" {
+		return nil
+	}
+	if before.RoleID == after.RoleID &&
+		before.Name == after.Name &&
+		before.Level == after.Level &&
+		before.Vocation == after.Vocation &&
+		before.HP == after.HP &&
+		before.MaxHP == after.MaxHP &&
+		before.MP == after.MP &&
+		before.MaxMP == after.MaxMP &&
+		before.MapID == after.MapID &&
+		before.Online == after.Online {
+		return nil
+	}
+	return classicTeamManager.UpsertOnline(after)
 }
 
 func writeClassicTeamBattleResult(writer *websocketWriter, result packetResult) {

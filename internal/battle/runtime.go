@@ -125,6 +125,7 @@ type CellInfoPush struct {
 	Name              string `json:"name"`
 	DisplayURL        string `json:"displayUrl"`
 	Level             int    `json:"level,omitempty"`
+	Vocation          string `json:"vocation,omitempty"`
 	XScale            int    `json:"xScale"`
 	YScale            int    `json:"yScale"`
 	MaxHP             int    `json:"maxHp"`
@@ -407,6 +408,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			Name:         defaultString(playerBase.DisplayName, role.DisplayName),
 			DisplayURL:   defaultString(playerBase.SourceQuery, defaultString(role.SourceQuery, "human/human.swf?w1=1&")),
 			Level:        playerLevel,
+			Vocation:     defaultString(playerBase.Voc, role.Voc),
 			XScale:       100,
 			YScale:       100,
 			MaxHP:        playerMaxHP,
@@ -543,6 +545,7 @@ func buildTeamActorCell(battleID string, role session.RoleSummary, playerBase se
 		Name:         defaultString(playerBase.DisplayName, role.DisplayName),
 		DisplayURL:   defaultString(playerBase.SourceQuery, defaultString(role.SourceQuery, "human/human.swf?w1=1&")),
 		Level:        playerLevel,
+		Vocation:     defaultString(playerBase.Voc, role.Voc),
 		XScale:       100,
 		YScale:       100,
 		MaxHP:        playerMaxHP,

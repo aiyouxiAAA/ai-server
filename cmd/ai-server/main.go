@@ -67,6 +67,8 @@ const (
 	cmdClassicTownChatSendReq       = 1139
 	cmdClassicTownDestroyItemReq    = 1181
 	cmdClassicTownSaleItemReq       = 1182
+	cmdClassicTownMoveRoleReq       = 1184
+	cmdClassicTownMoveRolePush      = 1185
 	cmdClassicSocialFriendInfo      = 1140
 	cmdClassicSocialClearFriend     = 1141
 	cmdClassicSocialBlackListInfo   = 1142
@@ -187,12 +189,14 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 	registeredSceneRoleID := ""
 	registeredSceneMapID := 0
 	defer func() {
+		// world scene:断开连接时给原 mapId 邻居推 removeRole,避免对端留僵尸节点。
+		if registeredSceneRoleID != "" {
+			if oldMapID, ok := worldSceneHub.unregister(registeredSceneRoleID); ok {
+				worldSceneHub.broadcastRemoveRoleToMap(oldMapID, registeredSceneRoleID, registeredSceneRoleID)
+			}
+		}
 		if registeredTeamRoleID == "" {
 			return
-		}
-		// world scene:断开连接时给原 mapId 邻居推 removeRole,避免对端留僵尸节点。
-		if oldMapID, ok := worldSceneHub.unregister(registeredSceneRoleID); ok {
-			worldSceneHub.broadcastRemoveRoleToMap(oldMapID, registeredSceneRoleID, registeredSceneRoleID)
 		}
 		classicTeamHub.unregister(registeredTeamRoleID)
 		classicTeamHub.broadcast(classicTeamManager.SetOffline(registeredTeamRoleID))
@@ -232,7 +236,7 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 			// sceneTransferFromMapID > 0 表示本次 townBootstrap 来自传送路径(非首次进图)。
 			// 同图传送(旧新 mapId 相同)时跳过,避免邻居收到多余的 removeRole+createRole 闪烁。
 			if result.sceneTransferFromMapID > 0 && registeredSceneRoleID != "" && socketSession.playerBase != nil && result.sceneTransferFromMapID != socketSession.playerBase.MapID {
-				registeredSceneMapID = announceWorldSceneTransfer(socketWriter, socketSession, registeredSceneRoleID, result.sceneTransferFromMapID)
+				registeredSceneMapID = announceWorldSceneTransfer(socketWriter, socketSession, registeredSceneRoleID, result.sceneTransferFromMapID, result.sceneTransferSpawn)
 			}
 		}
 		if result.teamSyncTransfer != nil {
@@ -514,6 +518,9 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				log.Printf("[ai-server] write classic town removeRole push failed: %v", err)
 				return
 			}
+		}
+		if result.moveRole != nil && socketSession.selectedRole != nil && socketSession.playerBase != nil {
+			worldSceneHub.broadcastMoveRoleToMap(socketSession.playerBase.MapID, socketSession.selectedRole.RoleID, *result.moveRole)
 		}
 		if result.battleStart == nil && result.battleCommand != nil {
 			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {

@@ -67,6 +67,37 @@ func TestTeamLeaderCanKickAndTransferLeader(t *testing.T) {
 	}
 }
 
+func TestTeamUpsertOnlineRefreshesMemberSnapshotFields(t *testing.T) {
+	manager := NewManager()
+	manager.UpsertOnline(testMember("role-a", "甲"))
+	manager.UpsertOnline(testMember("role-b", "乙"))
+	acceptInvite(t, manager, "role-a", "role-b")
+
+	events := manager.UpsertOnline(Member{
+		RoleID:   "role-b",
+		Name:     "乙",
+		Level:    21,
+		Vocation: "游侠",
+		HP:       42,
+		MaxHP:    120,
+		MP:       7,
+		MaxMP:    80,
+		MapID:    "2",
+	})
+
+	snapshot := collectMembers(events)
+	refreshed := snapshot["role-b"]
+	if refreshed.Level != 21 || refreshed.Vocation != "游侠" || refreshed.HP != 42 || refreshed.MaxHP != 120 || refreshed.MP != 7 || refreshed.MaxMP != 80 || refreshed.MapID != "2" {
+		t.Fatalf("expected refreshed role-b snapshot fields, got %+v", refreshed)
+	}
+	if !refreshed.Online || refreshed.IsLeader {
+		t.Fatalf("expected refreshed member to stay online and non-leader, got %+v", refreshed)
+	}
+	if leader := snapshot["role-a"]; !leader.IsLeader || !leader.Online || leader.MapID != "1" {
+		t.Fatalf("expected leader snapshot to stay intact, got %+v", leader)
+	}
+}
+
 func TestTeamNonLeaderCannotKick(t *testing.T) {
 	manager := NewManager()
 	manager.UpsertOnline(testMember("role-a", "甲"))

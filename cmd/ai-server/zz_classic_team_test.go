@@ -264,12 +264,15 @@ func TestHandlePacketClassicTeamCapturedSecondAccountSharesBattleAppearance(t *t
 	}
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(leaderSession))
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(memberSession))
-	acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	acceptResult := acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	assertClassicCapturedTeamMemberSnapshot(t, acceptResult, memberSession.selectedRole.RoleID, capturedClassicTeamRoleBridgeWoodcutter, "45")
 
 	moveClassicTeamSessionToMap(t, store, leaderSession, 4)
 	moveClassicTeamSessionToMap(t, store, memberSession, 4)
+	applyCapturedClassicTeamRoleFixture(memberSession, capturedClassicTeamRoleBridgeWoodcutter)
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(leaderSession))
-	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(memberSession))
+	replayEvents := classicTeamManager.UpsertOnline(classicTeamMemberFromSession(memberSession))
+	assertClassicCapturedTeamMemberSnapshot(t, packetResult{teamEvents: replayEvents}, memberSession.selectedRole.RoleID, capturedClassicTeamRoleBridgeWoodcutter, "4")
 	classicTeamHub.register(memberSession.selectedRole.RoleID, &websocketWriter{}, memberSession)
 
 	result := handlePacketWithSession(store, protocol.Packet{
@@ -294,6 +297,14 @@ func TestHandlePacketClassicTeamCapturedSecondAccountSharesBattleAppearance(t *t
 		capturedCellFound = true
 		if cell.DisplayURL != capturedClassicTeamRoleBridgeWoodcutter.RuntimeSourceQuery {
 			t.Fatalf("expected captured source query on team cell, got %q", cell.DisplayURL)
+		}
+		if cell.Level != capturedClassicTeamRoleBridgeWoodcutter.Level ||
+			cell.Vocation != capturedClassicTeamRoleBridgeWoodcutter.Vocation ||
+			cell.HP != capturedClassicTeamRoleBridgeWoodcutter.HP ||
+			cell.MaxHP != capturedClassicTeamRoleBridgeWoodcutter.MaxHP ||
+			cell.MP != capturedClassicTeamRoleBridgeWoodcutter.MP ||
+			cell.MaxMP != capturedClassicTeamRoleBridgeWoodcutter.MaxMP {
+			t.Fatalf("expected captured battle cell stats from packet fixture, got %+v", cell)
 		}
 	}
 	if !capturedCellFound {
@@ -408,6 +419,168 @@ func TestHandlePacketClassicTeamSharedBattleRejectsNonActiveActorAndAdvances(t *
 	}
 }
 
+func TestClassicTeamSharedBattleMemberStateRefreshesSnapshot(t *testing.T) {
+	classicTeamManager.Reset()
+
+	store := session.NewStore()
+	leaderSession, memberSession := seedClassicTeamPair(t, store)
+	acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	runtime, _, ok := battle.NewTeamWildBattle([]battle.TeamActor{
+		{Role: *leaderSession.selectedRole, PlayerBase: *leaderSession.playerBase},
+		{Role: *memberSession.selectedRole, PlayerBase: *memberSession.playerBase},
+	}, battle.StartRequest{
+		MapID:       "4",
+		MapName:     "云隐村口",
+		StageFocusX: 120,
+		ReturnRoute: "town-placeholder",
+	})
+	if !ok {
+		t.Fatal("expected shared battle runtime")
+	}
+	memberSession.battleRuntime = runtime
+	beforeMember := classicTeamMemberFromSession(memberSession)
+
+	for index := range runtime.Cells {
+		if runtime.Cells[index].Handle != memberSession.selectedRole.RoleID {
+			continue
+		}
+		runtime.Cells[index].HP = 123
+		runtime.Cells[index].MP = 17
+		break
+	}
+	updatePlayerBaseRoleStateFromBattle(memberSession)
+	events := classicTeamMemberSnapshotEventsIfChanged(beforeMember, memberSession)
+	assertClassicTeamMemberSnapshot(t, packetResult{teamEvents: events}, memberSession.selectedRole.RoleID, func(member team.Member) bool {
+		return member.HP == 123 && member.MP == 17 && member.MaxHP == beforeMember.MaxHP && member.MaxMP == beforeMember.MaxMP
+	})
+
+	unchangedEvents := classicTeamMemberSnapshotEventsIfChanged(classicTeamMemberFromSession(memberSession), memberSession)
+	if len(unchangedEvents) != 0 {
+		t.Fatalf("expected unchanged shared battle member state not to broadcast snapshot, got %+v", unchangedEvents)
+	}
+}
+
+func TestClassicTeamSharedBattleActiveItemRefreshesActorSnapshot(t *testing.T) {
+	classicTeamManager.Reset()
+
+	store := session.NewStore()
+	leaderSession, memberSession := seedClassicTeamPair(t, store)
+	acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	runtime, bundle, ok := battle.NewTeamWildBattle([]battle.TeamActor{
+		{Role: *leaderSession.selectedRole, PlayerBase: *leaderSession.playerBase},
+		{Role: *memberSession.selectedRole, PlayerBase: *memberSession.playerBase},
+	}, battle.StartRequest{
+		MapID:       "4",
+		MapName:     "云隐村口",
+		StageFocusX: 120,
+		ReturnRoute: "town-placeholder",
+	})
+	if !ok {
+		t.Fatal("expected shared battle runtime")
+	}
+	leaderSession.battleRuntime = runtime
+	memberSession.battleRuntime = runtime
+	for index := range runtime.Cells {
+		if runtime.Cells[index].Handle != leaderSession.selectedRole.RoleID {
+			continue
+		}
+		runtime.Cells[index].HP = 40
+		break
+	}
+	updatePlayerBaseRoleStateFromBattle(leaderSession)
+	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(leaderSession))
+
+	item, ok := store.GrantRoleItem(leaderSession.playerBase.PlayerID, leaderSession.selectedRole.RoleID, session.RoleItem{
+		Type:        "背包",
+		Name:        "L花卷",
+		ItemType:    "own",
+		Display:     "213.png",
+		Description: "f_i_L花卷^ffffff&24@消耗品&25@99&7@35&20@恢复气力",
+		Count:       2,
+		Index:       20,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected test item to be granted")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleActiveItemReq,
+		Seq: 22,
+		Payload: mustJSON(t, battle.ItemActionRequest{
+			BattleID:    bundle.Start.BattleID,
+			ActorHandle: leaderSession.selectedRole.RoleID,
+			Type:        item.Type,
+			Index:       item.Index,
+			Round:       bundle.StartCommand.Round,
+			Sequence:    bundle.StartCommand.Sequence,
+		}),
+	}, leaderSession)
+	if !result.handled || result.teamBattleSync == nil {
+		t.Fatalf("expected shared ActiveItem to produce team sync, got %+v", result)
+	}
+	leaderCell := classicTeamCellForRole(t, runtime, leaderSession.selectedRole.RoleID)
+	assertClassicTeamMemberSnapshot(t, result, leaderSession.selectedRole.RoleID, func(member team.Member) bool {
+		return member.HP == leaderCell.HP && member.MP == leaderCell.MP
+	})
+}
+
+func TestClassicTeamSharedBattleOverGrantsRewardAndLootToEachOnlineMember(t *testing.T) {
+	classicTeamManager.Reset()
+	classicTeamHub = newClassicTeamConnectionHub()
+
+	store := session.NewStore()
+	leaderSession, memberSession := seedClassicTeamPair(t, store)
+	acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	runtime, bundle, ok := battle.NewTeamWildBattle([]battle.TeamActor{
+		{Role: *leaderSession.selectedRole, PlayerBase: *leaderSession.playerBase},
+		{Role: *memberSession.selectedRole, PlayerBase: *memberSession.playerBase},
+	}, battle.StartRequest{
+		MapID:       "4",
+		MapName:     "云隐村口",
+		StageFocusX: 120,
+		ReturnRoute: "town-placeholder",
+	})
+	if !ok {
+		t.Fatal("expected shared battle runtime")
+	}
+	leaderSession.battleRuntime = runtime
+	memberSession.battleRuntime = runtime
+	classicTeamHub.mu.Lock()
+	classicTeamHub.connections[memberSession.selectedRole.RoleID] = classicTeamConnection{session: memberSession}
+	classicTeamHub.mu.Unlock()
+	runtime.PendingOver = &battle.OverPush{
+		BattleID: bundle.Start.BattleID,
+		Winner:   battle.CampTeam,
+		Rounds:   1,
+		Result: battle.ResultPayload{
+			Winner:   battle.CampTeam,
+			Rounds:   1,
+			ExpDelta: 37,
+			Items:    []string{"朽木x1"},
+		},
+	}
+
+	playOver := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattlePlayOverReq,
+		Seq: 21,
+		Payload: mustJSON(t, battle.PlayOverRequest{
+			BattleID: bundle.Start.BattleID,
+		}),
+	}, leaderSession)
+	if !playOver.handled || playOver.battleOver == nil || playOver.teamBattleSync == nil {
+		t.Fatalf("expected shared BattlePlayOver to produce team over sync, got %+v", playOver)
+	}
+	classicTeamHub.syncSharedBattle(store, *playOver.teamBattleSync)
+
+	assertClassicTeamSharedBattleRewardState(t, leaderSession, "leader")
+	assertClassicTeamSharedBattleRewardState(t, memberSession, "member")
+	memberLootList := buildClassicTownItemListResult(store, memberSession, classicBattleLootType)
+	if !memberLootList.handled || len(memberLootList.itemInfos) != 1 || memberLootList.itemInfos[0].Name != "朽木" {
+		t.Fatalf("expected member battle loot container to list shared reward, got %+v", memberLootList)
+	}
+}
+
 func seedClassicTeamPair(t *testing.T, store *session.Store) (*packetSession, *packetSession) {
 	t.Helper()
 
@@ -425,6 +598,13 @@ type classicCapturedTeamRoleFixture struct {
 	Gender             string
 	RoleTemplateID     int
 	PresetID           int
+	Level              int
+	Vocation           string
+	HP                 int
+	MaxHP              int
+	MP                 int
+	MaxMP              int
+	MapID              int
 	SourceQuery        string
 	RuntimeSourceQuery string
 }
@@ -436,9 +616,17 @@ var capturedClassicTeamRoleBridgeWoodcutter = classicCapturedTeamRoleFixture{
 	Gender:         "male",
 	RoleTemplateID: 1,
 	PresetID:       1,
-	// D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260611_222123_073_session_33544/connections/20260611_222129_098_conn_0002/derived/traffic-preview-0001.log:6
-	// createRole player_21432, name=222, vocation=游侠, level=18.
-	SourceQuery:        "human/human.swf?a=5&b=7&c=9&e=6&sex=1&h=7&hr=12&co=5&m=0&n=0&p=30&se=6&wr=6&w3=25&",
+	// D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260613_165223_214_session_29856/connections/20260613_165248_812_conn_0002
+	// raw/server-to-client-0001.bin:1231/:1240 and frames-server-to-client-0001.ndjson:6417.
+	// The local account keeps the user-facing test name 222, but carries the captured player_21432 body/state.
+	Level:              26,
+	Vocation:           "游侠",
+	HP:                 815,
+	MaxHP:              815,
+	MP:                 394,
+	MaxMP:              394,
+	MapID:              45,
+	SourceQuery:        "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&",
 	RuntimeSourceQuery: "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&",
 }
 
@@ -481,7 +669,61 @@ func seedCapturedClassicTeamRoleSessionInStore(t *testing.T, store *session.Stor
 	if socketSession.playerBase.SourceQuery != fixture.RuntimeSourceQuery {
 		t.Fatalf("expected captured source query on player base, got %q", socketSession.playerBase.SourceQuery)
 	}
+	applyCapturedClassicTeamRoleFixture(socketSession, fixture)
+	socketSession.selectedRole.MapID = fixture.MapID
+	socketSession.playerBase.MapID = fixture.MapID
 	return socketSession
+}
+
+func applyCapturedClassicTeamRoleFixture(socketSession *packetSession, fixture classicCapturedTeamRoleFixture) {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return
+	}
+	socketSession.selectedRole.Level = fixture.Level
+	socketSession.selectedRole.Voc = fixture.Vocation
+	if socketSession.selectedRole.MapID <= 0 {
+		socketSession.selectedRole.MapID = fixture.MapID
+	}
+	socketSession.selectedRole.SourceQuery = fixture.RuntimeSourceQuery
+	if socketSession.selectedRole.RoleState == nil {
+		socketSession.selectedRole.RoleState = &session.RoleState{Handle: socketSession.selectedRole.RoleID}
+	}
+	socketSession.selectedRole.RoleState.HP = fixture.HP
+	socketSession.selectedRole.RoleState.MP = fixture.MP
+	socketSession.selectedRole.RoleState.Lv = fixture.Level
+	if socketSession.selectedRole.RoleState.Speed == 0 {
+		socketSession.selectedRole.RoleState.Speed = 145
+	}
+	if socketSession.selectedRole.RolePhysique == nil {
+		socketSession.selectedRole.RolePhysique = &session.RolePhysique{Handle: socketSession.selectedRole.RoleID}
+	}
+	socketSession.selectedRole.RolePhysique.MaxHP = fixture.MaxHP
+	socketSession.selectedRole.RolePhysique.MaxMP = fixture.MaxMP
+
+	socketSession.playerBase.Level = fixture.Level
+	socketSession.playerBase.Voc = fixture.Vocation
+	socketSession.playerBase.HP = fixture.HP
+	socketSession.playerBase.MaxHP = fixture.MaxHP
+	socketSession.playerBase.MP = fixture.MP
+	socketSession.playerBase.MaxMP = fixture.MaxMP
+	if socketSession.playerBase.MapID <= 0 {
+		socketSession.playerBase.MapID = fixture.MapID
+	}
+	socketSession.playerBase.SourceQuery = fixture.RuntimeSourceQuery
+	if socketSession.playerBase.RoleState == nil {
+		socketSession.playerBase.RoleState = &session.RoleState{Handle: socketSession.selectedRole.RoleID}
+	}
+	socketSession.playerBase.RoleState.HP = fixture.HP
+	socketSession.playerBase.RoleState.MP = fixture.MP
+	socketSession.playerBase.RoleState.Lv = fixture.Level
+	if socketSession.playerBase.RoleState.Speed == 0 {
+		socketSession.playerBase.RoleState.Speed = 145
+	}
+	if socketSession.playerBase.RolePhysique == nil {
+		socketSession.playerBase.RolePhysique = &session.RolePhysique{Handle: socketSession.selectedRole.RoleID}
+	}
+	socketSession.playerBase.RolePhysique.MaxHP = fixture.MaxHP
+	socketSession.playerBase.RolePhysique.MaxMP = fixture.MaxMP
 }
 
 func firstEnemyCellForTest(t *testing.T, runtime *battle.Runtime) battle.CellInfoPush {
@@ -492,6 +734,17 @@ func firstEnemyCellForTest(t *testing.T, runtime *battle.Runtime) battle.CellInf
 		}
 	}
 	t.Fatalf("expected enemy cell, got %+v", runtime.Cells)
+	return battle.CellInfoPush{}
+}
+
+func classicTeamCellForRole(t *testing.T, runtime *battle.Runtime, roleID string) battle.CellInfoPush {
+	t.Helper()
+	for _, cell := range runtime.Cells {
+		if cell.Handle == roleID {
+			return cell
+		}
+	}
+	t.Fatalf("expected team cell for roleId=%s, got %+v", roleID, runtime.Cells)
 	return battle.CellInfoPush{}
 }
 
@@ -550,6 +803,50 @@ func firstClassicTeamInviteEvent(result packetResult) *team.Event {
 		}
 	}
 	return nil
+}
+
+func assertClassicCapturedTeamMemberSnapshot(t *testing.T, result packetResult, roleID string, fixture classicCapturedTeamRoleFixture, mapID string) {
+	t.Helper()
+	assertClassicTeamMemberSnapshot(t, result, roleID, func(member team.Member) bool {
+		return member.Name == fixture.DisplayName &&
+			member.Level == fixture.Level &&
+			member.Vocation == fixture.Vocation &&
+			member.HP == fixture.HP &&
+			member.MaxHP == fixture.MaxHP &&
+			member.MP == fixture.MP &&
+			member.MaxMP == fixture.MaxMP &&
+			member.MapID == mapID &&
+			member.Online
+	})
+}
+
+func assertClassicTeamMemberSnapshot(t *testing.T, result packetResult, roleID string, predicate func(team.Member) bool) {
+	t.Helper()
+	for _, event := range result.teamEvents {
+		for _, member := range event.Members {
+			if member.RoleID != roleID {
+				continue
+			}
+			if !predicate(member) {
+				t.Fatalf("unexpected team member snapshot for roleId=%s: %+v", roleID, member)
+			}
+			return
+		}
+	}
+	t.Fatalf("expected team member snapshot for roleId=%s, got %+v", roleID, result.teamEvents)
+}
+
+func assertClassicTeamSharedBattleRewardState(t *testing.T, socketSession *packetSession, label string) {
+	t.Helper()
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		t.Fatalf("expected %s session to stay selected after shared battle", label)
+	}
+	if socketSession.selectedRole.Exp != 37 || socketSession.playerBase.Exp != 37 {
+		t.Fatalf("expected %s shared battle exp reward 37, got role=%+v playerBase=%+v", label, socketSession.selectedRole, socketSession.playerBase)
+	}
+	if len(socketSession.battleLoot) != 1 || socketSession.battleLoot[0].Name != "朽木" || socketSession.battleLoot[0].Type != classicBattleLootType {
+		t.Fatalf("expected %s shared battle loot in battle container, got %+v", label, socketSession.battleLoot)
+	}
 }
 
 func classicTeamResultContains(result packetResult, success bool, action string, errorMessage string) bool {

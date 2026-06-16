@@ -152,6 +152,7 @@ func sourceWildEnemyConfigFromRow(row []string, header map[string]int, rowIndex 
 			Name:              requiredBattleConfigString(row, header, "name", rowIndex),
 			DisplayURL:        requiredBattleConfigString(row, header, "display_url", rowIndex),
 			Level:             requiredBattleConfigInt(row, header, "level", rowIndex),
+			Vocation:          requiredBattleConfigString(row, header, "vocation", rowIndex),
 			XScale:            100,
 			YScale:            100,
 			MaxHP:             maxHP,

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"strings"
 
 	"ai-server/internal/session"
@@ -30,23 +29,19 @@ type classicTeamSyncChangeMapRequest struct {
 
 func buildClassicTeamInviteResult(socketSession *packetSession, request classicTeamInviteRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
-		log.Printf("[ai-server] classic team invite ignored without selected role targetRoleId=%s targetName=%s", request.TargetRoleID, request.TargetName)
 		return packetResult{handled: true}
 	}
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(socketSession))
 	events := classicTeamManager.Invite(socketSession.selectedRole.RoleID, request.TargetRoleID, request.TargetName)
-	log.Printf("[ai-server] classic team invite roleId=%s targetRoleId=%s targetName=%s events=%d", socketSession.selectedRole.RoleID, request.TargetRoleID, request.TargetName, len(events))
 	return packetResult{teamEvents: events, handled: true}
 }
 
 func buildClassicTeamInviteReplyResult(socketSession *packetSession, request classicTeamInviteReplyRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
-		log.Printf("[ai-server] classic team invite reply ignored without selected role inviteId=%s", request.InviteID)
 		return packetResult{handled: true}
 	}
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(socketSession))
 	events := classicTeamManager.ReplyInvite(socketSession.selectedRole.RoleID, request.InviteID, request.Accept)
-	log.Printf("[ai-server] classic team invite reply roleId=%s inviteId=%s accept=%v events=%d", socketSession.selectedRole.RoleID, request.InviteID, request.Accept, len(events))
 	return packetResult{teamEvents: events, handled: true}
 }
 
@@ -55,7 +50,6 @@ func buildClassicTeamLeaveResult(socketSession *packetSession) packetResult {
 		return packetResult{handled: true}
 	}
 	events := classicTeamManager.Leave(socketSession.selectedRole.RoleID)
-	log.Printf("[ai-server] classic team leave roleId=%s events=%d", socketSession.selectedRole.RoleID, len(events))
 	return packetResult{teamEvents: events, handled: true}
 }
 
@@ -64,7 +58,6 @@ func buildClassicTeamKickResult(socketSession *packetSession, request classicTea
 		return packetResult{handled: true}
 	}
 	events := classicTeamManager.Kick(socketSession.selectedRole.RoleID, request.RoleID, request.Name)
-	log.Printf("[ai-server] classic team kick roleId=%s targetRoleId=%s targetName=%s events=%d", socketSession.selectedRole.RoleID, request.RoleID, request.Name, len(events))
 	return packetResult{teamEvents: events, handled: true}
 }
 
@@ -73,7 +66,6 @@ func buildClassicTeamTransferLeaderResult(socketSession *packetSession, request 
 		return packetResult{handled: true}
 	}
 	events := classicTeamManager.TransferLeader(socketSession.selectedRole.RoleID, request.RoleID, request.Name)
-	log.Printf("[ai-server] classic team transfer leader roleId=%s targetRoleId=%s targetName=%s events=%d", socketSession.selectedRole.RoleID, request.RoleID, request.Name, len(events))
 	return packetResult{teamEvents: events, handled: true}
 }
 
@@ -82,7 +74,6 @@ func buildClassicTeamSyncChangeMapResult(socketSession *packetSession, request c
 		return packetResult{handled: true}
 	}
 	events := classicTeamManager.SetSyncChangeMap(socketSession.selectedRole.RoleID, request.Enabled)
-	log.Printf("[ai-server] classic team sync change map roleId=%s enabled=%v events=%d", socketSession.selectedRole.RoleID, request.Enabled, len(events))
 	return packetResult{teamEvents: events, handled: true}
 }
 
@@ -115,7 +106,6 @@ func buildClassicTeamResetDungeonResult(store *session.Store, socketSession *pac
 		}
 	}
 	setDefeatedVisibleMonsterHandles(socketSession, nil)
-	log.Printf("[ai-server] classic team reset dungeon roleId=%s mapId=%d key=%s members=%d", socketSession.selectedRole.RoleID, mapID, instanceKey, len(plan.Members))
 	return packetResult{
 		dungeonInstance: inactiveDungeonInstancePush(instanceKey, mapID),
 		teamEvents: []team.Event{

@@ -33,6 +33,18 @@ type classicTownTransferRequest struct {
 	Y     int    `json:"y"`
 }
 
+type classicTownMoveRoleRequest struct {
+	Handle string `json:"handle"`
+	Type   string `json:"type"`
+	X      int    `json:"x"`
+	Y      int    `json:"y"`
+	Z      int    `json:"z"`
+	TX     int    `json:"tx"`
+	TY     int    `json:"ty"`
+	TZ     int    `json:"tz"`
+	MapID  string `json:"mapId"`
+}
+
 type classicTownBuySkillRequest struct {
 	ShopID  string `json:"shopId"`
 	SkillID int    `json:"skillId"`

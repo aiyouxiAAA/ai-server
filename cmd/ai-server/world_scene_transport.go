@@ -2,9 +2,15 @@ package main
 
 import (
 	"log"
+	"sort"
 	"sync"
 
 	"ai-server/internal/world"
+)
+
+const (
+	worldSceneHeroSpace       = 450
+	worldSceneScreenRoleLimit = 20
 )
 
 // worldSceneHub 是"同 mapId 在线玩家"的注册表。
@@ -29,6 +35,16 @@ type worldSceneConnection struct {
 	writer  *websocketWriter
 	session *packetSession
 	mapID   int
+	spawn   world.SpawnPoint
+	visible map[string]struct{}
+}
+
+type worldScenePushAction struct {
+	writer       *websocketWriter
+	recipientID  string
+	createRole   *world.RolePush
+	removeHandle string
+	moveRole     *world.RoleMovePush
 }
 
 func newWorldSceneConnectionHub() *worldSceneConnectionHub {
@@ -37,7 +53,7 @@ func newWorldSceneConnectionHub() *worldSceneConnectionHub {
 	}
 }
 
-func (hub *worldSceneConnectionHub) register(roleID string, mapID int, writer *websocketWriter, socketSession *packetSession) {
+func (hub *worldSceneConnectionHub) register(roleID string, mapID int, writer *websocketWriter, socketSession *packetSession, spawn world.SpawnPoint) {
 	if roleID == "" || writer == nil {
 		return
 	}
@@ -47,7 +63,24 @@ func (hub *worldSceneConnectionHub) register(roleID string, mapID int, writer *w
 		writer:  writer,
 		session: socketSession,
 		mapID:   mapID,
+		spawn:   spawn,
+		visible: make(map[string]struct{}),
 	}
+}
+
+func (hub *worldSceneConnectionHub) updatePosition(roleID string, mapID int, spawn world.SpawnPoint) bool {
+	if roleID == "" {
+		return false
+	}
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	conn, ok := hub.connections[roleID]
+	if !ok || conn.mapID != mapID {
+		return false
+	}
+	conn.spawn = spawn
+	hub.connections[roleID] = conn
+	return true
 }
 
 // unregister 返回该 roleID 之前的 mapID 与是否曾注册,供调用方广播 removeRole。
@@ -76,6 +109,202 @@ func (hub *worldSceneConnectionHub) connectionFor(roleID string) (worldSceneConn
 	defer hub.mu.Unlock()
 	conn, ok := hub.connections[roleID]
 	return conn, ok
+}
+
+func worldSceneDistanceSquared(left world.SpawnPoint, right world.SpawnPoint) int {
+	dx := left.X - right.X
+	dy := left.Y - right.Y
+	return dx*dx + dy*dy
+}
+
+func worldSceneInHeroSpace(left world.SpawnPoint, right world.SpawnPoint) bool {
+	return worldSceneDistanceSquared(left, right) < worldSceneHeroSpace*worldSceneHeroSpace
+}
+
+func worldSceneCanBuildRolePush(conn worldSceneConnection) bool {
+	return conn.writer != nil && conn.session != nil && conn.session.selectedRole != nil && conn.session.playerBase != nil
+}
+
+func worldSceneBuildRolePush(conn worldSceneConnection) world.RolePush {
+	return world.BuildPlayerRolePush(*conn.session.selectedRole, *conn.session.playerBase, conn.spawn)
+}
+
+func worldSceneTeamRoleIDSet(roleID string) map[string]struct{} {
+	recipients, ok := classicTeamManager.RecipientsForTeam(roleID)
+	if !ok {
+		return nil
+	}
+	teamRoleIDs := make(map[string]struct{}, len(recipients))
+	for _, recipientID := range recipients {
+		if recipientID == "" || recipientID == roleID {
+			continue
+		}
+		teamRoleIDs[recipientID] = struct{}{}
+	}
+	return teamRoleIDs
+}
+
+func (hub *worldSceneConnectionHub) syncMapVisibility(mapID int) []worldScenePushAction {
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	actions := make([]worldScenePushAction, 0)
+	roleIDs := make([]string, 0, len(hub.connections))
+	for roleID, conn := range hub.connections {
+		if conn.mapID == mapID && conn.writer != nil {
+			roleIDs = append(roleIDs, roleID)
+		}
+	}
+	sort.Strings(roleIDs)
+	for _, observerID := range roleIDs {
+		actions = append(actions, hub.syncObserverVisibilityLocked(observerID)...)
+	}
+	return actions
+}
+
+func (hub *worldSceneConnectionHub) syncObserverVisibilityLocked(observerID string) []worldScenePushAction {
+	observer, ok := hub.connections[observerID]
+	if !ok || observer.writer == nil {
+		return nil
+	}
+	if observer.visible == nil {
+		observer.visible = make(map[string]struct{})
+	}
+
+	type candidate struct {
+		roleID   string
+		distance int
+		conn     worldSceneConnection
+	}
+	teamRoleIDs := worldSceneTeamRoleIDSet(observerID)
+	forced := make(map[string]worldSceneConnection, len(teamRoleIDs))
+	candidates := make([]candidate, 0, len(hub.connections))
+	for roleID, conn := range hub.connections {
+		if roleID == observerID || conn.mapID != observer.mapID || !worldSceneCanBuildRolePush(conn) {
+			continue
+		}
+		if _, ok := teamRoleIDs[roleID]; ok {
+			forced[roleID] = conn
+			continue
+		}
+		if !worldSceneInHeroSpace(observer.spawn, conn.spawn) {
+			continue
+		}
+		candidates = append(candidates, candidate{
+			roleID:   roleID,
+			distance: worldSceneDistanceSquared(observer.spawn, conn.spawn),
+			conn:     conn,
+		})
+	}
+	sort.Slice(candidates, func(left int, right int) bool {
+		if candidates[left].distance != candidates[right].distance {
+			return candidates[left].distance < candidates[right].distance
+		}
+		return candidates[left].roleID < candidates[right].roleID
+	})
+
+	desired := make(map[string]worldSceneConnection, len(forced)+worldSceneScreenRoleLimit)
+	for roleID, conn := range forced {
+		desired[roleID] = conn
+	}
+	for index, item := range candidates {
+		if index >= worldSceneScreenRoleLimit {
+			break
+		}
+		desired[item.roleID] = item.conn
+	}
+
+	actions := make([]worldScenePushAction, 0)
+	for visibleID := range observer.visible {
+		if _, ok := desired[visibleID]; ok {
+			continue
+		}
+		delete(observer.visible, visibleID)
+		actions = append(actions, worldScenePushAction{
+			writer:       observer.writer,
+			recipientID:  observerID,
+			removeHandle: visibleID,
+		})
+	}
+	for roleID, conn := range desired {
+		if _, ok := observer.visible[roleID]; ok {
+			continue
+		}
+		observer.visible[roleID] = struct{}{}
+		push := worldSceneBuildRolePush(conn)
+		actions = append(actions, worldScenePushAction{
+			writer:      observer.writer,
+			recipientID: observerID,
+			createRole:  &push,
+		})
+	}
+	hub.connections[observerID] = observer
+	return actions
+}
+
+func (hub *worldSceneConnectionHub) removeRoleFromVisibility(mapID int, handle string) []worldScenePushAction {
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	actions := make([]worldScenePushAction, 0)
+	for observerID, observer := range hub.connections {
+		if observer.mapID != mapID || observer.writer == nil || observer.visible == nil {
+			continue
+		}
+		if _, ok := observer.visible[handle]; !ok {
+			continue
+		}
+		delete(observer.visible, handle)
+		hub.connections[observerID] = observer
+		actions = append(actions, worldScenePushAction{
+			writer:       observer.writer,
+			recipientID:  observerID,
+			removeHandle: handle,
+		})
+	}
+	return actions
+}
+
+func (hub *worldSceneConnectionHub) moveRoleActions(mapID int, actorRoleID string, push world.RoleMovePush) []worldScenePushAction {
+	actions := hub.syncMapVisibility(mapID)
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	for observerID, observer := range hub.connections {
+		if observerID == actorRoleID || observer.mapID != mapID || observer.writer == nil || observer.visible == nil {
+			continue
+		}
+		if _, ok := observer.visible[actorRoleID]; !ok {
+			continue
+		}
+		move := push
+		actions = append(actions, worldScenePushAction{
+			writer:      observer.writer,
+			recipientID: observerID,
+			moveRole:    &move,
+		})
+	}
+	return actions
+}
+
+func writeWorldSceneActions(actions []worldScenePushAction) {
+	for _, action := range actions {
+		if action.writer == nil {
+			continue
+		}
+		if action.createRole != nil {
+			if err := action.writer.writePush(cmdClassicTownCreateRolePush, encodePayload(*action.createRole)); err != nil {
+				log.Printf("[ai-server] world scene createRole failed roleId=%s: %v", action.recipientID, err)
+			}
+		}
+		if action.removeHandle != "" {
+			if err := action.writer.writePush(cmdClassicTownRemoveRolePush, encodePayload(action.removeHandle)); err != nil {
+				log.Printf("[ai-server] world scene removeRole failed roleId=%s: %v", action.recipientID, err)
+			}
+		}
+		if action.moveRole != nil {
+			if err := action.writer.writePush(cmdClassicTownMoveRolePush, encodePayload(*action.moveRole)); err != nil {
+				log.Printf("[ai-server] world scene moveRole failed roleId=%s: %v", action.recipientID, err)
+			}
+		}
+	}
 }
 
 // roleIDsForMap 返回当前在某 mapId 上的所有在线玩家 roleID(排除 exceptRoleID)。
@@ -119,29 +348,19 @@ func (hub *worldSceneConnectionHub) neighborsInMap(mapID int, exceptRoleID strin
 
 // broadcastCreateRoleToMap 把一条 createRole push 推给某 mapId 上除自己外所有在线邻居。
 func (hub *worldSceneConnectionHub) broadcastCreateRoleToMap(mapID int, exceptRoleID string, push world.RolePush) {
-	for _, roleID := range hub.roleIDsForMap(mapID, exceptRoleID) {
-		writer := hub.writerFor(roleID)
-		if writer == nil {
-			continue
-		}
-		if err := writer.writePush(cmdClassicTownCreateRolePush, encodePayload(push)); err != nil {
-			log.Printf("[ai-server] world scene broadcast createRole failed roleId=%s: %v", roleID, err)
-		}
-	}
+	writeWorldSceneActions(hub.syncMapVisibility(mapID))
 }
 
 // broadcastRemoveRoleToMap 把一条 removeRole push 推给某 mapId 上除自己外所有在线邻居。
 // payload 是裸 handle 字符串,与既有 removeRoleHandles 路径(main.go writePush)一致。
 func (hub *worldSceneConnectionHub) broadcastRemoveRoleToMap(mapID int, exceptRoleID string, handle string) {
-	for _, roleID := range hub.roleIDsForMap(mapID, exceptRoleID) {
-		writer := hub.writerFor(roleID)
-		if writer == nil {
-			continue
-		}
-		if err := writer.writePush(cmdClassicTownRemoveRolePush, encodePayload(handle)); err != nil {
-			log.Printf("[ai-server] world scene broadcast removeRole failed roleId=%s: %v", roleID, err)
-		}
-	}
+	writeWorldSceneActions(hub.removeRoleFromVisibility(mapID, handle))
+}
+
+// broadcastMoveRoleToMap 按原版 c_MoveRole(50012) 的 moveRole 语义,
+// 把某玩家当前位置/目标点推给同 mapId 上除自己外的在线邻居。
+func (hub *worldSceneConnectionHub) broadcastMoveRoleToMap(mapID int, exceptRoleID string, push world.RoleMovePush) {
+	writeWorldSceneActions(hub.moveRoleActions(mapID, exceptRoleID, push))
 }
 
 // syncWorldScenePresence 在玩家选角成功 / 换角色后,把 scene hub 状态对齐到当前 session,
@@ -191,25 +410,14 @@ func syncWorldScenePresence(writer *websocketWriter, socketSession *packetSessio
 	}
 	if clearRoleID != "" {
 		if clearedMapID, ok := worldSceneHub.unregister(clearRoleID); ok {
-			worldSceneHub.broadcastRemoveRoleToMap(clearedMapID, clearRoleID, clearRoleID)
+			writeWorldSceneActions(worldSceneHub.removeRoleFromVisibility(clearedMapID, clearRoleID))
 		}
 	}
 
 	spawn := world.DefaultSpawnForMap(currentMapID)
-	worldSceneHub.register(currentRoleID, currentMapID, writer, socketSession)
+	worldSceneHub.register(currentRoleID, currentMapID, writer, socketSession, spawn)
 
-	// 把已在同 mapId 的邻居 createRole 推给自己(让自己看到别人)。
-	neighbors := worldSceneHub.neighborsInMap(currentMapID, currentRoleID)
-	for _, neighbor := range neighbors {
-		push := world.BuildPlayerRolePush(*neighbor.session.selectedRole, *neighbor.session.playerBase, world.DefaultSpawnForMap(neighbor.session.playerBase.MapID))
-		if err := writer.writePush(cmdClassicTownCreateRolePush, encodePayload(push)); err != nil {
-			log.Printf("[ai-server] world scene self receive neighbor createRole failed neighborRoleId=%s: %v", push.RoleID, err)
-		}
-	}
-
-	// 把自己推给同 mapId 所有邻居。
-	selfPush := world.BuildPlayerRolePush(*socketSession.selectedRole, *socketSession.playerBase, spawn)
-	worldSceneHub.broadcastCreateRoleToMap(currentMapID, currentRoleID, selfPush)
+	writeWorldSceneActions(worldSceneHub.syncMapVisibility(currentMapID))
 
 	return currentRoleID, currentMapID
 }
@@ -221,7 +429,7 @@ func syncWorldScenePresence(writer *websocketWriter, socketSession *packetSessio
 // 与 syncWorldScenePresence 的区别:这里 roleID 没变,只是 mapId 变了,所以不走"换角色"分支。
 // 调用方:main.go 收到 townBootstrap(传送/切图)后调用;classic_team_transport.syncTransfer 给队员调用。
 // 返回值:新 mapId(供调用方更新追踪变量)。
-func announceWorldSceneTransfer(writer *websocketWriter, socketSession *packetSession, currentRoleID string, oldMapID int) int {
+func announceWorldSceneTransfer(writer *websocketWriter, socketSession *packetSession, currentRoleID string, oldMapID int, spawn world.SpawnPoint) int {
 	if writer == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil || currentRoleID == "" {
 		return oldMapID
 	}
@@ -230,22 +438,15 @@ func announceWorldSceneTransfer(writer *websocketWriter, socketSession *packetSe
 	// 离开旧图:先从 hub 注销(清掉旧 mapID 绑定),给旧图邻居推 removeRole。
 	if oldMapID > 0 && oldMapID != newMapID {
 		worldSceneHub.unregister(currentRoleID)
-		worldSceneHub.broadcastRemoveRoleToMap(oldMapID, currentRoleID, currentRoleID)
+		writeWorldSceneActions(worldSceneHub.removeRoleFromVisibility(oldMapID, currentRoleID))
 	}
 
-	spawn := world.DefaultSpawnForMap(newMapID)
-	worldSceneHub.register(currentRoleID, newMapID, writer, socketSession)
-
-	neighbors := worldSceneHub.neighborsInMap(newMapID, currentRoleID)
-	for _, neighbor := range neighbors {
-		push := world.BuildPlayerRolePush(*neighbor.session.selectedRole, *neighbor.session.playerBase, world.DefaultSpawnForMap(neighbor.session.playerBase.MapID))
-		if err := writer.writePush(cmdClassicTownCreateRolePush, encodePayload(push)); err != nil {
-			log.Printf("[ai-server] world scene transfer self receive neighbor createRole failed neighborRoleId=%s: %v", push.RoleID, err)
-		}
+	if spawn.X == 0 && spawn.Y == 0 {
+		spawn = world.DefaultSpawnForMap(newMapID)
 	}
+	worldSceneHub.register(currentRoleID, newMapID, writer, socketSession, spawn)
 
-	selfPush := world.BuildPlayerRolePush(*socketSession.selectedRole, *socketSession.playerBase, spawn)
-	worldSceneHub.broadcastCreateRoleToMap(newMapID, currentRoleID, selfPush)
+	writeWorldSceneActions(worldSceneHub.syncMapVisibility(newMapID))
 
 	return newMapID
 }

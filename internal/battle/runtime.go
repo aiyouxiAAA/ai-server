@@ -408,7 +408,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			Camp:         CampTeam,
 			Handle:       role.RoleID,
 			Name:         defaultString(playerBase.DisplayName, role.DisplayName),
-			DisplayURL:   defaultString(playerBase.SourceQuery, defaultString(role.SourceQuery, "human/human.swf?w1=1&")),
+			DisplayURL:   battleRoleDisplayURL(role, playerBase),
 			Level:        playerLevel,
 			Vocation:     defaultString(playerBase.Voc, role.Voc),
 			XScale:       100,
@@ -545,7 +545,7 @@ func buildTeamActorCell(battleID string, role session.RoleSummary, playerBase se
 		Camp:         CampTeam,
 		Handle:       role.RoleID,
 		Name:         defaultString(playerBase.DisplayName, role.DisplayName),
-		DisplayURL:   defaultString(playerBase.SourceQuery, defaultString(role.SourceQuery, "human/human.swf?w1=1&")),
+		DisplayURL:   battleRoleDisplayURL(role, playerBase),
 		Level:        playerLevel,
 		Vocation:     defaultString(playerBase.Voc, role.Voc),
 		XScale:       100,
@@ -563,6 +563,16 @@ func buildTeamActorCell(battleID string, role session.RoleSummary, playerBase se
 		Fat:          playerFat,
 		CommandLabel: "普通攻击",
 	}
+}
+
+func battleRoleDisplayURL(role session.RoleSummary, playerBase session.PlayerBaseData) string {
+	return defaultString(
+		playerBase.BattleSourceQuery,
+		defaultString(
+			role.BattleSourceQuery,
+			defaultString(playerBase.SourceQuery, defaultString(role.SourceQuery, "human/human.swf?w1=1&")),
+		),
+	)
 }
 
 func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {

@@ -1195,6 +1195,51 @@ func TestStoreSetRoleVocationPersistsSelectedVocation(t *testing.T) {
 	}
 }
 
+func TestStorePersistsCapturedBattleSourceQuery(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "抓包游侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&",
+	})
+
+	capturedBattleSourceQuery := "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&"
+	store.mu.Lock()
+	store.rolesByPID[login.PlayerID][0].BattleSourceQuery = capturedBattleSourceQuery
+	if err := store.persistPlayerStateLocked(login.PlayerID); err != nil {
+		store.mu.Unlock()
+		t.Fatalf("persist battle source query: %v", err)
+	}
+	store.mu.Unlock()
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected role runtime data")
+	}
+	if role.BattleSourceQuery != capturedBattleSourceQuery || playerBase.BattleSourceQuery != capturedBattleSourceQuery {
+		t.Fatalf("expected captured battle source query after reopen, role=%q base=%q", role.BattleSourceQuery, playerBase.BattleSourceQuery)
+	}
+	if !strings.Contains(playerBase.BattleSourceQuery, "w3=43") {
+		t.Fatalf("expected captured battle source query to keep w3=43, got %q", playerBase.BattleSourceQuery)
+	}
+}
+
 func TestStoreAddRolePointMatchesCapturedRolePhysiqueDeltas(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"ai-server/internal/battle"
@@ -295,8 +296,8 @@ func TestHandlePacketClassicTeamCapturedSecondAccountSharesBattleAppearance(t *t
 			continue
 		}
 		capturedCellFound = true
-		if cell.DisplayURL != capturedClassicTeamRoleBridgeWoodcutter.RuntimeSourceQuery {
-			t.Fatalf("expected captured source query on team cell, got %q", cell.DisplayURL)
+		if cell.DisplayURL != capturedClassicTeamRoleBridgeWoodcutter.BattleSourceQuery || !strings.Contains(cell.DisplayURL, "w3=43") {
+			t.Fatalf("expected captured battle source query on team cell, got %q", cell.DisplayURL)
 		}
 		if cell.Level != capturedClassicTeamRoleBridgeWoodcutter.Level ||
 			cell.Vocation != capturedClassicTeamRoleBridgeWoodcutter.Vocation ||
@@ -607,6 +608,7 @@ type classicCapturedTeamRoleFixture struct {
 	MapID              int
 	SourceQuery        string
 	RuntimeSourceQuery string
+	BattleSourceQuery  string
 }
 
 var capturedClassicTeamRoleBridgeWoodcutter = classicCapturedTeamRoleFixture{
@@ -628,6 +630,7 @@ var capturedClassicTeamRoleBridgeWoodcutter = classicCapturedTeamRoleFixture{
 	MapID:              45,
 	SourceQuery:        "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&",
 	RuntimeSourceQuery: "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&",
+	BattleSourceQuery:  "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&",
 }
 
 func seedCapturedClassicTeamRoleSessionInStore(t *testing.T, store *session.Store, fixture classicCapturedTeamRoleFixture) *packetSession {
@@ -685,6 +688,7 @@ func applyCapturedClassicTeamRoleFixture(socketSession *packetSession, fixture c
 		socketSession.selectedRole.MapID = fixture.MapID
 	}
 	socketSession.selectedRole.SourceQuery = fixture.RuntimeSourceQuery
+	socketSession.selectedRole.BattleSourceQuery = fixture.BattleSourceQuery
 	if socketSession.selectedRole.RoleState == nil {
 		socketSession.selectedRole.RoleState = &session.RoleState{Handle: socketSession.selectedRole.RoleID}
 	}
@@ -710,6 +714,7 @@ func applyCapturedClassicTeamRoleFixture(socketSession *packetSession, fixture c
 		socketSession.playerBase.MapID = fixture.MapID
 	}
 	socketSession.playerBase.SourceQuery = fixture.RuntimeSourceQuery
+	socketSession.playerBase.BattleSourceQuery = fixture.BattleSourceQuery
 	if socketSession.playerBase.RoleState == nil {
 		socketSession.playerBase.RoleState = &session.RoleState{Handle: socketSession.selectedRole.RoleID}
 	}

@@ -94,28 +94,29 @@ type LoginResponse struct {
 }
 
 type RoleSummary struct {
-	RoleID           string                          `json:"roleId"`
-	DisplayName      string                          `json:"displayName"`
-	Level            int                             `json:"level"`
-	Exp              int                             `json:"exp"`
-	Voc              string                          `json:"voc,omitempty"`
-	AGI              int                             `json:"AGI,omitempty"`
-	STR              int                             `json:"STR,omitempty"`
-	INT              int                             `json:"INT,omitempty"`
-	CON              int                             `json:"CON,omitempty"`
-	LCK              int                             `json:"LCK,omitempty"`
-	MapID            int                             `json:"mapId"`
-	VisualRoleID     int                             `json:"visualRoleId"`
-	PresetID         int                             `json:"presetId,omitempty"`
-	SourceQuery      string                          `json:"sourceQuery,omitempty"`
-	Appearance       RoleAppearance                  `json:"appearance,omitempty"`
-	Skills           []RoleSkill                     `json:"skills,omitempty"`
-	FastPanel        []RoleFastPanelEntry            `json:"fastPanel,omitempty"`
-	Currencies       RoleCurrencies                  `json:"currencies,omitempty"`
-	Items            []RoleItem                      `json:"items,omitempty"`
-	RoleState        *RoleState                      `json:"-"`
-	RolePhysique     *RolePhysique                   `json:"-"`
-	DungeonInstances map[string]DungeonInstanceState `json:"-"`
+	RoleID            string                          `json:"roleId"`
+	DisplayName       string                          `json:"displayName"`
+	Level             int                             `json:"level"`
+	Exp               int                             `json:"exp"`
+	Voc               string                          `json:"voc,omitempty"`
+	AGI               int                             `json:"AGI,omitempty"`
+	STR               int                             `json:"STR,omitempty"`
+	INT               int                             `json:"INT,omitempty"`
+	CON               int                             `json:"CON,omitempty"`
+	LCK               int                             `json:"LCK,omitempty"`
+	MapID             int                             `json:"mapId"`
+	VisualRoleID      int                             `json:"visualRoleId"`
+	PresetID          int                             `json:"presetId,omitempty"`
+	SourceQuery       string                          `json:"sourceQuery,omitempty"`
+	BattleSourceQuery string                          `json:"battleSourceQuery,omitempty"`
+	Appearance        RoleAppearance                  `json:"appearance,omitempty"`
+	Skills            []RoleSkill                     `json:"skills,omitempty"`
+	FastPanel         []RoleFastPanelEntry            `json:"fastPanel,omitempty"`
+	Currencies        RoleCurrencies                  `json:"currencies,omitempty"`
+	Items             []RoleItem                      `json:"items,omitempty"`
+	RoleState         *RoleState                      `json:"-"`
+	RolePhysique      *RolePhysique                   `json:"-"`
+	DungeonInstances  map[string]DungeonInstanceState `json:"-"`
 }
 
 type DungeonInstanceState struct {
@@ -160,28 +161,29 @@ type RoleSelectRequest struct {
 }
 
 type PlayerBaseData struct {
-	PlayerID     string         `json:"playerId"`
-	RoleID       string         `json:"roleId"`
-	DisplayName  string         `json:"displayName"`
-	Level        int            `json:"level"`
-	Exp          int            `json:"exp"`
-	Voc          string         `json:"voc,omitempty"`
-	HP           int            `json:"hp,omitempty"`
-	MP           int            `json:"mp,omitempty"`
-	MaxHP        int            `json:"maxHp,omitempty"`
-	MaxMP        int            `json:"maxMp,omitempty"`
-	MapID        int            `json:"mapId"`
-	VisualRoleID int            `json:"visualRoleId"`
-	PresetID     int            `json:"presetId,omitempty"`
-	SourceQuery  string         `json:"sourceQuery,omitempty"`
-	Appearance   RoleAppearance `json:"appearance,omitempty"`
-	Currencies   RoleCurrencies `json:"currencies,omitempty"`
-	RoleState    *RoleState     `json:"roleState,omitempty"`
-	RolePhysique *RolePhysique  `json:"rolePhysique,omitempty"`
-	PK           int            `json:"pk,omitempty"`
-	State        int            `json:"state,omitempty"`
-	GuildName    string         `json:"guildName,omitempty"`
-	GuildPic     string         `json:"guildPic,omitempty"`
+	PlayerID          string         `json:"playerId"`
+	RoleID            string         `json:"roleId"`
+	DisplayName       string         `json:"displayName"`
+	Level             int            `json:"level"`
+	Exp               int            `json:"exp"`
+	Voc               string         `json:"voc,omitempty"`
+	HP                int            `json:"hp,omitempty"`
+	MP                int            `json:"mp,omitempty"`
+	MaxHP             int            `json:"maxHp,omitempty"`
+	MaxMP             int            `json:"maxMp,omitempty"`
+	MapID             int            `json:"mapId"`
+	VisualRoleID      int            `json:"visualRoleId"`
+	PresetID          int            `json:"presetId,omitempty"`
+	SourceQuery       string         `json:"sourceQuery,omitempty"`
+	BattleSourceQuery string         `json:"battleSourceQuery,omitempty"`
+	Appearance        RoleAppearance `json:"appearance,omitempty"`
+	Currencies        RoleCurrencies `json:"currencies,omitempty"`
+	RoleState         *RoleState     `json:"roleState,omitempty"`
+	RolePhysique      *RolePhysique  `json:"rolePhysique,omitempty"`
+	PK                int            `json:"pk,omitempty"`
+	State             int            `json:"state,omitempty"`
+	GuildName         string         `json:"guildName,omitempty"`
+	GuildPic          string         `json:"guildPic,omitempty"`
 }
 
 type RoleState struct {

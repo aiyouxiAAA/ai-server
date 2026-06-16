@@ -1089,6 +1089,72 @@ func TestNewWildBattleUsesRoleStateAndPhysiqueForTeamCell(t *testing.T) {
 	}
 }
 
+func TestNewWildBattlePrefersCapturedBattleSourceQueryForTeamCell(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:            "player_21432",
+		DisplayName:       "222",
+		Level:             26,
+		Voc:               "游侠",
+		SourceQuery:       "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&",
+		BattleSourceQuery: "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&",
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:          "acct-cap1366655383",
+		RoleID:            role.RoleID,
+		DisplayName:       role.DisplayName,
+		Level:             role.Level,
+		Voc:               role.Voc,
+		HP:                815,
+		MP:                394,
+		MaxHP:             815,
+		MaxMP:             394,
+		SourceQuery:       role.SourceQuery,
+		BattleSourceQuery: role.BattleSourceQuery,
+	}
+
+	_, bundle, ok := NewWildBattle(role, playerBase, StartRequest{MapID: "4", MapName: "涧庭村口"})
+
+	if !ok || len(bundle.Cells) == 0 {
+		t.Fatalf("expected battle cells, ok=%v bundle=%+v", ok, bundle)
+	}
+	if bundle.Cells[0].DisplayURL != role.BattleSourceQuery || !strings.Contains(bundle.Cells[0].DisplayURL, "w3=43") {
+		t.Fatalf("expected captured battle display url, got %+v", bundle.Cells[0])
+	}
+}
+
+func TestNewWildBattleKeepsCapturedBattleSourceQueryForWarriorLeader(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:            "player_21424",
+		DisplayName:       "111",
+		Level:             35,
+		Voc:               "战士",
+		SourceQuery:       "human/human.swf?n=0&sex=1&co=5&hr=32&e=14&m=5&h=8&a=4&wr=7&w8=42&c=10&p=8&b=5&se=4&",
+		BattleSourceQuery: "human/human.swf?=&a=14&w8=47&b=16&c=39&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=18&se=29&wr=15&",
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:          "acct-1150045313",
+		RoleID:            role.RoleID,
+		DisplayName:       role.DisplayName,
+		Level:             role.Level,
+		Voc:               role.Voc,
+		HP:                1425,
+		MP:                296,
+		MaxHP:             1555,
+		MaxMP:             424,
+		SourceQuery:       role.SourceQuery,
+		BattleSourceQuery: role.BattleSourceQuery,
+	}
+
+	_, bundle, ok := NewWildBattle(role, playerBase, StartRequest{MapID: "4", MapName: "涧庭村口"})
+
+	if !ok || len(bundle.Cells) == 0 {
+		t.Fatalf("expected battle cells, ok=%v bundle=%+v", ok, bundle)
+	}
+	if bundle.Cells[0].DisplayURL != role.BattleSourceQuery || !strings.Contains(bundle.Cells[0].DisplayURL, "w8=47") {
+		t.Fatalf("expected captured 111 battle display url, got %+v", bundle.Cells[0])
+	}
+}
+
 func TestNewWildBattleSupportsCapturedBambooMaps(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:      "player_21424",

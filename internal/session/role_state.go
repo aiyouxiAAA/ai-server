@@ -1251,6 +1251,16 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 		},
 		{
 			Type:        "背包",
+			Name:        "狮虎窟通行证",
+			ItemType:    "null",
+			Display:     "425.png",
+			Description: "f_i_狮虎窟通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入狮虎窟修炼的通行证.</font>&27@sitem_book&101@425.png&103@0&104@0&105@&107@&108@165",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   3,
+		},
+		{
+			Type:        "背包",
 			Name:        "当归",
 			ItemType:    "null",
 			Display:     "92.png",

@@ -178,7 +178,7 @@ func TestStoreRoleLifecycle(t *testing.T) {
 }
 
 func TestStoreDungeonInstancePersistsForOneHour(t *testing.T) {
-	for _, instanceKey := range []string{DungeonInstanceShuiliandong, DungeonInstanceHuangfengzhai, DungeonInstanceFeixiandong} {
+	for _, instanceKey := range []string{DungeonInstanceShuiliandong, DungeonInstanceHuangfengzhai, DungeonInstanceFeixiandong, DungeonInstanceShihuku} {
 		t.Run(instanceKey, func(t *testing.T) {
 			store := NewStore()
 			now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
@@ -1504,6 +1504,27 @@ func TestStoreCapturedWarriorEquipmentSlotsAndAppearance(t *testing.T) {
 		}
 		if !strings.Contains(result.Role.SourceQuery, tc.sourceQueryPart) {
 			t.Fatalf("expected %s equip to add %s to source query, got %q", tc.name, tc.sourceQueryPart, result.Role.SourceQuery)
+		}
+	}
+}
+
+func TestStoreCapturedWoodcutterEquipmentAppearance(t *testing.T) {
+	sourceQuery := "human/human.swf?sex=1&co=5&hr=12&e=6&n=0&m=0&"
+	items := []RoleItem{
+		{Type: "装备", Name: "威武面甲", ItemType: "equip", Index: 0},
+		{Type: "装备", Name: "蓝晶护肩", ItemType: "equip", Index: 1},
+		{Type: "装备", Name: "威武护腕", ItemType: "equip", Index: 2},
+		{Type: "装备", Name: "牙刺", ItemType: "equip", Index: 3},
+		{Type: "装备", Name: "蛤蟆法袍", ItemType: "equip", Index: 4},
+		{Type: "装备", Name: "威武护腿", ItemType: "equip", Index: 5},
+		{Type: "装备", Name: "蛤蟆精护腰", ItemType: "equip", Index: 10},
+		{Type: "装备", Name: "盗贼的鞋", ItemType: "equip", Index: 12},
+	}
+
+	result := rebuildRoleEquipmentAppearanceSourceQuery(sourceQuery, items)
+	for _, part := range []string{"h=12", "a=34", "wr=11", "w3=43", "c=35", "p=13", "b=31", "se=27"} {
+		if !strings.Contains(result, part) {
+			t.Fatalf("expected captured woodcutter source query to include %s, got %q", part, result)
 		}
 	}
 }

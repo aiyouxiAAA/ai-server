@@ -47,45 +47,57 @@ const (
 	CommandEnemyRockRain   = "enemy-rock-rain"
 	CommandEnemyDarkMoon   = "enemy-dark-moon-cut"
 	CommandEnemyEarthShock = "enemy-earth-shock-atk"
+	CommandEnemyPieceAtk   = "enemy-piece-attack"
+	CommandEnemyLionRoars  = "enemy-lion-roars"
+	CommandEnemyGoldHit    = "enemy-gold-hit"
 	CommandDefense         = "defense"
 	CommandStore           = "battle-store"
 	CommandEscape          = "battle-escape"
 	CommandItem            = "battle-item"
 
-	maxStoredPower                 = 5
-	leiHunZhanRequiredPower        = 3
-	enemySlideCutMPCost            = 10
-	enemySlideCutChance            = 20
-	enemyShadeCutMPCost            = 40
-	enemyShadeCutChance            = 30
-	enemyHelixAtkMPCost            = 10
-	enemyHelixAtkChance            = 23
-	enemyHelixAtkDamageMultiplier  = 1.32
-	enemyPalsyAtkChance            = 40
-	enemyPalsyAtkStatusChance      = 100
-	enemyStunOnHitChance           = 5
-	enemyRampageMaxRounds          = 50
-	enemyFirePowerMPCost           = 10
-	enemyFirePowerChance           = 60
-	enemyFirePowerDamageMultiplier = 0.835
-	enemyDeadLightMPCost           = 10
-	enemyDeadLightChance           = 35
-	enemyDeadLightDamageMultiplier = 1.142
-	enemyDoubleHitMPCost           = 10
-	enemyDoubleHitChance           = 45
-	enemyDoubleHitDamageMultiplier = 1.825
-	enemyRollAtkMPCost             = 10
-	enemyRollAtkChance             = 45
-	enemyRollAtkDamageMultiplier   = 1.49
-	enemyRockRainMPCost            = 10
-	enemyRockRainChance            = 10
-	enemyDarkMoonMPCost            = 10
-	enemyDarkMoonChance            = 25
-	enemyEarthShockMPCost          = 10
-	enemyEarthShockChance          = 10
-	defaultBattleHit               = 100
-	defaultBattleDog               = 50
-	defaultBattleFat               = 5
+	maxStoredPower                     = 5
+	leiHunZhanRequiredPower            = 3
+	enemySlideCutMPCost                = 10
+	enemySlideCutChance                = 20
+	enemyShadeCutMPCost                = 40
+	enemyShadeCutChance                = 30
+	enemyHelixAtkMPCost                = 10
+	enemyHelixAtkChance                = 23
+	enemyHelixAtkDamageMultiplier      = 1.32
+	enemyPalsyAtkChance                = 40
+	enemyPalsyAtkStatusChance          = 100
+	enemyStunOnHitChance               = 5
+	enemyRampageMaxRounds              = 50
+	enemyFirePowerMPCost               = 10
+	enemyFirePowerChance               = 60
+	enemyFirePowerDamageMultiplier     = 0.835
+	enemyDeadLightMPCost               = 10
+	enemyDeadLightChance               = 35
+	enemyDeadLightDamageMultiplier     = 1.142
+	enemyDoubleHitMPCost               = 10
+	enemyDoubleHitChance               = 45
+	enemyDoubleHitDamageMultiplier     = 1.825
+	enemyRollAtkMPCost                 = 10
+	enemyRollAtkChance                 = 45
+	enemyRollAtkDamageMultiplier       = 1.49
+	enemyRockRainMPCost                = 10
+	enemyRockRainChance                = 10
+	enemyDarkMoonMPCost                = 10
+	enemyDarkMoonChance                = 25
+	enemyEarthShockMPCost              = 10
+	enemyEarthShockChance              = 10
+	enemyShihukuBlackshadowPieceChance = 7
+	enemyShihukuChilukingPieceChance   = 11
+	enemyShihukuBlackshadowWoundMin    = 6
+	enemyShihukuBlackshadowWoundMax    = 9
+	enemyShihukuChilukingWoundMin      = 10
+	enemyShihukuChilukingWoundMax      = 15
+	enemyShihukuPieceWoundRounds       = 5
+	enemyShihukuLionRoarsChance        = 20
+	enemyShihukuGoldHitChance          = 19
+	defaultBattleHit                   = 100
+	defaultBattleDog                   = 50
+	defaultBattleFat                   = 5
 )
 
 var sourceEncounterRoll = func(maxExclusive int) int {
@@ -1202,6 +1214,43 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			CanDodge:          true,
 			CanFat:            true,
 		}
+	case CommandEnemyPieceAtk:
+		profile := commandProfile{
+			ActionName:        "撕裂",
+			SourceType:        "oneE",
+			SourceActionLabel: "pieceAttack",
+			DamageMultiplier:  1,
+			CanDodge:          true,
+			CanFat:            true,
+		}
+		if minPercent, maxPercent, ok := sourceEnemyShihukuPieceAttackWoundPercents(actor); ok {
+			profile.StatusName = "外伤"
+			profile.StatusDisplay = "25.png"
+			profile.StatusRounds = enemyShihukuPieceWoundRounds
+			profile.StatusChance = 100
+			profile.StatusTickMin = minPercent
+			profile.StatusTickMax = maxPercent
+			profile.StatusDescription = fmt.Sprintf("每回合损失气力为角色物理攻击的%d%%~%d%%", minPercent, maxPercent)
+		}
+		return profile
+	case CommandEnemyLionRoars:
+		return commandProfile{
+			ActionName:        "狮吼",
+			SourceType:        "oneE",
+			SourceActionLabel: "lionroars",
+			DamageMultiplier:  1,
+			CanDodge:          true,
+			CanFat:            true,
+		}
+	case CommandEnemyGoldHit:
+		return commandProfile{
+			ActionName:        "黄金穿刺",
+			SourceType:        "all",
+			SourceActionLabel: "goldhit",
+			DamageMultiplier:  1,
+			CanDodge:          true,
+			CanFat:            true,
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
 		if actor == nil || strings.TrimSpace(actor.CommandLabel) == "" {
 			profile.ActionName = "普通攻击"
@@ -1214,6 +1263,15 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
+	if sourceEnemyCanShihukuGoldHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyGoldHit, enemyShihukuGoldHitChance) {
+		return CommandEnemyGoldHit
+	}
+	if sourceEnemyCanShihukuLionRoars(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyLionRoars, enemyShihukuLionRoarsChance) {
+		return CommandEnemyLionRoars
+	}
+	if pieceChance := sourceEnemyShihukuPieceAttackChance(enemy); pieceChance > 0 && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyPieceAtk, pieceChance) {
+		return CommandEnemyPieceAtk
+	}
 	if sourceEnemyCanFirePower(enemy) && enemy.MP >= enemyFirePowerMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyFirePower, enemyFirePowerChance) {
 		return CommandEnemyFirePower
 	}
@@ -1313,6 +1371,53 @@ func sourceEnemyCanEarthShock(enemy *CellInfoPush) bool {
 	return strings.TrimSpace(enemy.Name) == "黄风大寨主" || strings.Contains(normalizedDisplay, "monstermap/hfcastellan.swf")
 }
 
+func sourceEnemyShihukuPieceAttackChance(enemy *CellInfoPush) int {
+	if enemy == nil {
+		return 0
+	}
+	normalizedName := strings.TrimSpace(enemy.Name)
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	if normalizedName == "蚩颅王" || strings.Contains(normalizedDisplay, "monstermap/chiluking.swf") {
+		return enemyShihukuChilukingPieceChance
+	}
+	if normalizedName == "黑影" || normalizedName == "黑影队长" || strings.Contains(normalizedDisplay, "monstermap/blackshadow.swf") {
+		return enemyShihukuBlackshadowPieceChance
+	}
+	return 0
+}
+
+func sourceEnemyShihukuPieceAttackWoundPercents(enemy *CellInfoPush) (int, int, bool) {
+	if enemy == nil {
+		return 0, 0, false
+	}
+	normalizedName := strings.TrimSpace(enemy.Name)
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	if normalizedName == "蚩颅王" || strings.Contains(normalizedDisplay, "monstermap/chiluking.swf") {
+		return enemyShihukuChilukingWoundMin, enemyShihukuChilukingWoundMax, true
+	}
+	if normalizedName == "黑影" || normalizedName == "黑影队长" || strings.Contains(normalizedDisplay, "monstermap/blackshadow.swf") {
+		return enemyShihukuBlackshadowWoundMin, enemyShihukuBlackshadowWoundMax, true
+	}
+	return 0, 0, false
+}
+
+func sourceEnemyCanShihukuLionRoars(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedName := strings.TrimSpace(enemy.Name)
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return normalizedName == "盘狮怪" || normalizedName == "盘狮队长" || strings.Contains(normalizedDisplay, "monstermap/whorllion.swf")
+}
+
+func sourceEnemyCanShihukuGoldHit(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "蚩颅王" || strings.Contains(normalizedDisplay, "monstermap/chiluking.swf")
+}
+
 func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *CellInfoPush, commandID string) []ActionPush {
 	if runtime == nil || enemy == nil || target == nil {
 		return nil
@@ -1352,14 +1457,15 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	switch strings.TrimSpace(enemy.Name) {
-	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人":
+	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人", "蚩颅王":
 		return true
 	default:
 		return strings.Contains(normalizedDisplay, "monstermap/largerock.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/magicrockman.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/hfscastellan.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/hfcastellan.swf") ||
-			strings.Contains(normalizedDisplay, "monstermap/hflady.swf")
+			strings.Contains(normalizedDisplay, "monstermap/hflady.swf") ||
+			strings.Contains(normalizedDisplay, "monstermap/chiluking.swf")
 	}
 }
 

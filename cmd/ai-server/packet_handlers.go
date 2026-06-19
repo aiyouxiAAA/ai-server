@@ -2364,6 +2364,13 @@ func dungeonEntryRuleForInstance(instanceKey string) (dungeonEntryRule, bool) {
 			TicketCount:   1,
 			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
 		}, true
+	case session.DungeonInstanceShihuku:
+		return dungeonEntryRule{
+			InstanceKey:   instanceKey,
+			TicketName:    "狮虎窟通行证",
+			TicketCount:   1,
+			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
+		}, true
 	default:
 		return dungeonEntryRule{}, false
 	}
@@ -2454,6 +2461,8 @@ func dungeonInstanceDisplayName(key string) string {
 		return "黄风寨"
 	case session.DungeonInstanceFeixiandong:
 		return "飞仙洞"
+	case session.DungeonInstanceShihuku:
+		return "狮虎窟"
 	default:
 		return "副本"
 	}

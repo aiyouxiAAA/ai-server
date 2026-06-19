@@ -474,15 +474,24 @@ func (manager *Manager) removeMemberLocked(teamID string, roleID string, action 
 		Recipients: []string{roleID},
 		Clear:      &ClearPush{Reason: action},
 	}}
+	if len(team.Members) <= 1 {
+		for _, remainingRoleID := range team.Members {
+			delete(manager.teamByRoleID, remainingRoleID)
+		}
+		if len(team.Members) > 0 {
+			events = append(events, Event{
+				Recipients: append([]string{}, team.Members...),
+				Clear:      &ClearPush{Reason: "disband"},
+			})
+		}
+		delete(manager.teams, teamID)
+		return events
+	}
 	if ok {
 		events = append(events, Event{
 			Recipients:  append([]string{}, team.Members...),
 			MemberClear: &MemberClearPush{RoleID: removed.RoleID, Name: removed.Name},
 		})
-	}
-	if len(team.Members) == 0 {
-		delete(manager.teams, teamID)
-		return events
 	}
 	if team.LeaderRoleID == roleID {
 		team.LeaderRoleID = team.Members[0]

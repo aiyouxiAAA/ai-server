@@ -33,7 +33,14 @@ func buildClassicTeamInviteResult(socketSession *packetSession, request classicT
 	}
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(socketSession))
 	events := classicTeamManager.Invite(socketSession.selectedRole.RoleID, request.TargetRoleID, request.TargetName)
-	return packetResult{teamEvents: events, handled: true}
+	result := packetResult{teamEvents: events, handled: true}
+	if classicTeamEventsContainResult(events, socketSession.selectedRole.RoleID, true, "invite") {
+		targetName := strings.TrimSpace(request.TargetName)
+		if targetName != "" {
+			result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("你已经请求["+targetName+"]加入队伍,请等待对方确认"))
+		}
+	}
+	return result
 }
 
 func buildClassicTeamInviteReplyResult(socketSession *packetSession, request classicTeamInviteReplyRequest) packetResult {
@@ -42,7 +49,16 @@ func buildClassicTeamInviteReplyResult(socketSession *packetSession, request cla
 	}
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(socketSession))
 	events := classicTeamManager.ReplyInvite(socketSession.selectedRole.RoleID, request.InviteID, request.Accept)
-	return packetResult{teamEvents: events, handled: true}
+	result := packetResult{teamEvents: events, handled: true}
+	if request.Accept && !classicTeamEventsContainResult(events, socketSession.selectedRole.RoleID, false, "replyInvite") {
+		if recipients, ok := classicTeamManager.RecipientsForTeam(socketSession.selectedRole.RoleID); ok && len(recipients) > 0 {
+			result.chatBroadcasts = append(result.chatBroadcasts, classicTownChatBroadcast{
+				Recipients: recipients,
+				Message:    classicTownSystemChatMessage("[" + socketSession.selectedRole.DisplayName + "]加入队伍"),
+			})
+		}
+	}
+	return result
 }
 
 func buildClassicTeamLeaveResult(socketSession *packetSession) packetResult {
@@ -131,6 +147,21 @@ func classicTeamResultEvent(roleID string, success bool, action string, code str
 			ErrorMessage: message,
 		},
 	}
+}
+
+func classicTeamEventsContainResult(events []team.Event, roleID string, success bool, action string) bool {
+	roleID = strings.TrimSpace(roleID)
+	for _, event := range events {
+		if event.Result == nil || event.Result.Success != success || event.Result.Action != action {
+			continue
+		}
+		for _, recipient := range event.Recipients {
+			if strings.TrimSpace(recipient) == roleID {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func buildClassicTeamChatEvents(socketSession *packetSession, push classicTownChatMessagePush) ([]classicTownChatMessagePush, []string, bool) {

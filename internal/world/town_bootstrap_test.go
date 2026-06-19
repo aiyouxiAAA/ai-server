@@ -402,6 +402,72 @@ func TestBuildTownBootstrapUsesCapturedFeixiandongVisibleMonsterMovement(t *test
 	}
 }
 
+func TestBuildTownBootstrapUsesCapturedShihukuVisibleMonsterMovement(t *testing.T) {
+	testCases := []struct {
+		mapID    int
+		expected map[string]RoleMovement
+	}{
+		{
+			mapID: 158,
+			expected: map[string]RoleMovement{
+				"5835621591157688": {Speed: 130, Angle: 179.57871509583143, Mode: 1},
+				"5837621591158929": {Speed: 130, Angle: 2.3859440303888126, Mode: 1},
+				"5839621591159706": {Speed: 130, Angle: 8.761593390518517, Mode: 1},
+			},
+		},
+		{
+			mapID: 163,
+			expected: map[string]RoleMovement{
+				"8088622782646450": {Speed: 130, Angle: 338.51796167369224, Mode: 1},
+				"8094622782649492": {Speed: 130, Angle: 359.1815445383114, Mode: 1},
+			},
+		},
+		{
+			mapID: 167,
+			expected: map[string]RoleMovement{
+				"7546622260836700": {Speed: 130, Angle: 357.1196224471524, Mode: 1},
+				"7550622260838906": {Speed: 130, Angle: 181.06485469345895, Mode: 1},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-shihuku-visible",
+			DisplayName:  "测试女侠",
+			Level:        30,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, testCase.mapID, SpawnPoint{X: 1000, Y: 600})
+		if !ok {
+			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
+		}
+		for _, rolePush := range snapshot.CreateRoles {
+			expected, ok := testCase.expected[rolePush.Handle]
+			if !ok {
+				continue
+			}
+			if rolePush.Movement == nil || *rolePush.Movement != expected {
+				t.Fatalf("expected map%d monster %s to use captured movement %+v got %+v", testCase.mapID, rolePush.Handle, expected, rolePush.Movement)
+			}
+			delete(testCase.expected, rolePush.Handle)
+		}
+		if len(testCase.expected) != 0 {
+			t.Fatalf("missing captured shihuku movement checks for map%d: %+v", testCase.mapID, testCase.expected)
+		}
+	}
+}
+
 func TestBuildTownBootstrapOmitsMovementForCapturedStillVisibleMonsters(t *testing.T) {
 	testCases := []struct {
 		mapID   int
@@ -1247,6 +1313,119 @@ func TestBuildTownBootstrapUsesCapturedHuangfengzhaiVisibleMonsters(t *testing.T
 		}
 		if len(testCase.bossHandles) != 0 {
 			t.Fatalf("missing huangfengzhai boss checks for map%d: %+v", testCase.mapID, testCase.bossHandles)
+		}
+	}
+}
+
+func TestShihukuDungeonMapsUseCapturedTransportsAndVisibleMonsters(t *testing.T) {
+	cases := []struct {
+		mapID           int
+		roleCount       int
+		questCount      int
+		expectedHandles map[string]RolePush
+	}{
+		{
+			mapID:      158,
+			roleCount:  5,
+			questCount: 2,
+			expectedHandles: map[string]RolePush{
+				"5835621591157688": {
+					DisplayName: "黑影",
+					Level:       25,
+					Vocation:    "游侠+",
+					SourceQuery: "monstermap/blackshadow.swf",
+					SpawnFlash:  SpawnPoint{X: 1053, Y: 450},
+					SourceNPCVisual: &SourceNPCVisual{
+						MovieClipIRPath: "runtime/classic-monstermap/blackshadow/blackshadow-movieclip-ir",
+					},
+				},
+			},
+		},
+		{
+			mapID:      167,
+			roleCount:  8,
+			questCount: 3,
+			expectedHandles: map[string]RolePush{
+				"7550622260838906": {
+					DisplayName: "蚩颅王",
+					Level:       30,
+					Vocation:    "战士++",
+					SourceQuery: "monstermap/chiluking.swf",
+					SpawnFlash:  SpawnPoint{X: 2189, Y: 451},
+					SourceNPCVisual: &SourceNPCVisual{
+						MovieClipIRPath: "runtime/classic-monstermap/chiluking/chiluking-movieclip-ir",
+					},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-shihuku-monster",
+			DisplayName:  "测试女侠",
+			Level:        25,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected captured shihuku map%d visible monsters instead of enemyShow", testCase.mapID)
+		}
+		if len(snapshot.CreateRoles) != testCase.roleCount || len(snapshot.QuestStates) != testCase.questCount {
+			t.Fatalf("expected map%d roles=%d quests=%d got roles=%d quests=%d", testCase.mapID, testCase.roleCount, testCase.questCount, len(snapshot.CreateRoles), len(snapshot.QuestStates))
+		}
+
+		rolesByHandle := map[string]RolePush{}
+		for _, rolePush := range snapshot.CreateRoles {
+			rolesByHandle[rolePush.Handle] = rolePush
+		}
+		for handle, expected := range testCase.expectedHandles {
+			actual, ok := rolesByHandle[handle]
+			if !ok {
+				t.Fatalf("expected map%d captured monster handle %s, got roles=%+v", testCase.mapID, handle, snapshot.CreateRoles)
+			}
+			if actual.DisplayName != expected.DisplayName || actual.Level != expected.Level || actual.Vocation != expected.Vocation || actual.SourceQuery != expected.SourceQuery || actual.SpawnFlash != expected.SpawnFlash || actual.Kind != "monster" {
+				t.Fatalf("expected map%d captured monster %+v, got %+v", testCase.mapID, expected, actual)
+			}
+			if actual.SourceNPCVisual == nil || actual.SourceNPCVisual.MovieClipIRPath != expected.SourceNPCVisual.MovieClipIRPath {
+				t.Fatalf("expected map%d captured monster visual %+v, got %+v", testCase.mapID, expected.SourceNPCVisual, actual.SourceNPCVisual)
+			}
+		}
+	}
+}
+
+func TestShihukuDungeonInstanceKeyAndTransportRoutes(t *testing.T) {
+	if key, ok := DungeonInstanceKeyForMapID(158); !ok || key != session.DungeonInstanceShihuku {
+		t.Fatalf("expected map158 shihuku dungeon key, got key=%s ok=%v", key, ok)
+	}
+	if key, ok := DungeonInstanceKeyForMapID(167); !ok || key != session.DungeonInstanceShihuku {
+		t.Fatalf("expected map167 shihuku dungeon key, got key=%s ok=%v", key, ok)
+	}
+
+	cases := []struct {
+		fromMapID int
+		handle    string
+		mapID     int
+	}{
+		{fromMapID: 36, handle: "transp_158", mapID: 158},
+		{fromMapID: 158, handle: "transp_159", mapID: 159},
+		{fromMapID: 159, handle: "transp_162", mapID: 162},
+		{fromMapID: 167, handle: "transp_36", mapID: 36},
+	}
+	for _, testCase := range cases {
+		destination, ok := ResolveTownTransportAnswerFromMap(testCase.fromMapID, testCase.handle, "goto")
+		if !ok || destination.MapID != testCase.mapID {
+			t.Fatalf("expected shihuku transport %+v to resolve, got destination=%+v ok=%v", testCase, destination, ok)
 		}
 	}
 }

@@ -1190,6 +1190,30 @@ func TestClassicTownFeixiandongEntryRequiresTicketAndClearsSingleTicketSlot(t *t
 	}
 }
 
+func TestClassicTownShihukuEntryRequiresTicketAndClearsActualTicketSlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 36)
+	if !ok {
+		t.Fatal("expected test role map update to shihuku entrance")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+
+	rejected := buildClassicTownTransferResult(store, socketSession, "158", world.SpawnPoint{X: 120, Y: 481})
+	if rejected.townBootstrap != nil || len(rejected.chatMessages) != 1 || !strings.Contains(rejected.chatMessages[0].Msg, "狮虎窟通行证x1") {
+		t.Fatalf("expected shihuku entry without ticket to be rejected, got %+v", rejected)
+	}
+
+	granted := grantRoleItemTemplateForTest(t, store, socketSession, "狮虎窟通行证", 1)
+	entry := buildClassicTownTransferResult(store, socketSession, "158", world.SpawnPoint{X: 120, Y: 481})
+	if entry.townBootstrap == nil || entry.dungeonInstance == nil || !entry.dungeonInstance.Active || entry.dungeonInstance.Key != session.DungeonInstanceShihuku || entry.dungeonInstance.DisplayName != "狮虎窟" {
+		t.Fatalf("expected ticketed shihuku entry, got %+v", entry)
+	}
+	if len(entry.itemClears) != 1 || entry.itemClears[0].Type != "背包" || entry.itemClears[0].Index != granted.Index {
+		t.Fatalf("expected single shihuku ticket actual slot clear, got clears=%+v granted=%+v", entry.itemClears, granted)
+	}
+}
+
 func TestHandlePacketClassicTownAddPointPushesSourcePhysique(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	socketSession.selectedRole.Level = 2

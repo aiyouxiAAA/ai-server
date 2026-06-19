@@ -345,6 +345,43 @@ func TestBuildOverUsesCapturedHuangfengzhaiBossRewards(t *testing.T) {
 	}
 }
 
+func TestBuildOverUsesCapturedShihukuRewardCandidates(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	bossOver := (&Runtime{
+		BattleID: "battle-shihuku-boss-reward-candidate",
+		MapID:    "167",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 30},
+			{Camp: CampEnemy, Handle: "enemy_chiluking", Name: "蚩颅王", Level: 30, MaxHP: 6000, HP: 6000},
+		},
+	}).buildOver(CampTeam)
+	if bossOver == nil {
+		t.Fatal("expected shihuku boss OverBattle push")
+	}
+	if bossOver.Result.ExpDelta != 558 {
+		t.Fatalf("expected shihuku boss captured candidate exp 558, got %d", bossOver.Result.ExpDelta)
+	}
+	expectedBossItems := []string{"兽血x1", "L小喇叭x1", "兽骨x1", "石块x1", "碎金片x1", "铁块x1", "蚩颅王的角x1", "蚩颅王的头x1", "蚩颅王护肩x1"}
+	if !reflect.DeepEqual(bossOver.Result.Items, expectedBossItems) {
+		t.Fatalf("expected shihuku boss low-roll reward %+v, got %+v", expectedBossItems, bossOver.Result.Items)
+	}
+
+	blackshadowOver := (&Runtime{
+		BattleID: "battle-shihuku-blackshadow-reward-candidate",
+		MapID:    "162",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampEnemy, Handle: "enemy_blackshadow", Name: "黑影", Level: 26, MaxHP: 2300, HP: 2300},
+		},
+	}).buildOver(CampTeam)
+	expectedBlackshadowItems := []string{"肉x1", "兽牙x1", "兽血x1", "兽骨x1", "L小喇叭x1"}
+	if !reflect.DeepEqual(blackshadowOver.Result.Items, expectedBlackshadowItems) {
+		t.Fatalf("expected shihuku blackshadow low-roll reward %+v, got %+v", expectedBlackshadowItems, blackshadowOver.Result.Items)
+	}
+}
+
 func TestBuildOverRollsCapturedObservedDropRates(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
 	over := (&Runtime{BattleID: "battle-map5-high-roll", MapID: "5", Round: 1}).buildOver(CampTeam)
@@ -691,6 +728,88 @@ func TestHuangfengzhaiVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) 
 
 	if _, ok := sourceVisibleMonsterConfigForHandle("147", "6887685480585492"); ok {
 		t.Fatal("expected map147 to stay without visible monster config until source packets are captured")
+	}
+}
+
+func TestShihukuVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) {
+	cases := []struct {
+		mapID  string
+		handle string
+		name   string
+		level  int
+		maxHP  int
+		maxMP  int
+		attack int
+		label  string
+	}{
+		{mapID: "158", handle: "5837621591158929", name: "黑影", level: 25, maxHP: 2300, maxMP: 724, attack: 402, label: "普通攻击"},
+		{mapID: "160", handle: "3824621817512450", name: "蛮虎怪", level: 25, maxHP: 3000, maxMP: 584, attack: 303, label: "普通攻击"},
+		{mapID: "161", handle: "9333621886743795", name: "蛮虎队长", level: 28, maxHP: 3500, maxMP: 600, attack: 322, label: "普通攻击"},
+		{mapID: "163", handle: "8094622782649492", name: "盘狮队长", level: 26, maxHP: 3300, maxMP: 440, attack: 228, label: "普通攻击"},
+		{mapID: "165", handle: "3856623006745359", name: "黑影队长", level: 26, maxHP: 3000, maxMP: 760, attack: 276, label: "普通攻击"},
+		{mapID: "167", handle: "7550622260838906", name: "蚩颅王", level: 30, maxHP: 6000, maxMP: 600, attack: 236, label: "普通攻击"},
+	}
+
+	for _, testCase := range cases {
+		config, ok := sourceVisibleMonsterConfigForHandle(testCase.mapID, testCase.handle)
+		if !ok {
+			t.Fatalf("expected captured shihuku visible monster config for %s/%s", testCase.mapID, testCase.handle)
+		}
+		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.MaxHP != testCase.maxHP || config.Cell.MaxMP != testCase.maxMP || config.Cell.Attack != testCase.attack || config.Cell.CommandLabel != testCase.label {
+			t.Fatalf("expected captured shihuku visible monster %+v, got %+v", testCase, config.Cell)
+		}
+		if config.QueueIndexTeam != 1 || config.QueueIndexEnemy != 4 {
+			t.Fatalf("expected shihuku visible monster queue indexes 1/4, got %+v", config)
+		}
+	}
+}
+
+func TestShihukuVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T) {
+	cases := []struct {
+		mapID   string
+		handle  string
+		handles []string
+		names   []string
+	}{
+		{
+			mapID:   "161",
+			handle:  "9329621886741609",
+			handles: []string{"9329621886741609", "9331621886742375"},
+			names:   []string{"蛮虎怪", "蛮虎怪"},
+		},
+		{
+			mapID:   "163",
+			handle:  "8088622782646450",
+			handles: []string{"8088622782646450", "8090622782647529"},
+			names:   []string{"盘狮怪", "盘狮怪"},
+		},
+		{
+			mapID:   "166",
+			handle:  "1959622577208401",
+			handles: []string{"1959622577208401", "1961622577209280"},
+			names:   []string{"盘狮怪", "盘狮怪"},
+		},
+		{
+			mapID:   "167",
+			handle:  "7542622260835182",
+			handles: []string{"7542622260835182", "7544622260836750"},
+			names:   []string{"盘狮怪", "盘狮怪"},
+		},
+	}
+
+	for _, testCase := range cases {
+		configs, ok := sourceVisibleMonsterConfigsForHandle(testCase.mapID, testCase.handle)
+		if !ok {
+			t.Fatalf("expected captured shihuku visible encounter group for %+v", testCase)
+		}
+		if len(configs) != len(testCase.handles) {
+			t.Fatalf("expected captured shihuku encounter group %+v, got %+v", testCase.handles, configs)
+		}
+		for index, expectedHandle := range testCase.handles {
+			if configs[index].Cell.Handle != expectedHandle || configs[index].Cell.Name != testCase.names[index] {
+				t.Fatalf("expected captured shihuku encounter member %d %s/%s, got %+v", index, expectedHandle, testCase.names[index], configs[index].Cell)
+			}
+		}
 	}
 }
 
@@ -3663,6 +3782,230 @@ func TestFeixiandongLargerockRollAttackUsesCapturedDamage(t *testing.T) {
 	if action.Damage != 218 || action.TargetHP != 555 || actor.MP != 544 {
 		t.Fatalf("expected 滑行连击 to use captured damage and MP cost, got action=%+v target=%+v", action, target)
 	}
+}
+
+func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-shihuku-skill-profiles",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		Cells: []CellInfoPush{
+			{Handle: "player_21424", Camp: CampTeam, HP: 1085, MaxHP: 1085, Defense: 120},
+			{Handle: "player_21432", Camp: CampTeam, HP: 1010, MaxHP: 1010, Defense: 100},
+			{Handle: "enemy_whorllion", Camp: CampEnemy, Name: "盘狮怪", DisplayURL: "monstermap/whorllion.swf", HP: 3000, MaxHP: 3000, MP: 384, MaxMP: 384, Attack: 228},
+			{Handle: "enemy_chiluking", Camp: CampEnemy, Name: "蚩颅王", DisplayURL: "monstermap/chiluking.swf", HP: 6000, MaxHP: 6000, MP: 600, MaxMP: 600, Attack: 236},
+		},
+	}
+
+	lion := runtime.resolveAttack(runtime.cellByHandle("enemy_whorllion"), runtime.cellByHandle("player_21424"), CommandEnemyLionRoars)
+	if lion.ActionName != "狮吼" || lion.SourceActionLabel != "lionroars" || lion.SourceMode != "1" {
+		t.Fatalf("expected shihuku whorllion 狮吼/lionroars action, got %+v", lion)
+	}
+	if runtime.cellByHandle("enemy_whorllion").MP != 384 {
+		t.Fatalf("expected 狮吼 to keep MP unchanged until source MP cost is proven, got %+v", runtime.cellByHandle("enemy_whorllion"))
+	}
+
+	piece := runtime.resolveAttack(runtime.cellByHandle("enemy_chiluking"), runtime.cellByHandle("player_21424"), CommandEnemyPieceAtk)
+	if piece.ActionName != "撕裂" || piece.SourceActionLabel != "pieceAttack" || piece.SourceMode != "1" {
+		t.Fatalf("expected shihuku 撕裂/pieceAttack action, got %+v", piece)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected shihuku 撕裂 hit to push 外伤 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "外伤" || buff.Display != "25.png" || buff.ReleaseHandle != "enemy_chiluking" || buff.TargetHandle != "player_21424" || buff.Round != 5 {
+		t.Fatalf("expected shihuku 撕裂 BuffInfo metadata, got %+v", buff)
+	}
+	effect := runtime.StatusEffects["player_21424"].Effects["外伤"]
+	if effect.SourceHandle != "enemy_chiluking" || effect.SourceSkill != "撕裂" || effect.SourceAttack != 236 || effect.TickMinPercent != 10 || effect.TickMaxPercent != 15 || effect.Rounds != 5 {
+		t.Fatalf("expected shihuku 蚩颅王 外伤 to use source attack 10%%~15%%, got %+v", effect)
+	}
+
+	gold := runtime.resolveEnemyCommandActions(runtime.cellByHandle("enemy_chiluking"), runtime.cellByHandle("player_21424"), CommandEnemyGoldHit)[0]
+	if gold.ActionName != "黄金穿刺" || gold.SourceActionLabel != "goldhit" || gold.TargetHandle != "all" || gold.SourceMode != "1" {
+		t.Fatalf("expected shihuku 蚩颅王 黄金穿刺/goldhit all-target action, got %+v", gold)
+	}
+	if runtime.cellByHandle("enemy_chiluking").MP != 600 {
+		t.Fatalf("expected shihuku skill profiles to keep MP unchanged without source MP cost evidence, got %+v", runtime.cellByHandle("enemy_chiluking"))
+	}
+}
+
+func TestShihukuBlackshadowPieceAttackAppliesCapturedWoundPercent(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-shihuku-blackshadow-wound",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "enemy_blackshadow",
+		Camp:       CampEnemy,
+		Name:       "黑影",
+		DisplayURL: "monstermap/blackshadow.swf",
+		HP:         2300,
+		MaxHP:      2300,
+		Attack:     300,
+		Hit:        100,
+	}
+	target := &CellInfoPush{
+		Handle:  "player_21424",
+		Camp:    CampTeam,
+		HP:      1000,
+		MaxHP:   1555,
+		Attack:  999,
+		Defense: 0,
+		Dog:     0,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandEnemyPieceAtk)
+
+	if action.ActionName != "撕裂" || action.TargetActionStateCode == "1" {
+		t.Fatalf("expected blackshadow 撕裂 hit action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected blackshadow 撕裂 hit to push 外伤 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "外伤" || buff.Display != "25.png" || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle || buff.Round != 5 {
+		t.Fatalf("expected blackshadow 外伤 BuffInfo metadata, got %+v", buff)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["外伤"]
+	if effect.SourceHandle != actor.Handle || effect.SourceSkill != "撕裂" || effect.SourceAttack != 300 || effect.TickMinPercent != 6 || effect.TickMaxPercent != 9 || effect.Rounds != 5 {
+		t.Fatalf("expected blackshadow 外伤 to use captured source attack 6%%~9%%, got %+v", effect)
+	}
+
+	hpBeforeTick := target.HP
+	statusActions, skipTurn := runtime.resolveStatusStartActions(target)
+	if skipTurn || len(statusActions) != 1 || statusActions[0].ActionName != "外伤" {
+		t.Fatalf("expected one blackshadow 外伤 tick action without skip, actions=%+v skip=%v", statusActions, skipTurn)
+	}
+	if statusActions[0].Damage < 18 || statusActions[0].Damage > 27 {
+		t.Fatalf("expected blackshadow 外伤 tick to use source attack 300 * 6%%~9%%, got %+v", statusActions[0])
+	}
+	if target.HP != hpBeforeTick-statusActions[0].Damage {
+		t.Fatalf("expected target HP to follow 外伤 tick damage, target=%+v action=%+v", target, statusActions[0])
+	}
+}
+
+func TestShihukuPieceAttackDodgeSuppressesWound(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-shihuku-piece-dodge",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "enemy_chiluking",
+		Camp:       CampEnemy,
+		Name:       "蚩颅王",
+		DisplayURL: "monstermap/chiluking.swf",
+		HP:         6000,
+		MaxHP:      6000,
+		Attack:     236,
+		Hit:        0,
+	}
+	target := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		HP:     1000,
+		MaxHP:  1555,
+		Dog:    1,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandEnemyPieceAtk)
+
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected shihuku 撕裂 dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 {
+		t.Fatalf("expected shihuku 撕裂 dodge to suppress 外伤 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	if len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected shihuku 撕裂 dodge to leave status effects empty, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestShihukuEnemyBattleCommandUsesCapturedActionRatios(t *testing.T) {
+	target := &CellInfoPush{Handle: "player_21424", Camp: CampTeam, HP: 1085, MaxHP: 1085}
+	testCases := []struct {
+		name        string
+		displayURL  string
+		expected    string
+		chanceLabel string
+	}{
+		{name: "黑影", displayURL: "monstermap/blackshadow.swf", expected: CommandEnemyPieceAtk, chanceLabel: "pieceAttack 7/100"},
+		{name: "盘狮怪", displayURL: "monstermap/whorllion.swf", expected: CommandEnemyLionRoars, chanceLabel: "lionroars 20/100"},
+		{name: "蚩颅王", displayURL: "monstermap/chiluking.swf", expected: CommandEnemyGoldHit, chanceLabel: "goldhit 19/100"},
+		{name: "蚩颅王", displayURL: "monstermap/chiluking.swf", expected: CommandEnemyPieceAtk, chanceLabel: "pieceAttack 11/100 after goldhit misses"},
+	}
+
+	for _, testCase := range testCases {
+		enemy := &CellInfoPush{
+			Handle:     "enemy_" + testCase.expected,
+			Camp:       CampEnemy,
+			Name:       testCase.name,
+			DisplayURL: testCase.displayURL,
+			HP:         3000,
+			MaxHP:      3000,
+			MP:         600,
+			MaxMP:      600,
+		}
+		battleID, ok := findBattleIDForEnemyCommand(testCase.expected, enemy, target)
+		if !ok {
+			t.Fatalf("expected to find deterministic battle id for %s %s", testCase.name, testCase.chanceLabel)
+		}
+		runtime := &Runtime{BattleID: battleID, Round: 1, nextSequence: 1}
+		if command := runtime.enemyBattleCommand(enemy, target); command != testCase.expected {
+			t.Fatalf("expected %s to choose %s from captured %s, got %s with battle id %s", testCase.name, testCase.expected, testCase.chanceLabel, command, battleID)
+		}
+	}
+
+	powerTiger := &CellInfoPush{Handle: "enemy_powertiger", Camp: CampEnemy, Name: "蛮虎怪", DisplayURL: "monstermap/powertiger.swf", HP: 3200, MaxHP: 3200, MP: 600}
+	if command := (&Runtime{BattleID: "battle-shihuku-powertiger", Round: 1, nextSequence: 1}).enemyBattleCommand(powerTiger, target); command != CommandEnemyAttack {
+		t.Fatalf("expected shihuku powertiger to keep normal attack only, got %s", command)
+	}
+}
+
+func TestShihukuChilukingUsesCapturedRampageDisplayAction(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-shihuku-chiluking-rampage",
+		Round:            3,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "enemy_chiluking",
+		Camp:       CampEnemy,
+		Name:       "蚩颅王",
+		DisplayURL: "monstermap/chiluking.swf",
+		HP:         6000,
+		MaxHP:      6000,
+		MP:         600,
+		MaxMP:      600,
+	}
+
+	actions := runtime.resolveEnemyRampageActions(actor)
+
+	if len(actions) != 1 || actions[0].ActionName != "暴走之力" || actions[0].SourceActionLabel != "battleStand" || actions[0].TargetHandle != actor.Handle {
+		t.Fatalf("expected shihuku chiluking captured 暴走之力 battleStand self action, got %+v", actions)
+	}
+	if actor.MP != 600 || len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "暴走之力" {
+		t.Fatalf("expected shihuku chiluking rampage to keep MP and emit buff info, actor=%+v buffs=%+v", actor, runtime.PendingBuffInfos)
+	}
+}
+
+func findBattleIDForEnemyCommand(expected string, enemy *CellInfoPush, target *CellInfoPush) (string, bool) {
+	for index := 0; index < 10000; index++ {
+		battleID := fmt.Sprintf("battle-shihuku-ai-%s-%d", expected, index)
+		runtime := &Runtime{BattleID: battleID, Round: 1, nextSequence: 1}
+		if runtime.enemyBattleCommand(enemy, target) == expected {
+			return battleID, true
+		}
+	}
+	return "", false
 }
 
 func TestMagicpandaEnemyNormalAttackUsesCapturedBroadcastName(t *testing.T) {

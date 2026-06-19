@@ -1552,6 +1552,128 @@ var map157SourceMonsters = []sourceMonsterEntry{
 	buildCapturedSourceMonster("7607686175732966", "蛮族战士", "monstermap/barbarianfighter.swf", "barbarianfighter", 18, "战士", 2477, 534),
 }
 
+var map158SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_159", 2964, 514),
+	buildCapturedSourceTransport("transp_36", 35, 481),
+}
+
+var map159SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_158", 30, 515),
+	buildCapturedSourceTransport("transp_160", 2816, 700),
+	buildCapturedSourceTransport("transp_162", 1366, 465),
+}
+
+var map160SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_159", 180, 420),
+	buildCapturedSourceTransport("transp_161", 1214, 729),
+	buildCapturedSourceTransport("transp_164", 2449, 542),
+}
+
+var map161SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_160", 111, 405),
+}
+
+var map162SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_159", 163, 673),
+	buildCapturedSourceTransport("transp_163", 2400, 700),
+	buildCapturedSourceTransport("transp_165", 2966, 525),
+}
+
+var map163SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_162", 269, 410),
+	buildCapturedSourceTransport("transp_164", 2167, 707),
+	buildCapturedSourceTransport("transp_166", 2946, 527),
+}
+
+var map164SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_160", 54, 506),
+	buildCapturedSourceTransport("transp_163", 1763, 357),
+	buildCapturedSourceTransport("transp_167", 2916, 533),
+}
+
+var map165SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_162", 34, 513),
+}
+
+var map166SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_163", 32, 500),
+	buildCapturedSourceTransport("transp_167", 1802, 689),
+}
+
+var map167SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_164", 110, 490),
+	buildCapturedSourceTransport("transp_166", 611, 357),
+	buildCapturedSourceTransportMovieClip("transp_36", "transp/fl.swf", "fl", 139, 147, 2300, 464),
+}
+
+var map158SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("5835621591157688", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 1053, 450),
+	buildCapturedSourceMonster("5837621591158929", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 1215, 457),
+	buildCapturedSourceMonster("5839621591159706", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 2061, 496),
+}
+
+var map159SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("3309621687155655", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 25, "战士+", 580, 484),
+	buildCapturedSourceMonster("3311621687156296", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 25, "战士+", 1138, 550),
+	buildCapturedSourceMonster("3313621687156409", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 1769, 480),
+	buildCapturedSourceMonster("3315621687157919", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 1704, 553),
+}
+
+var map160SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("3822621817511562", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 25, "战士+", 440, 467),
+	buildCapturedSourceMonster("3824621817512450", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 25, "战士+", 1799, 514),
+	buildCapturedSourceMonster("3826621817513876", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 25, "战士+", 1030, 473),
+}
+
+var map161SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("9325621886740100", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 26, "战士+", 1988, 457),
+	buildCapturedSourceMonster("9327621886741599", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 26, "战士+", 2373, 538),
+	buildCapturedSourceMonster("9329621886741609", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 26, "战士+", 2481, 453),
+	buildCapturedSourceMonster("9331621886742375", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 26, "战士+", 2604, 530),
+	buildCapturedSourceMonster("9333621886743795", "蛮虎队长", "monstermap/powertiger.swf", "powertiger", 28, "战士+", 2688, 496),
+}
+
+var map162SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("5697622889787853", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 611, 465),
+	buildCapturedSourceMonster("5699622889788202", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 1442, 542),
+	buildCapturedSourceMonster("5701622889789230", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 2573, 461),
+	buildCapturedSourceMonster("5703622889791824", "黑影", "monstermap/blackshadow.swf", "blackshadow", 25, "游侠+", 2646, 523),
+}
+
+var map163SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("8088622782646450", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 26, "战士+", 1288, 442),
+	buildCapturedSourceMonster("8090622782647529", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 26, "战士+", 1300, 546),
+	buildCapturedSourceMonster("8092622782648950", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 26, "战士+", 2342, 492),
+	buildCapturedSourceMonster("8094622782649492", "盘狮队长", "monstermap/whorllion.swf", "whorllion", 26, "战士+", 2631, 503),
+}
+
+var map164SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7283622130690284", "黑影", "monstermap/blackshadow.swf", "blackshadow", 27, "游侠+", 1423, 430),
+	buildCapturedSourceMonster("7285622130691644", "黑影", "monstermap/blackshadow.swf", "blackshadow", 27, "游侠+", 1465, 546),
+	buildCapturedSourceMonster("7287622130692195", "黑影", "monstermap/blackshadow.swf", "blackshadow", 27, "游侠+", 2623, 488),
+}
+
+var map165SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("3850623006742112", "黑影", "monstermap/blackshadow.swf", "blackshadow", 26, "游侠+", 657, 431),
+	buildCapturedSourceMonster("3852623006743553", "黑影", "monstermap/blackshadow.swf", "blackshadow", 26, "游侠+", 1281, 471),
+	buildCapturedSourceMonster("3854623006744837", "黑影", "monstermap/blackshadow.swf", "blackshadow", 26, "游侠+", 592, 520),
+	buildCapturedSourceMonster("3856623006745359", "黑影队长", "monstermap/blackshadow.swf", "blackshadow", 26, "游侠+", 1707, 464),
+}
+
+var map166SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1957622577207441", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 27, "战士+", 822, 470),
+	buildCapturedSourceMonster("1959622577208401", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 27, "战士+", 734, 537),
+	buildCapturedSourceMonster("1961622577209280", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 27, "战士+", 412, 439),
+}
+
+var map167SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7542622260835182", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 27, "战士+", 1198, 413),
+	buildCapturedSourceMonster("7544622260836750", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 27, "战士+", 1266, 509),
+	buildCapturedSourceMonster("7546622260836700", "蛮虎怪", "monstermap/powertiger.swf", "powertiger", 27, "战士+", 2032, 509),
+	buildCapturedSourceMonster("7548622260837633", "盘狮怪", "monstermap/whorllion.swf", "whorllion", 27, "战士+", 2054, 413),
+	buildCapturedSourceMonster("7550622260838906", "蚩颅王", "monstermap/chiluking.swf", "chiluking", 30, "战士++", 2189, 451),
+}
+
 func buildCapturedSourceTransport(handle string, x int, y int) sourceNPCEntry {
 	return buildCapturedSourceTransportMovieClip(handle, "transp/flag2.swf", "flag2", 158, 258, x, y)
 }
@@ -1876,6 +1998,44 @@ var capturedSourceMonsterMovements = map[string]RoleMovement{
 	"1677675260684828": {Speed: 130, Angle: 166.37300514010846, Mode: 1},
 	"1679675260685862": {Speed: 130, Angle: 359.06080905426444, Mode: 1},
 	"1681675260686878": {Speed: 130, Angle: 182.50313977958493, Mode: 1},
+	"5835621591157688": {Speed: 130, Angle: 179.57871509583143, Mode: 1},
+	"5837621591158929": {Speed: 130, Angle: 2.3859440303888126, Mode: 1},
+	"5839621591159706": {Speed: 130, Angle: 8.761593390518517, Mode: 1},
+	"3309621687155655": {Speed: 130, Angle: 358.3909910939526, Mode: 1},
+	"3311621687156296": {Speed: 130, Angle: 349.8159668039759, Mode: 1},
+	"3313621687156409": {Speed: 130, Angle: 57.90740867126584, Mode: 1},
+	"3315621687157919": {Speed: 130, Angle: 173.13847796908763, Mode: 1},
+	"3822621817511562": {Speed: 130, Angle: 174.8055710922652, Mode: 1},
+	"3824621817512450": {Speed: 130, Angle: 173.3759673654825, Mode: 1},
+	"3826621817513876": {Speed: 130, Angle: 185.4280971861107, Mode: 1},
+	"9325621886740100": {Speed: 130, Angle: 0, Mode: 1},
+	"9327621886741599": {Speed: 130, Angle: 0, Mode: 1},
+	"9329621886741609": {Speed: 130, Angle: 180, Mode: 1},
+	"9331621886742375": {Speed: 130, Angle: 180, Mode: 1},
+	"9333621886743795": {Speed: 130, Angle: 180, Mode: 1},
+	"5697622889787853": {Speed: 130, Angle: 180.8363753254224, Mode: 1},
+	"5699622889788202": {Speed: 130, Angle: 2.862405226111748, Mode: 1},
+	"5701622889789230": {Speed: 130, Angle: 180, Mode: 1},
+	"5703622889791824": {Speed: 130, Angle: 0.3845296595845063, Mode: 1},
+	"8088622782646450": {Speed: 130, Angle: 338.51796167369224, Mode: 1},
+	"8090622782647529": {Speed: 130, Angle: 175.6012946450045, Mode: 1},
+	"8092622782648950": {Speed: 130, Angle: 351.6341138759674, Mode: 1},
+	"8094622782649492": {Speed: 130, Angle: 359.1815445383114, Mode: 1},
+	"7283622130690284": {Speed: 130, Angle: 342.4877438424672, Mode: 1},
+	"7285622130691644": {Speed: 130, Angle: 30.64066345575537, Mode: 1},
+	"7287622130692195": {Speed: 130, Angle: 356.39369137740334, Mode: 1},
+	"3850623006742112": {Speed: 130, Angle: 15.614401434528194, Mode: 1},
+	"3852623006743553": {Speed: 130, Angle: 185.31454566994475, Mode: 1},
+	"3854623006744837": {Speed: 130, Angle: 180.40066325579215, Mode: 1},
+	"3856623006745359": {Speed: 130, Angle: 180, Mode: 1},
+	"1957622577207441": {Speed: 130, Angle: 3.5950096610090987, Mode: 1},
+	"1959622577208401": {Speed: 130, Angle: 178.92917554521304, Mode: 1},
+	"1961622577209280": {Speed: 130, Angle: 160.54202098841014, Mode: 1},
+	"7542622260835182": {Speed: 130, Angle: 359.3969088056195, Mode: 1},
+	"7544622260836750": {Speed: 130, Angle: 359.3839400916008, Mode: 1},
+	"7546622260836700": {Speed: 130, Angle: 357.1196224471524, Mode: 1},
+	"7548622260837633": {Speed: 130, Angle: 4.398705354995532, Mode: 1},
+	"7550622260838906": {Speed: 130, Angle: 181.06485469345895, Mode: 1},
 }
 
 var sourceTransportDialogue = sourceNPCDialogueEntry{

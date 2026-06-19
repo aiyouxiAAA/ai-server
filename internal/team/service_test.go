@@ -67,6 +67,45 @@ func TestTeamLeaderCanKickAndTransferLeader(t *testing.T) {
 	}
 }
 
+func TestTeamDisbandsWhenOnlyOneMemberWouldRemain(t *testing.T) {
+	manager := NewManager()
+	manager.UpsertOnline(testMember("role-a", "甲"))
+	manager.UpsertOnline(testMember("role-b", "乙"))
+	acceptInvite(t, manager, "role-a", "role-b")
+
+	events := manager.Leave("role-b")
+	if !hasClearFor(events, "role-b") || !hasClearFor(events, "role-a") {
+		t.Fatalf("expected both two-person team members to receive clear events, got %+v", events)
+	}
+	if len(collectMembers(events)) != 0 {
+		t.Fatalf("expected disband to avoid one-person team snapshots, got %+v", events)
+	}
+	if recipients, ok := manager.RecipientsForTeam("role-a"); ok || len(recipients) != 0 {
+		t.Fatalf("expected remaining member to have no team after disband, got ok=%v recipients=%+v", ok, recipients)
+	}
+	if plan := manager.BuildBattleMemberPlan("role-a", "1"); len(plan.Members) != 0 {
+		t.Fatalf("expected disbanded role to have no battle team members, got %+v", plan)
+	}
+}
+
+func TestTeamKickDisbandsTwoPersonTeam(t *testing.T) {
+	manager := NewManager()
+	manager.UpsertOnline(testMember("role-a", "甲"))
+	manager.UpsertOnline(testMember("role-b", "乙"))
+	acceptInvite(t, manager, "role-a", "role-b")
+
+	events := manager.Kick("role-a", "role-b", "")
+	if !hasClearFor(events, "role-a") || !hasClearFor(events, "role-b") {
+		t.Fatalf("expected leader and kicked member to receive clear events, got %+v", events)
+	}
+	if len(collectMembers(events)) != 0 {
+		t.Fatalf("expected kick disband to avoid one-person team snapshots, got %+v", events)
+	}
+	if recipients, ok := manager.RecipientsForTeam("role-a"); ok || len(recipients) != 0 {
+		t.Fatalf("expected leader to have no team after two-person kick, got ok=%v recipients=%+v", ok, recipients)
+	}
+}
+
 func TestTeamUpsertOnlineRefreshesMemberSnapshotFields(t *testing.T) {
 	manager := NewManager()
 	manager.UpsertOnline(testMember("role-a", "甲"))

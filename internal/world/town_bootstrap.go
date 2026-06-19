@@ -538,6 +538,56 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneFiftySeven.SourceMonsters = map157SourceMonsters
 	definitions[157] = mapOneFiftySeven
 
+	mapOneFiftyEight := definitions[158]
+	mapOneFiftyEight.SourceNPCs = map158SourceNPCs
+	mapOneFiftyEight.SourceMonsters = map158SourceMonsters
+	definitions[158] = mapOneFiftyEight
+
+	mapOneFiftyNine := definitions[159]
+	mapOneFiftyNine.SourceNPCs = map159SourceNPCs
+	mapOneFiftyNine.SourceMonsters = map159SourceMonsters
+	definitions[159] = mapOneFiftyNine
+
+	mapOneSixty := definitions[160]
+	mapOneSixty.SourceNPCs = map160SourceNPCs
+	mapOneSixty.SourceMonsters = map160SourceMonsters
+	definitions[160] = mapOneSixty
+
+	mapOneSixtyOne := definitions[161]
+	mapOneSixtyOne.SourceNPCs = map161SourceNPCs
+	mapOneSixtyOne.SourceMonsters = map161SourceMonsters
+	definitions[161] = mapOneSixtyOne
+
+	mapOneSixtyTwo := definitions[162]
+	mapOneSixtyTwo.SourceNPCs = map162SourceNPCs
+	mapOneSixtyTwo.SourceMonsters = map162SourceMonsters
+	definitions[162] = mapOneSixtyTwo
+
+	mapOneSixtyThree := definitions[163]
+	mapOneSixtyThree.SourceNPCs = map163SourceNPCs
+	mapOneSixtyThree.SourceMonsters = map163SourceMonsters
+	definitions[163] = mapOneSixtyThree
+
+	mapOneSixtyFour := definitions[164]
+	mapOneSixtyFour.SourceNPCs = map164SourceNPCs
+	mapOneSixtyFour.SourceMonsters = map164SourceMonsters
+	definitions[164] = mapOneSixtyFour
+
+	mapOneSixtyFive := definitions[165]
+	mapOneSixtyFive.SourceNPCs = map165SourceNPCs
+	mapOneSixtyFive.SourceMonsters = map165SourceMonsters
+	definitions[165] = mapOneSixtyFive
+
+	mapOneSixtySix := definitions[166]
+	mapOneSixtySix.SourceNPCs = map166SourceNPCs
+	mapOneSixtySix.SourceMonsters = map166SourceMonsters
+	definitions[166] = mapOneSixtySix
+
+	mapOneSixtySeven := definitions[167]
+	mapOneSixtySeven.SourceNPCs = map167SourceNPCs
+	mapOneSixtySeven.SourceMonsters = map167SourceMonsters
+	definitions[167] = mapOneSixtySeven
+
 	for _, point := range sourceCollectionPointsByHandle {
 		mapDefinition, ok := definitions[point.MapID]
 		if !ok {
@@ -774,6 +824,11 @@ func IsFeixiandongMapID(mapID int) bool {
 	return ok && strings.HasPrefix(mapDefinition.Name, "飞仙洞_")
 }
 
+func IsShihukuMapID(mapID int) bool {
+	mapDefinition, ok := townMapBootstrapDefinitions[mapID]
+	return ok && strings.HasPrefix(mapDefinition.Name, "狮虎窟_")
+}
+
 func DungeonInstanceKeyForMapID(mapID int) (string, bool) {
 	switch {
 	case IsShuiliandongMapID(mapID):
@@ -782,6 +837,8 @@ func DungeonInstanceKeyForMapID(mapID int) (string, bool) {
 		return session.DungeonInstanceHuangfengzhai, true
 	case IsFeixiandongMapID(mapID):
 		return session.DungeonInstanceFeixiandong, true
+	case IsShihukuMapID(mapID):
+		return session.DungeonInstanceShihuku, true
 	default:
 		return "", false
 	}

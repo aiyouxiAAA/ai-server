@@ -35,6 +35,11 @@ func TestHandlePacketClassicTeamInviteAcceptAndTeamChat(t *testing.T) {
 		!classicTeamRecipientsContain(inviteEvent.Recipients, memberSession.selectedRole.RoleID) {
 		t.Fatalf("expected invite from leader to member, got %+v", inviteEvent.Invite)
 	}
+	if len(inviteResult.chatMessages) != 1 ||
+		!strings.Contains(inviteResult.chatMessages[0].Msg, "你已经请求["+memberSession.selectedRole.DisplayName+"]加入队伍") ||
+		!strings.Contains(inviteResult.chatMessages[0].Msg, "请等待对方确认") {
+		t.Fatalf("expected source invite wait system message, got %+v", inviteResult.chatMessages)
+	}
 
 	acceptResult := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicTeamInviteReplyReq,
@@ -49,6 +54,12 @@ func TestHandlePacketClassicTeamInviteAcceptAndTeamChat(t *testing.T) {
 	}
 	if classicTeamMemberEventCount(acceptResult) != 2 {
 		t.Fatalf("expected two member snapshots after accept, got %+v", acceptResult.teamEvents)
+	}
+	if len(acceptResult.chatBroadcasts) != 1 ||
+		acceptResult.chatBroadcasts[0].Message.Msg != "["+memberSession.selectedRole.DisplayName+"]加入队伍" ||
+		!classicTeamRecipientsContain(acceptResult.chatBroadcasts[0].Recipients, leaderSession.selectedRole.RoleID) ||
+		!classicTeamRecipientsContain(acceptResult.chatBroadcasts[0].Recipients, memberSession.selectedRole.RoleID) {
+		t.Fatalf("expected source join team system broadcast, got %+v", acceptResult.chatBroadcasts)
 	}
 
 	chatResult := handlePacketWithSession(store, protocol.Packet{

@@ -510,6 +510,8 @@ func sourceRoleSkillDescription(name string, level int, fallback string) string 
 		return fallback
 	case "奥义.雷魂斩":
 		return "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害"
+	case "奥义.暗杀者":
+		return "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害"
 	default:
 		return fallback
 	}

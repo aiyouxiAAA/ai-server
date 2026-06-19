@@ -2390,6 +2390,14 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			mpCost:     24,
 			multiplier: 3.4,
 		},
+		{
+			name:       "奥义.暗杀者",
+			level:      1,
+			desc:       "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害",
+			label:      "w3/assassinate",
+			mpCost:     26,
+			multiplier: 2.8,
+		},
 	}
 
 	for _, testCase := range cases {
@@ -2514,6 +2522,16 @@ func TestBattleSkillProfileUsesCapturedLevelWhenStoredDescriptionIsStale(t *test
 	if jieDuShu.SourceActionLabel != "w3/releaseDrug" || jieDuShu.MPCost != 20 || jieDuShu.DamageMultiplier != 0 || jieDuShu.SourceType != "own" {
 		t.Fatalf("expected 解毒术 Lv1 captured profile to ignore stale description, got %+v", jieDuShu)
 	}
+
+	aoYiAnShaZhe := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "奥义.暗杀者",
+		Level:       1,
+		Type:        "oneE",
+		Description: "特殊发动条件:3格魂元 / 大幅提升对敌人造成的物理伤害",
+	})
+	if aoYiAnShaZhe.SourceActionLabel != "w3/assassinate" || aoYiAnShaZhe.MPCost != 26 || aoYiAnShaZhe.DamageMultiplier != 2.8 {
+		t.Fatalf("expected 奥义.暗杀者 Lv1 captured profile to ignore stale description, got %+v", aoYiAnShaZhe)
+	}
 }
 
 func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
@@ -2603,6 +2621,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害",
 		},
 		{
+			Name:        "奥义.暗杀者",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害",
+		},
+		{
 			Name: "未抓包技能",
 			Type: "oneE",
 		},
@@ -2653,6 +2677,9 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if command := byID[CommandLeiHunZhan]; command.Label != "奥义.雷魂斩" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/thunderSoulAtk" || command.MPCost != 24 || command.DamageMultiplier != 3.4 {
 		t.Fatalf("expected captured 奥义.雷魂斩 single-target command, got %+v", command)
+	}
+	if command := byID[CommandAoYiAnShaZhe]; command.Label != "奥义.暗杀者" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/assassinate" || command.MPCost != 26 || command.DamageMultiplier != 2.8 {
+		t.Fatalf("expected captured 奥义.暗杀者 single-target command, got %+v", command)
 	}
 	if _, ok := byID["未抓包技能"]; ok {
 		t.Fatalf("expected uncaptured skill to be omitted, got %+v", commands)
@@ -2879,6 +2906,91 @@ func TestLeiHunZhanRequiresCapturedSoulPowerAndUsesThunderSoulAtk(t *testing.T) 
 	actor := runtime.cellByHandle("player_21424")
 	if actor == nil || actor.MP != 76 {
 		t.Fatalf("expected 奥义.雷魂斩 to consume MP 24, got actor=%+v", actor)
+	}
+}
+
+func TestAoYiAnShaZheRequiresCapturedSoulPowerAndUsesAssassinate(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-assassinate",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21432",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "奥义.暗杀者",
+				Level:       1,
+				Type:        "oneE",
+				Description: "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-assassinate",
+				Handle:   "player_21432",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Defense:  0,
+				Hit:      100,
+				Fat:      0,
+			},
+			{
+				BattleID: "battle-assassinate",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+		},
+	}
+
+	insufficient := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-assassinate",
+		ActorHandle:  "player_21432",
+		CommandID:    CommandAoYiAnShaZhe,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+	if insufficient.ErrorCode != "insufficient_power" {
+		t.Fatalf("expected 奥义.暗杀者 to require 3 soul power, got %+v", insufficient)
+	}
+
+	runtime.StoredPower["player_21432"] = 3
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-assassinate",
+		ActorHandle:  "player_21432",
+		CommandID:    CommandAoYiAnShaZhe,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 奥义.暗杀者 to be accepted with 3 soul power, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 奥义.暗杀者 action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "奥义.暗杀者" || action.SourceMode != "1" || action.SourceActionLabel != "w3/assassinate" {
+		t.Fatalf("expected captured 奥义.暗杀者 action label, got %+v", action)
+	}
+	if action.Damage != 280 || action.TargetHP != 720 {
+		t.Fatalf("expected 奥义.暗杀者 Lv1 captured multiplier without soul power damage bonus, got %+v", action)
+	}
+	actor := runtime.cellByHandle("player_21432")
+	if actor == nil || actor.MP != 74 {
+		t.Fatalf("expected 奥义.暗杀者 to consume MP 26, got actor=%+v", actor)
 	}
 }
 

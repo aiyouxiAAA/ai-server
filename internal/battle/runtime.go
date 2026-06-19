@@ -38,6 +38,7 @@ const (
 	CommandJiFengCi        = "skill-ji-feng-ci"
 	CommandJieDuShu        = "skill-jie-du-shu"
 	CommandLeiHunZhan      = "skill-lei-hun-zhan"
+	CommandAoYiAnShaZhe    = "skill-ao-yi-an-sha-zhe"
 	CommandEnemyAttack     = "enemy-normal-attack"
 	CommandEnemySlideCut   = "enemy-slide-cut"
 	CommandEnemyShadeCut   = "enemy-shade-cut"
@@ -61,6 +62,7 @@ const (
 
 	maxStoredPower                     = 5
 	leiHunZhanRequiredPower            = 3
+	aoYiAnShaZheRequiredPower          = 3
 	enemySlideCutMPCost                = 10
 	enemySlideCutChance                = 20
 	enemyShadeCutMPCost                = 40
@@ -724,6 +726,9 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	if normalizeBattleCommandID(commandID) == CommandLeiHunZhan && runtime.powerFor(actor.Handle) < leiHunZhanRequiredPower {
 		return ActionResult{ErrorCode: "insufficient_power"}
 	}
+	if normalizeBattleCommandID(commandID) == CommandAoYiAnShaZhe && runtime.powerFor(actor.Handle) < aoYiAnShaZheRequiredPower {
+		return ActionResult{ErrorCode: "insufficient_power"}
+	}
 
 	target := runtime.cellByHandle(request.TargetHandle)
 	if target == nil || target.Camp != CampEnemy || target.HP <= 0 {
@@ -1161,6 +1166,8 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "解毒术", 1)
 	case CommandLeiHunZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
+	case CommandAoYiAnShaZhe:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.暗杀者", 1)
 	case CommandEnemySlideCut:
 		return commandProfile{
 			ActionName:        "滑行斩",
@@ -1616,6 +1623,8 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "解毒术")
 	case CommandLeiHunZhan:
 		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
+	case CommandAoYiAnShaZhe:
+		return runtime.hasRoleSkillForActor(handle, "奥义.暗杀者")
 	default:
 		return false
 	}
@@ -1866,6 +1875,8 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandJieDuShu
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
+	case "奥义.暗杀者":
+		return CommandAoYiAnShaZhe
 	default:
 		return ""
 	}
@@ -1873,7 +1884,7 @@ func sourceBattleSkillCommandID(name string) string {
 
 func sourceBattleSkillSourceType(name string, fallbackType string) string {
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "奥义.雷魂斩":
+	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "奥义.雷魂斩", "奥义.暗杀者":
 		return "oneE"
 	case "狂爆", "解毒术":
 		return "own"
@@ -1938,6 +1949,8 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandJieDuShu
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
+	case "奥义.暗杀者":
+		return CommandAoYiAnShaZhe
 	default:
 		return strings.TrimSpace(commandID)
 	}
@@ -2052,6 +2065,14 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Icon:        "183.png",
 			Description: fallbackLeiHunZhanDescription(level),
 		}
+	case "奥义.暗杀者":
+		return session.RoleSkill{
+			Name:        "奥义.暗杀者",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "262.png",
+			Description: fallbackAoYiAnShaZheDescription(level),
+		}
 	default:
 		return session.RoleSkill{}
 	}
@@ -2160,6 +2181,13 @@ func fallbackLeiHunZhanDescription(level int) string {
 	}
 }
 
+func fallbackAoYiAnShaZheDescription(level int) string {
+	switch level {
+	default:
+		return "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害"
+	}
+}
+
 func sourceBattleSkillActionLabel(name string, level int) string {
 	switch strings.TrimSpace(name) {
 	case "密斩":
@@ -2194,6 +2222,8 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w3/releaseDrug"
 	case "奥义.雷魂斩":
 		return "w8/thunderSoulAtk"
+	case "奥义.暗杀者":
+		return "w3/assassinate"
 	case "普通攻击":
 		return "nomalAtk"
 	default:
@@ -2294,6 +2324,8 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		return 0
 	case "奥义.雷魂斩":
 		return 3.4
+	case "奥义.暗杀者":
+		return 2.8
 	default:
 		return 1
 	}
@@ -2354,6 +2386,8 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		return 20
 	case "奥义.雷魂斩":
 		return 24
+	case "奥义.暗杀者":
+		return 26
 	default:
 		return 0
 	}

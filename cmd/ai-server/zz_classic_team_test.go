@@ -307,7 +307,9 @@ func TestHandlePacketClassicTeamCapturedSecondAccountSharesBattleAppearance(t *t
 			continue
 		}
 		capturedCellFound = true
-		if cell.DisplayURL != capturedClassicTeamRoleBridgeWoodcutter.BattleSourceQuery || !strings.Contains(cell.DisplayURL, "w3=43") {
+		if cell.DisplayURL != capturedClassicTeamRoleBridgeWoodcutter.BattleSourceQuery ||
+			!strings.Contains(cell.DisplayURL, "w3=49") ||
+			strings.Contains(cell.DisplayURL, "w3=43") {
 			t.Fatalf("expected captured battle source query on team cell, got %q", cell.DisplayURL)
 		}
 		if cell.Level != capturedClassicTeamRoleBridgeWoodcutter.Level ||
@@ -629,19 +631,19 @@ var capturedClassicTeamRoleBridgeWoodcutter = classicCapturedTeamRoleFixture{
 	Gender:         "male",
 	RoleTemplateID: 1,
 	PresetID:       1,
-	// D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260613_165223_214_session_29856/connections/20260613_165248_812_conn_0002
-	// raw/server-to-client-0001.bin:1231/:1240 and frames-server-to-client-0001.ndjson:6417.
+	// D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260619_190155_492_session_02408/connections/20260619_190201_802_conn_0002
+	// raw/server-to-client-0001.bin packets #21781/#21795.
 	// The local account keeps the user-facing test name 222, but carries the captured player_21432 body/state.
-	Level:              26,
+	Level:              36,
 	Vocation:           "游侠",
-	HP:                 815,
-	MaxHP:              815,
-	MP:                 394,
-	MaxMP:              394,
+	HP:                 1165,
+	MaxHP:              1165,
+	MP:                 489,
+	MaxMP:              489,
 	MapID:              45,
-	SourceQuery:        "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&",
-	RuntimeSourceQuery: "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&",
-	BattleSourceQuery:  "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&",
+	SourceQuery:        "human/human.swf?a=29&b=14&c=17&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=16&se=12&wr=25&w3=49&",
+	RuntimeSourceQuery: "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&h=30&a=29&wr=25&w3=49&c=17&p=16&b=14&se=12&",
+	BattleSourceQuery:  "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&h=30&a=29&wr=25&w3=49&c=17&p=16&b=14&se=12&",
 }
 
 func seedCapturedClassicTeamRoleSessionInStore(t *testing.T, store *session.Store, fixture classicCapturedTeamRoleFixture) *packetSession {

@@ -161,6 +161,8 @@ func main() {
 		handleWebSocket(store, writer, request)
 	})
 
+	startClassicActivityAnnouncementLoop()
+
 	go func() {
 		log.Println("[ai-server] http api listening on http://127.0.0.1:18080")
 		if err := http.ListenAndServe("127.0.0.1:18080", apiMux); err != nil {

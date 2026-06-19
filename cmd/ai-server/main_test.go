@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ai-server/internal/battle"
+	"ai-server/internal/classicactivity"
 	"ai-server/internal/protocol"
 	"ai-server/internal/quest"
 	"ai-server/internal/session"
@@ -1314,6 +1315,67 @@ func TestBuildClassicBattleLootUsesPointCouponMetadata(t *testing.T) {
 	}
 }
 
+func TestPointCouponThiefBattleOverPushesWorldNotice(t *testing.T) {
+	store := session.NewStore()
+	socketSession, role := seedSelectedRoleSessionInStore(t, store, "恐龙抗狼1")
+	handle := classicactivity.PointCouponThiefHandle(114, 1718193600, 0)
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "114",
+			MapName:             "卧佛谷_10",
+			StageFocusX:         2329,
+			ReturnRoute:         "town-placeholder",
+			SourceMonsterHandle: handle,
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || socketSession.battleRuntime == nil {
+		t.Fatalf("expected point coupon thief battle start, got %+v", startResult)
+	}
+	socketSession.battleRuntime.PendingOver = &battle.OverPush{
+		BattleID: startResult.battleStart.BattleID,
+		Winner:   battle.CampTeam,
+		Rounds:   1,
+		Result: battle.ResultPayload{
+			Winner:   battle.CampTeam,
+			Rounds:   1,
+			ExpDelta: 50,
+			Items:    []string{"点券x10"},
+		},
+	}
+
+	playOver := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattlePlayOverReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.PlayOverRequest{
+			BattleID: startResult.battleStart.BattleID,
+		}),
+	}, socketSession)
+
+	if !playOver.handled || playOver.battleOver == nil {
+		t.Fatalf("expected point coupon thief BattlePlayOver, got %+v", playOver)
+	}
+	if len(playOver.chatMessages) != 1 {
+		t.Fatalf("expected one point coupon thief world notice, got %+v", playOver.chatMessages)
+	}
+	notice := playOver.chatMessages[0]
+	if notice.Channel != "system" || notice.Msg != "<w>["+role.DisplayName+"]消灭了[点券盗贼]，幸运的获得点券奖励。" {
+		t.Fatalf("expected captured point coupon thief world notice, got %+v", notice)
+	}
+}
+
+func TestPointCouponThiefSpawnAnnouncementUsesCapturedWorldNotice(t *testing.T) {
+	notice := classicPointCouponThiefSpawnAnnouncementMessage()
+
+	if notice.Channel != "system" {
+		t.Fatalf("expected point coupon thief spawn notice to use system channel, got %+v", notice)
+	}
+	if notice.Msg != "<w>[<font color='#00ccff'>点券盗贼</font>]突然出现在树海、卧佛谷、竹林地区。" {
+		t.Fatalf("expected captured point coupon thief spawn notice, got %+v", notice)
+	}
+}
+
 func TestBuildClassicBattleLootUsesFeixiandongBossItemMetadata(t *testing.T) {
 	_, socketSession := seedSelectedRoleSession(t)
 	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
@@ -2223,6 +2285,109 @@ func TestHandlePacketClassicTownFastPanelDoesNotAutoAddLearnedSkills(t *testing.
 	}
 }
 
+func TestHandlePacketClassicTownCapturedWoodcutter222PushesCapturedSkillsAndFastPanel(t *testing.T) {
+	store := session.NewStore()
+	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "222")
+	skillResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetSkillListReq,
+		Seq:     2,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+
+	if !skillResult.handled || skillResult.skillCap == nil || skillResult.skillCap.Count != 12 || len(skillResult.skillInfos) != 12 {
+		t.Fatalf("expected captured 222 skill list, got %+v", skillResult)
+	}
+	skillByName := map[string]classicTownSkillInfoPush{}
+	for _, skill := range skillResult.skillInfos {
+		skillByName[skill.Name] = skill
+	}
+	if _, ok := skillByName["密斩"]; ok {
+		t.Fatalf("expected captured 222 not to receive default 密斩, got %+v", skillResult.skillInfos)
+	}
+	if _, ok := skillByName["多段刺"]; ok {
+		t.Fatalf("expected captured final 222 state to replace 多段刺 with 奥义.暗杀者, got %+v", skillResult.skillInfos)
+	}
+	if skill := skillByName["奥义.暗杀者"]; skill.Level != 1 || skill.Type != "oneE" || skill.Icon != "262.png" || !strings.Contains(skill.Description, "提升180%的物理伤害") {
+		t.Fatalf("expected captured 奥义.暗杀者 info, got %+v", skill)
+	}
+
+	fastPanelResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetFastPanelReq,
+		Seq:     3,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if !fastPanelResult.handled || fastPanelResult.fastPanel == nil {
+		t.Fatalf("expected captured 222 fast panel push, got %+v", fastPanelResult)
+	}
+	for _, expected := range []struct {
+		index     int
+		entryType string
+		name      string
+	}{
+		{0, "skill", "普通攻击"},
+		{1, "skill", "强力飞镖"},
+		{2, "skill", "奥义.暗杀者"},
+		{3, "skill", "投毒"},
+		{4, "skill", "疾风刺"},
+		{5, "skill", "解毒术"},
+		{6, "skill", "魔力突刺"},
+		{8, "item", "馒头"},
+		{9, "item", "小瓶甘露"},
+	} {
+		if !fastPanelContains(fastPanelResult.fastPanel.Entries, expected.index, expected.entryType, expected.name) {
+			t.Fatalf("expected captured fast panel slot %+v, got %+v", expected, fastPanelResult.fastPanel.Entries)
+		}
+	}
+}
+
+func TestHandlePacketClassicTownCapturedWoodcutter222PushesCapturedEquipment(t *testing.T) {
+	store := session.NewStore()
+	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "222")
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerRequest{
+			Type: "装备",
+		}),
+	}, socketSession)
+
+	if !result.handled || result.containerCap == nil || result.containerCap.Type != "装备" || result.containerCap.Capacity != 20 {
+		t.Fatalf("expected captured equipment list response, got %+v", result)
+	}
+	if len(result.itemInfos) != 10 {
+		t.Fatalf("expected captured woodcutter equipment rows, got %+v", result.itemInfos)
+	}
+	itemsByName := itemInfosByName(result.itemInfos)
+	expectedEquipment := map[string]struct {
+		index   int
+		display string
+	}{
+		"黄风围巾":   {index: 0, display: "548.png"},
+		"蚩颅王护肩":  {index: 1, display: "484.png"},
+		"黄风护腕":   {index: 2, display: "549.png"},
+		"绯雨匕首":   {index: 3, display: "51.png"},
+		"神风护甲":   {index: 4, display: "366.png"},
+		"神风护腿":   {index: 5, display: "368.png"},
+		"炎火兽":    {index: 9, display: "324.png"},
+		"神风护腰":   {index: 10, display: "369.png"},
+		"神风战靴":   {index: 12, display: "370.png"},
+		"L千年人参果": {index: 15, display: "921.png"},
+	}
+	for name, expected := range expectedEquipment {
+		item := itemsByName[name]
+		if item.Name == "" || item.Index != expected.index || item.Display != expected.display || item.Type != "装备" || item.ItemType != "equip" {
+			t.Fatalf("expected captured equipment %s at index %d display %s, got %+v", name, expected.index, expected.display, item)
+		}
+	}
+	if socketSession.selectedRole == nil || !strings.Contains(socketSession.selectedRole.SourceQuery, "w3=49") || strings.Contains(socketSession.selectedRole.SourceQuery, "w3=43") {
+		t.Fatalf("expected selected role to use captured final appearance, got %+v", socketSession.selectedRole)
+	}
+	if socketSession.playerBase == nil || !strings.Contains(socketSession.playerBase.BattleSourceQuery, "w3=49") {
+		t.Fatalf("expected player base battle source query to use captured final appearance, got %+v", socketSession.playerBase)
+	}
+}
+
 func TestHandlePacketClassicTownSetFastPanelStoresActiveSkill(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	_, _, found, learned := store.LearnRoleSkill(
@@ -2551,6 +2716,25 @@ func TestSourceSkillItemsAndSkillInfoUseCapturedLevelDescriptions(t *testing.T) 
 	})
 	if !strings.Contains(leiHunInfo.Description, "&2@24") || !strings.Contains(leiHunInfo.Description, "特殊发动条件:需要3格魂元") || !strings.Contains(leiHunInfo.Description, "提升240%的物理伤害") {
 		t.Fatalf("expected skillInfo to use captured 奥义.雷魂斩 Lv1 description, got %+v", leiHunInfo)
+	}
+
+	anShaEntry, ok := findSourceSkillShopEntry("skill3", 11)
+	if !ok {
+		t.Fatal("expected captured 奥义.暗杀者 shop entry")
+	}
+	if !strings.Contains(anShaEntry.Description, "3格魂元") || !strings.Contains(anShaEntry.Description, "大幅提升对敌人造成的物理伤害") {
+		t.Fatalf("expected 奥义.暗杀者 shop entry to use captured shop summary, got %+v", anShaEntry)
+	}
+
+	anShaInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "奥义.暗杀者",
+		Level:       1,
+		Type:        "oneE",
+		Icon:        "687.png",
+		Description: "特殊发动条件:3格魂元 / 大幅提升对敌人造成的物理伤害",
+	})
+	if !strings.Contains(anShaInfo.Description, "&2@26") || !strings.Contains(anShaInfo.Description, "特殊发动条件:需要3格魂元") || !strings.Contains(anShaInfo.Description, "提升180%的物理伤害") {
+		t.Fatalf("expected skillInfo to use captured 奥义.暗杀者 Lv1 description, got %+v", anShaInfo)
 	}
 }
 

@@ -280,6 +280,178 @@ func TestStorePurchaseRoleSkillDeductsCurrenciesAndPersistsSkill(t *testing.T) {
 	}
 }
 
+func TestStoreCapturedWoodcutter222UsesCapturedSkillsAndFastPanel(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "222",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+
+	skills, cap, ok := store.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || cap != 12 || len(skills) != 12 {
+		t.Fatalf("expected captured woodcutter skill list, ok=%v cap=%d skills=%+v", ok, cap, skills)
+	}
+	byName := map[string]RoleSkill{}
+	for _, skill := range skills {
+		byName[skill.Name] = skill
+	}
+	if _, ok := byName["密斩"]; ok {
+		t.Fatalf("expected 222 to use captured ranger skills instead of default 密斩, got %+v", skills)
+	}
+	if _, ok := byName["多段刺"]; ok {
+		t.Fatalf("expected final captured woodcutter state to have replaced 多段刺 with 奥义.暗杀者, got %+v", skills)
+	}
+	if skill := byName["奥义.暗杀者"]; skill.Level != 1 || skill.Type != "oneE" || skill.Icon != "262.png" || !strings.Contains(skill.Description, "需要3格魂元") {
+		t.Fatalf("expected captured 奥义.暗杀者 skill info, got %+v", skill)
+	}
+	if skill := byName["强力飞镖"]; skill.Level != 3 || skill.Icon != "261.png" || !strings.Contains(skill.Description, "&2@24") {
+		t.Fatalf("expected captured 强力飞镖 Lv3 info, got %+v", skill)
+	}
+
+	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(fastPanel) != 9 {
+		t.Fatalf("expected captured fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
+	}
+	expectedSlots := map[int]RoleFastPanelEntry{
+		0: {Index: 0, Type: "skill", Name: "普通攻击"},
+		1: {Index: 1, Type: "skill", Name: "强力飞镖"},
+		2: {Index: 2, Type: "skill", Name: "奥义.暗杀者"},
+		3: {Index: 3, Type: "skill", Name: "投毒"},
+		4: {Index: 4, Type: "skill", Name: "疾风刺"},
+		5: {Index: 5, Type: "skill", Name: "解毒术"},
+		6: {Index: 6, Type: "skill", Name: "魔力突刺"},
+		8: {Index: 8, Type: "item", Name: "馒头"},
+		9: {Index: 9, Type: "item", Name: "小瓶甘露"},
+	}
+	for _, entry := range fastPanel {
+		expected, ok := expectedSlots[entry.Index]
+		if !ok || expected != entry {
+			t.Fatalf("expected captured fast panel slots %+v, got %+v", expectedSlots, fastPanel)
+		}
+	}
+}
+
+func TestStoreCapturedWoodcutter222UsesCapturedEquipmentAndAppearance(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "222",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+
+	equipment, capacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
+	if !ok || capacity != 20 || len(equipment) != 10 {
+		t.Fatalf("expected captured woodcutter equipment, ok=%v capacity=%d equipment=%+v", ok, capacity, equipment)
+	}
+	byName := map[string]RoleItem{}
+	for _, item := range equipment {
+		byName[item.Name] = item
+	}
+	expectedEquipment := map[string]struct {
+		index   int
+		display string
+	}{
+		"黄风围巾":   {index: 0, display: "548.png"},
+		"蚩颅王护肩":  {index: 1, display: "484.png"},
+		"黄风护腕":   {index: 2, display: "549.png"},
+		"绯雨匕首":   {index: 3, display: "51.png"},
+		"神风护甲":   {index: 4, display: "366.png"},
+		"神风护腿":   {index: 5, display: "368.png"},
+		"炎火兽":    {index: 9, display: "324.png"},
+		"神风护腰":   {index: 10, display: "369.png"},
+		"神风战靴":   {index: 12, display: "370.png"},
+		"L千年人参果": {index: 15, display: "921.png"},
+	}
+	for name, expected := range expectedEquipment {
+		item := byName[name]
+		if item.Name == "" || item.Index != expected.index || item.Display != expected.display || item.Type != "装备" || item.ItemType != "equip" {
+			t.Fatalf("expected captured equipment %s at index %d display %s, got %+v", name, expected.index, expected.display, item)
+		}
+	}
+	if !strings.Contains(byName["绯雨匕首"].Description, "内伤状态3回合") {
+		t.Fatalf("expected captured dagger description, got %+v", byName["绯雨匕首"])
+	}
+	if !strings.Contains(byName["L千年人参果"].Description, "剩余精力【8440】") || byName["L千年人参果"].Owner != "桥头的樵夫" {
+		t.Fatalf("expected captured treasure equipment data, got %+v", byName["L千年人参果"])
+	}
+
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected captured role runtime data")
+	}
+	for _, part := range []string{"h=30", "a=29", "wr=25", "w3=49", "c=17", "p=16", "b=14", "se=12", "sex=1", "hr=12"} {
+		if !strings.Contains(role.SourceQuery, part) || !strings.Contains(playerBase.SourceQuery, part) {
+			t.Fatalf("expected captured woodcutter source query to include %s, role=%q base=%q", part, role.SourceQuery, playerBase.SourceQuery)
+		}
+	}
+	if strings.Contains(role.SourceQuery, "w3=43") || strings.Contains(playerBase.SourceQuery, "w3=43") {
+		t.Fatalf("expected captured final equipment to replace stale w3=43, role=%q base=%q", role.SourceQuery, playerBase.SourceQuery)
+	}
+	if role.BattleSourceQuery != role.SourceQuery || playerBase.BattleSourceQuery != playerBase.SourceQuery {
+		t.Fatalf("expected battle source query to sync captured appearance, role=%q/%q base=%q/%q", role.SourceQuery, role.BattleSourceQuery, playerBase.SourceQuery, playerBase.BattleSourceQuery)
+	}
+}
+
+func TestStorePersistentCapturedWoodcutter222KeepsCapturedSkills(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store: %v", err)
+	}
+	login := firstStore.Login(LoginRequest{
+		UserName: "cap1366655383",
+		Password: "local-test-only",
+	})
+	createResponse := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "222",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !createResponse.Success {
+		t.Fatalf("expected captured role create success, got %+v", createResponse)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("expected close persistent store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	skills, _, ok := reopened.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected reopened captured role skills")
+	}
+	byName := map[string]RoleSkill{}
+	for _, skill := range skills {
+		byName[skill.Name] = skill
+	}
+	if _, ok := byName["奥义.暗杀者"]; !ok {
+		t.Fatalf("expected reopened 222 to keep captured 奥义.暗杀者, got %+v", skills)
+	}
+	if _, ok := byName["密斩"]; ok {
+		t.Fatalf("expected reopened 222 not to fall back to default skills, got %+v", skills)
+	}
+	equipment, _, ok := reopened.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
+	if !ok || len(equipment) != 10 {
+		t.Fatalf("expected reopened 222 to keep captured equipment, ok=%v equipment=%+v", ok, equipment)
+	}
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || !strings.Contains(role.SourceQuery, "w3=49") || !strings.Contains(playerBase.BattleSourceQuery, "w3=49") {
+		t.Fatalf("expected reopened 222 to keep captured appearance, ok=%v role=%+v base=%+v", ok, role, playerBase)
+	}
+}
+
 func TestStoreRoleInventoryDefaultsAndCapacity(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -1511,21 +1683,24 @@ func TestStoreCapturedWarriorEquipmentSlotsAndAppearance(t *testing.T) {
 func TestStoreCapturedWoodcutterEquipmentAppearance(t *testing.T) {
 	sourceQuery := "human/human.swf?sex=1&co=5&hr=12&e=6&n=0&m=0&"
 	items := []RoleItem{
-		{Type: "装备", Name: "威武面甲", ItemType: "equip", Index: 0},
-		{Type: "装备", Name: "蓝晶护肩", ItemType: "equip", Index: 1},
-		{Type: "装备", Name: "威武护腕", ItemType: "equip", Index: 2},
-		{Type: "装备", Name: "牙刺", ItemType: "equip", Index: 3},
-		{Type: "装备", Name: "蛤蟆法袍", ItemType: "equip", Index: 4},
-		{Type: "装备", Name: "威武护腿", ItemType: "equip", Index: 5},
-		{Type: "装备", Name: "蛤蟆精护腰", ItemType: "equip", Index: 10},
-		{Type: "装备", Name: "盗贼的鞋", ItemType: "equip", Index: 12},
+		{Type: "装备", Name: "黄风围巾", ItemType: "equip", Index: 0},
+		{Type: "装备", Name: "蚩颅王护肩", ItemType: "equip", Index: 1},
+		{Type: "装备", Name: "黄风护腕", ItemType: "equip", Index: 2},
+		{Type: "装备", Name: "绯雨匕首", ItemType: "equip", Index: 3},
+		{Type: "装备", Name: "神风护甲", ItemType: "equip", Index: 4},
+		{Type: "装备", Name: "神风护腿", ItemType: "equip", Index: 5},
+		{Type: "装备", Name: "神风护腰", ItemType: "equip", Index: 10},
+		{Type: "装备", Name: "神风战靴", ItemType: "equip", Index: 12},
 	}
 
 	result := rebuildRoleEquipmentAppearanceSourceQuery(sourceQuery, items)
-	for _, part := range []string{"h=12", "a=34", "wr=11", "w3=43", "c=35", "p=13", "b=31", "se=27"} {
+	for _, part := range []string{"h=30", "a=29", "wr=25", "w3=49", "c=17", "p=16", "b=14", "se=12"} {
 		if !strings.Contains(result, part) {
 			t.Fatalf("expected captured woodcutter source query to include %s, got %q", part, result)
 		}
+	}
+	if strings.Contains(result, "w3=43") {
+		t.Fatalf("expected captured woodcutter final source query to remove stale w3=43, got %q", result)
 	}
 }
 

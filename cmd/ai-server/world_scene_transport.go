@@ -111,6 +111,28 @@ func (hub *worldSceneConnectionHub) connectionFor(roleID string) (worldSceneConn
 	return conn, ok
 }
 
+func (hub *worldSceneConnectionHub) broadcastChatToAll(message classicTownChatMessagePush) {
+	type recipient struct {
+		roleID string
+		writer *websocketWriter
+	}
+	hub.mu.Lock()
+	recipients := make([]recipient, 0, len(hub.connections))
+	for roleID, conn := range hub.connections {
+		if conn.writer == nil || conn.writer.conn == nil {
+			continue
+		}
+		recipients = append(recipients, recipient{roleID: roleID, writer: conn.writer})
+	}
+	hub.mu.Unlock()
+
+	for _, item := range recipients {
+		if err := item.writer.writePush(cmdClassicTownChatMessagePush, encodePayload(message)); err != nil {
+			log.Printf("[ai-server] world scene chat failed roleId=%s: %v", item.roleID, err)
+		}
+	}
+}
+
 func worldSceneDistanceSquared(left world.SpawnPoint, right world.SpawnPoint) int {
 	dx := left.X - right.X
 	dy := left.Y - right.Y

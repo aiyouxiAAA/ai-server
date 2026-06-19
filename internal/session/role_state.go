@@ -542,6 +542,259 @@ func defaultRoleFastPanel() []RoleFastPanelEntry {
 	}
 }
 
+func capturedWoodcutterRoleSkills() []RoleSkill {
+	return []RoleSkill{
+		{
+			Name:        "魔力突刺",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "258.png",
+			Description: "f_s_魔力突刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@造成敌人100%的物理伤害&0;并追加80%的魔法伤害",
+		},
+		{
+			Name:        "奥义.暗杀者",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "262.png",
+			Description: "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害",
+		},
+		{
+			Name:        "爆发力",
+			Level:       5,
+			Type:        "null",
+			Icon:        "228.png",
+			Description: "f_s_爆发力^ffffff&9@被动&8@游侠 &10@通用&20@190",
+		},
+		{
+			Name:        "疾风刺",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "259.png",
+			Description: "f_s_疾风刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@对敌人造成40%的物理伤害&0;击中敌人时有92%的机率使对方进入迟钝状态(削减对方50%的命中和回避)3回合<br><font color='#00cc00'>叠加施放将削弱其造成迟钝的功效</font>",
+		},
+		{
+			Name:        "强力飞镖",
+			Level:       3,
+			Type:        "oneE",
+			Icon:        "261.png",
+			Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高50%（无视防御）的物理攻击力",
+		},
+		{
+			Name:        "武器娴熟",
+			Level:       5,
+			Type:        "null",
+			Icon:        "226.png",
+			Description: "f_s_武器娴熟^ffffff&9@被动&8@游侠 &10@通用&12@20",
+		},
+		{
+			Name:        "投毒",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "166.png",
+			Description: "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
+		},
+		{
+			Name:        "解毒术",
+			Level:       1,
+			Type:        "own",
+			Icon:        "260.png",
+			Description: "f_s_解毒术^ffffff&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@20&4@解除自身中毒状态",
+		},
+		{
+			Name:        "普通攻击",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "7.png",
+			Description: "f_s_普通攻击^ffffff&9@单体·攻击&10@通用&22@战斗&5@给予对手普通的物理攻击.",
+		},
+		{
+			Name:        "精神力",
+			Level:       5,
+			Type:        "null",
+			Icon:        "230.png",
+			Description: "f_s_精神力^ffffff&9@被动&8@游侠 &10@通用&18@12",
+		},
+		{
+			Name:        "幻影",
+			Level:       4,
+			Type:        "null",
+			Icon:        "229.png",
+			Description: "f_s_幻影^ffffff&9@被动&8@游侠 &10@通用&19@10",
+		},
+		{
+			Name:        "灵力进修",
+			Level:       4,
+			Type:        "null",
+			Icon:        "227.png",
+			Description: "f_s_灵力进修^ffffff&9@被动&8@游侠 &10@通用&13@90%&4@精力上限 +45",
+		},
+	}
+}
+
+func capturedWoodcutterFastPanel() []RoleFastPanelEntry {
+	return []RoleFastPanelEntry{
+		{Index: 0, Type: "skill", Name: "普通攻击"},
+		{Index: 1, Type: "skill", Name: "强力飞镖"},
+		{Index: 2, Type: "skill", Name: "奥义.暗杀者"},
+		{Index: 3, Type: "skill", Name: "投毒"},
+		{Index: 4, Type: "skill", Name: "疾风刺"},
+		{Index: 5, Type: "skill", Name: "解毒术"},
+		{Index: 6, Type: "skill", Name: "魔力突刺"},
+		{Index: 8, Type: "item", Name: "馒头"},
+		{Index: 9, Type: "item", Name: "小瓶甘露"},
+	}
+}
+
+func capturedWoodcutterBaseSourceQuery() string {
+	return "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&"
+}
+
+func capturedWoodcutterEquipmentItems() []RoleItem {
+	return []RoleItem{
+		{
+			Type:     "装备",
+			Name:     "黄风围巾",
+			ItemType: "equip",
+			Display:  "548.png",
+			Description: `f_i_黄风围巾^00ccff&23@凿孔上限 9 格&24@护具·头部&25@1&21@28&3@19&4@12&5@100&13@7<$jstr>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+3
+[精炼+1] 每升一级 魔法防御+3
+[精炼+1] 每升一级 命中+10
+[精炼+6] 每升一级 幸运+3
+<font color='#00cc00'>特殊效果:
+麻痹抗性:+5%
+眩晕抗性:+5%
+冰冻抗性:+8%</font>
+[精炼+1] 每升一级 麻痹抗性+1%
+[精炼+1] 每升一级 眩晕抗性+1%
+[精炼+1] 每升一级 冰冻抗性+1%&103@0&104@0&105@桥头的樵夫&107@&108@160`,
+			Count:     1,
+			Index:     0,
+			Owner:     "桥头的樵夫",
+			ItemLevel: 3,
+		},
+		{
+			Type:     "装备",
+			Name:     "蚩颅王护肩",
+			ItemType: "equip",
+			Display:  "484.png",
+			Description: `f_i_蚩颅王护肩^00ccff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@31&3@18(+6)&4@10(+6)&14@5&15@4&17@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+3
+[精炼+1] 每升一级 魔法防御+3
+[精炼+6] 每升一级 气力上限+100
+<font color='#00cc00'>特殊效果:
+遭受爆击时&0;有7%的机率使敌人进入眩晕状态1回合</font>
+[精炼+1] 每升一级 眩晕反射机率+1%&103@2&104@0&105@桥头的樵夫&107@&108@430`,
+			Count:     1,
+			Index:     1,
+			Level:     2,
+			Owner:     "桥头的樵夫",
+			ItemLevel: 3,
+		},
+		{
+			Type:        "装备",
+			Name:        "黄风护腕",
+			ItemType:    "equip",
+			Display:     "549.png",
+			Description: "f_i_黄风护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@25&3@15&11@16&13@2&27@sitem_jhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 命中+5&103@0&104@0&105@&107@&108@160",
+			Count:       1,
+			Index:       2,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "绯雨匕首",
+			ItemType:    "equip",
+			Display:     "51.png",
+			Description: "f_i_绯雨匕首&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@30&22@游侠&1@70&11@30&27@sitem_jwep&19@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n<font color='#00cc00'>特殊效果:\n击中敌人时候有1%机率使敌人进入内伤状态3回合(降低敌人10%~15%的物理攻击和魔法攻击)</font>&103@0&104@0&105@&107@&108@500",
+			Count:       1,
+			Index:       3,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "装备",
+			Name:        "神风护甲",
+			ItemType:    "equip",
+			Display:     "366.png",
+			Description: "f_i_神风护甲^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@30&22@游侠&3@33&4@5&10@8&27@sitem_jhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 爆击+12&103@0&104@0&105@&107@&108@120",
+			Count:       1,
+			Index:       4,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "神风护腿",
+			ItemType:    "equip",
+			Display:     "368.png",
+			Description: "f_i_神风护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@30&22@游侠&3@24&4@2&13@2&27@sitem_ezhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 回避+10&103@0&104@0&105@&107@&108@120",
+			Count:       1,
+			Index:       5,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "炎火兽",
+			ItemType:    "equip",
+			Display:     "324.png",
+			Description: "f_i_炎火兽^5BC46D&24@宠物&25@1&19@<font color='#00ff00'>可以提高主人的物理攻击力</font>&20@体内流淌着高温的酸性体液&0;喷射出来遇到火花就会烧起熊熊大火.生性好斗勇猛.&27@sitem_pet&103@0&104@0&105@&107@&108@0&19@喜好食物:\n宠物用营养水\n宠物成长药剂\n奇效宠物药剂\n<font color='#66ccff'>宠物等级:5\n物理攻击+14\n</font><font color='#00cc00'>成长属性:\n[等级1] 物理攻击+10 每升一级 +1</font>",
+			Count:       1,
+			Index:       9,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "神风护腰",
+			ItemType:    "equip",
+			Display:     "369.png",
+			Description: "f_i_神风护腰^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@30&22@游侠&3@15&10@3&17@5&27@sitem_jhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 耐力+1&103@0&104@0&105@&107@&108@120",
+			Count:       1,
+			Index:       10,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "神风战靴",
+			ItemType:    "equip",
+			Display:     "370.png",
+			Description: "f_i_神风战靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@30&22@游侠&3@17&12@5&15@2&27@sitem_jhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 幸运+2&103@0&104@0&105@&107@&108@120",
+			Count:       1,
+			Index:       12,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "L千年人参果",
+			ItemType:    "equip",
+			Display:     "921.png",
+			Description: "f_i_L千年人参果^C156C7&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余精力【8440】点&24@法宝&25@1&19@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。&20@<font color='#00ccff'>注:【内置50000精力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@桥头的樵夫&107@&108@0",
+			Count:       1,
+			Index:       15,
+			Owner:       "桥头的樵夫",
+			ItemLevel:   5,
+		},
+	}
+}
+
+func syncCapturedWoodcutterEquipmentItems(items []RoleItem) []RoleItem {
+	normalized := normalizeRoleItems(items)
+	result := make([]RoleItem, 0, len(normalized)+len(capturedWoodcutterEquipmentItems()))
+	for _, item := range normalized {
+		if item.Type == "装备" {
+			continue
+		}
+		if item.Type == "背包" && item.Name == "铁斧" && item.Display == "29.png" && item.Index == 19 {
+			continue
+		}
+		result = append(result, item)
+	}
+	result = append(result, capturedWoodcutterEquipmentItems()...)
+	return normalizeRoleItems(result)
+}
+
+func isCapturedWoodcutterLocalRole(role RoleSummary) bool {
+	return strings.TrimSpace(role.DisplayName) == "222" || strings.Contains(role.RoleID, "-role-222")
+}
+
 func ensureDefaultRoleSkills(skills []RoleSkill) []RoleSkill {
 	normalized := cloneRoleSkills(skills)
 	seen := make(map[string]struct{}, len(normalized))
@@ -903,12 +1156,18 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.Voc = defaultRoleVoc
 	}
-	if len(role.Skills) == 0 {
+	isWoodcutter222 := isCapturedWoodcutterLocalRole(role)
+	if isWoodcutter222 {
+		role.Voc = "游侠"
+		role.Skills = capturedWoodcutterRoleSkills()
+	} else if len(role.Skills) == 0 {
 		role.Skills = defaultRoleSkills()
 	} else {
 		role.Skills = cloneRoleSkills(role.Skills)
 	}
-	if len(role.FastPanel) == 0 {
+	if isWoodcutter222 {
+		role.FastPanel = capturedWoodcutterFastPanel()
+	} else if len(role.FastPanel) == 0 {
 		role.FastPanel = defaultRoleFastPanel()
 	} else {
 		role.FastPanel = normalizeRoleFastPanel(role.FastPanel)
@@ -918,14 +1177,22 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.Currencies = normalizeRoleCurrencies(role.Currencies)
 	}
-	if len(role.Items) == 0 {
+	if isWoodcutter222 {
+		role.Items = syncCapturedWoodcutterEquipmentItems(role.Items)
+	} else if len(role.Items) == 0 {
 		role.Items = defaultRoleItems()
 	} else {
 		role.Items = ensureStarterAxeItem(removeCapturedDefaultBagSeeds(normalizeRoleItems(role.Items)))
 	}
 	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
+	if isWoodcutter222 {
+		role.SourceQuery = capturedWoodcutterBaseSourceQuery()
+	}
 	role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
 	role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
+	if isWoodcutter222 {
+		role.BattleSourceQuery = role.SourceQuery
+	}
 	return role
 }
 

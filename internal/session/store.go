@@ -3174,18 +3174,24 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "w3", "34", true
 	case "牙刺":
 		return "w3", "43", true
+	case "绯雨匕首":
+		return "w3", "49", true
 	case "蓝布衣":
 		return "c", "1", true
 	case "蛮力护甲":
 		return "c", "10", true
 	case "蛤蟆法袍":
 		return "c", "35", true
+	case "神风护甲":
+		return "c", "17", true
 	case "蓝布裤":
 		return "p", "1", true
 	case "蛮力护腿":
 		return "p", "8", true
 	case "威武护腿":
 		return "p", "13", true
+	case "神风护腿":
+		return "p", "16", true
 	case "布鞋":
 		return "se", "1", true
 	case "蛮力战靴":
@@ -3196,6 +3202,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "se", "27", true
 	case "呼啸战靴":
 		return "se", "26", true
+	case "神风战靴":
+		return "se", "12", true
 	case "蛮力面甲":
 		return "h", "8", true
 	case "威武面甲":
@@ -3206,12 +3214,16 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "b", "5", true
 	case "蛤蟆精护腰":
 		return "b", "31", true
+	case "神风护腰":
+		return "b", "14", true
 	case "蛮力肩甲":
 		return "a", "4", true
 	case "威武护肩":
 		return "a", "10", true
 	case "蓝晶护肩":
 		return "a", "34", true
+	case "蚩颅王护肩":
+		return "a", "29", true
 	case "蛮力护腕":
 		return "wr", "7", true
 	case "威武护腕":

@@ -636,7 +636,9 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
+	var chatMessages []classicTownChatMessagePush
 	if result.Over != nil {
+		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
@@ -652,6 +654,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		battleOver:        result.Over,
 		roleState:         roleState,
 		rolePhysique:      rolePhysique,
+		chatMessages:      chatMessages,
 		removeRoleHandles: removeRoleHandles,
 		itemInfos:         make([]classicTownItemInfoPush, 0, 1),
 		itemClears:        make([]classicTownItemInfoClearPush, 0, 1),
@@ -751,7 +754,9 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
+	var chatMessages []classicTownChatMessagePush
 	if result.Over != nil {
+		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
@@ -768,6 +773,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		battleOver:        result.Over,
 		roleState:         roleState,
 		rolePhysique:      rolePhysique,
+		chatMessages:      chatMessages,
 		removeRoleHandles: removeRoleHandles,
 		itemInfos:         make([]classicTownItemInfoPush, 0, 1),
 		itemClears:        make([]classicTownItemInfoClearPush, 0, len(useResult.ClearedItems)),
@@ -819,7 +825,9 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
+	var chatMessages []classicTownChatMessagePush
 	if result.Over != nil {
+		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
@@ -832,6 +840,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		battleOver:        result.Over,
 		roleState:         roleState,
 		rolePhysique:      rolePhysique,
+		chatMessages:      chatMessages,
 		removeRoleHandles: removeRoleHandles,
 		handled:           true,
 	}
@@ -843,6 +852,22 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		}
 	}
 	return packet
+}
+
+func classicBattleOverChatMessages(socketSession *packetSession, over *battle.OverPush) []classicTownChatMessagePush {
+	if socketSession == nil || socketSession.battleRuntime == nil || socketSession.selectedRole == nil || over == nil {
+		return nil
+	}
+	if over.Result.Winner != battle.CampTeam || over.Result.Escaped {
+		return nil
+	}
+	if !classicactivity.IsPointCouponThiefHandleAnyMap(socketSession.battleRuntime.SourceMonsterHandle) {
+		return nil
+	}
+	return []classicTownChatMessagePush{{
+		Channel: "system",
+		Msg:     "<w>[" + socketSession.selectedRole.DisplayName + "]消灭了[点券盗贼]，幸运的获得点券奖励。",
+	}}
 }
 
 func shouldBroadcastTeamBattle(socketSession *packetSession) bool {

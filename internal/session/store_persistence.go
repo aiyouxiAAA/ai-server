@@ -475,7 +475,7 @@ func (store *Store) persistPlayerStateLocked(playerID string) error {
 		if encodeErr != nil {
 			return fmt.Errorf("encode role appearance for %s: %w", role.RoleID, encodeErr)
 		}
-		skillsJSON, encodeErr := encodeRoleSkills(role.Skills)
+		skillsJSON, encodeErr := encodeRoleSkills(runtimeRole.Skills)
 		if encodeErr != nil {
 			return fmt.Errorf("encode role skills for %s: %w", role.RoleID, encodeErr)
 		}
@@ -596,7 +596,7 @@ func (store *Store) saveLocked() error {
 			if encodeErr != nil {
 				return fmt.Errorf("encode role appearance for %s: %w", role.RoleID, encodeErr)
 			}
-			skillsJSON, encodeErr := encodeRoleSkills(role.Skills)
+			skillsJSON, encodeErr := encodeRoleSkills(runtimeRole.Skills)
 			if encodeErr != nil {
 				return fmt.Errorf("encode role skills for %s: %w", role.RoleID, encodeErr)
 			}

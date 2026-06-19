@@ -460,6 +460,88 @@ func TestBuildTownBootstrapOmitsCapturedShihukuVisibleMonsterBootstrapMovement(t
 	}
 }
 
+func TestCapturedSourceMonsterMoveReplayUsesCapturedMoveRoleTargets(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mapID     int
+		wantCount int
+		want      RoleMovePush
+	}{
+		{
+			name:      "feixiandong",
+			mapID:     64,
+			wantCount: 5,
+			want:      RoleMovePush{Handle: "8216674186649650", Type: "Move", X: 332, Y: 417, Z: 0, TX: 328, TY: 486, TZ: 0, MapID: "64"},
+		},
+		{
+			name:      "shuiliandong",
+			mapID:     143,
+			wantCount: 7,
+			want:      RoleMovePush{Handle: "5166206909805441", Type: "Move", X: 1315, Y: 553, Z: 0, TX: 1862, TY: 570, TZ: 0, MapID: "143"},
+		},
+		{
+			name:      "huangfengzhai",
+			mapID:     147,
+			wantCount: 26,
+			want:      RoleMovePush{Handle: "7633284548716137", Type: "Move", X: 2161, Y: 342, Z: 0, TX: 2338, TY: 326, TZ: 0, MapID: "147"},
+		},
+		{
+			name:      "shihuku",
+			mapID:     158,
+			wantCount: 50,
+			want:      RoleMovePush{Handle: "5839621591159706", Type: "Move", X: 2196, Y: 493, Z: 0, TX: 2557, TY: 484, TZ: 0, MapID: "158"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			steps := CapturedSourceMonsterMoveReplayForMap(testCase.mapID)
+			if len(steps) != testCase.wantCount {
+				t.Fatalf("expected map%d replay step count %d, got %d", testCase.mapID, testCase.wantCount, len(steps))
+			}
+			if !hasMoveReplayStep(steps, testCase.want) {
+				t.Fatalf("expected map%d replay to include captured moveRole %+v", testCase.mapID, testCase.want)
+			}
+		})
+	}
+}
+
+func TestCapturedSourceMonsterMoveReplayForBootstrapFiltersVisibleHandles(t *testing.T) {
+	snapshot := TownBootstrapSnapshot{
+		LoadMap: LoadMapPush{MapID: "143"},
+		CreateRoles: []RolePush{
+			{Handle: "5166206909805441", RoleID: "-2", Kind: "monster"},
+			{Handle: "5172206909807859", RoleID: "-2", Kind: "monster"},
+			{Handle: "transp_127", RoleID: "-3", Kind: "npc"},
+		},
+	}
+
+	steps := CapturedSourceMonsterMoveReplayForBootstrap(snapshot)
+	if len(steps) == 0 {
+		t.Fatal("expected map143 bootstrap replay steps")
+	}
+	for _, step := range steps {
+		if step.Handle != "5166206909805441" && step.Handle != "5172206909807859" {
+			t.Fatalf("expected replay to filter to visible monster createRoles, got %+v", step)
+		}
+		if step.MapID != "143" {
+			t.Fatalf("expected replay step mapId 143, got %+v", step)
+		}
+	}
+	if !hasMoveReplayStep(steps, RoleMovePush{Handle: "5166206909805441", Type: "Move", X: 1315, Y: 553, Z: 0, TX: 1862, TY: 570, TZ: 0, MapID: "143"}) {
+		t.Fatalf("expected filtered replay to keep captured map143 caster route, got %+v", steps)
+	}
+}
+
+func hasMoveReplayStep(steps []RoleMovePush, want RoleMovePush) bool {
+	for _, step := range steps {
+		if step == want {
+			return true
+		}
+	}
+	return false
+}
+
 func TestBuildTownBootstrapOmitsMovementForCapturedStillVisibleMonsters(t *testing.T) {
 	testCases := []struct {
 		mapID   int

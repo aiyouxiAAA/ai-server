@@ -191,6 +191,7 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 	registeredSceneRoleID := ""
 	registeredSceneMapID := 0
 	defer func() {
+		socketWriter.stopClassicTownSourceMonsterMoveReplay()
 		// world scene:断开连接时给原 mapId 邻居推 removeRole,避免对端留僵尸节点。
 		if registeredSceneRoleID != "" {
 			if oldMapID, ok := worldSceneHub.unregister(registeredSceneRoleID); ok {

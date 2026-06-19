@@ -614,14 +614,14 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		item, ok := findClassicBattleRequiredBagItem(store, socketSession, requiredItemName)
 		if !ok {
 			log.Printf("[ai-server] classic battle battleAction rejected missing required item battleId=%s actor=%s command=%s item=%s", request.BattleID, request.ActorHandle, request.CommandID, requiredItemName)
-			return packetResult{handled: true}
+			return buildClassicBattleActionRejectedRetryResult(socketSession, request, requiredItemName+"不足。")
 		}
 		requiredItem = item
 	}
 	result := socketSession.battleRuntime.ProcessAction(request)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle battleAction rejected battleId=%s actor=%s target=%s error=%s", request.BattleID, request.ActorHandle, request.TargetHandle, result.ErrorCode)
-		return packetResult{handled: true}
+		return buildClassicBattleActionRejectedRetryResult(socketSession, request, "")
 	}
 	var consumedRequiredItem session.RoleUseItemResult
 	if requiredItemName != "" {
@@ -669,6 +669,49 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		}
 	}
 	return packet
+}
+
+func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, request battle.ActionRequest, warning string) packetResult {
+	result := packetResult{handled: true}
+	if socketSession == nil || socketSession.battleRuntime == nil {
+		return result
+	}
+	runtime := socketSession.battleRuntime
+	if runtime.Phase != battle.PhaseCommand ||
+		request.BattleID != runtime.BattleID ||
+		request.Round != runtime.Round ||
+		strings.TrimSpace(request.ActorHandle) != strings.TrimSpace(runtime.ActiveHandle) {
+		return result
+	}
+	actorHandle := strings.TrimSpace(runtime.ActiveHandle)
+	if actorHandle == "" {
+		actorHandle = strings.TrimSpace(request.ActorHandle)
+	}
+	result.battleCommand = &battle.StartCommandPush{
+		BattleID:    runtime.BattleID,
+		ActorHandle: actorHandle,
+		Round:       runtime.Round,
+		Sequence:    request.Sequence,
+		Power:       classicBattleRetryPower(runtime, actorHandle),
+	}
+	if strings.TrimSpace(warning) != "" {
+		result.chatMessages = []classicTownChatMessagePush{classicTownSystemWarningMessage(warning)}
+	}
+	return result
+}
+
+func classicBattleRetryPower(runtime *battle.Runtime, actorHandle string) int {
+	if runtime == nil || strings.TrimSpace(actorHandle) == "" {
+		return 1
+	}
+	power := runtime.StoredPower[actorHandle]
+	if power <= 0 {
+		return 1
+	}
+	if power > 5 {
+		return 5
+	}
+	return power
 }
 
 func classicBattleActionRequiredItemName(commandID string) string {

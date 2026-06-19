@@ -490,6 +490,11 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneFortySix.SourceMonsters = map146SourceMonsters
 	definitions[146] = mapOneFortySix
 
+	mapOneFortySeven := definitions[147]
+	mapOneFortySeven.SourceNPCs = map147SourceNPCs
+	mapOneFortySeven.SourceMonsters = map147SourceMonsters
+	definitions[147] = mapOneFortySeven
+
 	mapOneFortyEight := definitions[148]
 	mapOneFortyEight.SourceNPCs = map148SourceNPCs
 	mapOneFortyEight.SourceMonsters = map148SourceMonsters
@@ -896,7 +901,6 @@ func buildTownBootstrap(
 			Kind:            "monster",
 			SpawnFlash:      monster.SpawnFlash,
 			SourceNPCVisual: buildMonsterVisual(monster),
-			Movement:        buildMonsterMovement(monster),
 		})
 	}
 
@@ -1277,14 +1281,6 @@ func buildMonsterVisual(monster sourceMonsterEntry) *SourceNPCVisual {
 		NameY:           monster.Height + 18,
 		QuestMarkerY:    monster.Height + 62,
 	}
-}
-
-func buildMonsterMovement(monster sourceMonsterEntry) *RoleMovement {
-	if monster.Movement.Speed <= 0 {
-		return nil
-	}
-	movement := monster.Movement
-	return &movement
 }
 
 func stripSourceMarkup(value string) string {

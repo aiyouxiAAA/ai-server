@@ -4050,8 +4050,14 @@ func TestHandlePacketClassicBattleQiangLiFeiBiaoRejectsMissingDart(t *testing.T)
 	if !result.handled {
 		t.Fatal("expected missing 飞镖 request to be handled")
 	}
-	if len(result.battleActions) != 0 || len(result.itemInfos) != 0 || len(result.itemClears) != 0 {
-		t.Fatalf("expected missing 飞镖 to reject without pushes, got %+v", result)
+	if len(result.battleActions) != 0 || len(result.itemInfos) != 0 || len(result.itemClears) != 0 || result.battleCommand == nil {
+		t.Fatalf("expected missing 飞镖 to reject with retry startCommand and without mutation pushes, got %+v", result)
+	}
+	if result.battleCommand.ActorHandle != socketSession.selectedRole.RoleID || result.battleCommand.Sequence != startResult.battleCommand.Sequence {
+		t.Fatalf("expected missing 飞镖 retry command to keep current actor/sequence, got %+v", result.battleCommand)
+	}
+	if !packetChatMessagesContain(result.chatMessages, "飞镖不足") {
+		t.Fatalf("expected missing 飞镖 warning chat, got %+v", result.chatMessages)
 	}
 	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
 		t.Fatalf("expected missing 飞镖 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)
@@ -4181,8 +4187,14 @@ func TestHandlePacketClassicBattleTouDuRejectsMissingPoison(t *testing.T) {
 	if !result.handled {
 		t.Fatal("expected missing 毒药 request to be handled")
 	}
-	if len(result.battleActions) != 0 || len(result.itemInfos) != 0 || len(result.itemClears) != 0 {
-		t.Fatalf("expected missing 毒药 to reject without pushes, got %+v", result)
+	if len(result.battleActions) != 0 || len(result.itemInfos) != 0 || len(result.itemClears) != 0 || result.battleCommand == nil {
+		t.Fatalf("expected missing 毒药 to reject with retry startCommand and without mutation pushes, got %+v", result)
+	}
+	if result.battleCommand.ActorHandle != socketSession.selectedRole.RoleID || result.battleCommand.Sequence != startResult.battleCommand.Sequence {
+		t.Fatalf("expected missing 毒药 retry command to keep current actor/sequence, got %+v", result.battleCommand)
+	}
+	if !packetChatMessagesContain(result.chatMessages, "毒药不足") {
+		t.Fatalf("expected missing 毒药 warning chat, got %+v", result.chatMessages)
 	}
 	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
 		t.Fatalf("expected missing 毒药 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)

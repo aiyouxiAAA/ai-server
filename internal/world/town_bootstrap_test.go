@@ -319,49 +319,40 @@ func TestBuildTownBootstrapUsesCapturedShuiliandongVisibleMonsters(t *testing.T)
 		t.Fatal("expected captured map143 frog boss visible monster")
 	}
 
-	expectedSwordpandaAngles := map[string]float64{
-		"5172206909807859": 2.984785658956835,
-		"5174206909807286": 0.8709838935552793,
-	}
 	for _, rolePush := range snapshot.CreateRoles {
-		expectedAngle, ok := expectedSwordpandaAngles[rolePush.Handle]
-		if !ok {
+		if rolePush.Kind != "monster" || rolePush.RoleID != "-2" {
 			continue
 		}
-		if rolePush.Movement == nil || rolePush.Movement.Speed != 130 || rolePush.Movement.Angle != expectedAngle {
-			t.Fatalf("expected map143 swordpanda %s to use first captured moveRole angle %.12f got %+v", rolePush.Handle, expectedAngle, rolePush.Movement)
+		if rolePush.Movement != nil {
+			t.Fatalf("expected map143 visible monster %s bootstrap to omit movement, got %+v", rolePush.Handle, rolePush.Movement)
 		}
-		delete(expectedSwordpandaAngles, rolePush.Handle)
-	}
-	if len(expectedSwordpandaAngles) != 0 {
-		t.Fatalf("missing captured map143 swordpanda movement checks: %+v", expectedSwordpandaAngles)
 	}
 }
 
-func TestBuildTownBootstrapUsesCapturedFeixiandongVisibleMonsterMovement(t *testing.T) {
+func TestBuildTownBootstrapOmitsCapturedFeixiandongVisibleMonsterBootstrapMovement(t *testing.T) {
 	testCases := []struct {
-		mapID    int
-		expected map[string]RoleMovement
+		mapID   int
+		handles map[string]struct{}
 	}{
 		{
 			mapID: 64,
-			expected: map[string]RoleMovement{
-				"8216674186649650": {Speed: 130, Angle: 184.32764820310817, Mode: 1},
-				"8218674186650741": {Speed: 130, Angle: 309.0118516242245, Mode: 1},
+			handles: map[string]struct{}{
+				"8216674186649650": {},
+				"8218674186650741": {},
 			},
 		},
 		{
 			mapID: 76,
-			expected: map[string]RoleMovement{
-				"1044675671974869": {Speed: 130, Angle: 340.51919977172065, Mode: 1},
-				"1048675671977626": {Speed: 130, Angle: 190.4914770123316, Mode: 1},
+			handles: map[string]struct{}{
+				"1044675671974869": {},
+				"1048675671977626": {},
 			},
 		},
 		{
 			mapID: 78,
-			expected: map[string]RoleMovement{
-				"1679675260685862": {Speed: 130, Angle: 359.06080905426444, Mode: 1},
-				"1681675260686878": {Speed: 130, Angle: 182.50313977958493, Mode: 1},
+			handles: map[string]struct{}{
+				"1679675260685862": {},
+				"1681675260686878": {},
 			},
 		},
 	}
@@ -388,46 +379,46 @@ func TestBuildTownBootstrapUsesCapturedFeixiandongVisibleMonsterMovement(t *test
 			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
 		}
 		for _, rolePush := range snapshot.CreateRoles {
-			expected, ok := testCase.expected[rolePush.Handle]
+			_, ok := testCase.handles[rolePush.Handle]
 			if !ok {
 				continue
 			}
-			if rolePush.Movement == nil || *rolePush.Movement != expected {
-				t.Fatalf("expected map%d monster %s to use captured movement %+v got %+v", testCase.mapID, rolePush.Handle, expected, rolePush.Movement)
+			if rolePush.Movement != nil {
+				t.Fatalf("expected map%d visible monster %s bootstrap to omit movement, got %+v", testCase.mapID, rolePush.Handle, rolePush.Movement)
 			}
-			delete(testCase.expected, rolePush.Handle)
+			delete(testCase.handles, rolePush.Handle)
 		}
-		if len(testCase.expected) != 0 {
-			t.Fatalf("missing captured feixiandong movement checks for map%d: %+v", testCase.mapID, testCase.expected)
+		if len(testCase.handles) != 0 {
+			t.Fatalf("missing captured feixiandong movement checks for map%d: %+v", testCase.mapID, testCase.handles)
 		}
 	}
 }
 
-func TestBuildTownBootstrapUsesCapturedShihukuVisibleMonsterMovement(t *testing.T) {
+func TestBuildTownBootstrapOmitsCapturedShihukuVisibleMonsterBootstrapMovement(t *testing.T) {
 	testCases := []struct {
-		mapID    int
-		expected map[string]RoleMovement
+		mapID   int
+		handles map[string]struct{}
 	}{
 		{
 			mapID: 158,
-			expected: map[string]RoleMovement{
-				"5835621591157688": {Speed: 130, Angle: 179.57871509583143, Mode: 1},
-				"5837621591158929": {Speed: 130, Angle: 2.3859440303888126, Mode: 1},
-				"5839621591159706": {Speed: 130, Angle: 8.761593390518517, Mode: 1},
+			handles: map[string]struct{}{
+				"5835621591157688": {},
+				"5837621591158929": {},
+				"5839621591159706": {},
 			},
 		},
 		{
 			mapID: 163,
-			expected: map[string]RoleMovement{
-				"8088622782646450": {Speed: 130, Angle: 338.51796167369224, Mode: 1},
-				"8094622782649492": {Speed: 130, Angle: 359.1815445383114, Mode: 1},
+			handles: map[string]struct{}{
+				"8088622782646450": {},
+				"8094622782649492": {},
 			},
 		},
 		{
 			mapID: 167,
-			expected: map[string]RoleMovement{
-				"7546622260836700": {Speed: 130, Angle: 357.1196224471524, Mode: 1},
-				"7550622260838906": {Speed: 130, Angle: 181.06485469345895, Mode: 1},
+			handles: map[string]struct{}{
+				"7546622260836700": {},
+				"7550622260838906": {},
 			},
 		},
 	}
@@ -454,17 +445,17 @@ func TestBuildTownBootstrapUsesCapturedShihukuVisibleMonsterMovement(t *testing.
 			t.Fatalf("expected map%d transfer bootstrap to be supported", testCase.mapID)
 		}
 		for _, rolePush := range snapshot.CreateRoles {
-			expected, ok := testCase.expected[rolePush.Handle]
+			_, ok := testCase.handles[rolePush.Handle]
 			if !ok {
 				continue
 			}
-			if rolePush.Movement == nil || *rolePush.Movement != expected {
-				t.Fatalf("expected map%d monster %s to use captured movement %+v got %+v", testCase.mapID, rolePush.Handle, expected, rolePush.Movement)
+			if rolePush.Movement != nil {
+				t.Fatalf("expected map%d visible monster %s bootstrap to omit movement, got %+v", testCase.mapID, rolePush.Handle, rolePush.Movement)
 			}
-			delete(testCase.expected, rolePush.Handle)
+			delete(testCase.handles, rolePush.Handle)
 		}
-		if len(testCase.expected) != 0 {
-			t.Fatalf("missing captured shihuku movement checks for map%d: %+v", testCase.mapID, testCase.expected)
+		if len(testCase.handles) != 0 {
+			t.Fatalf("missing captured shihuku movement checks for map%d: %+v", testCase.mapID, testCase.handles)
 		}
 	}
 }
@@ -1059,6 +1050,7 @@ func TestBuildTownBootstrapUsesCapturedHuangfengzhaiTransportData(t *testing.T) 
 	}{
 		{mapID: 122, mapName: "黄风寨口", handles: []string{"transp_121", "transp_146"}, spawns: []SpawnPoint{{X: 1460, Y: 520}, {X: 329, Y: 480}}, sourceQueries: []string{"transp/flag2.swf", "transp/fl.swf"}},
 		{mapID: 146, mapName: "黄风寨_1", handles: []string{"transp_122", "transp_147", "transp_152"}, spawns: []SpawnPoint{{X: 1950, Y: 488}, {X: 55, Y: 507}, {X: 409, Y: 185}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf", "transp/flag2.swf"}},
+		{mapID: 147, mapName: "黄风寨_2", handles: []string{"transp_146", "transp_148"}, spawns: []SpawnPoint{{X: 2964, Y: 529}, {X: 31, Y: 561}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
 		{mapID: 148, mapName: "黄风寨_3", handles: []string{"transp_147", "transp_149"}, spawns: []SpawnPoint{{X: 1969, Y: 505}, {X: 424, Y: 379}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
 		{mapID: 149, mapName: "黄风寨_4", handles: []string{"transp_148", "transp_150"}, spawns: []SpawnPoint{{X: 30, Y: 550}, {X: 2280, Y: 351}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
 		{mapID: 150, mapName: "黄风寨_5", handles: []string{"transp_149", "transp_151", "transp_153"}, spawns: []SpawnPoint{{X: 1413, Y: 750}, {X: 2969, Y: 437}, {X: 151, Y: 273}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf", "transp/flag2.swf"}},
@@ -1305,7 +1297,7 @@ func TestBuildTownBootstrapUsesCapturedHuangfengzhaiVisibleMonsters(t *testing.T
 				t.Fatalf("expected huangfengzhai boss spawn %+v got %+v", expected.SpawnFlash, rolePush.SpawnFlash)
 			}
 			if rolePush.Movement != nil {
-				t.Fatalf("expected huangfengzhai boss %s to stay still until a moveRole packet is captured, got %+v", rolePush.Handle, rolePush.Movement)
+				t.Fatalf("expected huangfengzhai boss %s bootstrap to omit movement, got %+v", rolePush.Handle, rolePush.Movement)
 			}
 			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != expected.SourceNPCVisual.MovieClipIRPath {
 				t.Fatalf("expected huangfengzhai boss visual %+v got %+v", expected.SourceNPCVisual, rolePush.SourceNPCVisual)
@@ -1431,7 +1423,7 @@ func TestShihukuDungeonInstanceKeyAndTransportRoutes(t *testing.T) {
 	}
 }
 
-func TestBuildTownBootstrapKeepsUncapturedHuangfengzhaiMap147Empty(t *testing.T) {
+func TestBuildTownBootstrapUsesCapturedHuangfengzhaiMap147Roles(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-huangfengzhai-147",
 		DisplayName:  "测试女侠",
@@ -1452,8 +1444,39 @@ func TestBuildTownBootstrapKeepsUncapturedHuangfengzhaiMap147Empty(t *testing.T)
 	if snapshot.LoadMap.MapID != "147" || snapshot.LoadMap.MapName != "黄风寨_2" {
 		t.Fatalf("expected map147 bootstrap, got %+v", snapshot.LoadMap)
 	}
-	if len(snapshot.CreateRoles) != 0 || len(snapshot.QuestStates) != 0 {
-		t.Fatalf("expected map147 to stay empty because no source roles were captured, got roles=%d quests=%d", len(snapshot.CreateRoles), len(snapshot.QuestStates))
+	if len(snapshot.CreateRoles) != 6 || len(snapshot.QuestStates) != 2 {
+		t.Fatalf("expected map147 captured roles=6 quests=2, got roles=%d quests=%d", len(snapshot.CreateRoles), len(snapshot.QuestStates))
+	}
+
+	expectedMonsters := map[string]struct {
+		spawn SpawnPoint
+	}{
+		"7633284548716137": {spawn: SpawnPoint{X: 2073, Y: 350}},
+		"7635284548716728": {spawn: SpawnPoint{X: 1196, Y: 438}},
+		"7637284548717286": {spawn: SpawnPoint{X: 980, Y: 576}},
+		"7639284548717945": {spawn: SpawnPoint{X: 438, Y: 430}},
+	}
+	for _, rolePush := range snapshot.CreateRoles {
+		expected, ok := expectedMonsters[rolePush.Handle]
+		if !ok {
+			continue
+		}
+		if rolePush.RoleID != "-2" || rolePush.Kind != "monster" || rolePush.DisplayName != "蛮族刀客" || rolePush.SourceQuery != "monstermap/barbarianweapons.swf" {
+			t.Fatalf("expected map147 barbarianweapons source monster, got %+v", rolePush)
+		}
+		if rolePush.SpawnFlash != expected.spawn {
+			t.Fatalf("expected map147 monster %s spawn %+v, got %+v", rolePush.Handle, expected.spawn, rolePush.SpawnFlash)
+		}
+		if rolePush.Movement != nil {
+			t.Fatalf("expected map147 monster %s bootstrap to omit movement, got %+v", rolePush.Handle, rolePush.Movement)
+		}
+		if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-monstermap/barbarianweapons/barbarianweapons-movieclip-ir" {
+			t.Fatalf("expected map147 monster %s barbarianweapons visual, got %+v", rolePush.Handle, rolePush.SourceNPCVisual)
+		}
+		delete(expectedMonsters, rolePush.Handle)
+	}
+	if len(expectedMonsters) != 0 {
+		t.Fatalf("missing map147 captured monster checks: %+v", expectedMonsters)
 	}
 }
 

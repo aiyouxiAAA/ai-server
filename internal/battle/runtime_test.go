@@ -407,6 +407,29 @@ func TestBuildOverUsesCapturedShihukuRewardCandidates(t *testing.T) {
 	}
 }
 
+func TestBuildOverUsesCapturedHuangfengzhaiMap147RewardCandidate(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	over := (&Runtime{
+		BattleID: "battle-huangfengzhai-map147-reward-candidate",
+		MapID:    "147",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampEnemy, Handle: "7633284548716137", Name: "蛮族刀客", Level: 12, MaxHP: 520, HP: 520},
+		},
+	}).buildOver(CampTeam)
+	if over == nil {
+		t.Fatal("expected huangfengzhai map147 OverBattle push")
+	}
+	if over.Result.ExpDelta != 0 {
+		t.Fatalf("expected huangfengzhai map147 captured candidate exp 0, got %d", over.Result.ExpDelta)
+	}
+	expectedItems := []string{"铜钱x6"}
+	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
+		t.Fatalf("expected huangfengzhai map147 low-roll reward %+v, got %+v", expectedItems, over.Result.Items)
+	}
+}
+
 func TestBuildOverRollsCapturedObservedDropRates(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
 	over := (&Runtime{BattleID: "battle-map5-high-roll", MapID: "5", Round: 1}).buildOver(CampTeam)
@@ -732,6 +755,7 @@ func TestHuangfengzhaiVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) 
 		label  string
 	}{
 		{mapID: "146", handle: "6887685480585492", name: "蛮族刀客", level: 12, maxHP: 520, maxMP: 214, attack: 208, label: "普通攻击"},
+		{mapID: "147", handle: "7633284548716137", name: "蛮族刀客", level: 12, maxHP: 520, maxMP: 214, attack: 208, label: "普通攻击"},
 		{mapID: "149", handle: "3218685759638239", name: "黄风二寨主", level: 19, maxHP: 1200, maxMP: 564, attack: 240, label: "普通攻击"},
 		{mapID: "153", handle: "7494686002239485", name: "咒巫师", level: 16, maxHP: 500, maxMP: 550, attack: 202, label: "法术普通攻击"},
 		{mapID: "155", handle: "2600686416056495", name: "黄风大寨主", level: 20, maxHP: 1500, maxMP: 564, attack: 260, label: "普通攻击"},
@@ -749,10 +773,6 @@ func TestHuangfengzhaiVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) 
 		if config.QueueIndexTeam != 1 || config.QueueIndexEnemy != 4 {
 			t.Fatalf("expected huangfengzhai visible monster queue indexes 1/4, got %+v", config)
 		}
-	}
-
-	if _, ok := sourceVisibleMonsterConfigForHandle("147", "6887685480585492"); ok {
-		t.Fatal("expected map147 to stay without visible monster config until source packets are captured")
 	}
 }
 

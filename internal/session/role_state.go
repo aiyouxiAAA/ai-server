@@ -1211,6 +1211,16 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 		},
 		{
 			Type:        "背包",
+			Name:        "点券",
+			ItemType:    "null",
+			Display:     "659.png",
+			Description: "f_i_点券^f9e000&24@特殊&25@9999&19@特殊消费或商城购物。&20@游戏中的换购券&0;用于流通买卖。&27@sitem_book&101@659.png&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   5,
+		},
+		{
+			Type:        "背包",
 			Name:        "雪莲花",
 			ItemType:    "null",
 			Display:     "935.png",

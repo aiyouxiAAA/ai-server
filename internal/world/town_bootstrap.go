@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"time"
 
+	"ai-server/internal/classicactivity"
 	"ai-server/internal/session"
 )
 
@@ -851,7 +853,9 @@ func buildTownBootstrap(
 	spawn SpawnPoint,
 ) TownBootstrapSnapshot {
 	mapID := itoa(mapDefinition.ID)
-	createRoles := make([]RolePush, 0, len(mapDefinition.SourceNPCs)+len(mapDefinition.SourceMonsters))
+	sourceMonsters := append([]sourceMonsterEntry{}, mapDefinition.SourceMonsters...)
+	sourceMonsters = appendPointCouponThiefSourceMonster(sourceMonsters, mapDefinition.ID, time.Now())
+	createRoles := make([]RolePush, 0, len(mapDefinition.SourceNPCs)+len(sourceMonsters))
 	questStates := make([]QuestStatePush, 0, len(mapDefinition.SourceNPCs))
 	for _, npc := range mapDefinition.SourceNPCs {
 		roleID := npc.RoleID
@@ -879,7 +883,7 @@ func buildTownBootstrap(
 			State:  npc.QuestState,
 		})
 	}
-	for _, monster := range mapDefinition.SourceMonsters {
+	for _, monster := range sourceMonsters {
 		createRoles = append(createRoles, RolePush{
 			Handle:          monster.Handle,
 			RoleID:          "-2",
@@ -926,6 +930,31 @@ func buildTownBootstrap(
 		RoleState:    playerBase.RoleState,
 		RolePhysique: playerBase.RolePhysique,
 	}
+}
+
+func appendPointCouponThiefSourceMonster(monsters []sourceMonsterEntry, mapID int, now time.Time) []sourceMonsterEntry {
+	spawn, ok := classicactivity.PointCouponThiefSpawnForMap(mapID, now)
+	if !ok {
+		return monsters
+	}
+	monster := buildCapturedSourceMonster(
+		spawn.Handle,
+		classicactivity.PointCouponThiefName,
+		classicactivity.PointCouponThiefSourceQuery,
+		classicactivity.PointCouponThiefSpriteName,
+		15,
+		"游侠",
+		spawn.Source.X,
+		spawn.Source.Y,
+	)
+	if spawn.MoveSpeed > 0 {
+		monster.Movement = RoleMovement{
+			Speed: spawn.MoveSpeed,
+			Angle: spawn.MoveAngle,
+			Mode:  spawn.MoveMode,
+		}
+	}
+	return append(monsters, monster)
 }
 
 func isSourceWildBattleMap(mapID int) bool {

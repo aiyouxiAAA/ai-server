@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"ai-server/internal/classicactivity"
 	"ai-server/internal/session"
 )
 
@@ -284,6 +285,30 @@ func TestBuildOverUsesCapturedShuiliandongVisibleMonsterBaseRewards(t *testing.T
 		if !reflect.DeepEqual(over.Result.Items, testCase.items) {
 			t.Fatalf("expected shuiliandong visible monster %+v low-roll rewards, got %+v", testCase, over.Result.Items)
 		}
+	}
+}
+
+func TestPointCouponThiefVisibleBattleConfigAndReward(t *testing.T) {
+	handle := classicactivity.PointCouponThiefHandle(114, 1781888400, 0)
+	config, ok := sourceVisibleMonsterConfigForHandle("114", handle)
+	if !ok {
+		t.Fatal("expected point coupon thief dynamic visible monster config")
+	}
+	if config.Cell.Name != "点券盗贼" || config.Cell.DisplayURL != "monstermap/militia.swf" || config.Cell.Level != 15 || config.Cell.MaxHP != 1200 || config.Cell.MaxMP != 300 {
+		t.Fatalf("expected captured point coupon thief battle cell, got %+v", config.Cell)
+	}
+	if !sourceEnemyCanRampage(&config.Cell) {
+		t.Fatalf("expected point coupon thief to cast 暴走之力, got %+v", config.Cell)
+	}
+
+	over := (&Runtime{
+		BattleID:            "battle-point-coupon-thief",
+		MapID:               "114",
+		SourceMonsterHandle: handle,
+		Round:               1,
+	}).buildOver(CampTeam)
+	if over == nil || over.Result.ExpDelta != 50 || !reflect.DeepEqual(over.Result.Items, []string{"点券x10"}) {
+		t.Fatalf("expected point coupon thief 点券x10 reward with exp 50, got %+v", over)
 	}
 }
 
@@ -2071,6 +2096,42 @@ func TestProcessActionAllowsCapturedDaggerSkills(t *testing.T) {
 			expectedDamage: 148,
 			expectedMP:     80,
 		},
+		{
+			name:           "强力飞镖",
+			level:          3,
+			description:    "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高50%（无视防御）的物理攻击力",
+			commandID:      CommandQiangLiFeiBiao,
+			label:          "w3/powerDart",
+			expectedDamage: 150,
+			expectedMP:     76,
+		},
+		{
+			name:           "投毒",
+			level:          1,
+			description:    "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
+			commandID:      CommandTouDu,
+			label:          "w3/drugAtk",
+			expectedDamage: 1,
+			expectedMP:     84,
+		},
+		{
+			name:           "魔力突刺",
+			level:          1,
+			description:    "f_s_魔力突刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@造成敌人100%的物理伤害&0;并追加80%的魔法伤害",
+			commandID:      CommandMoLiTuCi,
+			label:          "w3/magicCut",
+			expectedDamage: 60,
+			expectedMP:     80,
+		},
+		{
+			name:           "疾风刺",
+			level:          1,
+			description:    "f_s_疾风刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@对敌人造成40%的物理伤害&0;击中敌人时有92%的机率使对方进入迟钝状态(削减对方50%的命中和回避)3回合<br><font color='#00cc00'>叠加施放将削弱其造成迟钝的功效</font>",
+			commandID:      CommandJiFengCi,
+			label:          "w3/windCut",
+			expectedDamage: 1,
+			expectedMP:     80,
+		},
 	}
 
 	for _, testCase := range cases {
@@ -2132,6 +2193,67 @@ func TestProcessActionAllowsCapturedDaggerSkills(t *testing.T) {
 		if action.Damage != testCase.expectedDamage || action.TargetHP != 220-testCase.expectedDamage || action.RefreshInfos[0].MP != testCase.expectedMP {
 			t.Fatalf("expected captured %s damage/mp, got %+v", testCase.name, action)
 		}
+	}
+}
+
+func TestProcessActionAllowsCapturedRangerSelfStatusSkill(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-command-ranger-self-status",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21432",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "解毒术",
+				Level:       1,
+				Type:        "own",
+				Description: "f_s_解毒术^ffffff&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@20&4@解除自身中毒状态",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-command-ranger-self-status",
+				Handle:   "player_21432",
+				Camp:     CampTeam,
+				HP:       300,
+				MaxHP:    300,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+			},
+			{
+				BattleID: "battle-command-ranger-self-status",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       220,
+				MaxHP:    220,
+				Defense:  40,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21432",
+		CommandID:    CommandJieDuShu,
+		TargetHandle: "player_21432",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" || len(result.Actions) == 0 {
+		t.Fatalf("expected learned 解毒术 action, got %+v", result)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "解毒术" || action.SourceActionLabel != "w3/releaseDrug" || action.SourceMode != "0" {
+		t.Fatalf("expected captured 解毒术 self action, got %+v", action)
+	}
+	if action.Damage != 0 || action.TargetHP != 300 || action.TargetMP != 80 || action.RefreshInfos[0].MP != 80 {
+		t.Fatalf("expected 解毒术 to consume MP without damage, got %+v", action)
 	}
 }
 
@@ -2221,6 +2343,46 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 1.48,
 		},
 		{
+			name:       "强力飞镖",
+			level:      3,
+			desc:       "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高50%（无视防御）的物理攻击力",
+			label:      "w3/powerDart",
+			mpCost:     24,
+			multiplier: 1.5,
+		},
+		{
+			name:       "投毒",
+			level:      1,
+			desc:       "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
+			label:      "w3/drugAtk",
+			mpCost:     16,
+			multiplier: 0,
+		},
+		{
+			name:       "魔力突刺",
+			level:      1,
+			desc:       "f_s_魔力突刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@造成敌人100%的物理伤害&0;并追加80%的魔法伤害",
+			label:      "w3/magicCut",
+			mpCost:     20,
+			multiplier: 1,
+		},
+		{
+			name:       "疾风刺",
+			level:      1,
+			desc:       "f_s_疾风刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@对敌人造成40%的物理伤害&0;击中敌人时有92%的机率使对方进入迟钝状态(削减对方50%的命中和回避)3回合<br><font color='#00cc00'>叠加施放将削弱其造成迟钝的功效</font>",
+			label:      "w3/windCut",
+			mpCost:     20,
+			multiplier: 0.4,
+		},
+		{
+			name:       "解毒术",
+			level:      1,
+			desc:       "f_s_解毒术^ffffff&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@20&4@解除自身中毒状态",
+			label:      "w3/releaseDrug",
+			mpCost:     20,
+			multiplier: 0,
+		},
+		{
 			name:       "奥义.雷魂斩",
 			level:      1,
 			desc:       "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害",
@@ -2302,6 +2464,56 @@ func TestBattleSkillProfileUsesCapturedLevelWhenStoredDescriptionIsStale(t *test
 	if qiangLiFeiBiao.SourceActionLabel != "w3/powerDart" || qiangLiFeiBiao.MPCost != 20 || qiangLiFeiBiao.DamageMultiplier != 1.48 || qiangLiFeiBiao.DefenseType != "direct" {
 		t.Fatalf("expected 强力飞镖 Lv2 captured profile to ignore stale description, got %+v", qiangLiFeiBiao)
 	}
+
+	qiangLiFeiBiaoLv3 := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "强力飞镖",
+		Level:       3,
+		Type:        "oneE",
+		Description: "对敌人造成物理伤害 / 进攻时候提升一定的物理攻击力",
+	})
+	if qiangLiFeiBiaoLv3.SourceActionLabel != "w3/powerDart" || qiangLiFeiBiaoLv3.MPCost != 24 || qiangLiFeiBiaoLv3.DamageMultiplier != 1.5 || qiangLiFeiBiaoLv3.DefenseType != "direct" {
+		t.Fatalf("expected 强力飞镖 Lv3 captured profile to ignore stale description, got %+v", qiangLiFeiBiaoLv3)
+	}
+
+	touDu := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "投毒",
+		Level:       1,
+		Type:        "oneE",
+		Description: "有机率使敌人中毒",
+	})
+	if touDu.SourceActionLabel != "w3/drugAtk" || touDu.MPCost != 16 || touDu.DamageMultiplier != 0 || touDu.StatusName != "中毒" || touDu.StatusChance != 80 || touDu.StatusRounds != 4 {
+		t.Fatalf("expected 投毒 Lv1 captured profile to ignore stale description, got %+v", touDu)
+	}
+
+	moLiTuCi := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "魔力突刺",
+		Level:       1,
+		Type:        "oneE",
+		Description: "提升对敌人造成的物理伤害 / 并附加魔法伤害",
+	})
+	if moLiTuCi.SourceActionLabel != "w3/magicCut" || moLiTuCi.MPCost != 20 || moLiTuCi.DamageMultiplier != 1 {
+		t.Fatalf("expected 魔力突刺 Lv1 captured profile to ignore stale description, got %+v", moLiTuCi)
+	}
+
+	jiFengCi := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "疾风刺",
+		Level:       1,
+		Type:        "oneE",
+		Description: "对敌人造成物理伤害 / 击中敌人时有机率使其进入迟钝状态",
+	})
+	if jiFengCi.SourceActionLabel != "w3/windCut" || jiFengCi.MPCost != 20 || jiFengCi.DamageMultiplier != 0.4 {
+		t.Fatalf("expected 疾风刺 Lv1 captured profile to ignore stale description, got %+v", jiFengCi)
+	}
+
+	jieDuShu := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "解毒术",
+		Level:       1,
+		Type:        "own",
+		Description: "解除自身的中毒状态",
+	})
+	if jieDuShu.SourceActionLabel != "w3/releaseDrug" || jieDuShu.MPCost != 20 || jieDuShu.DamageMultiplier != 0 || jieDuShu.SourceType != "own" {
+		t.Fatalf("expected 解毒术 Lv1 captured profile to ignore stale description, got %+v", jieDuShu)
+	}
 }
 
 func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
@@ -2361,6 +2573,30 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
 		},
 		{
+			Name:        "投毒",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
+		},
+		{
+			Name:        "魔力突刺",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_魔力突刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@造成敌人100%的物理伤害&0;并追加80%的魔法伤害",
+		},
+		{
+			Name:        "疾风刺",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_疾风刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@对敌人造成40%的物理伤害&0;击中敌人时有92%的机率使对方进入迟钝状态(削减对方50%的命中和回避)3回合<br><font color='#00cc00'>叠加施放将削弱其造成迟钝的功效</font>",
+		},
+		{
+			Name:        "解毒术",
+			Level:       1,
+			Type:        "own",
+			Description: "f_s_解毒术^ffffff&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@20&4@解除自身中毒状态",
+		},
+		{
 			Name:        "奥义.雷魂斩",
 			Level:       1,
 			Type:        "oneE",
@@ -2402,6 +2638,18 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if command := byID[CommandQiangLiFeiBiao]; command.Label != "强力飞镖" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/powerDart" || command.MPCost != 20 || command.DamageMultiplier != 1.48 {
 		t.Fatalf("expected captured 强力飞镖 Lv2 command, got %+v", command)
+	}
+	if command := byID[CommandTouDu]; command.Label != "投毒" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/drugAtk" || command.MPCost != 16 || command.DamageMultiplier != 0 {
+		t.Fatalf("expected captured 投毒 status command, got %+v", command)
+	}
+	if command := byID[CommandMoLiTuCi]; command.Label != "魔力突刺" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/magicCut" || command.MPCost != 20 || command.DamageMultiplier != 1 {
+		t.Fatalf("expected captured 魔力突刺 command, got %+v", command)
+	}
+	if command := byID[CommandJiFengCi]; command.Label != "疾风刺" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/windCut" || command.MPCost != 20 || command.DamageMultiplier != 0.4 {
+		t.Fatalf("expected captured 疾风刺 command, got %+v", command)
+	}
+	if command := byID[CommandJieDuShu]; command.Label != "解毒术" || command.SourceType != "own" || command.Target != "self" || command.SourceActionLabel != "w3/releaseDrug" || command.MPCost != 20 || command.DamageMultiplier != 0 {
+		t.Fatalf("expected captured 解毒术 self command, got %+v", command)
 	}
 	if command := byID[CommandLeiHunZhan]; command.Label != "奥义.雷魂斩" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/thunderSoulAtk" || command.MPCost != 24 || command.DamageMultiplier != 3.4 {
 		t.Fatalf("expected captured 奥义.雷魂斩 single-target command, got %+v", command)
@@ -2925,6 +3173,454 @@ func TestXueQieDoesNotApplyWoundOnDodge(t *testing.T) {
 	}
 	if len(runtime.StatusEffects) != 0 {
 		t.Fatalf("expected dodge to leave status effects empty, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestEquipmentInnerInjuryAppliesCapturedBuffInfoOnHit(t *testing.T) {
+	var runtime *Runtime
+	var actor *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 500; index += 1 {
+		candidate := newInnerInjuryTestRuntime(fmt.Sprintf("player_inner_%d", index), "enemy_inner")
+		candidateActor := candidate.cellByHandle(fmt.Sprintf("player_inner_%d", index))
+		candidateTarget := candidate.cellByHandle("enemy_inner")
+		if candidate.hashBattleRollWithSalt(candidateActor, candidateTarget, CommandNormalAttack, "equipment:内伤") < 1 {
+			runtime = candidate
+			actor = candidateActor
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 绯雨匕首 inner-injury roll below 1")
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.TargetActionStateCode != "0" || action.Damage <= 0 {
+		t.Fatalf("expected inner-injury source hit to land, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected one 内伤 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "内伤" || buff.Display != "26.png" || buff.Round != 3 || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 内伤 BuffInfo metadata, got %+v", buff)
+	}
+	if !strings.Contains(buff.Description, "降低对象") || !strings.Contains(buff.Description, "点物理攻击") || !strings.Contains(buff.Description, "点魔法攻击力") {
+		t.Fatalf("expected captured 内伤 description shape, got %q", buff.Description)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["内伤"]
+	if effect.Name != "内伤" || effect.Display != "26.png" || effect.Rounds != 3 || effect.SourceHandle != actor.Handle || effect.SourceSkill != "绯雨匕首" {
+		t.Fatalf("expected runtime 内伤 status to be recorded, got %+v", runtime.StatusEffects)
+	}
+	if effect.AttackReduction < 18 || effect.AttackReduction > 30 {
+		t.Fatalf("expected 内伤 to reduce 10%%-15%% of post-hit attack 180, got %+v", effect)
+	}
+	if target.Attack != 180-effect.AttackReduction {
+		t.Fatalf("expected target attack to be reduced by inner injury, target=%+v effect=%+v", target, effect)
+	}
+}
+
+func TestEquipmentInnerInjuryDoesNotApplyOnDodge(t *testing.T) {
+	runtime := newInnerInjuryTestRuntime("player_inner_dodge", "enemy_inner_dodge")
+	actor := runtime.cellByHandle("player_inner_dodge")
+	target := runtime.cellByHandle("enemy_inner_dodge")
+	actor.Hit = 0
+	target.Dog = 1
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to suppress 内伤 status, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+}
+
+func TestEquipmentInnerInjuryRestoresAttackWhenExpired(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-inner-injury-expire",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"enemy_inner": {
+				Effects: map[string]BattleStatusEffect{
+					"内伤": {
+						Name:            "内伤",
+						Rounds:          1,
+						AttackReduction: 24,
+					},
+				},
+			},
+		},
+	}
+	target := &CellInfoPush{
+		BattleID: "battle-inner-injury-expire",
+		Handle:   "enemy_inner",
+		Camp:     CampEnemy,
+		HP:       500,
+		MaxHP:    500,
+		Attack:   156,
+	}
+
+	actions, skipTurn := runtime.resolveStatusStartActions(target)
+
+	if len(actions) != 0 || skipTurn {
+		t.Fatalf("expected 内伤 to tick without action or skip, actions=%+v skip=%v", actions, skipTurn)
+	}
+	if target.Attack != 180 {
+		t.Fatalf("expected 内伤 expiration to restore attack, got %+v", target)
+	}
+	if _, ok := runtime.StatusEffects["enemy_inner"]; ok {
+		t.Fatalf("expected expired 内伤 status to clear, got %+v", runtime.StatusEffects)
+	}
+	if len(runtime.PendingClearBuffInfos) != 1 || runtime.PendingClearBuffInfos[0].Name != "内伤" || runtime.PendingClearBuffInfos[0].TargetHandle != "enemy_inner" {
+		t.Fatalf("expected 内伤 clear buff info, got %+v", runtime.PendingClearBuffInfos)
+	}
+}
+
+func TestJiFengCiAppliesSlownessBuffInfoOnHit(t *testing.T) {
+	var runtime *Runtime
+	var actor *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 200; index += 1 {
+		candidate := newSlownessTestRuntime(fmt.Sprintf("player_slow_%d", index), "enemy_slow")
+		candidateActor := candidate.cellByHandle(fmt.Sprintf("player_slow_%d", index))
+		candidateTarget := candidate.cellByHandle("enemy_slow")
+		if candidate.hashBattleRollWithSalt(candidateActor, candidateTarget, CommandJiFengCi, "status:迟钝") < jiFengCiSlownessChance {
+			runtime = candidate
+			actor = candidateActor
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 疾风刺迟钝 roll below 92")
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandJiFengCi)
+
+	if action.ActionName != "疾风刺" || action.SourceActionLabel != "w3/windCut" || action.TargetActionStateCode != "0" {
+		t.Fatalf("expected captured 疾风刺 hit action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected one 迟钝 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "迟钝" || buff.Display != "16.png" || buff.Round != 3 || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 迟钝 BuffInfo metadata, got %+v", buff)
+	}
+	if buff.Description != "降低对象100点命中和30点回避" {
+		t.Fatalf("expected captured 迟钝 description shape, got %q", buff.Description)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["迟钝"]
+	if effect.Name != "迟钝" || effect.HitReduction != 100 || effect.DodgeReduction != 30 || effect.Rounds != 3 {
+		t.Fatalf("expected runtime 迟钝 status to be recorded, got %+v", runtime.StatusEffects)
+	}
+	if target.Hit != 100 || target.Dog != 30 {
+		t.Fatalf("expected target hit/dodge to be reduced by 50%%, got %+v", target)
+	}
+}
+
+func TestTouDuAppliesPoisonBuffInfoOnHit(t *testing.T) {
+	var runtime *Runtime
+	var actor *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 200; index += 1 {
+		candidate := newPoisonTestRuntime(fmt.Sprintf("player_poison_%d", index), "enemy_poison")
+		candidateActor := candidate.cellByHandle(fmt.Sprintf("player_poison_%d", index))
+		candidateTarget := candidate.cellByHandle("enemy_poison")
+		if candidate.hashBattleRollWithSalt(candidateActor, candidateTarget, CommandTouDu, "status:中毒") < touDuPoisonChance {
+			runtime = candidate
+			actor = candidateActor
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 投毒中毒 roll below 80")
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandTouDu)
+
+	if action.ActionName != "投毒" || action.SourceActionLabel != "w3/drugAtk" || action.TargetActionStateCode != "0" {
+		t.Fatalf("expected captured 投毒 hit action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected one 中毒 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "中毒" || buff.Display != "8.png" || buff.Round != 4 || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 中毒 BuffInfo metadata, got %+v", buff)
+	}
+	if buff.Description != "降低对象5点魔防和9点物防，每回合内减少对象48~60点气力" {
+		t.Fatalf("expected captured 中毒 description shape, got %q", buff.Description)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["中毒"]
+	if effect.Name != "中毒" || effect.DefenseReduction != 9 || effect.MagicDefenseReduction != 5 || effect.SourceAttack != 240 || effect.TickMinPercent != 20 || effect.TickMaxPercent != 25 || effect.Rounds != 4 {
+		t.Fatalf("expected runtime 中毒 status to be recorded, got %+v", runtime.StatusEffects)
+	}
+	if target.Defense != 51 || target.MgcDefense != 31 {
+		t.Fatalf("expected target defense/magic defense to be reduced by 15%%, got %+v", target)
+	}
+}
+
+func TestTouDuDoesNotApplyPoisonOnDodge(t *testing.T) {
+	runtime := newPoisonTestRuntime("player_poison_dodge", "enemy_poison_dodge")
+	actor := runtime.cellByHandle("player_poison_dodge")
+	target := runtime.cellByHandle("enemy_poison_dodge")
+	actor.Hit = 0
+	target.Dog = 1
+
+	action := runtime.resolveAttack(actor, target, CommandTouDu)
+
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected 投毒 dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to suppress 中毒 status, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+}
+
+func TestPoisonTickRestoresDefenseWhenExpired(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-poison-expire",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"enemy_poison": {
+				Effects: map[string]BattleStatusEffect{
+					"中毒": {
+						Name:                  "中毒",
+						Rounds:                1,
+						SourceHandle:          "player_poison",
+						SourceSkill:           "投毒",
+						SourceAttack:          240,
+						TickMinPercent:        20,
+						TickMaxPercent:        25,
+						DefenseReduction:      9,
+						MagicDefenseReduction: 5,
+					},
+				},
+			},
+		},
+	}
+	target := &CellInfoPush{
+		BattleID:   "battle-poison-expire",
+		Handle:     "enemy_poison",
+		Camp:       CampEnemy,
+		HP:         500,
+		MaxHP:      500,
+		Defense:    51,
+		MgcDefense: 31,
+	}
+
+	actions, skipTurn := runtime.resolveStatusStartActions(target)
+
+	if len(actions) != 1 || skipTurn {
+		t.Fatalf("expected one 中毒 tick without skip, actions=%+v skip=%v", actions, skipTurn)
+	}
+	action := actions[0]
+	if action.ActionName != "中毒" || action.ActorHandle != "enemy_poison" || action.TargetHandle != "enemy_poison" || action.SourceMode != "0" || action.SourceActionLabel != "battleStand" || action.TargetActionStateCode != "3" {
+		t.Fatalf("expected captured 中毒 battleStand self action, got %+v", action)
+	}
+	if action.Damage < 48 || action.Damage > 60 || action.TargetHP != target.HP {
+		t.Fatalf("expected 中毒 tick to use 20%%-25%% source attack damage, action=%+v target=%+v", action, target)
+	}
+	if target.Defense != 60 || target.MgcDefense != 36 {
+		t.Fatalf("expected 中毒 expiration to restore defense/magic defense, got %+v", target)
+	}
+	if _, ok := runtime.StatusEffects["enemy_poison"]; ok {
+		t.Fatalf("expected expired 中毒 status to clear, got %+v", runtime.StatusEffects)
+	}
+	if len(runtime.PendingClearBuffInfos) != 1 || runtime.PendingClearBuffInfos[0].Name != "中毒" || runtime.PendingClearBuffInfos[0].TargetHandle != "enemy_poison" {
+		t.Fatalf("expected 中毒 clear buff info, got %+v", runtime.PendingClearBuffInfos)
+	}
+}
+
+func TestJiFengCiDoesNotApplySlownessOnDodge(t *testing.T) {
+	runtime := newSlownessTestRuntime("player_slow_dodge", "enemy_slow_dodge")
+	actor := runtime.cellByHandle("player_slow_dodge")
+	target := runtime.cellByHandle("enemy_slow_dodge")
+	actor.Hit = 0
+	target.Dog = 1
+
+	action := runtime.resolveAttack(actor, target, CommandJiFengCi)
+
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected 疾风刺 dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to suppress 迟钝 status, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+}
+
+func TestJiFengCiSlownessRestoresHitAndDodgeWhenExpired(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-slowness-expire",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"enemy_slow": {
+				Effects: map[string]BattleStatusEffect{
+					"迟钝": {
+						Name:           "迟钝",
+						Rounds:         1,
+						HitReduction:   100,
+						DodgeReduction: 30,
+					},
+				},
+			},
+		},
+	}
+	target := &CellInfoPush{
+		BattleID: "battle-slowness-expire",
+		Handle:   "enemy_slow",
+		Camp:     CampEnemy,
+		HP:       500,
+		MaxHP:    500,
+		Hit:      100,
+		Dog:      30,
+	}
+
+	actions, skipTurn := runtime.resolveStatusStartActions(target)
+
+	if len(actions) != 0 || skipTurn {
+		t.Fatalf("expected 迟钝 to tick without action or skip, actions=%+v skip=%v", actions, skipTurn)
+	}
+	if target.Hit != 200 || target.Dog != 60 {
+		t.Fatalf("expected 迟钝 expiration to restore hit/dodge, got %+v", target)
+	}
+	if _, ok := runtime.StatusEffects["enemy_slow"]; ok {
+		t.Fatalf("expected expired 迟钝 status to clear, got %+v", runtime.StatusEffects)
+	}
+	if len(runtime.PendingClearBuffInfos) != 1 || runtime.PendingClearBuffInfos[0].Name != "迟钝" || runtime.PendingClearBuffInfos[0].TargetHandle != "enemy_slow" {
+		t.Fatalf("expected 迟钝 clear buff info, got %+v", runtime.PendingClearBuffInfos)
+	}
+}
+
+func newSlownessTestRuntime(actorHandle string, targetHandle string) *Runtime {
+	return &Runtime{
+		BattleID:         "battle-slowness",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-slowness",
+				Handle:   actorHandle,
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Hit:      100,
+			},
+			{
+				BattleID: "battle-slowness",
+				Handle:   targetHandle,
+				Camp:     CampEnemy,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   120,
+				Defense:  0,
+				Hit:      200,
+				Dog:      60,
+			},
+		},
+	}
+}
+
+func newPoisonTestRuntime(actorHandle string, targetHandle string) *Runtime {
+	return &Runtime{
+		BattleID:         "battle-poison",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "投毒",
+				Level:       1,
+				Type:        "oneE",
+				Description: "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-poison",
+				Handle:   actorHandle,
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   240,
+				Hit:      100,
+			},
+			{
+				BattleID:   "battle-poison",
+				Handle:     targetHandle,
+				Camp:       CampEnemy,
+				HP:         1000,
+				MaxHP:      1000,
+				Attack:     120,
+				Defense:    60,
+				MgcDefense: 36,
+				Hit:        200,
+				Dog:        0,
+			},
+		},
+	}
+}
+
+func newInnerInjuryTestRuntime(actorHandle string, targetHandle string) *Runtime {
+	return &Runtime{
+		BattleID:         "battle-inner-injury",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		RoleItemsByHandle: map[string][]session.RoleItem{
+			actorHandle: {
+				{
+					Type:        "装备",
+					Name:        "绯雨匕首",
+					Display:     "51.png",
+					Description: "f_i_绯雨匕首<br>特殊效果: 击中敌人时候有1%机率使敌人进入内伤状态3回合(降低敌人10%~15%的物理攻击和魔法攻击)",
+				},
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-inner-injury",
+				Handle:   actorHandle,
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   100,
+				Hit:      100,
+			},
+			{
+				BattleID:     "battle-inner-injury",
+				Handle:       targetHandle,
+				Camp:         CampEnemy,
+				HP:           1000,
+				MaxHP:        1000,
+				Attack:       180,
+				Defense:      0,
+				MgcDefense:   10,
+				Dog:          0,
+				CommandLabel: "普通攻击",
+			},
+		},
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"ai-server/internal/classicactivity"
 	"ai-server/internal/session"
 )
 
@@ -1525,6 +1526,53 @@ func TestBuildAnswerSpeakMap3PandaHealerIncludesTreatment(t *testing.T) {
 	}
 	if !hasAnswerOption(speak.Answers, "2", "进行治疗") {
 		t.Fatalf("expected panda healer treatment answer, got %+v", speak.Answers)
+	}
+}
+
+func TestBuildTownBootstrapIncludesPointCouponThiefOnlyOnActivityMaps(t *testing.T) {
+	for _, mapID := range []int{84, 114, 115} {
+		role := session.RoleSummary{
+			RoleID:      "role-point-coupon-thief",
+			DisplayName: "测试角色",
+			Level:       15,
+			MapID:       mapID,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:    "player-point-coupon-thief",
+			RoleID:      role.RoleID,
+			DisplayName: role.DisplayName,
+			Level:       role.Level,
+			MapID:       mapID,
+		}
+		snapshot := BuildTownBootstrap(role, playerBase)
+		var thief *RolePush
+		for index := range snapshot.CreateRoles {
+			if snapshot.CreateRoles[index].DisplayName == classicactivity.PointCouponThiefName {
+				thief = &snapshot.CreateRoles[index]
+				break
+			}
+		}
+		if thief == nil {
+			t.Fatalf("expected point coupon thief on map%d, got roles=%+v", mapID, snapshot.CreateRoles)
+		}
+		if thief.Kind != "monster" || thief.RoleID != "-2" || thief.SourceQuery != classicactivity.PointCouponThiefSourceQuery || thief.Level != 15 || thief.Vocation != "游侠" {
+			t.Fatalf("expected point coupon thief source role on map%d, got %+v", mapID, thief)
+		}
+		if !classicactivity.IsPointCouponThiefHandle(snapshot.LoadMap.MapID, thief.Handle) {
+			t.Fatalf("expected point coupon thief hourly handle on map%d, got %s", mapID, thief.Handle)
+		}
+		if thief.SourceNPCVisual == nil || thief.SourceNPCVisual.MovieClipIRPath != "runtime/classic-monstermap/militia/militia-movieclip-ir" {
+			t.Fatalf("expected militia monstermap visual on map%d, got %+v", mapID, thief.SourceNPCVisual)
+		}
+	}
+
+	role := session.RoleSummary{RoleID: "role-novice", DisplayName: "测试角色", Level: 1, MapID: 1}
+	playerBase := session.PlayerBaseData{PlayerID: "player-novice", RoleID: role.RoleID, DisplayName: role.DisplayName, Level: role.Level, MapID: 1}
+	snapshot := BuildTownBootstrap(role, playerBase)
+	for _, rolePush := range snapshot.CreateRoles {
+		if rolePush.DisplayName == classicactivity.PointCouponThiefName {
+			t.Fatalf("point coupon thief must not spawn in novice village, got %+v", rolePush)
+		}
 	}
 }
 

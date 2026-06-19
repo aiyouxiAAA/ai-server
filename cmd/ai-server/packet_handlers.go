@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"ai-server/internal/battle"
+	"ai-server/internal/classicactivity"
 	"ai-server/internal/guild"
 	"ai-server/internal/mall"
 	"ai-server/internal/protocol"
@@ -671,6 +672,8 @@ func classicBattleActionRequiredItemName(commandID string) string {
 	switch strings.TrimSpace(commandID) {
 	case battle.CommandQiangLiFeiBiao, "强力飞镖":
 		return "飞镖"
+	case battle.CommandTouDu, "投毒":
+		return "毒药"
 	default:
 		return ""
 	}
@@ -2419,7 +2422,7 @@ func syncDungeonInstanceState(store *session.Store, socketSession *packetSession
 	}
 	instanceKey, ok := world.DungeonInstanceKeyForMapID(mapID)
 	if !ok {
-		setDefeatedVisibleMonsterHandles(socketSession, nil)
+		setDefeatedVisibleMonsterHandles(socketSession, keepPointCouponThiefDefeatedHandles(socketSession))
 		return &classicTownDungeonInstancePush{
 			MapID:           strconv.Itoa(mapID),
 			Active:          false,
@@ -2451,6 +2454,19 @@ func syncDungeonInstanceState(store *session.Store, socketSession *packetSession
 		RemainingSeconds:              remainingSeconds,
 		DefeatedVisibleMonsterHandles: append([]string{}, state.DefeatedVisibleMonsterHandles...),
 	}
+}
+
+func keepPointCouponThiefDefeatedHandles(socketSession *packetSession) []string {
+	if socketSession == nil || len(socketSession.defeatedVisibleMonsters) == 0 {
+		return nil
+	}
+	handles := make([]string, 0, len(socketSession.defeatedVisibleMonsters))
+	for handle := range socketSession.defeatedVisibleMonsters {
+		if classicactivity.IsPointCouponThiefHandleAnyMap(handle) {
+			handles = append(handles, handle)
+		}
+	}
+	return handles
 }
 
 func dungeonInstanceDisplayName(key string) string {

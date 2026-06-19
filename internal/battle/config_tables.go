@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"ai-server/internal/classicactivity"
 )
 
 //go:embed config/classic-wild-enemy.csv config/classic-visible-monster.csv config/classic-battle-reward.csv config/classic-battle-reward-candidate.csv
@@ -67,6 +69,9 @@ func sourceEnemyConfigsForMap(mapID string) []sourceWildEnemyConfig {
 }
 
 func sourceVisibleMonsterConfigForHandle(mapID string, handle string) (sourceWildEnemyConfig, bool) {
+	if config, ok := sourcePointCouponThiefConfigForHandle(mapID, handle); ok {
+		return config, true
+	}
 	config, ok := sourceVisibleMonsterConfigByKey[visibleMonsterConfigKey(mapID, handle)]
 	return config, ok
 }
@@ -98,11 +103,61 @@ func sourceBattleRewardConfigForMap(mapID string) (sourceBattleRewardConfig, boo
 
 func sourceBattleRewardConfigForEncounter(mapID string, sourceMonsterHandle string) (sourceBattleRewardConfig, bool) {
 	if strings.TrimSpace(sourceMonsterHandle) != "" {
+		if reward, ok := sourcePointCouponThiefRewardConfig(mapID, sourceMonsterHandle); ok {
+			return reward, true
+		}
 		if reward, ok := sourceBattleRewardConfigByKey[battleRewardConfigKey(mapID, sourceMonsterHandle)]; ok {
 			return reward, true
 		}
 	}
 	return sourceBattleRewardConfigForMap(mapID)
+}
+
+func sourcePointCouponThiefConfigForHandle(mapID string, handle string) (sourceWildEnemyConfig, bool) {
+	if !classicactivity.IsPointCouponThiefHandle(mapID, handle) {
+		return sourceWildEnemyConfig{}, false
+	}
+	return sourceWildEnemyConfig{
+		Cell: CellInfoPush{
+			Camp:              CampEnemy,
+			Handle:            strings.TrimSpace(handle),
+			Name:              classicactivity.PointCouponThiefName,
+			DisplayURL:        classicactivity.PointCouponThiefSourceQuery,
+			Level:             15,
+			Vocation:          "游侠",
+			XScale:            100,
+			YScale:            100,
+			MaxHP:             1200,
+			HP:                1200,
+			MaxMP:             300,
+			MP:                300,
+			Speed:             160,
+			Attack:            160,
+			Defense:           0,
+			Hit:               defaultBattleHit,
+			Dog:               defaultBattleDog,
+			Fat:               defaultBattleFat,
+			CommandLabel:      "普通攻击",
+			DamageDefenseType: "physical",
+		},
+		QueueIndexTeam:  1,
+		QueueIndexEnemy: 4,
+		Vocation:        "游侠",
+		Source:          "capture: tmp/shihuku-capture-summary-combined.json point coupon thief battle cell",
+	}, true
+}
+
+func sourcePointCouponThiefRewardConfig(mapID string, handle string) (sourceBattleRewardConfig, bool) {
+	if !classicactivity.IsPointCouponThiefHandle(mapID, handle) {
+		return sourceBattleRewardConfig{}, false
+	}
+	return sourceBattleRewardConfig{
+		SourceMonsterHandle: strings.TrimSpace(handle),
+		ExpDelta:            50,
+		Items:               []string{"点券x10"},
+		Source:              "capture: tmp/shihuku-capture-summary-combined.json reward 点券 total x10 tail exp 50",
+		Status:              "confirmed",
+	}, true
 }
 
 func mustLoadSourceWildEnemyConfigs() map[string]sourceWildEnemyConfig {

@@ -33,6 +33,10 @@ const (
 	CommandHongYueZhan     = "skill-hong-yue-zhan"
 	CommandXueQie          = "skill-xue-qie"
 	CommandQiangLiFeiBiao  = "skill-qiang-li-fei-biao"
+	CommandTouDu           = "skill-tou-du"
+	CommandMoLiTuCi        = "skill-mo-li-tu-ci"
+	CommandJiFengCi        = "skill-ji-feng-ci"
+	CommandJieDuShu        = "skill-jie-du-shu"
 	CommandLeiHunZhan      = "skill-lei-hun-zhan"
 	CommandEnemyAttack     = "enemy-normal-attack"
 	CommandEnemySlideCut   = "enemy-slide-cut"
@@ -98,6 +102,18 @@ const (
 	defaultBattleHit                   = 100
 	defaultBattleDog                   = 50
 	defaultBattleFat                   = 5
+	equipmentInnerInjuryDefaultChance  = 1
+	equipmentInnerInjuryDefaultRounds  = 3
+	equipmentInnerInjuryDefaultMin     = 10
+	equipmentInnerInjuryDefaultMax     = 15
+	jiFengCiSlownessChance             = 92
+	jiFengCiSlownessRounds             = 3
+	jiFengCiSlownessPercent            = 50
+	touDuPoisonChance                  = 80
+	touDuPoisonRounds                  = 4
+	touDuPoisonDefensePercent          = 15
+	touDuPoisonTickMin                 = 20
+	touDuPoisonTickMax                 = 25
 )
 
 var sourceEncounterRoll = func(maxExclusive int) int {
@@ -282,6 +298,8 @@ type Runtime struct {
 	SourceMonsterHandle   string
 	RoleSkills            []session.RoleSkill
 	RoleSkillsByHandle    map[string][]session.RoleSkill
+	RoleItems             []session.RoleItem
+	RoleItemsByHandle     map[string][]session.RoleItem
 	Phase                 string
 	Round                 int
 	Cells                 []CellInfoPush
@@ -298,17 +316,23 @@ type Runtime struct {
 }
 
 type BattleStatusEffect struct {
-	Name           string
-	Display        string
-	Description    string
-	Rounds         int
-	SourceHandle   string
-	SourceSkill    string
-	AppliedAction  string
-	SourceAttack   int
-	TickMinPercent int
-	TickMaxPercent int
-	SkipTurn       bool
+	Name                  string
+	Display               string
+	Description           string
+	Rounds                int
+	SourceHandle          string
+	SourceSkill           string
+	AppliedAction         string
+	SourceAttack          int
+	TickMinPercent        int
+	TickMaxPercent        int
+	AttackReduction       int
+	MagicAttackReduction  int
+	DefenseReduction      int
+	MagicDefenseReduction int
+	HitReduction          int
+	DodgeReduction        int
+	SkipTurn              bool
 }
 
 type BattleStatusEffects struct {
@@ -453,6 +477,8 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		SourceMonsterHandle: sourceMonsterHandle,
 		RoleSkills:          cloneBattleRoleSkills(role.Skills),
 		RoleSkillsByHandle:  map[string][]session.RoleSkill{role.RoleID: cloneBattleRoleSkills(role.Skills)},
+		RoleItems:           cloneBattleRoleItems(role.Items),
+		RoleItemsByHandle:   map[string][]session.RoleItem{role.RoleID: cloneBattleRoleItems(role.Items)},
 		Phase:               PhaseCommand,
 		Round:               1,
 		Cells:               cells,
@@ -501,6 +527,9 @@ func NewTeamWildBattle(actors []TeamActor, request StartRequest) (*Runtime, Star
 	if runtime.RoleSkillsByHandle == nil {
 		runtime.RoleSkillsByHandle = map[string][]session.RoleSkill{}
 	}
+	if runtime.RoleItemsByHandle == nil {
+		runtime.RoleItemsByHandle = map[string][]session.RoleItem{}
+	}
 	for index := 1; index < len(actors); index++ {
 		actor := actors[index]
 		roleID := strings.TrimSpace(actor.Role.RoleID)
@@ -510,6 +539,7 @@ func NewTeamWildBattle(actors []TeamActor, request StartRequest) (*Runtime, Star
 		cell := buildTeamActorCell(runtime.BattleID, actor.Role, actor.PlayerBase)
 		runtime.Cells = append(runtime.Cells, cell)
 		runtime.RoleSkillsByHandle[roleID] = cloneBattleRoleSkills(actor.Role.Skills)
+		runtime.RoleItemsByHandle[roleID] = cloneBattleRoleItems(actor.Role.Items)
 	}
 	bundle.Cells = append([]CellInfoPush(nil), runtime.Cells...)
 	return runtime, bundle, true
@@ -601,8 +631,9 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	runtime.PendingBuffInfos = nil
 	runtime.PendingClearBuffInfos = nil
 	commandID := strings.TrimSpace(request.CommandID)
+	normalizedCommandID := normalizeBattleCommandID(commandID)
 
-	switch commandID {
+	switch normalizedCommandID {
 	case CommandEscape:
 		if !runtime.isSelfTarget(actor, request.TargetHandle) {
 			return ActionResult{ErrorCode: "invalid_target"}
@@ -658,6 +689,22 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		})
 		result.BuffInfos = append(result.BuffInfos, runtime.resolveKuangBaoBuffInfo(actor))
 		return result
+	case CommandJieDuShu:
+		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
+			return ActionResult{ErrorCode: "unsupported_command"}
+		}
+		if !runtime.isSelfTarget(actor, request.TargetHandle) {
+			return ActionResult{ErrorCode: "invalid_target"}
+		}
+		runtime.ConsumedSequence[request.Sequence] = true
+		runtime.setStoredPower(actor.Handle, 0)
+		profile := runtime.sourceSkillProfileForActor(actor.Handle, "解毒术", 1)
+		if profile.MPCost > 0 {
+			actor.MP = maxInt(0, actor.MP-profile.MPCost)
+		}
+		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
+			runtime.resolveSelfAction(actor, commandID, "解毒术", "w3/releaseDrug"),
+		})
 	}
 
 	if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
@@ -1037,10 +1084,19 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			TickMaxPercent: profile.StatusTickMax,
 			SkipTurn:       profile.SkipTurn,
 		}
-		runtime.applyStatusEffect(target.Handle, effect)
-		runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+		if strings.TrimSpace(effect.Name) == "迟钝" {
+			runtime.applySlownessStatusEffect(actor, target, effect)
+		} else if strings.TrimSpace(effect.Name) == "中毒" {
+			runtime.applyPoisonStatusEffect(actor, target, effect)
+		} else {
+			runtime.applyStatusEffect(target.Handle, effect)
+			runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+		}
 	}
 	runtime.applyCapturedStunOnHit(actor, target, commandID)
+	if target.HP > 0 {
+		runtime.applyEquipmentInnerInjuryOnHit(actor, target, commandID)
+	}
 	refreshInfos := []CellInfoPush{*target}
 	if (consumeMP && profile.MPCost > 0) || profile.LifeStealChance > 0 {
 		refreshInfos = []CellInfoPush{*actor, *target}
@@ -1095,6 +1151,14 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "血切", 1)
 	case CommandQiangLiFeiBiao:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "强力飞镖", 2)
+	case CommandTouDu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "投毒", 1)
+	case CommandMoLiTuCi:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "魔力突刺", 1)
+	case CommandJiFengCi:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "疾风刺", 1)
+	case CommandJieDuShu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "解毒术", 1)
 	case CommandLeiHunZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
 	case CommandEnemySlideCut:
@@ -1457,7 +1521,7 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	switch strings.TrimSpace(enemy.Name) {
-	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人", "蚩颅王":
+	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人", "蚩颅王", "点券盗贼":
 		return true
 	default:
 		return strings.Contains(normalizedDisplay, "monstermap/largerock.swf") ||
@@ -1465,7 +1529,8 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 			strings.Contains(normalizedDisplay, "monstermap/hfscastellan.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/hfcastellan.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/hflady.swf") ||
-			strings.Contains(normalizedDisplay, "monstermap/chiluking.swf")
+			strings.Contains(normalizedDisplay, "monstermap/chiluking.swf") ||
+			strings.Contains(normalizedDisplay, "monstermap/militia.swf")
 	}
 }
 
@@ -1541,6 +1606,14 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "血切")
 	case CommandQiangLiFeiBiao:
 		return runtime.hasRoleSkillForActor(handle, "强力飞镖")
+	case CommandTouDu:
+		return runtime.hasRoleSkillForActor(handle, "投毒")
+	case CommandMoLiTuCi:
+		return runtime.hasRoleSkillForActor(handle, "魔力突刺")
+	case CommandJiFengCi:
+		return runtime.hasRoleSkillForActor(handle, "疾风刺")
+	case CommandJieDuShu:
+		return runtime.hasRoleSkillForActor(handle, "解毒术")
 	case CommandLeiHunZhan:
 		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
 	default:
@@ -1609,6 +1682,19 @@ func (runtime *Runtime) skillsForHandle(handle string) []session.RoleSkill {
 	return runtime.RoleSkills
 }
 
+func (runtime *Runtime) itemsForHandle(handle string) []session.RoleItem {
+	if runtime == nil {
+		return nil
+	}
+	handle = strings.TrimSpace(handle)
+	if handle != "" && runtime.RoleItemsByHandle != nil {
+		if items, ok := runtime.RoleItemsByHandle[handle]; ok {
+			return items
+		}
+	}
+	return runtime.RoleItems
+}
+
 func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 	name := strings.TrimSpace(skill.Name)
 	level := skill.Level
@@ -1650,8 +1736,28 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusTickMin = 25
 		profile.StatusTickMax = 30
 	}
+	if name == "疾风刺" {
+		profile.StatusName = "迟钝"
+		profile.StatusDisplay = "16.png"
+		profile.StatusRounds = jiFengCiSlownessRounds
+		profile.StatusChance = jiFengCiSlownessChance
+		profile.StatusDescription = "降低对象50%命中和回避"
+	}
+	if name == "投毒" {
+		profile.StatusName = "中毒"
+		profile.StatusDisplay = "8.png"
+		profile.StatusRounds = touDuPoisonRounds
+		profile.StatusChance = touDuPoisonChance
+		profile.StatusDescription = "降低对象15%魔防和物防，每回合内减少对象20%~25%气力"
+		profile.StatusTickMin = touDuPoisonTickMin
+		profile.StatusTickMax = touDuPoisonTickMax
+	}
 	if name == "强力飞镖" {
 		profile.DefenseType = "direct"
+	}
+	if name == "解毒术" {
+		profile.CanDodge = false
+		profile.CanFat = false
 	}
 	return profile
 }
@@ -1750,6 +1856,14 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandXueQie
 	case "强力飞镖":
 		return CommandQiangLiFeiBiao
+	case "投毒":
+		return CommandTouDu
+	case "魔力突刺":
+		return CommandMoLiTuCi
+	case "疾风刺":
+		return CommandJiFengCi
+	case "解毒术":
+		return CommandJieDuShu
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	default:
@@ -1759,9 +1873,9 @@ func sourceBattleSkillCommandID(name string) string {
 
 func sourceBattleSkillSourceType(name string, fallbackType string) string {
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "奥义.雷魂斩":
+	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "奥义.雷魂斩":
 		return "oneE"
-	case "狂爆":
+	case "狂爆", "解毒术":
 		return "own"
 	case "红月斩":
 		return "all"
@@ -1791,7 +1905,7 @@ func sourceBattleCommandTarget(sourceType string) string {
 var (
 	sourceMPCostPattern          = regexp.MustCompile(`&2@(\d+)`)
 	sourceImproveDamagePattern   = regexp.MustCompile(`提升(\d+)%的物理伤害`)
-	sourcePercentDamagePattern   = regexp.MustCompile(`造成(\d+)%的物理伤害`)
+	sourcePercentDamagePattern   = regexp.MustCompile(`造成(?:敌人)?(\d+)%的物理伤害`)
 	sourceLifeStealChancePattern = regexp.MustCompile(`有(\d+)%机率`)
 	sourceLifeStealRatioPattern  = regexp.MustCompile(`伤害的(\d+)%`)
 )
@@ -1814,6 +1928,14 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandXueQie
 	case "强力飞镖":
 		return CommandQiangLiFeiBiao
+	case "投毒":
+		return CommandTouDu
+	case "魔力突刺":
+		return CommandMoLiTuCi
+	case "疾风刺":
+		return CommandJiFengCi
+	case "解毒术":
+		return CommandJieDuShu
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	default:
@@ -1890,6 +2012,38 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Icon:        "261.png",
 			Description: fallbackQiangLiFeiBiaoDescription(level),
 		}
+	case "投毒":
+		return session.RoleSkill{
+			Name:        "投毒",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "166.png",
+			Description: fallbackTouDuDescription(level),
+		}
+	case "魔力突刺":
+		return session.RoleSkill{
+			Name:        "魔力突刺",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "258.png",
+			Description: fallbackMoLiTuCiDescription(level),
+		}
+	case "疾风刺":
+		return session.RoleSkill{
+			Name:        "疾风刺",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "259.png",
+			Description: fallbackJiFengCiDescription(level),
+		}
+	case "解毒术":
+		return session.RoleSkill{
+			Name:        "解毒术",
+			Level:       level,
+			Type:        "own",
+			Icon:        "260.png",
+			Description: fallbackJieDuShuDescription(level),
+		}
 	case "奥义.雷魂斩":
 		return session.RoleSkill{
 			Name:        "奥义.雷魂斩",
@@ -1956,6 +2110,44 @@ func fallbackQiangLiFeiBiaoDescription(level int) string {
 	switch level {
 	case 2:
 		return "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力"
+	case 3:
+		return "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高50%（无视防御）的物理攻击力"
+	default:
+		return ""
+	}
+}
+
+func fallbackTouDuDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%"
+	default:
+		return ""
+	}
+}
+
+func fallbackMoLiTuCiDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_魔力突刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@造成敌人100%的物理伤害&0;并追加80%的魔法伤害"
+	default:
+		return ""
+	}
+}
+
+func fallbackJiFengCiDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_疾风刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@对敌人造成40%的物理伤害&0;击中敌人时有92%的机率使对方进入迟钝状态(削减对方50%的命中和回避)3回合<br><font color='#00cc00'>叠加施放将削弱其造成迟钝的功效</font>"
+	default:
+		return ""
+	}
+}
+
+func fallbackJieDuShuDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_解毒术^ffffff&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@20&4@解除自身中毒状态"
 	default:
 		return ""
 	}
@@ -1992,6 +2184,14 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w8/cutBlood"
 	case "强力飞镖":
 		return "w3/powerDart"
+	case "投毒":
+		return "w3/drugAtk"
+	case "魔力突刺":
+		return "w3/magicCut"
+	case "疾风刺":
+		return "w3/windCut"
+	case "解毒术":
+		return "w3/releaseDrug"
 	case "奥义.雷魂斩":
 		return "w8/thunderSoulAtk"
 	case "普通攻击":
@@ -2077,10 +2277,21 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 	case "血切":
 		return 0.3
 	case "强力飞镖":
-		if level == 2 {
+		switch level {
+		case 2:
 			return 1.48
+		case 3:
+			return 1.5
 		}
 		return 1
+	case "投毒":
+		return 0
+	case "魔力突刺":
+		return 1
+	case "疾风刺":
+		return 0.4
+	case "解毒术":
+		return 0
 	case "奥义.雷魂斩":
 		return 3.4
 	default:
@@ -2126,10 +2337,21 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 	case "血切":
 		return 19
 	case "强力飞镖":
-		if level == 2 {
+		switch level {
+		case 2:
 			return 20
+		case 3:
+			return 24
 		}
 		return 0
+	case "投毒":
+		return 16
+	case "魔力突刺":
+		return 20
+	case "疾风刺":
+		return 20
+	case "解毒术":
+		return 20
 	case "奥义.雷魂斩":
 		return 24
 	default:
@@ -2253,6 +2475,211 @@ func (runtime *Runtime) applyStatusEffect(handle string, effect BattleStatusEffe
 	runtime.StatusEffects[handle] = effects
 }
 
+func (runtime *Runtime) applySlownessStatusEffect(actor *CellInfoPush, target *CellInfoPush, effect BattleStatusEffect) bool {
+	if runtime == nil || target == nil || strings.TrimSpace(effect.Name) == "" || effect.Rounds <= 0 {
+		return false
+	}
+	runtime.restoreExistingStatusEffect(target.Handle, "迟钝")
+	hitReduction := percentReduction(target.Hit, jiFengCiSlownessPercent)
+	dodgeReduction := percentReduction(target.Dog, jiFengCiSlownessPercent)
+	if hitReduction > 0 {
+		target.Hit = maxInt(0, target.Hit-hitReduction)
+	}
+	if dodgeReduction > 0 {
+		target.Dog = maxInt(0, target.Dog-dodgeReduction)
+	}
+	effect.Name = "迟钝"
+	if strings.TrimSpace(effect.Display) == "" {
+		effect.Display = "16.png"
+	}
+	effect.Description = fmt.Sprintf("降低对象%d点命中和%d点回避", hitReduction, dodgeReduction)
+	effect.HitReduction = hitReduction
+	effect.DodgeReduction = dodgeReduction
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+	return true
+}
+
+func (runtime *Runtime) applyPoisonStatusEffect(actor *CellInfoPush, target *CellInfoPush, effect BattleStatusEffect) bool {
+	if runtime == nil || target == nil || strings.TrimSpace(effect.Name) == "" || effect.Rounds <= 0 {
+		return false
+	}
+	runtime.restoreExistingStatusEffect(target.Handle, "中毒")
+	magicDefenseReduction := percentReduction(target.MgcDefense, touDuPoisonDefensePercent)
+	defenseReduction := percentReduction(target.Defense, touDuPoisonDefensePercent)
+	if magicDefenseReduction > 0 {
+		target.MgcDefense = maxInt(0, target.MgcDefense-magicDefenseReduction)
+	}
+	if defenseReduction > 0 {
+		target.Defense = maxInt(0, target.Defense-defenseReduction)
+	}
+	sourceAttack := effect.SourceAttack
+	if sourceAttack <= 0 && actor != nil {
+		sourceAttack = actor.Attack
+	}
+	tickMin := maxInt(1, int(math.Round(float64(sourceAttack)*float64(touDuPoisonTickMin)/100)))
+	tickMax := maxInt(tickMin, int(math.Round(float64(sourceAttack)*float64(touDuPoisonTickMax)/100)))
+	effect.Name = "中毒"
+	if strings.TrimSpace(effect.Display) == "" {
+		effect.Display = "8.png"
+	}
+	effect.Description = fmt.Sprintf("降低对象%d点魔防和%d点物防，每回合内减少对象%d~%d点气力", magicDefenseReduction, defenseReduction, tickMin, tickMax)
+	effect.DefenseReduction = defenseReduction
+	effect.MagicDefenseReduction = magicDefenseReduction
+	effect.SourceAttack = sourceAttack
+	if effect.TickMinPercent <= 0 {
+		effect.TickMinPercent = touDuPoisonTickMin
+	}
+	if effect.TickMaxPercent < effect.TickMinPercent {
+		effect.TickMaxPercent = effect.TickMinPercent
+	}
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+	return true
+}
+
+func percentReduction(value int, percent int) int {
+	if value <= 0 || percent <= 0 {
+		return 0
+	}
+	return maxInt(1, int(math.Round(float64(value)*float64(percent)/100)))
+}
+
+type equipmentInnerInjuryEffect struct {
+	Chance     int
+	Rounds     int
+	MinPercent int
+	MaxPercent int
+}
+
+var innerInjuryEquipmentPattern = regexp.MustCompile(`有(\d+)%机率.*进入内伤状态(\d+)回合.*降低敌人(\d+)%~(\d+)%`)
+
+func (runtime *Runtime) applyEquipmentInnerInjuryOnHit(actor *CellInfoPush, target *CellInfoPush, commandID string) bool {
+	if runtime == nil || actor == nil || target == nil || target.HP <= 0 {
+		return false
+	}
+	effectConfig, ok := sourceEquipmentInnerInjuryEffect(runtime.itemsForHandle(actor.Handle))
+	if !ok {
+		return false
+	}
+	chance := clampInt(effectConfig.Chance, 0, 100)
+	if chance <= 0 {
+		return false
+	}
+	if chance < 100 && runtime.hashBattleRollWithSalt(actor, target, commandID, "equipment:内伤") >= chance {
+		return false
+	}
+	percent := effectConfig.MinPercent
+	if effectConfig.MaxPercent > effectConfig.MinPercent {
+		roll := runtime.hashBattleRollWithSalt(actor, target, commandID, "equipment:内伤:percent")
+		percent += roll % (effectConfig.MaxPercent - effectConfig.MinPercent + 1)
+	}
+	attackReduction := 0
+	if target.Attack > 0 && percent > 0 {
+		attackReduction = maxInt(1, int(math.Round(float64(target.Attack)*float64(percent)/100)))
+	}
+	magicReduction := 0
+	if target.MgcDefense > 0 && percent > 0 {
+		magicReduction = maxInt(1, int(math.Round(float64(target.MgcDefense)*float64(percent)/100)))
+	}
+	runtime.restoreExistingStatusEffect(target.Handle, "内伤")
+	if attackReduction > 0 {
+		target.Attack = maxInt(0, target.Attack-attackReduction)
+	}
+	effect := BattleStatusEffect{
+		Name:                 "内伤",
+		Display:              "26.png",
+		Description:          fmt.Sprintf("降低对象%d点物理攻击和%d点魔法攻击力", attackReduction, magicReduction),
+		Rounds:               effectConfig.Rounds,
+		SourceHandle:         actor.Handle,
+		SourceSkill:          "绯雨匕首",
+		AppliedAction:        "equipment:inner-injury",
+		AttackReduction:      attackReduction,
+		MagicAttackReduction: magicReduction,
+	}
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+	return true
+}
+
+func sourceEquipmentInnerInjuryEffect(items []session.RoleItem) (equipmentInnerInjuryEffect, bool) {
+	for _, item := range items {
+		if strings.TrimSpace(item.Type) != "装备" {
+			continue
+		}
+		description := strings.TrimSpace(item.Description)
+		if !strings.Contains(description, "进入内伤状态") {
+			continue
+		}
+		effect := equipmentInnerInjuryEffect{
+			Chance:     equipmentInnerInjuryDefaultChance,
+			Rounds:     equipmentInnerInjuryDefaultRounds,
+			MinPercent: equipmentInnerInjuryDefaultMin,
+			MaxPercent: equipmentInnerInjuryDefaultMax,
+		}
+		if matches := innerInjuryEquipmentPattern.FindStringSubmatch(description); len(matches) == 5 {
+			effect.Chance = parsePositiveIntOrDefault(matches[1], effect.Chance)
+			effect.Rounds = parsePositiveIntOrDefault(matches[2], effect.Rounds)
+			effect.MinPercent = parsePositiveIntOrDefault(matches[3], effect.MinPercent)
+			effect.MaxPercent = parsePositiveIntOrDefault(matches[4], effect.MaxPercent)
+		}
+		if effect.MaxPercent < effect.MinPercent {
+			effect.MaxPercent = effect.MinPercent
+		}
+		return effect, true
+	}
+	return equipmentInnerInjuryEffect{}, false
+}
+
+func parsePositiveIntOrDefault(raw string, fallback int) int {
+	value, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func (runtime *Runtime) restoreExistingStatusEffect(handle string, name string) {
+	if runtime == nil || runtime.StatusEffects == nil {
+		return
+	}
+	handle = strings.TrimSpace(handle)
+	name = strings.TrimSpace(name)
+	if handle == "" || name == "" {
+		return
+	}
+	effects := runtime.StatusEffects[handle]
+	if effects.Effects == nil {
+		return
+	}
+	effect, ok := effects.Effects[name]
+	if !ok {
+		return
+	}
+	runtime.restoreStatusEffect(runtime.cellByHandle(handle), effect)
+}
+
+func (runtime *Runtime) restoreStatusEffect(target *CellInfoPush, effect BattleStatusEffect) {
+	if target == nil {
+		return
+	}
+	if effect.AttackReduction > 0 {
+		target.Attack += effect.AttackReduction
+	}
+	if effect.DefenseReduction > 0 {
+		target.Defense += effect.DefenseReduction
+	}
+	if effect.MagicDefenseReduction > 0 {
+		target.MgcDefense += effect.MagicDefenseReduction
+	}
+	if effect.HitReduction > 0 {
+		target.Hit += effect.HitReduction
+	}
+	if effect.DodgeReduction > 0 {
+		target.Dog += effect.DodgeReduction
+	}
+}
+
 func (runtime *Runtime) applyCapturedStunOnHit(actor *CellInfoPush, target *CellInfoPush, commandID string) bool {
 	if runtime == nil || actor == nil || target == nil || actor.Camp != CampEnemy || target.Camp != CampTeam || target.HP <= 0 {
 		return false
@@ -2295,6 +2722,7 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 		}
 		effect := effects.Effects[name]
 		if effect.Rounds <= 0 {
+			runtime.restoreStatusEffect(actor, effect)
 			delete(effects.Effects, name)
 			runtime.queueClearBuffInfo(actor.Handle, effect.Name)
 			continue
@@ -2302,6 +2730,11 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 		switch strings.TrimSpace(effect.Name) {
 		case "外伤":
 			action := runtime.resolveWoundStatusAction(actor, effect)
+			if action != nil {
+				actions = append(actions, *action)
+			}
+		case "中毒":
+			action := runtime.resolvePoisonStatusAction(actor, effect)
 			if action != nil {
 				actions = append(actions, *action)
 			}
@@ -2324,6 +2757,7 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 		}
 		effect.Rounds -= 1
 		if effect.Rounds <= 0 {
+			runtime.restoreStatusEffect(actor, effect)
 			delete(effects.Effects, name)
 			runtime.queueClearBuffInfo(actor.Handle, effect.Name)
 		} else {
@@ -2391,6 +2825,15 @@ func (runtime *Runtime) resolveWoundStatusAction(target *CellInfoPush, effect Ba
 		Round:                 runtime.Round,
 		Sequence:              runtime.nextSequence,
 	}
+}
+
+func (runtime *Runtime) resolvePoisonStatusAction(target *CellInfoPush, effect BattleStatusEffect) *ActionPush {
+	action := runtime.resolveWoundStatusAction(target, effect)
+	if action == nil {
+		return nil
+	}
+	action.ActionName = "中毒"
+	return action
 }
 
 func (runtime *Runtime) resolveSkipTurnStatusAction(target *CellInfoPush, effect BattleStatusEffect) *ActionPush {
@@ -3055,6 +3498,15 @@ func cloneBattleRoleSkills(skills []session.RoleSkill) []session.RoleSkill {
 	}
 	cloned := make([]session.RoleSkill, len(skills))
 	copy(cloned, skills)
+	return cloned
+}
+
+func cloneBattleRoleItems(items []session.RoleItem) []session.RoleItem {
+	if len(items) == 0 {
+		return nil
+	}
+	cloned := make([]session.RoleItem, len(items))
+	copy(cloned, items)
 	return cloned
 }
 

@@ -1296,6 +1296,24 @@ func TestBuildClassicBattleLootParsesCapturedItemCounts(t *testing.T) {
 	}
 }
 
+func TestBuildClassicBattleLootUsesPointCouponMetadata(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
+		Winner: battle.CampTeam,
+		Items:  []string{"点券x10"},
+	})
+
+	if len(loot) != 1 {
+		t.Fatalf("expected one point coupon loot stack, got %+v", loot)
+	}
+	if loot[0].Name != "点券" || loot[0].Count != 10 || loot[0].Display != "659.png" || loot[0].ItemLevel != 5 {
+		t.Fatalf("expected captured 点券 metadata, got %+v", loot[0])
+	}
+	if !strings.Contains(loot[0].Description, "特殊消费或商城购物") {
+		t.Fatalf("expected captured 点券 description, got %+v", loot[0])
+	}
+}
+
 func TestBuildClassicBattleLootUsesFeixiandongBossItemMetadata(t *testing.T) {
 	_, socketSession := seedSelectedRoleSession(t)
 	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
@@ -2459,6 +2477,61 @@ func TestSourceSkillItemsAndSkillInfoUseCapturedLevelDescriptions(t *testing.T) 
 	})
 	if !strings.Contains(qiangLiFeiBiaoInfo.Description, "&2@20") || !strings.Contains(qiangLiFeiBiaoInfo.Description, "需要【飞镖x1】") || !strings.Contains(qiangLiFeiBiaoInfo.Description, "提高48%") || !strings.Contains(qiangLiFeiBiaoInfo.Description, "无视防御") {
 		t.Fatalf("expected skillInfo to use captured 强力飞镖 Lv2 description, got %+v", qiangLiFeiBiaoInfo)
+	}
+
+	qiangLiFeiBiaoLv3Info := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "强力飞镖",
+		Level:       3,
+		Type:        "oneE",
+		Icon:        "261.png",
+		Description: "对敌人造成物理伤害 / 进攻时候提升一定的物理攻击力",
+	})
+	if !strings.Contains(qiangLiFeiBiaoLv3Info.Description, "&2@24") || !strings.Contains(qiangLiFeiBiaoLv3Info.Description, "提高50%") || !strings.Contains(qiangLiFeiBiaoLv3Info.Description, "无视防御") {
+		t.Fatalf("expected skillInfo to use captured 强力飞镖 Lv3 description, got %+v", qiangLiFeiBiaoLv3Info)
+	}
+
+	moLiTuCiInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "魔力突刺",
+		Level:       1,
+		Type:        "oneE",
+		Icon:        "258.png",
+		Description: "提升对敌人造成的物理伤害 / 并附加魔法伤害",
+	})
+	if !strings.Contains(moLiTuCiInfo.Description, "&2@20") || !strings.Contains(moLiTuCiInfo.Description, "造成敌人100%的物理伤害") || !strings.Contains(moLiTuCiInfo.Description, "追加80%的魔法伤害") {
+		t.Fatalf("expected skillInfo to use captured 魔力突刺 Lv1 description, got %+v", moLiTuCiInfo)
+	}
+
+	jiFengCiInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "疾风刺",
+		Level:       1,
+		Type:        "oneE",
+		Icon:        "259.png",
+		Description: "对敌人造成物理伤害 / 击中敌人时有机率使其进入迟钝状态",
+	})
+	if !strings.Contains(jiFengCiInfo.Description, "&2@20") || !strings.Contains(jiFengCiInfo.Description, "造成40%的物理伤害") || !strings.Contains(jiFengCiInfo.Description, "92%的机率") {
+		t.Fatalf("expected skillInfo to use captured 疾风刺 Lv1 description, got %+v", jiFengCiInfo)
+	}
+
+	touDuInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "投毒",
+		Level:       1,
+		Type:        "oneE",
+		Icon:        "166.png",
+		Description: "有机率使敌人中毒",
+	})
+	if !strings.Contains(touDuInfo.Description, "&2@16") || !strings.Contains(touDuInfo.Description, "需要【毒药x1】") || !strings.Contains(touDuInfo.Description, "有80%的机率") {
+		t.Fatalf("expected skillInfo to use captured 投毒 Lv1 description, got %+v", touDuInfo)
+	}
+
+	jieDuShuInfo := classicTownSkillInfoPushFromRoleSkill("role_1", session.RoleSkill{
+		Name:        "解毒术",
+		Level:       1,
+		Type:        "own",
+		Icon:        "260.png",
+		Description: "解除自身的中毒状态",
+	})
+	if !strings.Contains(jieDuShuInfo.Description, "&2@20") || !strings.Contains(jieDuShuInfo.Description, "解除自身中毒状态") {
+		t.Fatalf("expected skillInfo to use captured 解毒术 Lv1 description, got %+v", jieDuShuInfo)
 	}
 
 	leiHunEntry, ok := findSourceSkillShopEntry("skill1", 15)
@@ -3798,6 +3871,137 @@ func TestHandlePacketClassicBattleQiangLiFeiBiaoRejectsMissingDart(t *testing.T)
 	}
 	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
 		t.Fatalf("expected missing 飞镖 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)
+	}
+}
+
+func TestHandlePacketClassicBattleTouDuConsumesPoison(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || startResult.battleCommand == nil {
+		t.Fatalf("expected battle start result, got %+v", startResult)
+	}
+
+	poison := session.RoleItem{
+		Type:        "背包",
+		Name:        "毒药",
+		ItemType:    "null",
+		Display:     "240.png",
+		Description: "f_i_毒药^ffffff&24@消耗品&25@999&20@涂在武器上的毒药。&103@0&104@0&105@&107@&108@0",
+		Count:       2,
+		Index:       -1,
+		ItemLevel:   1,
+	}
+	grantedPoison, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, poison)
+	if !ok {
+		t.Fatal("expected grant 毒药")
+	}
+
+	touDuSkill := []session.RoleSkill{
+		{
+			Name:        "投毒",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
+		},
+	}
+	socketSession.battleRuntime.RoleSkills = touDuSkill
+	socketSession.battleRuntime.RoleSkillsByHandle[socketSession.selectedRole.RoleID] = touDuSkill
+	socketSession.battleRuntime.Cells[0].Attack = 240
+	socketSession.battleRuntime.Cells[0].MP = 100
+	socketSession.battleRuntime.Cells[0].MaxMP = 100
+	socketSession.battleRuntime.Cells[0].Fat = 0
+	socketSession.battleRuntime.Cells[1].HP = 300
+	socketSession.battleRuntime.Cells[1].Defense = 60
+	socketSession.battleRuntime.Cells[1].MgcDefense = 36
+	socketSession.battleRuntime.Cells[1].Dog = 0
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleActionReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.ActionRequest{
+			BattleID:     startResult.battleStart.BattleID,
+			ActorHandle:  socketSession.selectedRole.RoleID,
+			CommandID:    battle.CommandTouDu,
+			TargetHandle: socketSession.battleRuntime.Cells[1].Handle,
+			Round:        startResult.battleCommand.Round,
+			Sequence:     startResult.battleCommand.Sequence,
+		}),
+	}, socketSession)
+
+	if !result.handled || len(result.battleActions) == 0 {
+		t.Fatalf("expected 投毒 battleAction, got %+v", result)
+	}
+	action := result.battleActions[0]
+	if action.ActionName != "投毒" || action.SourceActionLabel != "w3/drugAtk" || action.Damage != 1 || action.RefreshInfos[0].MP != 84 {
+		t.Fatalf("expected captured 投毒 action and MP cost, got %+v", action)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Name != "毒药" || result.itemInfos[0].Index != grantedPoison.Index || result.itemInfos[0].Count != 1 {
+		t.Fatalf("expected 毒药 itemInfo count 1 after skill use, got %+v", result.itemInfos)
+	}
+	persisted, ok := store.GetRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, grantedPoison.Type, grantedPoison.Index)
+	if !ok || persisted.Count != 1 {
+		t.Fatalf("expected persisted 毒药 count 1, ok=%v item=%+v", ok, persisted)
+	}
+}
+
+func TestHandlePacketClassicBattleTouDuRejectsMissingPoison(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || startResult.battleCommand == nil {
+		t.Fatalf("expected battle start result, got %+v", startResult)
+	}
+
+	touDuSkill := []session.RoleSkill{
+		{
+			Name:        "投毒",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
+		},
+	}
+	socketSession.battleRuntime.RoleSkills = touDuSkill
+	socketSession.battleRuntime.RoleSkillsByHandle[socketSession.selectedRole.RoleID] = touDuSkill
+	enemyHP := socketSession.battleRuntime.Cells[1].HP
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleActionReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.ActionRequest{
+			BattleID:     startResult.battleStart.BattleID,
+			ActorHandle:  socketSession.selectedRole.RoleID,
+			CommandID:    battle.CommandTouDu,
+			TargetHandle: socketSession.battleRuntime.Cells[1].Handle,
+			Round:        startResult.battleCommand.Round,
+			Sequence:     startResult.battleCommand.Sequence,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected missing 毒药 request to be handled")
+	}
+	if len(result.battleActions) != 0 || len(result.itemInfos) != 0 || len(result.itemClears) != 0 {
+		t.Fatalf("expected missing 毒药 to reject without pushes, got %+v", result)
+	}
+	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
+		t.Fatalf("expected missing 毒药 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)
 	}
 }
 

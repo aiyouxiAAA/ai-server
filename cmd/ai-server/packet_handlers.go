@@ -352,6 +352,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicTownContainerMoveResult(store, socketSession, request)
+	case cmdClassicTownFinishingContainerReq:
+		var request classicTownContainerRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownFinishingContainerResult(store, socketSession, request.Type)
 	case cmdClassicTownEquipItemReq:
 		var request classicTownEquipItemRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -1426,6 +1432,43 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 
 	log.Printf("[ai-server] classic town ContainerMove ignored unsupported source=%s target=%s", sourceType, targetType)
 	return packetResult{handled: true}
+}
+
+func buildClassicTownFinishingContainerResult(store *session.Store, socketSession *packetSession, containerType string) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic town FinishingContainer ignored without selected role type=%s", containerType)
+		return packetResult{handled: true}
+	}
+
+	containerType = strings.TrimSpace(containerType)
+	if containerType != classicTownBagContainerType {
+		log.Printf("[ai-server] classic town FinishingContainer ignored unsupported type=%s", containerType)
+		return packetResult{handled: true}
+	}
+
+	finishResult := store.FinishRoleContainer(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, containerType)
+	if !finishResult.Found {
+		log.Printf("[ai-server] classic town FinishingContainer role missing roleId=%s type=%s", socketSession.selectedRole.RoleID, containerType)
+		return packetResult{handled: true}
+	}
+
+	result := packetResult{
+		itemInfos:  make([]classicTownItemInfoPush, 0, len(finishResult.UpdatedItems)),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(finishResult.ClearedItems)),
+		handled:    true,
+	}
+	for _, clear := range finishResult.ClearedItems {
+		result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+			Handle: socketSession.selectedRole.RoleID,
+			Type:   clear.Type,
+			Index:  clear.Index,
+		})
+	}
+	for _, item := range finishResult.UpdatedItems {
+		item.Handle = socketSession.selectedRole.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+	}
+	return result
 }
 
 func buildClassicBattleLootExchangeResult(socketSession *packetSession, sourceIndex int, targetIndex int, count *int) packetResult {

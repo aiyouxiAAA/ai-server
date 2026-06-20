@@ -1979,6 +1979,72 @@ func TestHandlePacketClassicTownContainerMoveMovesBagItemBySlot(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownFinishingContainerStacksBagItems(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	roleID := socketSession.selectedRole.RoleID
+	playerID := socketSession.playerBase.PlayerID
+
+	meat, ok := session.CapturedRoleItemTemplate("肉")
+	if !ok {
+		t.Fatal("expected captured 肉 template")
+	}
+	meat.Type = "背包"
+	meat.Index = 7
+	meat.Count = 2
+	if _, ok := store.GrantRoleItem(playerID, roleID, meat); !ok {
+		t.Fatal("expected first 肉 grant to succeed")
+	}
+	meat.Index = 22
+	meat.Count = 3
+	if _, ok := store.GrantRoleItem(playerID, roleID, meat); !ok {
+		t.Fatal("expected second 肉 grant to succeed")
+	}
+
+	skull, ok := session.CapturedRoleItemTemplate("头骨")
+	if !ok {
+		t.Fatal("expected captured 头骨 template")
+	}
+	skull.Type = "背包"
+	skull.Index = 25
+	skull.Count = 1
+	if _, ok := store.GrantRoleItem(playerID, roleID, skull); !ok {
+		t.Fatal("expected 头骨 grant to succeed")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownFinishingContainerReq,
+		Seq:     2,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "背包"}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected FinishingContainer to be handled")
+	}
+	if len(result.itemClears) != 1 || result.itemClears[0].Type != "背包" || result.itemClears[0].Index != 22 {
+		t.Fatalf("expected merged source meat slot 22 to be cleared, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Name != "肉" || result.itemInfos[0].Index != 7 || result.itemInfos[0].Count != 5 {
+		t.Fatalf("expected stacked meat push at original slot 7, got %+v", result.itemInfos)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "背包"}),
+	}, socketSession)
+	itemsByIndex := map[int]classicTownItemInfoPush{}
+	for _, item := range listResult.itemInfos {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[7].Name != "肉" || itemsByIndex[7].Count != 5 ||
+		itemsByIndex[19].Name != "铁斧" || itemsByIndex[25].Name != "头骨" {
+		t.Fatalf("expected stacked bag to persist without compacting unrelated slots, got %+v", listResult.itemInfos)
+	}
+	if _, exists := itemsByIndex[22]; exists {
+		t.Fatalf("expected merged source slot 22 to be empty, got %+v", listResult.itemInfos)
+	}
+}
+
 func TestHandlePacketClassicTownDestroyItemConsumesRequestedCount(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	roleID := socketSession.selectedRole.RoleID

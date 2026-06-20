@@ -333,6 +333,17 @@ type RoleMoveItemResult struct {
 	ErrorMessage string
 }
 
+type RoleFinishContainerResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	UpdatedItems []RoleItem
+	ClearedItems []RoleItemClear
+	Found        bool
+	Changed      bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
 type RoleUseItemResult struct {
 	Role             RoleSummary
 	PlayerBase       PlayerBaseData
@@ -2810,6 +2821,136 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 	}
 
 	return RoleMoveItemResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) FinishRoleContainer(playerID string, roleID string, containerType string) RoleFinishContainerResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	containerType = strings.TrimSpace(containerType)
+	_, supported := roleContainerCapacity(containerType)
+	if !supported || containerType != "背包" {
+		return RoleFinishContainerResult{
+			Found:        true,
+			ErrorCode:    "container_unsupported",
+			ErrorMessage: "容器类型不支持整理。",
+		}
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		containerItems := make([]RoleItem, 0, len(roles[index].Items))
+		otherItems := make([]RoleItem, 0, len(roles[index].Items))
+		for _, item := range roles[index].Items {
+			item = normalizeRoleItem(item)
+			if item.Type == containerType && item.Index >= 0 {
+				containerItems = append(containerItems, item)
+				continue
+			}
+			otherItems = append(otherItems, item)
+		}
+
+		sort.SliceStable(containerItems, func(left int, right int) bool {
+			return containerItems[left].Index < containerItems[right].Index
+		})
+
+		updatedItems := make([]RoleItem, 0, len(containerItems))
+		clearedItems := make([]RoleItemClear, 0, len(containerItems))
+		removed := make([]bool, len(containerItems))
+		updatedSlotIndexes := make(map[int]int, len(containerItems))
+		changed := false
+		for targetIndex := range containerItems {
+			if removed[targetIndex] {
+				continue
+			}
+			stackLimit := classicItemStackLimit(containerItems[targetIndex])
+			if stackLimit <= 1 || containerItems[targetIndex].Count >= stackLimit {
+				continue
+			}
+			for sourceIndex := targetIndex + 1; sourceIndex < len(containerItems); sourceIndex += 1 {
+				if removed[sourceIndex] || !canRoleItemsStack(containerItems[targetIndex], containerItems[sourceIndex]) {
+					continue
+				}
+				space := stackLimit - containerItems[targetIndex].Count
+				if space <= 0 {
+					break
+				}
+				moveCount := containerItems[sourceIndex].Count
+				if moveCount > space {
+					moveCount = space
+				}
+				if moveCount <= 0 {
+					continue
+				}
+
+				changed = true
+				containerItems[targetIndex].Count += moveCount
+				containerItems[targetIndex] = normalizeRoleItem(containerItems[targetIndex])
+				updatedSlotIndexes[containerItems[targetIndex].Index] = targetIndex
+
+				containerItems[sourceIndex].Count -= moveCount
+				if containerItems[sourceIndex].Count <= 0 {
+					clearedItems = append(clearedItems, RoleItemClear{Type: containerType, Index: containerItems[sourceIndex].Index})
+					removed[sourceIndex] = true
+					continue
+				}
+				containerItems[sourceIndex] = normalizeRoleItem(containerItems[sourceIndex])
+				updatedSlotIndexes[containerItems[sourceIndex].Index] = sourceIndex
+			}
+		}
+
+		if !changed {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleFinishContainerResult{
+				Role:       role,
+				PlayerBase: playerBaseDataFromRole(playerID, role),
+				Found:      true,
+			}
+		}
+
+		normalizedItems := make([]RoleItem, 0, len(otherItems)+len(containerItems))
+		normalizedItems = append(normalizedItems, otherItems...)
+		for itemIndex, item := range containerItems {
+			if removed[itemIndex] {
+				continue
+			}
+			normalizedItems = append(normalizedItems, item)
+		}
+		roles[index].Items = normalizeRoleItems(normalizedItems)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist finished container failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		for _, itemIndex := range updatedSlotIndexes {
+			if !removed[itemIndex] {
+				updatedItems = append(updatedItems, normalizeRoleItem(containerItems[itemIndex]))
+			}
+		}
+		sort.SliceStable(updatedItems, func(left int, right int) bool {
+			return updatedItems[left].Index < updatedItems[right].Index
+		})
+		return RoleFinishContainerResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			UpdatedItems: normalizeRoleItems(updatedItems),
+			ClearedItems: clearedItems,
+			Found:        true,
+			Changed:      true,
+		}
+	}
+
+	return RoleFinishContainerResult{
 		Found:        false,
 		ErrorCode:    "role_missing",
 		ErrorMessage: "角色不存在。",

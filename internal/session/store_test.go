@@ -1241,6 +1241,77 @@ func TestStoreMoveRoleItemSplitsBagItemToEmptySlot(t *testing.T) {
 	}
 }
 
+func TestStoreFinishRoleContainerStacksCompatibleBagItems(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "整包女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	meat, ok := CapturedRoleItemTemplate("肉")
+	if !ok {
+		t.Fatal("expected captured 肉 template")
+	}
+	meat.Type = "背包"
+	meat.Index = 7
+	meat.Count = 2
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, meat); !ok {
+		t.Fatal("expected first 肉 grant to succeed")
+	}
+	meat.Index = 22
+	meat.Count = 3
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, meat); !ok {
+		t.Fatal("expected second 肉 grant to succeed")
+	}
+
+	skull, ok := CapturedRoleItemTemplate("头骨")
+	if !ok {
+		t.Fatal("expected captured 头骨 template")
+	}
+	skull.Type = "背包"
+	skull.Index = 25
+	skull.Count = 1
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, skull); !ok {
+		t.Fatal("expected 头骨 grant to succeed")
+	}
+
+	result := store.FinishRoleContainer(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !result.Found || !result.Changed {
+		t.Fatalf("expected bag finish success, got %+v", result)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != "背包" || result.ClearedItems[0].Index != 22 {
+		t.Fatalf("expected merged source meat slot 22 to be cleared, got %+v", result.ClearedItems)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Name != "肉" || result.UpdatedItems[0].Index != 7 || result.UpdatedItems[0].Count != 5 {
+		t.Fatalf("expected stacked meat push at original slot 7, got %+v", result.UpdatedItems)
+	}
+
+	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag list after finishing")
+	}
+	if len(bagItems) != 3 {
+		t.Fatalf("expected three persisted bag items, got %+v", bagItems)
+	}
+	itemsByIndex := map[int]RoleItem{}
+	for _, item := range bagItems {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[7].Name != "肉" || itemsByIndex[7].Count != 5 {
+		t.Fatalf("expected stacked 肉 to remain at slot 7, got %+v", bagItems)
+	}
+	if itemsByIndex[19].Name != "铁斧" || itemsByIndex[25].Name != "头骨" {
+		t.Fatalf("expected unrelated items to keep original slots, got %+v", bagItems)
+	}
+	if _, exists := itemsByIndex[22]; exists {
+		t.Fatalf("expected merged source slot 22 to be empty, got %+v", bagItems)
+	}
+}
+
 func TestStoreMoveRoleItemUnequipsToNextBagSlotAndClearsAppearance(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")

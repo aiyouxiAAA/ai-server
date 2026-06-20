@@ -18,6 +18,17 @@ func useSourceEncounterRoll(roll func(int) int) func() {
 	}
 }
 
+func requireSourceBattleRewardDropRate(t *testing.T, rates []sourceBattleRewardDropRate, itemName string) sourceBattleRewardDropRate {
+	t.Helper()
+	for _, rate := range rates {
+		if rate.ItemName == itemName {
+			return rate
+		}
+	}
+	t.Fatalf("expected drop rate for %s in %+v", itemName, rates)
+	return sourceBattleRewardDropRate{}
+}
+
 func TestBuildOverUsesCapturedMap5BattleRewards(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	runtime := &Runtime{
@@ -324,25 +335,25 @@ func TestBuildOverUsesCapturedHuangfengzhaiBossRewards(t *testing.T) {
 			mapID:    "149",
 			handle:   "3218685759638239",
 			expDelta: 336,
-			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1", "雪莲花x1"},
+			items:    []string{"毛皮x2", "铜钱x131", "盗贼的首级x1", "黄风腰带x1", "兽骨x1", "黄风围巾x1", "头骨x1", "雪莲花x1"},
 		},
 		{
 			mapID:    "149",
 			handle:   "3220685759639165",
 			expDelta: 336,
-			items:    []string{"毛皮x2", "铜钱x106", "盗贼的首级x1", "黄风腰带x1", "兽骨x1", "雪莲花x1"},
+			items:    []string{"毛皮x2", "铜钱x131", "盗贼的首级x1", "黄风腰带x1", "兽骨x1", "黄风围巾x1", "头骨x1", "雪莲花x1"},
 		},
 		{
 			mapID:    "155",
 			handle:   "2600686416056495",
 			expDelta: 720,
-			items:    []string{"红方巾x2", "绸缎x3", "铜钱x110", "盗贼的首级x1", "呼啸战靴x1", "寨夫人上衣x1", "寨夫人护腕x1", "宝匣x1"},
+			items:    []string{"红方巾x2", "绸缎x3", "铜钱x280", "盗贼的首级x1", "呼啸战靴x1", "寨夫人上衣x1", "寨夫人护腕x1", "宝匣x1"},
 		},
 		{
 			mapID:    "155",
 			handle:   "2800686416057704",
 			expDelta: 720,
-			items:    []string{"红方巾x2", "绸缎x3", "铜钱x110", "盗贼的首级x1", "呼啸战靴x1", "寨夫人上衣x1", "寨夫人护腕x1", "宝匣x1"},
+			items:    []string{"红方巾x2", "绸缎x3", "铜钱x280", "盗贼的首级x1", "呼啸战靴x1", "寨夫人上衣x1", "寨夫人护腕x1", "宝匣x1"},
 		},
 	}
 
@@ -367,6 +378,32 @@ func TestBuildOverUsesCapturedHuangfengzhaiBossRewards(t *testing.T) {
 				t.Fatalf("expected huangfengzhai boss reward item %d to be %q for %+v, got %+v", index, item, testCase, over.Result.Items)
 			}
 		}
+	}
+}
+
+func TestBuildOverUsesCapturedHuangfengzhaiBossObservedDropRates(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
+
+	secondChief := (&Runtime{
+		BattleID:            "battle-huangfengzhai-second-chief-high-roll",
+		MapID:               "149",
+		SourceMonsterHandle: "3218685759638239",
+		Round:               1,
+	}).buildOver(CampTeam)
+	expectedSecondChiefItems := []string{"毛皮x2", "铜钱x131", "盗贼的首级x1"}
+	if secondChief == nil || secondChief.Result.ExpDelta != 336 || !reflect.DeepEqual(secondChief.Result.Items, expectedSecondChiefItems) {
+		t.Fatalf("expected high-roll second-chief drops to keep only 2/2 items %+v, got %+v", expectedSecondChiefItems, secondChief)
+	}
+
+	chief := (&Runtime{
+		BattleID:            "battle-huangfengzhai-chief-high-roll",
+		MapID:               "155",
+		SourceMonsterHandle: "2600686416056495",
+		Round:               1,
+	}).buildOver(CampTeam)
+	expectedChiefItems := []string{"红方巾x2", "绸缎x3", "铜钱x280", "盗贼的首级x1"}
+	if chief == nil || chief.Result.ExpDelta != 720 || !reflect.DeepEqual(chief.Result.Items, expectedChiefItems) {
+		t.Fatalf("expected high-roll chief drops to keep only 2/2 items %+v, got %+v", expectedChiefItems, chief)
 	}
 }
 
@@ -427,6 +464,35 @@ func TestBuildOverUsesCapturedHuangfengzhaiMap147RewardCandidate(t *testing.T) {
 	expectedItems := []string{"铜钱x6"}
 	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
 		t.Fatalf("expected huangfengzhai map147 low-roll reward %+v, got %+v", expectedItems, over.Result.Items)
+	}
+}
+
+func TestHuangfengzhaiRewardCandidatesUseFullCaptureStatistics(t *testing.T) {
+	testCases := []struct {
+		mapID       string
+		monsterName string
+		maxHP       int
+		itemName    string
+		quantity    int
+		numerator   int
+		denominator int
+	}{
+		{mapID: "122", monsterName: "秃鹫", maxHP: 215, itemName: "刺", quantity: 1, numerator: 1, denominator: 1},
+		{mapID: "146", monsterName: "蛮族刀客", maxHP: 520, itemName: "红缨", quantity: 1, numerator: 4, denominator: 6},
+		{mapID: "150", monsterName: "蛮族弓手", maxHP: 530, itemName: "铜钱", quantity: 8, numerator: 2, denominator: 2},
+		{mapID: "153", monsterName: "咒巫师", maxHP: 500, itemName: "图腾面具", quantity: 1, numerator: 1, denominator: 4},
+		{mapID: "156", monsterName: "咒巫师", maxHP: 550, itemName: "兽骨", quantity: 1, numerator: 6, denominator: 6},
+	}
+
+	for _, testCase := range testCases {
+		config, ok := sourceBattleRewardCandidateForCell(testCase.mapID, testCase.monsterName, testCase.maxHP)
+		if !ok {
+			t.Fatalf("expected Huangfeng reward candidate %+v", testCase)
+		}
+		rate := requireSourceBattleRewardDropRate(t, config.DropRates, testCase.itemName)
+		if rate.Quantity != testCase.quantity || rate.Numerator != testCase.numerator || rate.Denominator != testCase.denominator {
+			t.Fatalf("expected Huangfeng reward candidate drop %+v, got %+v", testCase, rate)
+		}
 	}
 }
 

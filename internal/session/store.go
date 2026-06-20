@@ -20,6 +20,7 @@ const (
 	defaultRoleVoc  = "新手"
 	defaultSkillCap = 12
 	defaultBagCap   = 30
+	bagCapacityStep = 6
 	defaultEquipCap = 20
 	defaultMallCap  = 30
 	defaultCopper   = 5000
@@ -1021,13 +1022,15 @@ func (store *Store) GetRoleContainerCapacity(playerID string, roleID string, con
 	defer store.mu.Unlock()
 
 	containerType = strings.TrimSpace(containerType)
-	capacity, supported := roleContainerCapacity(containerType)
+	baseCapacity, supported := roleContainerCapacity(containerType)
 	if !supported {
 		return 0, false
 	}
-	for _, role := range store.rolesByPID[playerID] {
-		if role.RoleID == roleID {
-			return capacity, true
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID == roleID {
+			roles[index] = withRoleRuntimeDefaults(roles[index])
+			return effectiveRoleContainerCapacity(roles[index].Items, containerType, baseCapacity), true
 		}
 	}
 
@@ -1039,7 +1042,7 @@ func (store *Store) GetRoleItems(playerID string, roleID string, containerType s
 	defer store.mu.Unlock()
 
 	containerType = strings.TrimSpace(containerType)
-	capacity, supported := roleContainerCapacity(containerType)
+	baseCapacity, supported := roleContainerCapacity(containerType)
 	if !supported {
 		return []RoleItem{}, 0, false
 	}
@@ -1066,6 +1069,7 @@ func (store *Store) GetRoleItems(playerID string, roleID string, containerType s
 				items = append(items, item)
 			}
 		}
+		capacity := effectiveRoleContainerCapacity(roles[index].Items, containerType, baseCapacity)
 		return cloneRoleItems(items), capacity, true
 	}
 
@@ -1356,7 +1360,7 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 		return RoleItem{}, false
 	}
 
-	capacity, supported := roleContainerCapacity(item.Type)
+	baseCapacity, supported := roleContainerCapacity(item.Type)
 	if !supported {
 		return RoleItem{}, false
 	}
@@ -1368,6 +1372,7 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 		}
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
+		capacity := effectiveRoleContainerCapacity(roles[index].Items, item.Type, baseCapacity)
 		updatedItems, grantedItem, ok := grantRoleItemToItems(roles[index].Items, capacity, item)
 		if !ok {
 			return RoleItem{}, false
@@ -1405,7 +1410,7 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 			ErrorMessage: "物品不存在。",
 		}
 	}
-	capacity, supported := roleContainerCapacity(item.Type)
+	baseCapacity, supported := roleContainerCapacity(item.Type)
 	if !supported {
 		return RoleItemPurchaseResult{
 			ErrorCode:    "invalid_container",
@@ -1420,6 +1425,7 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 		}
 
 		currentRole := withRoleRuntimeDefaults(roles[index])
+		capacity := effectiveRoleContainerCapacity(currentRole.Items, item.Type, baseCapacity)
 		currentBase := playerBaseDataFromRole(playerID, currentRole)
 		currentCurrencies := cloneRoleCurrencies(currentRole.Currencies)
 		originalCurrencies := cloneRoleCurrencies(currentCurrencies)
@@ -2684,7 +2690,8 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 		}
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
-		capacity, supported := roleContainerCapacity(targetType)
+		baseCapacity, supported := roleContainerCapacity(targetType)
+		capacity := effectiveRoleContainerCapacity(roles[index].Items, targetType, baseCapacity)
 		if supported && targetIndex < 0 {
 			if nextIndex, ok := nextRoleItemIndex(roles[index].Items, targetType, capacity); ok {
 				targetIndex = nextIndex
@@ -2820,6 +2827,34 @@ func roleContainerCapacity(containerType string) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func effectiveRoleContainerCapacity(items []RoleItem, containerType string, baseCapacity int) int {
+	if containerType != "背包" {
+		return baseCapacity
+	}
+	capacity := baseCapacity
+	for _, item := range items {
+		if item.Type != containerType || item.Index < 0 {
+			continue
+		}
+		required := item.Index + 1
+		if required > capacity {
+			capacity = roundUpBagCapacity(required)
+		}
+	}
+	return capacity
+}
+
+func roundUpBagCapacity(required int) int {
+	if required <= defaultBagCap {
+		return defaultBagCap
+	}
+	remainder := required % bagCapacityStep
+	if remainder == 0 {
+		return required
+	}
+	return required + bagCapacityStep - remainder
 }
 
 func nextRoleItemIndex(items []RoleItem, containerType string, capacity int) (int, bool) {

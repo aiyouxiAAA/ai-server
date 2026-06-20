@@ -52,6 +52,7 @@ const (
 	CommandEnemyRockRain   = "enemy-rock-rain"
 	CommandEnemyDarkMoon   = "enemy-dark-moon-cut"
 	CommandEnemyEarthShock = "enemy-earth-shock-atk"
+	CommandEnemyDelude     = "enemy-delude"
 	CommandEnemyPieceAtk   = "enemy-piece-attack"
 	CommandEnemyLionRoars  = "enemy-lion-roars"
 	CommandEnemyGoldHit    = "enemy-gold-hit"
@@ -92,6 +93,9 @@ const (
 	enemyDarkMoonChance                = 25
 	enemyEarthShockMPCost              = 10
 	enemyEarthShockChance              = 10
+	enemyDeludeMPCost                  = 10
+	enemyDeludeChance                  = 33
+	enemyDeludeStatusRounds            = 2
 	enemyShihukuBlackshadowPieceChance = 7
 	enemyShihukuChilukingPieceChance   = 11
 	enemyShihukuBlackshadowWoundMin    = 6
@@ -309,6 +313,7 @@ type Runtime struct {
 	ConsumedSequence      map[int]bool
 	DefendingHandles      map[string]bool
 	StatusEffects         map[string]BattleStatusEffects
+	PendingConfusion      map[string]bool
 	StoredPower           map[string]int
 	PendingBuffInfos      []BuffInfoPush
 	PendingClearBuffInfos []ClearBuffInfoPush
@@ -488,6 +493,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		ConsumedSequence:    map[int]bool{},
 		DefendingHandles:    map[string]bool{},
 		StatusEffects:       map[string]BattleStatusEffects{},
+		PendingConfusion:    map[string]bool{},
 		StoredPower:         map[string]int{},
 		nextSequence:        1,
 	}
@@ -633,6 +639,16 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	runtime.PendingBuffInfos = nil
 	runtime.PendingClearBuffInfos = nil
 	commandID := strings.TrimSpace(request.CommandID)
+	if runtime.consumePendingConfusion(actor.Handle) {
+		runtime.ConsumedSequence[request.Sequence] = true
+		runtime.setStoredPower(actor.Handle, 0)
+		action := runtime.resolveConfusionNormalAttackAction(actor)
+		actions := []ActionPush{}
+		if action != nil {
+			actions = append(actions, *action)
+		}
+		return runtime.resolveEnemyTurnAndNextCommand(actor, actions)
+	}
 	normalizedCommandID := normalizeBattleCommandID(commandID)
 
 	switch normalizedCommandID {
@@ -752,6 +768,17 @@ func (runtime *Runtime) ProcessItemAction(request ItemActionRequest, item ItemAc
 		return validation
 	}
 
+	if runtime.consumePendingConfusion(actor.Handle) {
+		runtime.ConsumedSequence[request.Sequence] = true
+		runtime.setStoredPower(actor.Handle, 0)
+		action := runtime.resolveConfusionNormalAttackAction(actor)
+		actions := []ActionPush{}
+		if action != nil {
+			actions = append(actions, *action)
+		}
+		return runtime.resolveEnemyTurnAndNextCommand(actor, actions)
+	}
+
 	item.SourceType = strings.TrimSpace(item.SourceType)
 	item.ItemType = strings.TrimSpace(item.ItemType)
 	if item.SourceType != strings.TrimSpace(request.Type) || item.SourceIndex != request.Index {
@@ -864,6 +891,17 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 				team = runtime.firstLiving(CampTeam)
 				continue
 			}
+			if runtime.consumePendingConfusion(enemy.Handle) {
+				if action := runtime.resolveConfusionNormalAttackAction(enemy); action != nil {
+					actions = append(actions, *action)
+				}
+				runtime.setStoredPower(enemy.Handle, 0)
+				team = runtime.firstLiving(CampTeam)
+				if runtime.resolveWinner() != "" {
+					break
+				}
+				continue
+			}
 			actions = append(actions, runtime.resolveEnemyRampageActions(enemy)...)
 			targetHandle := team.Handle
 			commandID := runtime.enemyBattleCommand(enemy, team)
@@ -918,6 +956,17 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		runtime.Phase = PhasePlaying
 		runtime.advanceKuangBaoRound(nextActor.Handle)
 		if skipTurn && runtime.hasActiveAutoContinueSkipStatus(nextActor.Handle) {
+			continue
+		}
+		if !skipTurn && runtime.consumePendingConfusion(nextActor.Handle) {
+			if action := runtime.resolveConfusionNormalAttackAction(nextActor); action != nil {
+				actions = append(actions, *action)
+			}
+			runtime.setStoredPower(nextActor.Handle, 0)
+			actor = nextActor
+			if runtime.resolveWinner() != "" {
+				continue
+			}
 			continue
 		}
 		if !skipTurn {
@@ -1285,6 +1334,13 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			CanDodge:          true,
 			CanFat:            true,
 		}
+	case CommandEnemyDelude:
+		return commandProfile{
+			ActionName:        "魅惑术",
+			SourceType:        "oneE",
+			SourceActionLabel: "delude",
+			MPCost:            enemyDeludeMPCost,
+		}
 	case CommandEnemyPieceAtk:
 		profile := commandProfile{
 			ActionName:        "撕裂",
@@ -1351,6 +1407,9 @@ func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfo
 	}
 	if sourceEnemyCanEarthShock(enemy) && enemy.MP >= enemyEarthShockMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyEarthShock, enemyEarthShockChance) {
 		return CommandEnemyEarthShock
+	}
+	if sourceEnemyCanDelude(enemy) && enemy.MP >= enemyDeludeMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDelude, enemyDeludeChance) {
+		return CommandEnemyDelude
 	}
 	if sourceEnemyCanDeadLight(enemy) && enemy.MP >= enemyDeadLightMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDeadLight, enemyDeadLightChance) {
 		return CommandEnemyDeadLight
@@ -1442,6 +1501,14 @@ func sourceEnemyCanEarthShock(enemy *CellInfoPush) bool {
 	return strings.TrimSpace(enemy.Name) == "黄风大寨主" || strings.Contains(normalizedDisplay, "monstermap/hfcastellan.swf")
 }
 
+func sourceEnemyCanDelude(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "黄风寨夫人" || strings.Contains(normalizedDisplay, "monstermap/hflady.swf")
+}
+
 func sourceEnemyShihukuPieceAttackChance(enemy *CellInfoPush) int {
 	if enemy == nil {
 		return 0
@@ -1493,6 +1560,13 @@ func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *
 	if runtime == nil || enemy == nil || target == nil {
 		return nil
 	}
+	if normalizeBattleCommandID(commandID) == CommandEnemyDelude {
+		action := runtime.resolveEnemyDeludeAction(enemy, target)
+		if strings.TrimSpace(action.ActionName) == "" {
+			return nil
+		}
+		return []ActionPush{action}
+	}
 	profile := runtime.battleCommandProfile(enemy, commandID)
 	if strings.TrimSpace(profile.SourceType) == "all" {
 		action := runtime.resolveAllTargetAttack(enemy, runtime.livingCells(CampTeam), commandID)
@@ -1502,6 +1576,43 @@ func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *
 		return []ActionPush{action}
 	}
 	return []ActionPush{runtime.resolveAttack(enemy, target, commandID)}
+}
+
+func (runtime *Runtime) resolveEnemyDeludeAction(enemy *CellInfoPush, target *CellInfoPush) ActionPush {
+	if runtime == nil || enemy == nil || target == nil || target.HP <= 0 {
+		return ActionPush{}
+	}
+	profile := runtime.battleCommandProfile(enemy, CommandEnemyDelude)
+	if profile.MPCost > 0 {
+		enemy.MP = maxInt(0, enemy.MP-profile.MPCost)
+	}
+	effect := BattleStatusEffect{
+		Name:          "混乱",
+		Display:       "20.png",
+		Description:   "这个状态让人失去理智&0;胡乱攻击甚至自己人。",
+		Rounds:        enemyDeludeStatusRounds,
+		SourceHandle:  enemy.Handle,
+		SourceSkill:   profile.ActionName,
+		AppliedAction: profile.SourceActionLabel,
+	}
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(enemy, target, effect))
+	return ActionPush{
+		BattleID:          runtime.BattleID,
+		ActorHandle:       enemy.Handle,
+		TargetHandle:      target.Handle,
+		CommandID:         CommandEnemyDelude,
+		ActionName:        profile.ActionName,
+		SourceMode:        sourceBattleActionMode(profile.SourceType),
+		SourceActionLabel: profile.SourceActionLabel,
+		Damage:            0,
+		TargetHP:          target.HP,
+		TargetMP:          target.MP,
+		TargetDead:        target.HP <= 0,
+		RefreshInfos:      []CellInfoPush{*enemy, *target},
+		Round:             runtime.Round,
+		Sequence:          runtime.nextSequence,
+	}
 }
 
 func (runtime *Runtime) resolveEnemyRampageActions(enemy *CellInfoPush) []ActionPush {
@@ -2788,6 +2899,12 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 					skipTurn = true
 				}
 			}
+		case "混乱":
+			action := runtime.resolveSkipTurnStatusAction(actor, effect)
+			if action != nil {
+				actions = append(actions, *action)
+				runtime.markPendingConfusion(actor.Handle)
+			}
 		}
 		effect.Rounds -= 1
 		if effect.Rounds <= 0 {
@@ -2803,6 +2920,9 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 	} else {
 		runtime.StatusEffects[actor.Handle] = effects
 	}
+	if skipTurn {
+		runtime.consumePendingConfusion(actor.Handle)
+	}
 	return actions, skipTurn
 }
 
@@ -2817,6 +2937,59 @@ func (runtime *Runtime) hasActiveAutoContinueSkipStatus(handle string) bool {
 		}
 	}
 	return false
+}
+
+func (runtime *Runtime) markPendingConfusion(handle string) {
+	if runtime == nil || strings.TrimSpace(handle) == "" {
+		return
+	}
+	if runtime.PendingConfusion == nil {
+		runtime.PendingConfusion = map[string]bool{}
+	}
+	runtime.PendingConfusion[handle] = true
+}
+
+func (runtime *Runtime) consumePendingConfusion(handle string) bool {
+	if runtime == nil || runtime.PendingConfusion == nil {
+		return false
+	}
+	if !runtime.PendingConfusion[handle] {
+		return false
+	}
+	delete(runtime.PendingConfusion, handle)
+	return true
+}
+
+func (runtime *Runtime) resolveConfusionNormalAttackAction(actor *CellInfoPush) *ActionPush {
+	target := runtime.resolveConfusionTarget(actor)
+	if target == nil {
+		return nil
+	}
+	commandID := CommandNormalAttack
+	if actor.Camp == CampEnemy {
+		commandID = CommandEnemyAttack
+	}
+	action := runtime.resolveAttack(actor, target, commandID)
+	return &action
+}
+
+func (runtime *Runtime) resolveConfusionTarget(actor *CellInfoPush) *CellInfoPush {
+	if runtime == nil || actor == nil || actor.HP <= 0 {
+		return nil
+	}
+	targets := make([]*CellInfoPush, 0, len(runtime.Cells)-1)
+	for index := range runtime.Cells {
+		cell := &runtime.Cells[index]
+		if cell.HP <= 0 || strings.TrimSpace(cell.Handle) == "" || cell.Handle == actor.Handle {
+			continue
+		}
+		targets = append(targets, cell)
+	}
+	if len(targets) == 0 {
+		return nil
+	}
+	roll := runtime.hashBattleRollWithSalt(actor, actor, CommandNormalAttack, "status:混乱:target")
+	return targets[roll%len(targets)]
 }
 
 func (runtime *Runtime) resolveWoundStatusAction(target *CellInfoPush, effect BattleStatusEffect) *ActionPush {

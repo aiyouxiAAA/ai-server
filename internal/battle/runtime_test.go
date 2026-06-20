@@ -4464,6 +4464,288 @@ func TestHuangfengFirstCastellanEarthShockUsesCapturedAllTargetSkill(t *testing.
 	}
 }
 
+func TestHuangfengLadyDeludeAppliesCapturedConfusionBuff(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-huangfeng-delude",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+	}
+	actor := &CellInfoPush{
+		Handle:     "5431285114036433",
+		Camp:       CampEnemy,
+		Name:       "黄风寨夫人",
+		DisplayURL: "monstermap/hflady.swf",
+		HP:         111,
+		MaxHP:      1200,
+		MP:         704,
+		MaxMP:      704,
+	}
+	target := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		HP:     1555,
+		MaxHP:  1555,
+		MP:     424,
+		MaxMP:  424,
+	}
+
+	actions := runtime.resolveEnemyCommandActions(actor, target, CommandEnemyDelude)
+
+	if len(actions) != 1 {
+		t.Fatalf("expected one captured 魅惑术 action, got %+v", actions)
+	}
+	action := actions[0]
+	if action.ActionName != "魅惑术" || action.SourceActionLabel != "delude" || action.SourceMode != "1" || action.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 魅惑术/delude one-target action, got %+v", action)
+	}
+	if action.Damage != 0 || action.TargetHP != target.HP || len(action.TargetActionResults) != 0 {
+		t.Fatalf("expected 魅惑术 to be status-only without target result rows, got %+v", action)
+	}
+	if actor.MP != 694 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 694 {
+		t.Fatalf("expected 魅惑术 to consume captured MP cost 10, actor=%+v action=%+v", actor, action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected 魅惑术 to push one 混乱 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "混乱" || buff.Display != "20.png" || buff.Description != "这个状态让人失去理智&0;胡乱攻击甚至自己人。" || buff.Round != 2 || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 混乱 BuffInfo metadata, got %+v", buff)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["混乱"]
+	if effect.Name != "混乱" || effect.Rounds != 2 || effect.SourceHandle != actor.Handle || effect.SourceSkill != "魅惑术" || effect.AppliedAction != "delude" || effect.SkipTurn {
+		t.Fatalf("expected captured 混乱 status without skip-turn, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestHuangfengLadyDeludeUsesCapturedChanceAndStatusAction(t *testing.T) {
+	if enemyDeludeChance != 33 || enemyDeludeMPCost != 10 || enemyDeludeStatusRounds != 2 {
+		t.Fatalf("expected captured delude chance/cost/rounds to stay 33/10/2, got chance=%d cost=%d rounds=%d", enemyDeludeChance, enemyDeludeMPCost, enemyDeludeStatusRounds)
+	}
+	if !sourceEnemyCanDelude(&CellInfoPush{Name: "黄风寨夫人"}) || !sourceEnemyCanDelude(&CellInfoPush{DisplayURL: "monstermap/hflady.swf"}) {
+		t.Fatal("expected 黄风寨夫人/hflady to unlock captured 魅惑术")
+	}
+	if sourceEnemyCanDelude(&CellInfoPush{Name: "黄风大寨主", DisplayURL: "monstermap/hfcastellan.swf"}) {
+		t.Fatal("expected non-hflady enemies not to unlock 魅惑术")
+	}
+	runtime := &Runtime{
+		BattleID:      "battle-huangfeng-confusion",
+		Round:         2,
+		nextSequence:  1,
+		StatusEffects: map[string]BattleStatusEffects{},
+	}
+	target := &CellInfoPush{
+		Handle: "player_21424",
+		Camp:   CampTeam,
+		HP:     1555,
+		MaxHP:  1555,
+		MP:     424,
+		MaxMP:  424,
+	}
+	runtime.applyStatusEffect(target.Handle, BattleStatusEffect{
+		Name:          "混乱",
+		Display:       "20.png",
+		Description:   "这个状态让人失去理智&0;胡乱攻击甚至自己人。",
+		Rounds:        2,
+		SourceHandle:  "5431285114036433",
+		SourceSkill:   "魅惑术",
+		AppliedAction: "delude",
+	})
+
+	statusActions, skipTurn := runtime.resolveStatusStartActions(target)
+
+	if skipTurn || len(statusActions) != 1 {
+		t.Fatalf("expected 混乱 to emit status action without skipping turn, skip=%v actions=%+v", skipTurn, statusActions)
+	}
+	action := statusActions[0]
+	if action.ActionName != "混乱" || action.ActorHandle != target.Handle || action.TargetHandle != target.Handle || action.SourceMode != "0" || action.SourceActionLabel != "battleStand" {
+		t.Fatalf("expected captured 混乱 battleStand self action, got %+v", action)
+	}
+	if runtime.StatusEffects[target.Handle].Effects["混乱"].Rounds != 1 {
+		t.Fatalf("expected first 混乱 status action to consume one round, got %+v", runtime.StatusEffects)
+	}
+	if !runtime.PendingConfusion[target.Handle] {
+		t.Fatalf("expected 混乱 status action to force the next command into random normal attack, got %+v", runtime.PendingConfusion)
+	}
+}
+
+func TestConfusionForcesCapturedPlayerNormalAttackAgainstTeammate(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-confusion-teammate",
+		Round:            4,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		PendingConfusion: map[string]bool{"player_21424": true},
+		Cells: []CellInfoPush{
+			{
+				Handle:  "player_21424",
+				Camp:    CampTeam,
+				HP:      1050,
+				MaxHP:   1525,
+				MP:      414,
+				MaxMP:   414,
+				Attack:  200,
+				Defense: 0,
+				Hit:     100,
+			},
+			{
+				Handle:  "player_21432",
+				Camp:    CampTeam,
+				HP:      715,
+				MaxHP:   715,
+				Defense: 0,
+				Dog:     0,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21424",
+		CommandID:    CommandDuoDuanZhan,
+		TargetHandle: "5431285114036433",
+		Round:        4,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected confused command to be accepted as forced normal attack, got %+v", result)
+	}
+	if len(result.Actions) == 0 {
+		t.Fatalf("expected forced normal attack action, got %+v", result)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "普通攻击" || action.CommandID != CommandNormalAttack || action.ActorHandle != "player_21424" || action.TargetHandle != "player_21432" || action.SourceActionLabel != "nomalAtk" {
+		t.Fatalf("expected captured confused teammate normal attack, got %+v", action)
+	}
+	if action.Damage <= 0 || runtime.cellByHandle("player_21432").HP >= 715 {
+		t.Fatalf("expected confused normal attack to damage teammate, action=%+v target=%+v", action, runtime.cellByHandle("player_21432"))
+	}
+	if runtime.cellByHandle("player_21424").MP != 414 {
+		t.Fatalf("expected forced normal attack not to spend requested skill MP, actor=%+v", runtime.cellByHandle("player_21424"))
+	}
+	if runtime.PendingConfusion["player_21424"] {
+		t.Fatalf("expected pending confusion command to be consumed, got %+v", runtime.PendingConfusion)
+	}
+}
+
+func TestConfusionAutoExecutesPlayerNormalAttackBeforeStartCommand(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-confusion-teammate",
+		Round:            4,
+		Phase:            PhasePlaying,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		PendingConfusion: map[string]bool{},
+		Cells: []CellInfoPush{
+			{
+				Handle:  "player_21424",
+				Camp:    CampTeam,
+				HP:      1050,
+				MaxHP:   1525,
+				MP:      414,
+				MaxMP:   414,
+				Attack:  200,
+				Defense: 0,
+				Hit:     100,
+			},
+			{
+				Handle:  "player_21432",
+				Camp:    CampTeam,
+				HP:      715,
+				MaxHP:   715,
+				Defense: 0,
+				Dog:     0,
+			},
+			{
+				Handle:  "enemy_dummy",
+				Camp:    CampEnemy,
+				Name:    "黄风寨喽啰",
+				HP:      1200,
+				MaxHP:   1200,
+				Attack:  1,
+				Defense: 0,
+				Hit:     100,
+			},
+		},
+	}
+	runtime.applyStatusEffect("player_21424", BattleStatusEffect{
+		Name:          "混乱",
+		Display:       "20.png",
+		Description:   "这个状态让人失去理智&0;胡乱攻击甚至自己人。",
+		Rounds:        1,
+		SourceHandle:  "5431285114036433",
+		SourceSkill:   "魅惑术",
+		AppliedAction: "delude",
+	})
+
+	result := runtime.resolveEnemyTurnAndNextCommand(&CellInfoPush{Handle: "not-in-team-order"}, nil)
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected confused turn to auto-resolve, got %+v", result)
+	}
+	statusIndex := -1
+	for index := range result.Actions {
+		action := result.Actions[index]
+		if action.ActionName == "混乱" && action.ActorHandle == "player_21424" && action.SourceActionLabel == "battleStand" {
+			statusIndex = index
+			break
+		}
+	}
+	if statusIndex < 0 {
+		t.Fatalf("expected 混乱 status action before auto attack, got %+v", result.Actions)
+	}
+	if statusIndex+1 >= len(result.Actions) {
+		t.Fatalf("expected auto normal attack after 混乱 status action, got %+v", result.Actions)
+	}
+	action := result.Actions[statusIndex+1]
+	if action.ActionName != "普通攻击" || action.CommandID != CommandNormalAttack || action.ActorHandle != "player_21424" || action.TargetHandle != "player_21432" || action.SourceActionLabel != "nomalAtk" {
+		t.Fatalf("expected captured 混乱 to auto normal-attack teammate before startCommand, got %+v actions=%+v", action, result.Actions)
+	}
+	if action.Damage <= 0 || runtime.cellByHandle("player_21432").HP >= 715 {
+		t.Fatalf("expected auto confused attack to damage teammate, action=%+v target=%+v", action, runtime.cellByHandle("player_21432"))
+	}
+	if runtime.PendingConfusion["player_21424"] {
+		t.Fatalf("expected auto confused attack to consume pending confusion, got %+v", runtime.PendingConfusion)
+	}
+	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle == "player_21424" {
+		t.Fatalf("expected no startCommand to be queued for confused actor, pendingStart=%+v", runtime.PendingStart)
+	}
+	if len(result.ClearBuffInfos) != 1 || result.ClearBuffInfos[0].TargetHandle != "player_21424" || result.ClearBuffInfos[0].Name != "混乱" {
+		t.Fatalf("expected expired 混乱 to clear during auto flow, got %+v", result.ClearBuffInfos)
+	}
+}
+
+func TestConfusionRandomTargetCanSelectEnemyOrTeammate(t *testing.T) {
+	found := map[string]bool{}
+	for index := 0; index < 300; index += 1 {
+		runtime := &Runtime{
+			BattleID:     fmt.Sprintf("battle-confusion-target-%d", index),
+			Round:        4,
+			nextSequence: 1,
+			Cells: []CellInfoPush{
+				{Handle: "player_21424", Camp: CampTeam, HP: 1000, MaxHP: 1000, Attack: 100, Hit: 100},
+				{Handle: "player_21432", Camp: CampTeam, HP: 800, MaxHP: 800},
+				{Handle: "5431285114036433", Camp: CampEnemy, Name: "黄风寨夫人", HP: 1200, MaxHP: 1200},
+			},
+		}
+		actor := runtime.cellByHandle("player_21424")
+		target := runtime.resolveConfusionTarget(actor)
+		if target != nil {
+			found[target.Handle] = true
+		}
+		if found["player_21432"] && found["5431285114036433"] {
+			return
+		}
+	}
+	t.Fatalf("expected 混乱 target roll to be able to select teammate and enemy, got %+v", found)
+}
+
 func TestFeixiandongLargerockFirePowerUsesCapturedAllTargetAction(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-feixiandong-fire-power",

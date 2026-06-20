@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -663,6 +664,132 @@ func TestHandlePacketClassicTownBattleBootyContainerMoveFiltersNames(t *testing.
 	}
 }
 
+func TestHandlePacketClassicTownBattleBootyMoveStacksCapturedLootIntoFullBag(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	template, ok := session.CapturedRoleItemTemplate("兽骨")
+	if !ok {
+		t.Fatal("expected captured 兽骨 template")
+	}
+	template.Type = "背包"
+	template.Index = 0
+	template.Count = 38
+	template.Owner = ""
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, template); !ok {
+		t.Fatal("expected existing 兽骨 stack to be granted")
+	}
+	fillBagSlotsForTest(t, store, socketSession, 1)
+	socketSession.battleLoot = buildClassicBattleLoot(socketSession, battle.ResultPayload{
+		Winner: battle.CampTeam,
+		Items:  []string{"兽骨x1"},
+	})
+	if len(socketSession.battleLoot) != 1 || socketSession.battleLoot[0].Owner != "" {
+		t.Fatalf("expected unbound 兽骨 battle loot, got %+v", socketSession.battleLoot)
+	}
+
+	moveResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType: "战斗",
+			TargetType: "背包",
+		}),
+	}, socketSession)
+	if !moveResult.handled {
+		t.Fatal("expected battle booty ContainerMove to be handled")
+	}
+	if len(moveResult.itemClears) != 1 || moveResult.itemClears[0].Type != "战斗" || moveResult.itemClears[0].Index != 0 {
+		t.Fatalf("expected battle slot to clear after stacking, got %+v", moveResult.itemClears)
+	}
+	if len(moveResult.itemInfos) != 1 || moveResult.itemInfos[0].Type != "背包" || moveResult.itemInfos[0].Name != "兽骨" || moveResult.itemInfos[0].Count != 39 || moveResult.itemInfos[0].Index != 0 {
+		t.Fatalf("expected loot to stack into existing 兽骨 slot, got %+v", moveResult.itemInfos)
+	}
+	if len(moveResult.chatMessages) != 0 {
+		t.Fatalf("expected no full-bag warning when stacking succeeds, got %+v", moveResult.chatMessages)
+	}
+	if len(socketSession.battleLoot) != 0 {
+		t.Fatalf("expected battle loot session container to be empty, got %+v", socketSession.battleLoot)
+	}
+}
+
+func TestHandlePacketClassicTownBattleBootyMoveStacksHeadboneWithIconDescriptionDrift(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	template, ok := session.CapturedRoleItemTemplate("头骨")
+	if !ok {
+		t.Fatal("expected captured 头骨 template")
+	}
+	template.Type = "背包"
+	template.Index = 0
+	template.Count = 16
+	template.Owner = ""
+	template.Description = strings.Replace(template.Description, "&101@102.png", "", 1)
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, template); !ok {
+		t.Fatal("expected existing 头骨 stack to be granted")
+	}
+	fillBagSlotsForTest(t, store, socketSession, 1)
+	socketSession.battleLoot = buildClassicBattleLoot(socketSession, battle.ResultPayload{
+		Winner: battle.CampTeam,
+		Items:  []string{"头骨x1"},
+	})
+
+	moveResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType: "战斗",
+			TargetType: "背包",
+		}),
+	}, socketSession)
+	if !moveResult.handled {
+		t.Fatal("expected battle booty ContainerMove to be handled")
+	}
+	if len(moveResult.itemClears) != 1 || moveResult.itemClears[0].Type != "战斗" || moveResult.itemClears[0].Index != 0 {
+		t.Fatalf("expected battle headbone slot to clear after stacking, got %+v", moveResult.itemClears)
+	}
+	if len(moveResult.itemInfos) != 1 || moveResult.itemInfos[0].Type != "背包" || moveResult.itemInfos[0].Name != "头骨" || moveResult.itemInfos[0].Count != 17 || moveResult.itemInfos[0].Index != 0 {
+		t.Fatalf("expected headbone loot to stack into existing slot, got %+v", moveResult.itemInfos)
+	}
+	if len(moveResult.chatMessages) != 0 {
+		t.Fatalf("expected no full-bag warning when headbone stacks, got %+v", moveResult.chatMessages)
+	}
+	if len(socketSession.battleLoot) != 0 {
+		t.Fatalf("expected battle loot session container to be empty, got %+v", socketSession.battleLoot)
+	}
+}
+
+func TestHandlePacketClassicTownBattleBootyMoveWarnsWhenBagFull(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	fillBagSlotsForTest(t, store, socketSession, 0)
+	socketSession.battleLoot = []session.RoleItem{{
+		Type:      "战斗",
+		Name:      "满背包测试物",
+		ItemType:  "own",
+		Count:     1,
+		Index:     0,
+		ItemLevel: 1,
+	}}
+
+	moveResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType: "战斗",
+			TargetType: "背包",
+		}),
+	}, socketSession)
+	if !moveResult.handled {
+		t.Fatal("expected battle booty ContainerMove to be handled")
+	}
+	if len(moveResult.itemClears) != 0 || len(moveResult.itemInfos) != 0 {
+		t.Fatalf("expected no item changes when full bag rejects loot, got infos=%+v clears=%+v", moveResult.itemInfos, moveResult.itemClears)
+	}
+	if len(moveResult.chatMessages) != 1 || !strings.Contains(moveResult.chatMessages[0].Msg, "背包空间不足") || !moveResult.chatMessages[0].Bold {
+		t.Fatalf("expected full-bag warning message, got %+v", moveResult.chatMessages)
+	}
+	if len(socketSession.battleLoot) != 1 || socketSession.battleLoot[0].Name != "满背包测试物" {
+		t.Fatalf("expected rejected loot to remain in battle container, got %+v", socketSession.battleLoot)
+	}
+}
+
 func TestHandlePacketClassicTownBattleBootyContainerMoveExchangesBattleSlots(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	sourceIndex := 0
@@ -1264,8 +1391,8 @@ func TestBuildClassicBattleLootUsesCapturedSourceItemMetadata(t *testing.T) {
 	if item.Display != "70.png" || item.ItemType != "own" || !strings.Contains(item.Description, "f_i_肉") {
 		t.Fatalf("expected captured meat display metadata, got %+v", item)
 	}
-	if item.Handle != socketSession.selectedRole.RoleID || item.Owner != socketSession.selectedRole.DisplayName {
-		t.Fatalf("expected loot ownership metadata from selected role, got %+v", item)
+	if item.Handle != socketSession.selectedRole.RoleID || item.Owner != "" {
+		t.Fatalf("expected loot handle without role-bound owner metadata, got %+v", item)
 	}
 }
 
@@ -5330,6 +5457,24 @@ func grantRoleItemTemplateForTest(t *testing.T, store *session.Store, socketSess
 		t.Fatalf("expected grant item %s", name)
 	}
 	return granted
+}
+
+func fillBagSlotsForTest(t *testing.T, store *session.Store, socketSession *packetSession, startIndex int) {
+	t.Helper()
+
+	for index := startIndex; index < 30; index += 1 {
+		item := session.RoleItem{
+			Type:      "背包",
+			Name:      "test-slot-" + strconv.Itoa(index),
+			ItemType:  "own",
+			Count:     1,
+			Index:     index,
+			ItemLevel: 1,
+		}
+		if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, item); !ok {
+			t.Fatalf("expected filler item for bag slot %d to be granted", index)
+		}
+	}
 }
 
 func startClassicBattleForTest(t *testing.T, socketSession *packetSession) packetResult {

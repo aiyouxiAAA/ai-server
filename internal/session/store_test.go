@@ -535,9 +535,12 @@ func TestStoreRoleInventoryPreservesCapturedFullInventoryDefaultLikeSlots(t *tes
 	}
 	store.rolesByPID[login.PlayerID][0].Items = []RoleItem{defaultLike, fullInventoryItem}
 
-	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	items, capacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
 	if !ok {
 		t.Fatal("expected bag items")
+	}
+	if capacity != 42 {
+		t.Fatalf("expected captured index 36 to expand visible bag capacity to 42, got %d", capacity)
 	}
 	if _, ok := findRoleItem(items, "背包", defaultLike.Index); !ok {
 		t.Fatalf("expected default-like item in captured full inventory to remain, got %+v", items)
@@ -549,6 +552,56 @@ func TestStoreRoleInventoryPreservesCapturedFullInventoryDefaultLikeSlots(t *tes
 		if item.Name == "铁斧" {
 			t.Fatalf("expected captured full inventory without starter axe pollution, got %+v", items)
 		}
+	}
+}
+
+func TestStoreRoleInventoryCapacityFollowsCapturedExpandedIndexes(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "扩格背包女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	items := make([]RoleItem, 0, 31)
+	for index := 0; index < defaultBagCap; index += 1 {
+		items = append(items, RoleItem{
+			Type:      "背包",
+			Name:      "占位物",
+			ItemType:  "own",
+			Count:     1,
+			Index:     index,
+			ItemLevel: 1,
+		})
+	}
+	items = append(items, RoleItem{
+		Type:      "背包",
+		Name:      "红缨",
+		ItemType:  "null",
+		Display:   "77.png",
+		Count:     1,
+		Index:     39,
+		ItemLevel: 1,
+	})
+	store.rolesByPID[login.PlayerID][0].Items = items
+
+	capacity, ok := store.GetRoleContainerCapacity(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok || capacity != 42 {
+		t.Fatalf("expected expanded bag capacity 42 from captured index 39, ok=%v capacity=%d", ok, capacity)
+	}
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+		Type:      "背包",
+		Name:      "新材料",
+		ItemType:  "own",
+		Count:     1,
+		Index:     -1,
+		ItemLevel: 1,
+	})
+	if !ok || granted.Index != 30 {
+		t.Fatalf("expected grant to use first expanded empty slot 30, ok=%v item=%+v", ok, granted)
 	}
 }
 

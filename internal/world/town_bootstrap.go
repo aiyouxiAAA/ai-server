@@ -206,6 +206,23 @@ var capturedTownTransportRouteDestinations = map[townTransportRouteKey]TownTrans
 	{FromMapID: 74, Handle: "transp_75"}: {MapID: 75, Spawn: SpawnPoint{X: 1332, Y: 394}},
 	{FromMapID: 75, Handle: "transp_76"}: {MapID: 76, Spawn: SpawnPoint{X: 129, Y: 525}},
 	{FromMapID: 76, Handle: "transp_18"}: {MapID: 18, Spawn: SpawnPoint{X: 600, Y: 300}},
+
+	{FromMapID: 122, Handle: "transp_146"}: {MapID: 146, Spawn: SpawnPoint{X: 1860, Y: 448}},
+	{FromMapID: 146, Handle: "transp_147"}: {MapID: 147, Spawn: SpawnPoint{X: 2850, Y: 498}},
+	{FromMapID: 146, Handle: "transp_152"}: {MapID: 152, Spawn: SpawnPoint{X: 2863, Y: 550}},
+	{FromMapID: 147, Handle: "transp_148"}: {MapID: 148, Spawn: SpawnPoint{X: 1855, Y: 468}},
+	{FromMapID: 148, Handle: "transp_149"}: {MapID: 149, Spawn: SpawnPoint{X: 129, Y: 544}},
+	{FromMapID: 149, Handle: "transp_148"}: {MapID: 148, Spawn: SpawnPoint{X: 424, Y: 401}},
+	{FromMapID: 149, Handle: "transp_150"}: {MapID: 150, Spawn: SpawnPoint{X: 1426, Y: 633}},
+	{FromMapID: 150, Handle: "transp_149"}: {MapID: 149, Spawn: SpawnPoint{X: 2280, Y: 365}},
+	{FromMapID: 150, Handle: "transp_153"}: {MapID: 153, Spawn: SpawnPoint{X: 2785, Y: 434}},
+	{FromMapID: 151, Handle: "transp_150"}: {MapID: 150, Spawn: SpawnPoint{X: 2893, Y: 469}},
+	{FromMapID: 152, Handle: "transp_151"}: {MapID: 151, Spawn: SpawnPoint{X: 2373, Y: 426}},
+	{FromMapID: 153, Handle: "transp_156"}: {MapID: 156, Spawn: SpawnPoint{X: 2382, Y: 473}},
+	{FromMapID: 154, Handle: "transp_155"}: {MapID: 155, Spawn: SpawnPoint{X: 1841, Y: 506}},
+	{FromMapID: 155, Handle: "transp_122"}: {MapID: 122, Spawn: SpawnPoint{X: 530, Y: 520}},
+	{FromMapID: 156, Handle: "transp_157"}: {MapID: 157, Spawn: SpawnPoint{X: 2890, Y: 494}},
+	{FromMapID: 157, Handle: "transp_154"}: {MapID: 154, Spawn: SpawnPoint{X: 920, Y: 159}},
 }
 
 type townMapsIndexFile struct {

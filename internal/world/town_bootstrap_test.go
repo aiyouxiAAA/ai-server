@@ -268,6 +268,92 @@ func TestResolveTownTransportAnswerUsesShuiliandongDestination(t *testing.T) {
 	}
 }
 
+func TestResolveTownTransportAnswerFromMapUsesCapturedHuangfengzhaiRouteSpawns(t *testing.T) {
+	testCases := []struct {
+		fromMapID int
+		handle    string
+		mapID     int
+		spawn     SpawnPoint
+	}{
+		{fromMapID: 122, handle: "transp_146", mapID: 146, spawn: SpawnPoint{X: 1860, Y: 448}},
+		{fromMapID: 146, handle: "transp_147", mapID: 147, spawn: SpawnPoint{X: 2850, Y: 498}},
+		{fromMapID: 146, handle: "transp_152", mapID: 152, spawn: SpawnPoint{X: 2863, Y: 550}},
+		{fromMapID: 147, handle: "transp_148", mapID: 148, spawn: SpawnPoint{X: 1855, Y: 468}},
+		{fromMapID: 148, handle: "transp_149", mapID: 149, spawn: SpawnPoint{X: 129, Y: 544}},
+		{fromMapID: 149, handle: "transp_148", mapID: 148, spawn: SpawnPoint{X: 424, Y: 401}},
+		{fromMapID: 149, handle: "transp_150", mapID: 150, spawn: SpawnPoint{X: 1426, Y: 633}},
+		{fromMapID: 150, handle: "transp_149", mapID: 149, spawn: SpawnPoint{X: 2280, Y: 365}},
+		{fromMapID: 150, handle: "transp_153", mapID: 153, spawn: SpawnPoint{X: 2785, Y: 434}},
+		{fromMapID: 151, handle: "transp_150", mapID: 150, spawn: SpawnPoint{X: 2893, Y: 469}},
+		{fromMapID: 152, handle: "transp_151", mapID: 151, spawn: SpawnPoint{X: 2373, Y: 426}},
+		{fromMapID: 153, handle: "transp_156", mapID: 156, spawn: SpawnPoint{X: 2382, Y: 473}},
+		{fromMapID: 154, handle: "transp_155", mapID: 155, spawn: SpawnPoint{X: 1841, Y: 506}},
+		{fromMapID: 155, handle: "transp_122", mapID: 122, spawn: SpawnPoint{X: 530, Y: 520}},
+		{fromMapID: 156, handle: "transp_157", mapID: 157, spawn: SpawnPoint{X: 2890, Y: 494}},
+		{fromMapID: 157, handle: "transp_154", mapID: 154, spawn: SpawnPoint{X: 920, Y: 159}},
+	}
+
+	for _, testCase := range testCases {
+		destination, ok := ResolveTownTransportAnswerFromMap(testCase.fromMapID, testCase.handle, "goto")
+		if !ok {
+			t.Fatalf("expected map%d %s to resolve", testCase.fromMapID, testCase.handle)
+		}
+		if destination.MapID != testCase.mapID || destination.Spawn != testCase.spawn {
+			t.Fatalf("expected map%d %s -> map%d spawn %+v, got map%d spawn %+v",
+				testCase.fromMapID, testCase.handle, testCase.mapID, testCase.spawn, destination.MapID, destination.Spawn)
+		}
+	}
+}
+
+func TestResolveTownTransportAnswerFromMapCoversHuangfengzhaiSceneTransports(t *testing.T) {
+	testCases := []struct {
+		fromMapID int
+		handle    string
+		mapID     int
+	}{
+		{fromMapID: 122, handle: "transp_121", mapID: 121},
+		{fromMapID: 122, handle: "transp_146", mapID: 146},
+		{fromMapID: 146, handle: "transp_122", mapID: 122},
+		{fromMapID: 146, handle: "transp_147", mapID: 147},
+		{fromMapID: 146, handle: "transp_152", mapID: 152},
+		{fromMapID: 147, handle: "transp_146", mapID: 146},
+		{fromMapID: 147, handle: "transp_148", mapID: 148},
+		{fromMapID: 148, handle: "transp_147", mapID: 147},
+		{fromMapID: 148, handle: "transp_149", mapID: 149},
+		{fromMapID: 149, handle: "transp_148", mapID: 148},
+		{fromMapID: 149, handle: "transp_150", mapID: 150},
+		{fromMapID: 150, handle: "transp_149", mapID: 149},
+		{fromMapID: 150, handle: "transp_151", mapID: 151},
+		{fromMapID: 150, handle: "transp_153", mapID: 153},
+		{fromMapID: 151, handle: "transp_150", mapID: 150},
+		{fromMapID: 151, handle: "transp_152", mapID: 152},
+		{fromMapID: 152, handle: "transp_146", mapID: 146},
+		{fromMapID: 152, handle: "transp_151", mapID: 151},
+		{fromMapID: 153, handle: "transp_150", mapID: 150},
+		{fromMapID: 153, handle: "transp_154", mapID: 154},
+		{fromMapID: 153, handle: "transp_156", mapID: 156},
+		{fromMapID: 154, handle: "transp_153", mapID: 153},
+		{fromMapID: 154, handle: "transp_155", mapID: 155},
+		{fromMapID: 154, handle: "transp_157", mapID: 157},
+		{fromMapID: 155, handle: "transp_122", mapID: 122},
+		{fromMapID: 155, handle: "transp_154", mapID: 154},
+		{fromMapID: 156, handle: "transp_153", mapID: 153},
+		{fromMapID: 156, handle: "transp_157", mapID: 157},
+		{fromMapID: 157, handle: "transp_154", mapID: 154},
+		{fromMapID: 157, handle: "transp_156", mapID: 156},
+	}
+
+	for _, testCase := range testCases {
+		destination, ok := ResolveTownTransportAnswerFromMap(testCase.fromMapID, testCase.handle, "goto")
+		if !ok {
+			t.Fatalf("expected map%d %s to resolve", testCase.fromMapID, testCase.handle)
+		}
+		if destination.MapID != testCase.mapID {
+			t.Fatalf("expected map%d %s -> map%d, got map%d", testCase.fromMapID, testCase.handle, testCase.mapID, destination.MapID)
+		}
+	}
+}
+
 func TestBuildTownBootstrapUsesCapturedShuiliandongVisibleMonsters(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-143",

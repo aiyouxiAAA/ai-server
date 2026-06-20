@@ -1103,11 +1103,27 @@ func canRoleItemsStack(existing RoleItem, incoming RoleItem) bool {
 		existing.Name == incoming.Name &&
 		existing.ItemType == incoming.ItemType &&
 		existing.Display == incoming.Display &&
-		existing.Description == incoming.Description &&
+		classicStackDescription(existing.Description) == classicStackDescription(incoming.Description) &&
 		existing.Level == incoming.Level &&
 		existing.EndTime == incoming.EndTime &&
 		existing.Owner == incoming.Owner &&
 		existing.ItemLevel == incoming.ItemLevel
+}
+
+func classicStackDescription(description string) string {
+	description = strings.TrimSpace(description)
+	for {
+		start := strings.Index(description, "&101@")
+		if start < 0 {
+			return description
+		}
+		rest := description[start+len("&101@"):]
+		next := strings.Index(rest, "&")
+		if next < 0 {
+			return strings.TrimSpace(description[:start])
+		}
+		description = description[:start] + rest[next:]
+	}
 }
 
 func remainingRolePoint(role RoleSummary) int {

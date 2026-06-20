@@ -1053,7 +1053,7 @@ func buildClassicBattleLoot(socketSession *packetSession, result battle.ResultPa
 		item.Count = count
 		item.Index = len(items)
 		item.Handle = socketSession.selectedRole.RoleID
-		item.Owner = socketSession.selectedRole.DisplayName
+		item.Owner = ""
 		items = append(items, item)
 	}
 	return items
@@ -1297,17 +1297,21 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 		remaining := make([]session.RoleItem, 0, len(socketSession.battleLoot))
 		itemInfos := []classicTownItemInfoPush{}
 		itemClears := []classicTownItemInfoClearPush{}
+		moveAttempts := 0
+		moveFailures := 0
 		for _, item := range socketSession.battleLoot {
 			if item.Type != classicBattleLootType || (len(nameFilter) > 0 && !nameFilter[item.Name]) {
 				remaining = append(remaining, item)
 				continue
 			}
 
+			moveAttempts += 1
 			moved := item
 			moved.Type = "背包"
 			moved.Index = -1
 			granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, moved)
 			if !ok {
+				moveFailures += 1
 				remaining = append(remaining, item)
 				continue
 			}
@@ -1321,6 +1325,14 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 			})
 		}
 		socketSession.battleLoot = remaining
+		chatMessages := []classicTownChatMessagePush{}
+		if moveFailures > 0 {
+			message := "背包空间不足，部分战利品未能放入背包。"
+			if moveFailures == moveAttempts {
+				message = "背包空间不足，战利品未能放入背包。"
+			}
+			chatMessages = append(chatMessages, classicTownSystemWarningMessage(message))
+		}
 
 		return packetResult{
 			containerCap: &classicTownContainerCapacityPush{
@@ -1329,9 +1341,10 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 				Capacity: classicBattleLootCap,
 				OpenType: "",
 			},
-			itemInfos:  itemInfos,
-			itemClears: itemClears,
-			handled:    true,
+			chatMessages: chatMessages,
+			itemInfos:    itemInfos,
+			itemClears:   itemClears,
+			handled:      true,
 		}
 	}
 	if sourceType == "背包" && targetType == "背包" && request.SourceIndex != nil && request.TargetIndex != nil {

@@ -18,6 +18,14 @@ type websocketWriter struct {
 	nextServerSeq             uint64
 	sourceMonsterReplayMu     sync.Mutex
 	sourceMonsterReplayCancel context.CancelFunc
+	sourceMonsterStateMu      sync.Mutex
+	sourceMonsterStates       map[string]classicTownSourceMonsterMoveState
+	sourceMonsterLastTargets  map[string]world.SpawnPoint
+}
+
+type classicTownSourceMonsterMoveState struct {
+	mapID    string
+	position world.SpawnPoint
 }
 
 const (
@@ -26,6 +34,7 @@ const (
 	classicTownSourceMonsterRunMultiplier      = 2.0
 	classicTownSourceMonsterReplayMinDelay     = 150 * time.Millisecond
 	classicTownSourceMonsterReplayMaxDelay     = 8 * time.Second
+	classicTownSourceMonsterChaseRadius        = 200.0
 )
 
 func (writer *websocketWriter) writePacket(cmd uint64, seq uint64, payload []byte) error {
@@ -61,6 +70,7 @@ func (writer *websocketWriter) writePush(cmd uint64, payload []byte) error {
 
 func (writer *websocketWriter) writeClassicTownBootstrap(snapshot world.TownBootstrapSnapshot) {
 	writer.stopClassicTownSourceMonsterMoveReplay()
+	writer.resetClassicTownSourceMonsterState(snapshot)
 
 	if err := writer.writePush(cmdClassicTownLoadMapPush, encodePayload(snapshot.LoadMap)); err != nil {
 		log.Printf("[ai-server] write classic town loadMap push failed: %v", err)
@@ -147,6 +157,10 @@ func (writer *websocketWriter) replayClassicTownSourceMonsterMoves(ctx context.C
 
 func (writer *websocketWriter) replayClassicTownSourceMonsterHandleMoves(ctx context.Context, steps []world.RoleMovePush) {
 	for _, step := range steps {
+		if !classicTownSourceMonsterReplayableStep(step) {
+			continue
+		}
+		writer.setClassicTownSourceMonsterPosition(step.Handle, step.MapID, world.SpawnPoint{X: step.X, Y: step.Y})
 		if err := writer.writePush(cmdClassicTownMoveRolePush, encodePayload(step)); err != nil {
 			log.Printf("[ai-server] write classic source monster moveRole replay failed: %v", err)
 			return
@@ -155,6 +169,10 @@ func (writer *websocketWriter) replayClassicTownSourceMonsterHandleMoves(ctx con
 			return
 		}
 	}
+}
+
+func classicTownSourceMonsterReplayableStep(step world.RoleMovePush) bool {
+	return step.Type != "Run"
 }
 
 func classicTownSourceMonsterReplayDelay(step world.RoleMovePush) time.Duration {
@@ -181,6 +199,117 @@ func classicTownSourceMonsterReplayDelay(step world.RoleMovePush) time.Duration 
 		return classicTownSourceMonsterReplayMaxDelay
 	}
 	return delay
+}
+
+func (writer *websocketWriter) resetClassicTownSourceMonsterState(snapshot world.TownBootstrapSnapshot) {
+	states := make(map[string]classicTownSourceMonsterMoveState)
+	for _, role := range snapshot.CreateRoles {
+		if role.Kind != "monster" || role.RoleID != "-2" || role.Handle == "" {
+			continue
+		}
+		states[role.Handle] = classicTownSourceMonsterMoveState{
+			mapID:    role.MapID,
+			position: role.SpawnFlash,
+		}
+	}
+
+	writer.sourceMonsterStateMu.Lock()
+	defer writer.sourceMonsterStateMu.Unlock()
+	writer.sourceMonsterStates = states
+	writer.sourceMonsterLastTargets = make(map[string]world.SpawnPoint)
+}
+
+func (writer *websocketWriter) setClassicTownSourceMonsterPosition(handle string, mapID string, position world.SpawnPoint) {
+	if handle == "" {
+		return
+	}
+
+	writer.sourceMonsterStateMu.Lock()
+	defer writer.sourceMonsterStateMu.Unlock()
+	if writer.sourceMonsterStates == nil {
+		writer.sourceMonsterStates = make(map[string]classicTownSourceMonsterMoveState)
+	}
+	state := writer.sourceMonsterStates[handle]
+	state.mapID = mapID
+	state.position = position
+	writer.sourceMonsterStates[handle] = state
+}
+
+func (writer *websocketWriter) removeClassicTownSourceMonsterStates(handles []string) {
+	if len(handles) == 0 {
+		return
+	}
+
+	writer.sourceMonsterStateMu.Lock()
+	defer writer.sourceMonsterStateMu.Unlock()
+	for _, handle := range handles {
+		delete(writer.sourceMonsterStates, handle)
+		delete(writer.sourceMonsterLastTargets, handle)
+	}
+}
+
+func (writer *websocketWriter) classicTownSourceMonsterChaseMoves(playerMove world.RoleMovePush) []world.RoleMovePush {
+	if playerMove.MapID == "" {
+		return nil
+	}
+
+	playerCurrent := world.SpawnPoint{X: playerMove.X, Y: playerMove.Y}
+	playerTarget := world.SpawnPoint{X: playerMove.TX, Y: playerMove.TY}
+
+	writer.sourceMonsterStateMu.Lock()
+	defer writer.sourceMonsterStateMu.Unlock()
+	if len(writer.sourceMonsterStates) == 0 {
+		return nil
+	}
+	if writer.sourceMonsterLastTargets == nil {
+		writer.sourceMonsterLastTargets = make(map[string]world.SpawnPoint)
+	}
+
+	moves := make([]world.RoleMovePush, 0)
+	for handle, state := range writer.sourceMonsterStates {
+		if state.mapID != playerMove.MapID {
+			continue
+		}
+		target, ok := classicTownSourceMonsterChaseTarget(state.position, playerCurrent, playerTarget)
+		if !ok {
+			continue
+		}
+		if lastTarget, ok := writer.sourceMonsterLastTargets[handle]; ok && lastTarget == target {
+			continue
+		}
+		move := world.RoleMovePush{
+			Handle: handle,
+			Type:   "Run",
+			X:      state.position.X,
+			Y:      state.position.Y,
+			Z:      0,
+			TX:     target.X,
+			TY:     target.Y,
+			TZ:     0,
+			MapID:  state.mapID,
+		}
+		moves = append(moves, move)
+		state.position = target
+		writer.sourceMonsterStates[handle] = state
+		writer.sourceMonsterLastTargets[handle] = target
+	}
+	return moves
+}
+
+func classicTownSourceMonsterChaseTarget(source world.SpawnPoint, playerCurrent world.SpawnPoint, playerTarget world.SpawnPoint) (world.SpawnPoint, bool) {
+	if isClassicTownSourceMonsterWithinChaseRadius(source, playerTarget) {
+		return playerTarget, true
+	}
+	if isClassicTownSourceMonsterWithinChaseRadius(source, playerCurrent) {
+		return playerCurrent, true
+	}
+	return world.SpawnPoint{}, false
+}
+
+func isClassicTownSourceMonsterWithinChaseRadius(source world.SpawnPoint, target world.SpawnPoint) bool {
+	dx := float64(target.X - source.X)
+	dy := float64(target.Y - source.Y)
+	return math.Sqrt(dx*dx+dy*dy) <= classicTownSourceMonsterChaseRadius
 }
 
 func sleepWithContext(ctx context.Context, delay time.Duration) bool {

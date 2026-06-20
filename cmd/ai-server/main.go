@@ -69,6 +69,7 @@ const (
 	cmdClassicTownSaleItemReq       = 1182
 	cmdClassicTownMoveRoleReq       = 1184
 	cmdClassicTownMoveRolePush      = 1185
+	cmdClassicTownFollowRolePush    = 1186
 	cmdClassicSocialFriendInfo      = 1140
 	cmdClassicSocialClearFriend     = 1141
 	cmdClassicSocialBlackListInfo   = 1142
@@ -522,8 +523,15 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		socketWriter.removeClassicTownSourceMonsterStates(result.removeRoleHandles)
 		if result.moveRole != nil && socketSession.selectedRole != nil && socketSession.playerBase != nil {
 			worldSceneHub.broadcastMoveRoleToMap(socketSession.playerBase.MapID, socketSession.selectedRole.RoleID, *result.moveRole)
+			for _, chaseMove := range socketWriter.classicTownSourceMonsterChaseMoves(*result.moveRole) {
+				if err := socketWriter.writePush(cmdClassicTownMoveRolePush, encodePayload(chaseMove)); err != nil {
+					log.Printf("[ai-server] write classic source monster chase moveRole failed: %v", err)
+					return
+				}
+			}
 		}
 		if result.battleStart == nil && result.battleCommand != nil {
 			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {

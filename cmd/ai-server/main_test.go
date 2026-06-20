@@ -1442,6 +1442,122 @@ func TestBuildClassicBattleLootUsesPointCouponMetadata(t *testing.T) {
 	}
 }
 
+func TestBuildClassicBattleLootUsesHuangfengEquipmentMetadata(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
+		Winner: battle.CampTeam,
+		Items:  []string{"黄风腰带x1"},
+	})
+
+	if len(loot) != 1 {
+		t.Fatalf("expected one 黄风腰带 loot stack, got %+v", loot)
+	}
+	item := loot[0]
+	if item.Type != classicBattleLootType || item.Name != "黄风腰带" || item.Count != 1 || item.Index != 0 {
+		t.Fatalf("expected 黄风腰带 reward in battle container slot 0, got %+v", item)
+	}
+	if item.Display != "547.png" || item.ItemType != "equip" || item.ItemLevel != 2 || !strings.Contains(item.Description, "护具") {
+		t.Fatalf("expected captured 黄风腰带 equipment metadata, got %+v", item)
+	}
+	if item.Handle != socketSession.selectedRole.RoleID || item.Owner != "" {
+		t.Fatalf("expected loot handle without role-bound owner metadata, got %+v", item)
+	}
+}
+
+func TestBuildClassicBattleLootUsesHuangfengChiefRewardMetadata(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
+		Winner: battle.CampTeam,
+		Items: []string{
+			"红方巾x2",
+			"绸缎x3",
+			"铜钱x110",
+			"盗贼的首级x1",
+			"呼啸战靴x1",
+			"寨夫人上衣x1",
+			"寨夫人护腕x1",
+			"宝匣x1",
+		},
+	})
+
+	if len(loot) != 8 {
+		t.Fatalf("expected eight Huangfeng chief loot stacks, got %+v", loot)
+	}
+	expected := map[string]struct {
+		count     int
+		display   string
+		itemType  string
+		itemLevel int
+		token     string
+	}{
+		"红方巾":   {count: 2, display: "121.png", itemType: "null", itemLevel: 1, token: "红色绸缎制方巾"},
+		"绸缎":    {count: 3, display: "79.png", itemType: "null", itemLevel: 1, token: "代表高贵的布料"},
+		"铜钱":    {count: 110, display: "163.png", itemType: "own", itemLevel: 1, token: "游戏中的货币"},
+		"盗贼的首级": {count: 1, display: "120.png", itemType: "null", itemLevel: 2, token: "击杀盗贼的证明"},
+		"呼啸战靴":  {count: 1, display: "502.png", itemType: "equip", itemLevel: 2, token: "护具·足部"},
+		"寨夫人上衣": {count: 1, display: "474.png", itemType: "equip", itemLevel: 2, token: "护具·躯干"},
+		"寨夫人护腕": {count: 1, display: "467.png", itemType: "equip", itemLevel: 2, token: "护具·护腕"},
+		"宝匣":    {count: 1, display: "596.png", itemType: "own", itemLevel: 3, token: "双击打开"},
+	}
+	for index, item := range loot {
+		want, ok := expected[item.Name]
+		if !ok {
+			t.Fatalf("unexpected Huangfeng chief loot item %+v in %+v", item, loot)
+		}
+		if item.Type != classicBattleLootType || item.Count != want.count || item.Index != index || item.Display != want.display || item.ItemType != want.itemType || item.ItemLevel != want.itemLevel {
+			t.Fatalf("expected %s loot metadata count=%d display=%s itemType=%s itemLevel=%d index=%d, got %+v", item.Name, want.count, want.display, want.itemType, want.itemLevel, index, item)
+		}
+		if !strings.Contains(item.Description, want.token) || item.Handle != socketSession.selectedRole.RoleID || item.Owner != "" {
+			t.Fatalf("expected %s source description and unowned battle loot handle, got %+v", item.Name, item)
+		}
+	}
+}
+
+func TestBuildClassicBattleLootUsesHuangfengCandidateRewardMetadata(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	loot := buildClassicBattleLoot(socketSession, battle.ResultPayload{
+		Winner: battle.CampTeam,
+		Items: []string{
+			"刺x1",
+			"红缨x2",
+			"刀客布衣x1",
+			"剔骨刀x1",
+			"图腾面具x1",
+			"黄风围巾x1",
+		},
+	})
+
+	if len(loot) != 6 {
+		t.Fatalf("expected six Huangfeng candidate loot stacks, got %+v", loot)
+	}
+	expected := map[string]struct {
+		count     int
+		display   string
+		itemType  string
+		itemLevel int
+		token     string
+	}{
+		"刺":    {count: 1, display: "134.png", itemType: "null", itemLevel: 1, token: "锋利尖锐"},
+		"红缨":   {count: 2, display: "77.png", itemType: "null", itemLevel: 1, token: "丝线染色后制成"},
+		"刀客布衣": {count: 1, display: "540.png", itemType: "equip", itemLevel: 2, token: "护具·躯干"},
+		"剔骨刀":  {count: 1, display: "552.png", itemType: "equip", itemLevel: 2, token: "武器·匕首系"},
+		"图腾面具": {count: 1, display: "135.png", itemType: "null", itemLevel: 2, token: "诅咒的面具"},
+		"黄风围巾": {count: 1, display: "548.png", itemType: "equip", itemLevel: 3, token: "护具·头部"},
+	}
+	for index, item := range loot {
+		want, ok := expected[item.Name]
+		if !ok {
+			t.Fatalf("unexpected Huangfeng candidate loot item %+v in %+v", item, loot)
+		}
+		if item.Type != classicBattleLootType || item.Count != want.count || item.Index != index || item.Display != want.display || item.ItemType != want.itemType || item.ItemLevel != want.itemLevel {
+			t.Fatalf("expected %s loot metadata count=%d display=%s itemType=%s itemLevel=%d index=%d, got %+v", item.Name, want.count, want.display, want.itemType, want.itemLevel, index, item)
+		}
+		if !strings.Contains(item.Description, want.token) || item.Handle != socketSession.selectedRole.RoleID || item.Owner != "" {
+			t.Fatalf("expected %s source description and unowned battle loot handle, got %+v", item.Name, item)
+		}
+	}
+}
+
 func TestPointCouponThiefBattleOverPushesWorldNotice(t *testing.T) {
 	store := session.NewStore()
 	socketSession, role := seedSelectedRoleSessionInStore(t, store, "恐龙抗狼1")

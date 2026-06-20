@@ -461,16 +461,20 @@ func fillMissingRoleItemTemplateFields(item RoleItem) RoleItem {
 	if !ok {
 		return item
 	}
+	usesTemplateDisplay := item.Display == "" || item.Display == template.Display
+	usesTemplateDescription := item.Description == "" ||
+		item.Description == genericCollectionRewardDescription(item.Name) ||
+		item.Description == template.Description
 	if item.Display == "" {
 		item.Display = template.Display
 	}
-	if item.ItemType == "" {
+	if item.ItemType == "" || (item.ItemType == "own" && template.ItemType != "" && template.ItemType != item.ItemType && usesTemplateDisplay && usesTemplateDescription) {
 		item.ItemType = template.ItemType
 	}
 	if item.Description == "" || item.Description == genericCollectionRewardDescription(item.Name) {
 		item.Description = template.Description
 	}
-	if item.ItemLevel <= 0 {
+	if item.ItemLevel <= 0 || (template.ItemLevel > item.ItemLevel && usesTemplateDisplay && usesTemplateDescription && item.ItemType == template.ItemType) {
 		item.ItemLevel = template.ItemLevel
 	}
 	return item
@@ -1514,6 +1518,77 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 		},
 		{
 			Type:        "背包",
+			Name:        "黄风腰带",
+			ItemType:    "equip",
+			Display:     "547.png",
+			Description: "f_i_黄风腰带^5BC46D&24@护具&25@1&21@25&3@12&4@5&5@2%&27@sitem_jhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 回避+3&103@0&104@0&105@&107@&108@160",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   2,
+		},
+		{
+			Type:     "装备",
+			Name:     "黄风围巾",
+			ItemType: "equip",
+			Display:  "548.png",
+			Description: `f_i_黄风围巾^00ccff&23@凿孔上限 9 格&24@护具·头部&25@1&21@28&3@19&4@12&5@100&13@7<$jstr>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+3
+[精炼+1] 每升一级 魔法防御+3
+[精炼+1] 每升一级 命中+10
+[精炼+6] 每升一级 幸运+3
+<font color='#00cc00'>特殊效果:
+麻痹抗性:+5%
+眩晕抗性:+5%
+冰冻抗性:+8%</font>
+[精炼+1] 每升一级 麻痹抗性+1%
+[精炼+1] 每升一级 眩晕抗性+1%
+[精炼+1] 每升一级 冰冻抗性+1%&103@0&104@0&105@&107@&108@160`,
+			Count:     1,
+			Index:     0,
+			ItemLevel: 3,
+		},
+		{
+			Type:        "背包",
+			Name:        "红方巾",
+			ItemType:    "null",
+			Display:     "121.png",
+			Description: "f_i_红方巾^ffffff&24@材料&25@99&20@红色绸缎制方巾.&27@sitem_ezhj&103@0&104@0&105@&107@&108@21",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "绸缎",
+			ItemType:    "null",
+			Display:     "79.png",
+			Description: "f_i_绸缎^ffffff&24@材料&25@99&20@代表高贵的布料.颜色光滑亮丽&0;五彩缤纷.&27@sitem_ezhj&103@0&104@0&105@&107@&108@24",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "刺",
+			ItemType:    "null",
+			Display:     "134.png",
+			Description: "f_i_刺^ffffff&24@材料&25@99&20@一些植物自带的锋利尖锐的刺状物.&27@sitem_piput&103@0&104@0&105@&107@&108@19",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "红缨",
+			ItemType:    "null",
+			Display:     "77.png",
+			Description: "f_i_红缨&24@材料&25@99&20@丝线染色后制成&0;用于武器和护具的装饰.&27@sitem_ezhj&103@0&104@0&105@&107@&108@24",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
 			Name:        "水帘洞通行证",
 			ItemType:    "null",
 			Display:     "781.png",
@@ -1710,6 +1785,66 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 			Description: "f_i_蓝晶护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@18&3@8&4@12&14@4<$jintt>&15@2&27@sitem_jhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 敏捷+2&101@603.png&103@0&104@0&105@&107@&108@210",
 			Count:       1,
 			Index:       1,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "呼啸战靴",
+			ItemType:    "equip",
+			Display:     "502.png",
+			Description: "f_i_呼啸战靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@26&3@15&12@10&15@6&27@sitem_piput&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@220",
+			Count:       1,
+			Index:       12,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "寨夫人上衣",
+			ItemType:    "equip",
+			Display:     "474.png",
+			Description: "f_i_寨夫人上衣^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@26&3@31&4@20&15@5&27@sitem_ezhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 回避+5\n<font color='#00cc00'>特殊效果:\n混乱抗性:+30%&103@0&104@0&105@&107@&108@250",
+			Count:       1,
+			Index:       4,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "寨夫人护腕",
+			ItemType:    "equip",
+			Display:     "467.png",
+			Description: "f_i_寨夫人护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@24&3@14&4@4&9@10&11@10&27@sitem_ezhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 气力上限+10&103@0&104@0&105@&107@&108@230",
+			Count:       1,
+			Index:       2,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "刀客布衣",
+			ItemType:    "equip",
+			Display:     "540.png",
+			Description: "f_i_刀客布衣^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@16&3@20&4@6&15@4&27@sitem_ezhj&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 耐力+1&103@0&104@0&105@&107@&108@120",
+			Count:       1,
+			Index:       4,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "装备",
+			Name:        "剔骨刀",
+			ItemType:    "equip",
+			Display:     "552.png",
+			Description: "f_i_剔骨刀^5BC46D&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@15&22@游侠&1@38&15@2<$jagi>&17@3<$jlck>&27@sitem_jwep&19@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+6] 每升一级 回避+2\n<font color='#00cc00'>特殊效果:\n击中敌人时&0;有2%的机率使敌人进入外伤状态3回合(每回合损失气力15~30点)</font>&103@0&104@0&105@&107@&108@142",
+			Count:       1,
+			Index:       3,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "背包",
+			Name:        "图腾面具",
+			ItemType:    "null",
+			Display:     "135.png",
+			Description: "f_i_图腾面具^5BC46D&24@材料&25@99&20@看似已经被下了诅咒的面具&0;有点毛骨悚然.&27@sitem_wood&103@0&104@0&105@&107@&108@34",
+			Count:       1,
+			Index:       0,
 			ItemLevel:   2,
 		},
 		{

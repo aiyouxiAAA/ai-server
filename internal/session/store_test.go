@@ -1649,6 +1649,140 @@ func TestStoreCapturedMaterialTemplatesFillMissingIconFields(t *testing.T) {
 	}
 }
 
+func TestStoreCapturedHuangfengEquipmentDropTemplateFillsMissingIconFields(t *testing.T) {
+	template, ok := CapturedRoleItemTemplate("黄风腰带")
+	if !ok {
+		t.Fatal("expected captured source equipment template for 黄风腰带")
+	}
+	if template.Display != "547.png" || template.ItemType != "equip" || template.ItemLevel != 2 {
+		t.Fatalf("expected 黄风腰带 template display=547.png itemType=equip itemLevel=2, got %+v", template)
+	}
+	if !strings.Contains(template.Description, "护具") || !strings.Contains(template.Description, "sitem_jhj") {
+		t.Fatalf("expected 黄风腰带 source description metadata, got %q", template.Description)
+	}
+
+	item := normalizeRoleItem(RoleItem{
+		Type:  "背包",
+		Name:  "黄风腰带",
+		Count: 1,
+		Index: 40,
+	})
+	if item.Display != "547.png" || item.ItemType != "equip" || item.Description == "" || item.ItemLevel != 2 {
+		t.Fatalf("expected 黄风腰带 missing fields to be filled from template, got %+v", item)
+	}
+
+	staleFallbackItem := normalizeRoleItem(RoleItem{
+		Type:        "背包",
+		Name:        "黄风腰带",
+		ItemType:    "own",
+		Display:     template.Display,
+		Description: template.Description,
+		Count:       1,
+		Index:       40,
+		ItemLevel:   1,
+	})
+	if staleFallbackItem.ItemType != "equip" || staleFallbackItem.ItemLevel != 2 {
+		t.Fatalf("expected stale fallback 黄风腰带 metadata to be repaired from template, got %+v", staleFallbackItem)
+	}
+}
+
+func TestStoreCapturedHuangfengBossRewardTemplatesFillMissingIconFields(t *testing.T) {
+	cases := []struct {
+		name         string
+		templateType string
+		display      string
+		itemType     string
+		slot         int
+		itemLevel    int
+		token        string
+	}{
+		{name: "红方巾", templateType: "背包", display: "121.png", itemType: "null", slot: 0, itemLevel: 1, token: "红色绸缎制方巾"},
+		{name: "绸缎", templateType: "背包", display: "79.png", itemType: "null", slot: 0, itemLevel: 1, token: "代表高贵的布料"},
+		{name: "呼啸战靴", templateType: "装备", display: "502.png", itemType: "equip", slot: 12, itemLevel: 2, token: "护具·足部"},
+		{name: "寨夫人上衣", templateType: "装备", display: "474.png", itemType: "equip", slot: 4, itemLevel: 2, token: "护具·躯干"},
+		{name: "寨夫人护腕", templateType: "装备", display: "467.png", itemType: "equip", slot: 2, itemLevel: 2, token: "护具·护腕"},
+	}
+
+	for _, tc := range cases {
+		template, ok := CapturedRoleItemTemplate(tc.name)
+		if !ok {
+			t.Fatalf("expected captured Huangfeng boss reward template for %s", tc.name)
+		}
+		if template.Type != tc.templateType || template.Display != tc.display || template.ItemType != tc.itemType || template.Index != tc.slot || template.ItemLevel != tc.itemLevel {
+			t.Fatalf("expected %s template type=%s display=%s itemType=%s slot=%d itemLevel=%d, got %+v", tc.name, tc.templateType, tc.display, tc.itemType, tc.slot, tc.itemLevel, template)
+		}
+		if !strings.Contains(template.Description, tc.token) {
+			t.Fatalf("expected %s description to include %q, got %q", tc.name, tc.token, template.Description)
+		}
+
+		item := normalizeRoleItem(RoleItem{
+			Type:  "背包",
+			Name:  tc.name,
+			Count: 1,
+			Index: 6,
+		})
+		if item.Display != tc.display || item.ItemType != tc.itemType || item.Description == "" || item.ItemLevel != tc.itemLevel {
+			t.Fatalf("expected %s missing fields to be filled from template, got %+v", tc.name, item)
+		}
+
+		staleFallbackItem := normalizeRoleItem(RoleItem{
+			Type:        "背包",
+			Name:        tc.name,
+			ItemType:    "own",
+			Display:     template.Display,
+			Description: template.Description,
+			Count:       1,
+			Index:       6,
+			ItemLevel:   1,
+		})
+		if staleFallbackItem.ItemType != tc.itemType || staleFallbackItem.ItemLevel != tc.itemLevel {
+			t.Fatalf("expected stale fallback %s metadata to be repaired from template, got %+v", tc.name, staleFallbackItem)
+		}
+	}
+}
+
+func TestStoreCapturedHuangfengCandidateRewardTemplatesFillMissingIconFields(t *testing.T) {
+	cases := []struct {
+		name         string
+		templateType string
+		display      string
+		itemType     string
+		slot         int
+		itemLevel    int
+		token        string
+	}{
+		{name: "刺", templateType: "背包", display: "134.png", itemType: "null", slot: 0, itemLevel: 1, token: "锋利尖锐"},
+		{name: "红缨", templateType: "背包", display: "77.png", itemType: "null", slot: 0, itemLevel: 1, token: "丝线染色后制成"},
+		{name: "刀客布衣", templateType: "装备", display: "540.png", itemType: "equip", slot: 4, itemLevel: 2, token: "护具·躯干"},
+		{name: "剔骨刀", templateType: "装备", display: "552.png", itemType: "equip", slot: 3, itemLevel: 2, token: "武器·匕首系"},
+		{name: "图腾面具", templateType: "背包", display: "135.png", itemType: "null", slot: 0, itemLevel: 2, token: "诅咒的面具"},
+		{name: "黄风围巾", templateType: "装备", display: "548.png", itemType: "equip", slot: 0, itemLevel: 3, token: "护具·头部"},
+	}
+
+	for _, tc := range cases {
+		template, ok := CapturedRoleItemTemplate(tc.name)
+		if !ok {
+			t.Fatalf("expected captured Huangfeng candidate reward template for %s", tc.name)
+		}
+		if template.Type != tc.templateType || template.Display != tc.display || template.ItemType != tc.itemType || template.Index != tc.slot || template.ItemLevel != tc.itemLevel {
+			t.Fatalf("expected %s template type=%s display=%s itemType=%s slot=%d itemLevel=%d, got %+v", tc.name, tc.templateType, tc.display, tc.itemType, tc.slot, tc.itemLevel, template)
+		}
+		if !strings.Contains(template.Description, tc.token) {
+			t.Fatalf("expected %s description to include %q, got %q", tc.name, tc.token, template.Description)
+		}
+
+		item := normalizeRoleItem(RoleItem{
+			Type:  "背包",
+			Name:  tc.name,
+			Count: 1,
+			Index: 6,
+		})
+		if item.Display != tc.display || item.ItemType != tc.itemType || item.Description == "" || item.ItemLevel != tc.itemLevel {
+			t.Fatalf("expected %s missing fields to be filled from template, got %+v", tc.name, item)
+		}
+	}
+}
+
 func TestStoreCapturedFeixiandongEquipmentTemplates(t *testing.T) {
 	cases := []struct {
 		name             string

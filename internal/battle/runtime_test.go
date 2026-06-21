@@ -2421,6 +2421,22 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 0.3,
 		},
 		{
+			name:       "力释棍术",
+			level:      1,
+			desc:       "f_s_力释棍术^5BC46D&9@单体·状态&8@战士 &10@棍&22@战斗&2@10&4@5回合内提升物理攻击15%",
+			label:      "w11/releasePower",
+			mpCost:     10,
+			multiplier: 0,
+		},
+		{
+			name:       "盘龙棍法",
+			level:      1,
+			desc:       "f_s_盘龙棍法^ffffff&9@群体·攻击&8@战士 &10@棍&22@战斗&2@14&4@对所有敌人造成82%的物理伤害",
+			label:      "w11/circleDargon",
+			mpCost:     14,
+			multiplier: 0.82,
+		},
+		{
 			name:       "强力飞镖",
 			level:      2,
 			desc:       "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
@@ -2483,6 +2499,14 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			label:      "w3/assassinate",
 			mpCost:     26,
 			multiplier: 2.8,
+		},
+		{
+			name:       "奥义.六合棍法",
+			level:      1,
+			desc:       "f_s_奥义.六合棍法^00ccff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时候增加300%的命中",
+			label:      "w11/liuhe",
+			mpCost:     24,
+			multiplier: 3.1,
 		},
 	}
 
@@ -2618,6 +2642,36 @@ func TestBattleSkillProfileUsesCapturedLevelWhenStoredDescriptionIsStale(t *test
 	if aoYiAnShaZhe.SourceActionLabel != "w3/assassinate" || aoYiAnShaZhe.MPCost != 26 || aoYiAnShaZhe.DamageMultiplier != 2.8 {
 		t.Fatalf("expected 奥义.暗杀者 Lv1 captured profile to ignore stale description, got %+v", aoYiAnShaZhe)
 	}
+
+	liShiGunShu := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "力释棍术",
+		Level:       1,
+		Type:        "oneE",
+		Description: "提升自身物理攻击",
+	})
+	if liShiGunShu.SourceActionLabel != "w11/releasePower" || liShiGunShu.MPCost != 10 || liShiGunShu.DamageMultiplier != 0 || liShiGunShu.SourceType != "own" {
+		t.Fatalf("expected 力释棍术 Lv1 captured profile to ignore stale description, got %+v", liShiGunShu)
+	}
+
+	panLongGunFa := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "盘龙棍法",
+		Level:       1,
+		Type:        "oneE",
+		Description: "对敌人造成群体物理伤害",
+	})
+	if panLongGunFa.SourceActionLabel != "w11/circleDargon" || panLongGunFa.MPCost != 14 || panLongGunFa.DamageMultiplier != 0.82 || panLongGunFa.SourceType != "all" {
+		t.Fatalf("expected 盘龙棍法 Lv1 captured profile to ignore stale description, got %+v", panLongGunFa)
+	}
+
+	aoYiLiuHeGunFa := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "奥义.六合棍法",
+		Level:       1,
+		Type:        "oneE",
+		Description: "特殊发动条件:3格魂元 / 大幅提升伤害和命中",
+	})
+	if aoYiLiuHeGunFa.SourceActionLabel != "w11/liuhe" || aoYiLiuHeGunFa.MPCost != 24 || aoYiLiuHeGunFa.DamageMultiplier != 3.1 || aoYiLiuHeGunFa.HitMultiplier != 4 {
+		t.Fatalf("expected 奥义.六合棍法 Lv1 captured profile to ignore stale description, got %+v", aoYiLiuHeGunFa)
+	}
 }
 
 func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
@@ -2671,6 +2725,18 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_血切^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@19&4@对敌人造成30%的物理伤害&0;击中敌人时有80%的机率使对方进入外伤状态4回合<br>(每回合损失气力为角色物理攻击的25%~30%)",
 		},
 		{
+			Name:        "力释棍术",
+			Level:       1,
+			Type:        "own",
+			Description: "f_s_力释棍术^5BC46D&9@单体·状态&8@战士 &10@棍&22@战斗&2@10&4@5回合内提升物理攻击15%",
+		},
+		{
+			Name:        "盘龙棍法",
+			Level:       1,
+			Type:        "all",
+			Description: "f_s_盘龙棍法^ffffff&9@群体·攻击&8@战士 &10@棍&22@战斗&2@14&4@对所有敌人造成82%的物理伤害",
+		},
+		{
 			Name:        "强力飞镖",
 			Level:       2,
 			Type:        "oneE",
@@ -2713,6 +2779,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害",
 		},
 		{
+			Name:        "奥义.六合棍法",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_奥义.六合棍法^00ccff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时候增加300%的命中",
+		},
+		{
 			Name: "未抓包技能",
 			Type: "oneE",
 		},
@@ -2746,6 +2818,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	if command := byID[CommandXueQie]; command.Label != "血切" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/cutBlood" || command.MPCost != 19 || command.DamageMultiplier != 0.3 {
 		t.Fatalf("expected captured 血切 single-target command, got %+v", command)
 	}
+	if command := byID[CommandLiShiGunShu]; command.Label != "力释棍术" || command.SourceType != "own" || command.Target != "self" || command.SourceActionLabel != "w11/releasePower" || command.MPCost != 10 || command.DamageMultiplier != 0 {
+		t.Fatalf("expected captured 力释棍术 self command, got %+v", command)
+	}
+	if command := byID[CommandPanLongGunFa]; command.Label != "盘龙棍法" || command.SourceType != "all" || command.Target != "enemy" || command.SourceActionLabel != "w11/circleDargon" || command.MPCost != 14 || command.DamageMultiplier != 0.82 {
+		t.Fatalf("expected captured 盘龙棍法 all-target command, got %+v", command)
+	}
 	if command := byID[CommandQiangLiFeiBiao]; command.Label != "强力飞镖" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/powerDart" || command.MPCost != 20 || command.DamageMultiplier != 1.48 {
 		t.Fatalf("expected captured 强力飞镖 Lv2 command, got %+v", command)
 	}
@@ -2766,6 +2844,9 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if command := byID[CommandAoYiAnShaZhe]; command.Label != "奥义.暗杀者" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/assassinate" || command.MPCost != 26 || command.DamageMultiplier != 2.8 {
 		t.Fatalf("expected captured 奥义.暗杀者 single-target command, got %+v", command)
+	}
+	if command := byID[CommandAoYiLiuHeGunFa]; command.Label != "奥义.六合棍法" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w11/liuhe" || command.MPCost != 24 || command.DamageMultiplier != 3.1 {
+		t.Fatalf("expected captured 奥义.六合棍法 single-target command, got %+v", command)
 	}
 	if _, ok := byID["未抓包技能"]; ok {
 		t.Fatalf("expected uncaptured skill to be omitted, got %+v", commands)
@@ -2910,6 +2991,168 @@ func TestHongYueZhanHitsAllLivingEnemiesAndConsumesMPOnce(t *testing.T) {
 	}
 }
 
+func TestPanLongGunFaHitsAllLivingEnemiesAndConsumesCapturedMPOnce(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-panlong",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "盘龙棍法",
+				Level:       1,
+				Type:        "all",
+				Description: "f_s_盘龙棍法^ffffff&9@群体·攻击&8@战士 &10@棍&22@战斗&2@14&4@对所有敌人造成82%的物理伤害",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-panlong",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Defense:  0,
+				Hit:      100,
+				Fat:      0,
+			},
+			{
+				BattleID: "battle-panlong",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+			{
+				BattleID: "battle-panlong",
+				Handle:   "enemy_2",
+				Camp:     CampEnemy,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-panlong",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandPanLongGunFa,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 盘龙棍法 to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 盘龙棍法 to emit one all-target action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "盘龙棍法" || action.SourceMode != "1" || action.SourceActionLabel != "w11/circleDargon" || action.TargetHandle != "all" {
+		t.Fatalf("expected 盘龙棍法 source all-target action, got %+v", action)
+	}
+	if len(action.TargetActionResults) != 2 || action.TargetActionResults[0].Handle != "enemy_1" || action.TargetActionResults[1].Handle != "enemy_2" {
+		t.Fatalf("expected 盘龙棍法 to carry target result pairs, got %+v", action.TargetActionResults)
+	}
+	for _, expectedHandle := range []string{"enemy_1", "enemy_2"} {
+		target := runtime.cellByHandle(expectedHandle)
+		if target == nil || target.HP != 418 {
+			t.Fatalf("expected 盘龙棍法 Lv1 captured damage against %s, got target=%+v action=%+v", expectedHandle, target, action)
+		}
+	}
+	actor := runtime.cellByHandle("player_21424")
+	if actor == nil || actor.MP != 86 {
+		t.Fatalf("expected 盘龙棍法 to consume MP 14 once, got actor=%+v", actor)
+	}
+}
+
+func TestLiShiGunShuAppliesCapturedFightingSpirit(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-lishi",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "力释棍术",
+				Level:       1,
+				Type:        "own",
+				Description: "f_s_力释棍术^5BC46D&9@单体·状态&8@战士 &10@棍&22@战斗&2@10&4@5回合内提升物理攻击15%",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-lishi",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       50,
+				MaxMP:    50,
+				Attack:   100,
+				Defense:  0,
+				Hit:      100,
+			},
+			{
+				BattleID: "battle-lishi",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   0,
+				Defense:  0,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-lishi",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandLiShiGunShu,
+		TargetHandle: "player_21424",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 力释棍术 to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 力释棍术 action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "力释棍术" || action.SourceActionLabel != "w11/releasePower" || action.TargetHandle != "player_21424" {
+		t.Fatalf("expected captured 力释棍术 self action, got %+v", action)
+	}
+	actor := runtime.cellByHandle("player_21424")
+	if actor == nil || actor.Attack != 115 || actor.MP != 40 {
+		t.Fatalf("expected 力释棍术 to raise attack by 15 and consume MP 10, got actor=%+v", actor)
+	}
+	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "斗志" || result.BuffInfos[0].Display != "23.png" || result.BuffInfos[0].Round != 5 || !strings.Contains(result.BuffInfos[0].Description, "15点物理攻击") {
+		t.Fatalf("expected captured 斗志 BuffInfo, got %+v", result.BuffInfos)
+	}
+	effect := runtime.StatusEffects["player_21424"].Effects["斗志"]
+	if effect.AttackIncrease != 15 || effect.AppliedAction != "w11/releasePower" {
+		t.Fatalf("expected 力释棍术 to persist reversible attack increase, got %+v", effect)
+	}
+}
+
 func TestLeiHunZhanRequiresCapturedSoulPowerAndUsesThunderSoulAtk(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-leihun",
@@ -2992,6 +3235,91 @@ func TestLeiHunZhanRequiresCapturedSoulPowerAndUsesThunderSoulAtk(t *testing.T) 
 	actor := runtime.cellByHandle("player_21424")
 	if actor == nil || actor.MP != 76 {
 		t.Fatalf("expected 奥义.雷魂斩 to consume MP 24, got actor=%+v", actor)
+	}
+}
+
+func TestAoYiLiuHeGunFaRequiresCapturedSoulPowerAndUsesLiuhe(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-liuhe",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "奥义.六合棍法",
+				Level:       1,
+				Type:        "oneE",
+				Description: "f_s_奥义.六合棍法^00ccff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时候增加300%的命中",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-liuhe",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Defense:  0,
+				Hit:      100,
+				Fat:      0,
+			},
+			{
+				BattleID: "battle-liuhe",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+		},
+	}
+
+	insufficient := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-liuhe",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandAoYiLiuHeGunFa,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+	if insufficient.ErrorCode != "insufficient_power" {
+		t.Fatalf("expected 奥义.六合棍法 to require 3 soul power, got %+v", insufficient)
+	}
+
+	runtime.StoredPower["player_21424"] = 3
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-liuhe",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandAoYiLiuHeGunFa,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 奥义.六合棍法 to be accepted with 3 soul power, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 奥义.六合棍法 action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "奥义.六合棍法" || action.SourceMode != "1" || action.SourceActionLabel != "w11/liuhe" {
+		t.Fatalf("expected captured 奥义.六合棍法 action label, got %+v", action)
+	}
+	if action.Damage != 310 || action.TargetHP != 690 {
+		t.Fatalf("expected 奥义.六合棍法 Lv1 captured multiplier without soul power damage bonus, got %+v", action)
+	}
+	actor := runtime.cellByHandle("player_21424")
+	if actor == nil || actor.MP != 76 {
+		t.Fatalf("expected 奥义.六合棍法 to consume MP 24, got actor=%+v", actor)
 	}
 }
 

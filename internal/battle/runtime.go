@@ -32,6 +32,8 @@ const (
 	CommandKuangBao        = "skill-kuang-bao"
 	CommandHongYueZhan     = "skill-hong-yue-zhan"
 	CommandXueQie          = "skill-xue-qie"
+	CommandLiShiGunShu     = "skill-li-shi-gun-shu"
+	CommandPanLongGunFa    = "skill-pan-long-gun-fa"
 	CommandQiangLiFeiBiao  = "skill-qiang-li-fei-biao"
 	CommandTouDu           = "skill-tou-du"
 	CommandMoLiTuCi        = "skill-mo-li-tu-ci"
@@ -39,6 +41,7 @@ const (
 	CommandJieDuShu        = "skill-jie-du-shu"
 	CommandLeiHunZhan      = "skill-lei-hun-zhan"
 	CommandAoYiAnShaZhe    = "skill-ao-yi-an-sha-zhe"
+	CommandAoYiLiuHeGunFa  = "skill-ao-yi-liu-he-gun-fa"
 	CommandEnemyAttack     = "enemy-normal-attack"
 	CommandEnemySlideCut   = "enemy-slide-cut"
 	CommandEnemyShadeCut   = "enemy-shade-cut"
@@ -64,6 +67,7 @@ const (
 	maxStoredPower                     = 5
 	leiHunZhanRequiredPower            = 3
 	aoYiAnShaZheRequiredPower          = 3
+	aoYiLiuHeGunFaRequiredPower        = 3
 	enemySlideCutMPCost                = 10
 	enemySlideCutChance                = 20
 	enemyShadeCutMPCost                = 40
@@ -120,6 +124,8 @@ const (
 	touDuPoisonDefensePercent          = 15
 	touDuPoisonTickMin                 = 20
 	touDuPoisonTickMax                 = 25
+	liShiGunShuAttackPercent           = 15
+	liShiGunShuRounds                  = 5
 )
 
 var sourceEncounterRoll = func(maxExclusive int) int {
@@ -333,6 +339,7 @@ type BattleStatusEffect struct {
 	SourceAttack          int
 	TickMinPercent        int
 	TickMaxPercent        int
+	AttackIncrease        int
 	AttackReduction       int
 	MagicAttackReduction  int
 	DefenseReduction      int
@@ -373,6 +380,7 @@ type commandProfile struct {
 	LifeStealChance   int
 	LifeStealRatio    float64
 	DefenseType       string
+	HitMultiplier     float64
 	TargetMPDamage    int
 	StatusName        string
 	StatusDisplay     string
@@ -723,13 +731,32 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
 			runtime.resolveSelfAction(actor, commandID, "解毒术", "w3/releaseDrug"),
 		})
+	case CommandLiShiGunShu:
+		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
+			return ActionResult{ErrorCode: "unsupported_command"}
+		}
+		if !runtime.isSelfTarget(actor, request.TargetHandle) {
+			return ActionResult{ErrorCode: "invalid_target"}
+		}
+		runtime.ConsumedSequence[request.Sequence] = true
+		runtime.setStoredPower(actor.Handle, 0)
+		profile := runtime.sourceSkillProfileForActor(actor.Handle, "力释棍术", 1)
+		if profile.MPCost > 0 {
+			actor.MP = maxInt(0, actor.MP-profile.MPCost)
+		}
+		buffInfo := runtime.applyFightingSpiritStatusEffect(actor)
+		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
+			runtime.resolveSelfAction(actor, commandID, "力释棍术", "w11/releasePower"),
+		})
+		result.BuffInfos = append(result.BuffInfos, buffInfo)
+		return result
 	}
 
 	if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
 		return ActionResult{ErrorCode: "unsupported_command"}
 	}
 
-	if normalizeBattleCommandID(commandID) == CommandHongYueZhan {
+	if normalizeBattleCommandID(commandID) == CommandHongYueZhan || normalizeBattleCommandID(commandID) == CommandPanLongGunFa {
 		targets := runtime.livingCells(CampEnemy)
 		if len(targets) == 0 {
 			return ActionResult{ErrorCode: "invalid_target"}
@@ -743,6 +770,9 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return ActionResult{ErrorCode: "insufficient_power"}
 	}
 	if normalizeBattleCommandID(commandID) == CommandAoYiAnShaZhe && runtime.powerFor(actor.Handle) < aoYiAnShaZheRequiredPower {
+		return ActionResult{ErrorCode: "insufficient_power"}
+	}
+	if normalizeBattleCommandID(commandID) == CommandAoYiLiuHeGunFa && runtime.powerFor(actor.Handle) < aoYiLiuHeGunFaRequiredPower {
 		return ActionResult{ErrorCode: "insufficient_power"}
 	}
 
@@ -1203,6 +1233,10 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "红月斩", 1)
 	case CommandXueQie:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "血切", 1)
+	case CommandLiShiGunShu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "力释棍术", 1)
+	case CommandPanLongGunFa:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "盘龙棍法", 1)
 	case CommandQiangLiFeiBiao:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "强力飞镖", 2)
 	case CommandTouDu:
@@ -1217,6 +1251,8 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
 	case CommandAoYiAnShaZhe:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.暗杀者", 1)
+	case CommandAoYiLiuHeGunFa:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.六合棍法", 1)
 	case CommandEnemySlideCut:
 		return commandProfile{
 			ActionName:        "滑行斩",
@@ -1722,6 +1758,10 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "红月斩")
 	case CommandXueQie:
 		return runtime.hasRoleSkillForActor(handle, "血切")
+	case CommandLiShiGunShu:
+		return runtime.hasRoleSkillForActor(handle, "力释棍术")
+	case CommandPanLongGunFa:
+		return runtime.hasRoleSkillForActor(handle, "盘龙棍法")
 	case CommandQiangLiFeiBiao:
 		return runtime.hasRoleSkillForActor(handle, "强力飞镖")
 	case CommandTouDu:
@@ -1736,6 +1776,8 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
 	case CommandAoYiAnShaZhe:
 		return runtime.hasRoleSkillForActor(handle, "奥义.暗杀者")
+	case CommandAoYiLiuHeGunFa:
+		return runtime.hasRoleSkillForActor(handle, "奥义.六合棍法")
 	default:
 		return false
 	}
@@ -1872,6 +1914,13 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusTickMin = touDuPoisonTickMin
 		profile.StatusTickMax = touDuPoisonTickMax
 	}
+	if name == "力释棍术" {
+		profile.CanDodge = false
+		profile.CanFat = false
+	}
+	if name == "奥义.六合棍法" {
+		profile.HitMultiplier = 4
+	}
 	if name == "强力飞镖" {
 		profile.DefenseType = "direct"
 	}
@@ -1974,6 +2023,10 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandHongYueZhan
 	case "血切":
 		return CommandXueQie
+	case "力释棍术":
+		return CommandLiShiGunShu
+	case "盘龙棍法":
+		return CommandPanLongGunFa
 	case "强力飞镖":
 		return CommandQiangLiFeiBiao
 	case "投毒":
@@ -1988,6 +2041,8 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandLeiHunZhan
 	case "奥义.暗杀者":
 		return CommandAoYiAnShaZhe
+	case "奥义.六合棍法":
+		return CommandAoYiLiuHeGunFa
 	default:
 		return ""
 	}
@@ -1995,11 +2050,11 @@ func sourceBattleSkillCommandID(name string) string {
 
 func sourceBattleSkillSourceType(name string, fallbackType string) string {
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "奥义.雷魂斩", "奥义.暗杀者":
+	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "奥义.雷魂斩", "奥义.暗杀者", "奥义.六合棍法":
 		return "oneE"
-	case "狂爆", "解毒术":
+	case "狂爆", "解毒术", "力释棍术":
 		return "own"
-	case "红月斩":
+	case "红月斩", "盘龙棍法":
 		return "all"
 	default:
 		return defaultString(strings.TrimSpace(fallbackType), "oneE")
@@ -2048,6 +2103,10 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandHongYueZhan
 	case "血切":
 		return CommandXueQie
+	case "力释棍术":
+		return CommandLiShiGunShu
+	case "盘龙棍法":
+		return CommandPanLongGunFa
 	case "强力飞镖":
 		return CommandQiangLiFeiBiao
 	case "投毒":
@@ -2062,6 +2121,8 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandLeiHunZhan
 	case "奥义.暗杀者":
 		return CommandAoYiAnShaZhe
+	case "奥义.六合棍法":
+		return CommandAoYiLiuHeGunFa
 	default:
 		return strings.TrimSpace(commandID)
 	}
@@ -2128,6 +2189,28 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Icon:        "182.png",
 			Description: fallbackXueQieDescription(level),
 		}
+	case "力释棍术":
+		if level != 1 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "力释棍术",
+			Level:       1,
+			Type:        "own",
+			Icon:        "186.png",
+			Description: "f_s_力释棍术^5BC46D&9@单体·状态&8@战士 &10@棍&22@战斗&2@10&4@5回合内提升物理攻击15%",
+		}
+	case "盘龙棍法":
+		if level != 1 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "盘龙棍法",
+			Level:       1,
+			Type:        "all",
+			Icon:        "187.png",
+			Description: "f_s_盘龙棍法^ffffff&9@群体·攻击&8@战士 &10@棍&22@战斗&2@14&4@对所有敌人造成82%的物理伤害",
+		}
 	case "强力飞镖":
 		return session.RoleSkill{
 			Name:        "强力飞镖",
@@ -2183,6 +2266,17 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Type:        "oneE",
 			Icon:        "262.png",
 			Description: fallbackAoYiAnShaZheDescription(level),
+		}
+	case "奥义.六合棍法":
+		if level != 1 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "奥义.六合棍法",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "190.png",
+			Description: "f_s_奥义.六合棍法^00ccff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时候增加300%的命中",
 		}
 	default:
 		return session.RoleSkill{}
@@ -2321,6 +2415,10 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w8/redMoonAtk"
 	case "血切":
 		return "w8/cutBlood"
+	case "力释棍术":
+		return "w11/releasePower"
+	case "盘龙棍法":
+		return "w11/circleDargon"
 	case "强力飞镖":
 		return "w3/powerDart"
 	case "投毒":
@@ -2335,6 +2433,8 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w8/thunderSoulAtk"
 	case "奥义.暗杀者":
 		return "w3/assassinate"
+	case "奥义.六合棍法":
+		return "w11/liuhe"
 	case "普通攻击":
 		return "nomalAtk"
 	default:
@@ -2417,6 +2517,16 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		return 0.72
 	case "血切":
 		return 0.3
+	case "力释棍术":
+		if level == 1 {
+			return 0
+		}
+		return 0
+	case "盘龙棍法":
+		if level == 1 {
+			return 0.82
+		}
+		return 0
 	case "强力飞镖":
 		switch level {
 		case 2:
@@ -2437,6 +2547,11 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		return 3.4
 	case "奥义.暗杀者":
 		return 2.8
+	case "奥义.六合棍法":
+		if level == 1 {
+			return 3.1
+		}
+		return 0
 	default:
 		return 1
 	}
@@ -2479,6 +2594,16 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		return 40
 	case "血切":
 		return 19
+	case "力释棍术":
+		if level == 1 {
+			return 10
+		}
+		return 0
+	case "盘龙棍法":
+		if level == 1 {
+			return 14
+		}
+		return 0
 	case "强力飞镖":
 		switch level {
 		case 2:
@@ -2499,6 +2624,11 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		return 24
 	case "奥义.暗杀者":
 		return 26
+	case "奥义.六合棍法":
+		if level == 1 {
+			return 24
+		}
+		return 0
 	default:
 		return 0
 	}
@@ -2600,7 +2730,11 @@ func (runtime *Runtime) resolveDodge(actor *CellInfoPush, target *CellInfoPush, 
 	if actor.Hit <= 0 {
 		return true
 	}
-	chance := battleDodgeChancePercent(actor.Hit, target.Dog)
+	actorHit := actor.Hit
+	if profile.HitMultiplier > 0 {
+		actorHit = int(math.Round(float64(actorHit) * profile.HitMultiplier))
+	}
+	chance := battleDodgeChancePercent(actorHit, target.Dog)
 	return runtime.hashBattleRollWithSalt(actor, target, commandID, "dog") < chance
 }
 
@@ -2810,6 +2944,9 @@ func (runtime *Runtime) restoreStatusEffect(target *CellInfoPush, effect BattleS
 	}
 	if effect.AttackReduction > 0 {
 		target.Attack += effect.AttackReduction
+	}
+	if effect.AttackIncrease > 0 {
+		target.Attack = maxInt(0, target.Attack-effect.AttackIncrease)
 	}
 	if effect.DefenseReduction > 0 {
 		target.Defense += effect.DefenseReduction
@@ -3133,6 +3270,36 @@ func (runtime *Runtime) consumePendingClearBuffInfos() []ClearBuffInfoPush {
 	clearBuffInfos := append([]ClearBuffInfoPush(nil), runtime.PendingClearBuffInfos...)
 	runtime.PendingClearBuffInfos = nil
 	return clearBuffInfos
+}
+
+func (runtime *Runtime) applyFightingSpiritStatusEffect(actor *CellInfoPush) BuffInfoPush {
+	if runtime == nil || actor == nil {
+		return BuffInfoPush{}
+	}
+	runtime.restoreExistingStatusEffect(actor.Handle, "斗志")
+	increase := maxInt(1, int(math.Round(float64(actor.Attack)*float64(liShiGunShuAttackPercent)/100)))
+	actor.Attack += increase
+	description := fmt.Sprintf("提升对象%d点物理攻击", increase)
+	effect := BattleStatusEffect{
+		Name:           "斗志",
+		Display:        "23.png",
+		Description:    description,
+		Rounds:         liShiGunShuRounds,
+		SourceHandle:   actor.Handle,
+		SourceSkill:    "力释棍术",
+		AppliedAction:  "w11/releasePower",
+		AttackIncrease: increase,
+	}
+	runtime.applyStatusEffect(actor.Handle, effect)
+	return BuffInfoPush{
+		BattleID:      runtime.BattleID,
+		ReleaseHandle: actor.Handle,
+		TargetHandle:  actor.Handle,
+		Name:          "斗志",
+		Display:       "23.png",
+		Description:   description,
+		Round:         liShiGunShuRounds,
+	}
 }
 
 func (runtime *Runtime) applyKuangBao(handle string) {

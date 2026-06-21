@@ -4178,7 +4178,7 @@ func TestEnemyPalsyAtkAppliesParalysisOnHit(t *testing.T) {
 	if action.ActionName != "蜂刺" || action.SourceActionLabel != "palsyAtk" || action.TargetActionStateCode != "0" {
 		t.Fatalf("expected captured 毒蜂 palsy action, got %+v", action)
 	}
-	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "麻痹" || runtime.PendingBuffInfos[0].TargetHandle != "player_21424" || runtime.PendingBuffInfos[0].Round != 2 {
+	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "麻痹" || runtime.PendingBuffInfos[0].Display != "17.png" || runtime.PendingBuffInfos[0].TargetHandle != "player_21424" || runtime.PendingBuffInfos[0].Round != 2 {
 		t.Fatalf("expected 蜂刺 hit to push 麻痹 BuffInfo, got %+v", runtime.PendingBuffInfos)
 	}
 	effect := runtime.StatusEffects["player_21424"].Effects["麻痹"]
@@ -4286,7 +4286,7 @@ func TestEnemyPalsyAtkSkipsPlayerNextCommand(t *testing.T) {
 	if result.Actions[2].ActorHandle != "player_21424" || result.Actions[2].TargetHandle != "player_21424" || result.Actions[2].SourceMode != "0" || result.Actions[2].SourceActionLabel != "battleStand" || result.Actions[2].Damage != 0 {
 		t.Fatalf("expected 麻痹 battleStand self action, got %+v", result.Actions[2])
 	}
-	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "麻痹" || result.BuffInfos[0].Round != 2 {
+	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "麻痹" || result.BuffInfos[0].Display != "17.png" || result.BuffInfos[0].Round != 2 {
 		t.Fatalf("expected 麻痹 BuffInfo to be pushed with source round, got %+v", result.BuffInfos)
 	}
 	effect := runtime.StatusEffects["player_21424"].Effects["麻痹"]

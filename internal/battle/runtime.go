@@ -1292,6 +1292,7 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			CanDodge:          true,
 			CanFat:            true,
 			StatusName:        "麻痹",
+			StatusDisplay:     "17.png",
 			StatusRounds:      2,
 			StatusChance:      enemyPalsyAtkStatusChance,
 			StatusDescription: "眩晕并每回合损失气力",

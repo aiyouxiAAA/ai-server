@@ -1,7 +1,10 @@
 package battle
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -3894,6 +3897,128 @@ func TestTouDuAppliesPoisonBuffInfoOnHit(t *testing.T) {
 	}
 }
 
+func TestTouDuProcessActionAppliesPoisonAndTicksInEnemyTurn(t *testing.T) {
+	var runtime *Runtime
+	var actor *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 200; index += 1 {
+		actorHandle := fmt.Sprintf("player_poison_process_%d", index)
+		candidate := newPoisonTestRuntime(actorHandle, "enemy_poison_process")
+		candidate.BattleID = fmt.Sprintf("battle-poison-process-%d", index)
+		candidate.Phase = PhaseCommand
+		candidate.ActiveHandle = actorHandle
+		candidate.ConsumedSequence = map[int]bool{}
+		candidate.StoredPower = map[string]int{}
+		for cellIndex := range candidate.Cells {
+			candidate.Cells[cellIndex].BattleID = candidate.BattleID
+		}
+		candidateActor := candidate.cellByHandle(actorHandle)
+		candidateTarget := candidate.cellByHandle("enemy_poison_process")
+		if candidate.hashBattleRollWithSalt(candidateActor, candidateTarget, CommandTouDu, "status:中毒") < touDuPoisonChance {
+			runtime = candidate
+			actor = candidateActor
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic ProcessAction 投毒中毒 roll below 80")
+	}
+
+	initialActor := *actor
+	initialTarget := *target
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  actor.Handle,
+		CommandID:    CommandTouDu,
+		TargetHandle: target.Handle,
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected ProcessAction 投毒 to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 2 {
+		t.Fatalf("expected ProcessAction 投毒 to emit skill and poison tick actions, got %+v", result.Actions)
+	}
+	t.Logf("real ProcessAction poison actions=%+v buffs=%+v clears=%+v", result.Actions, result.BuffInfos, result.ClearBuffInfos)
+	touDuAction := result.Actions[0]
+	if touDuAction.ActionName != "投毒" || touDuAction.CommandID != CommandTouDu || touDuAction.SourceActionLabel != "w3/drugAtk" || touDuAction.ActorHandle != actor.Handle || touDuAction.TargetHandle != target.Handle {
+		t.Fatalf("expected real ProcessAction first action to be captured 投毒, got %+v", touDuAction)
+	}
+	if touDuAction.Damage != 1 || touDuAction.TargetHP != 999 || touDuAction.TargetActionStateCode != "0" {
+		t.Fatalf("expected 投毒 ProcessAction to apply captured minimum hit damage before poison status, got %+v", touDuAction)
+	}
+	if len(result.BuffInfos) != 1 {
+		t.Fatalf("expected real ProcessAction to push one 中毒 BuffInfo, got %+v", result.BuffInfos)
+	}
+	buff := result.BuffInfos[0]
+	if buff.Name != "中毒" || buff.Display != "8.png" || buff.Round != 4 || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected real ProcessAction captured 中毒 BuffInfo metadata, got %+v", buff)
+	}
+	var poisonTick *ActionPush
+	for index := range result.Actions {
+		if result.Actions[index].ActionName == "中毒" && result.Actions[index].ActorHandle == target.Handle {
+			poisonTick = &result.Actions[index]
+			break
+		}
+	}
+	if poisonTick == nil {
+		t.Fatalf("expected real ProcessAction enemy turn to emit 中毒/battleStand tick, got %+v", result.Actions)
+	}
+	if poisonTick.SourceMode != "0" || poisonTick.SourceActionLabel != "battleStand" || poisonTick.TargetHandle != target.Handle || poisonTick.TargetActionStateCode != "3" {
+		t.Fatalf("expected real ProcessAction 中毒 tick self state action, got %+v", poisonTick)
+	}
+	if poisonTick.Damage < 48 || poisonTick.Damage > 60 {
+		t.Fatalf("expected real ProcessAction 中毒 tick damage from 20%%-25%% source attack, got %+v", poisonTick)
+	}
+	if actor.MP != 84 {
+		t.Fatalf("expected real ProcessAction 投毒 to consume MP 16, actor=%+v", actor)
+	}
+	expectedTargetHP := touDuAction.TargetHP - poisonTick.Damage
+	if target.Defense != 51 || target.MgcDefense != 31 || target.HP != expectedTargetHP || poisonTick.TargetHP != expectedTargetHP {
+		t.Fatalf("expected real ProcessAction to apply poison reductions and tick HP, target=%+v tick=%+v", target, poisonTick)
+	}
+	if runtime.StatusEffects[target.Handle].Effects["中毒"].Rounds != 3 {
+		t.Fatalf("expected real ProcessAction enemy-turn tick to reduce remaining poison rounds to 3, got %+v", runtime.StatusEffects)
+	}
+	writePoisonRealFlowFixture(t, initialActor, initialTarget, result)
+}
+
+func writePoisonRealFlowFixture(t *testing.T, actor CellInfoPush, target CellInfoPush, result ActionResult) {
+	t.Helper()
+	outputPath := strings.TrimSpace(os.Getenv("BATTLE_POISON_REAL_FLOW_OUT"))
+	if outputPath == "" {
+		return
+	}
+	payload := struct {
+		BattleID       string              `json:"battleId"`
+		Actor          CellInfoPush        `json:"actor"`
+		Target         CellInfoPush        `json:"target"`
+		Actions        []ActionPush        `json:"actions"`
+		BuffInfos      []BuffInfoPush      `json:"buffInfos"`
+		ClearBuffInfos []ClearBuffInfoPush `json:"clearBuffInfos"`
+	}{
+		BattleID:       result.Actions[0].BattleID,
+		Actor:          actor,
+		Target:         target,
+		Actions:        result.Actions,
+		BuffInfos:      result.BuffInfos,
+		ClearBuffInfos: result.ClearBuffInfos,
+	}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal poison real flow fixture: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		t.Fatalf("create poison real flow fixture dir: %v", err)
+	}
+	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
+		t.Fatalf("write poison real flow fixture: %v", err)
+	}
+}
+
 func TestTouDuDoesNotApplyPoisonOnDodge(t *testing.T) {
 	runtime := newPoisonTestRuntime("player_poison_dodge", "enemy_poison_dodge")
 	actor := runtime.cellByHandle("player_poison_dodge")
@@ -4897,6 +5022,9 @@ func TestHuangfengLadyDeludeAppliesCapturedConfusionBuff(t *testing.T) {
 	if action.Damage != 0 || action.TargetHP != target.HP || len(action.TargetActionResults) != 0 {
 		t.Fatalf("expected 魅惑术 to be status-only without target result rows, got %+v", action)
 	}
+	if action.TargetActionState != "none" || action.TargetActionStateCode != "3" {
+		t.Fatalf("expected 魅惑术 to play as status-only target none, got %+v", action)
+	}
 	if actor.MP != 694 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 694 {
 		t.Fatalf("expected 魅惑术 to consume captured MP cost 10, actor=%+v action=%+v", actor, action)
 	}
@@ -5115,24 +5243,58 @@ func TestConfusionAutoExecutesPlayerNormalAttackBeforeStartCommand(t *testing.T)
 	}
 }
 
-func TestConfusionRandomTargetCanSelectEnemyOrTeammate(t *testing.T) {
+func TestConfusionProcessActionCanSelectEnemyOrTeammate(t *testing.T) {
 	found := map[string]bool{}
 	for index := 0; index < 300; index += 1 {
 		runtime := &Runtime{
-			BattleID:     fmt.Sprintf("battle-confusion-target-%d", index),
-			Round:        4,
-			nextSequence: 1,
+			BattleID:         fmt.Sprintf("battle-confusion-target-%d", index),
+			Round:            4,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_21424",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			PendingConfusion: map[string]bool{"player_21424": true},
 			Cells: []CellInfoPush{
-				{Handle: "player_21424", Camp: CampTeam, HP: 1000, MaxHP: 1000, Attack: 100, Hit: 100},
-				{Handle: "player_21432", Camp: CampTeam, HP: 800, MaxHP: 800},
-				{Handle: "5431285114036433", Camp: CampEnemy, Name: "黄风寨夫人", HP: 1200, MaxHP: 1200},
+				{Handle: "player_21424", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 414, MaxMP: 414, Attack: 100, Hit: 100},
+				{Handle: "player_21432", Camp: CampTeam, Name: "桥头的樵夫", HP: 800, MaxHP: 800, Defense: 0, Dog: 0},
+				{Handle: "5431285114036433", Camp: CampEnemy, Name: "黄风寨夫人", HP: 1200, MaxHP: 1200, Attack: 1, Defense: 0, Hit: 100, Dog: 0},
 			},
 		}
-		actor := runtime.cellByHandle("player_21424")
-		target := runtime.resolveConfusionTarget(actor)
-		if target != nil {
-			found[target.Handle] = true
+		result := runtime.ProcessAction(ActionRequest{
+			BattleID:     runtime.BattleID,
+			ActorHandle:  "player_21424",
+			CommandID:    CommandDuoDuanZhan,
+			TargetHandle: "5431285114036433",
+			Round:        4,
+			Sequence:     1,
+		})
+		if result.ErrorCode != "" {
+			t.Fatalf("expected confused command to be accepted as forced normal attack, got %+v", result)
 		}
+		if len(result.Actions) == 0 {
+			t.Fatalf("expected confused ProcessAction to emit a normal attack, got %+v", result)
+		}
+		action := result.Actions[0]
+		if action.ActionName != "普通攻击" || action.CommandID != CommandNormalAttack || action.ActorHandle != "player_21424" || action.SourceActionLabel != "nomalAtk" {
+			t.Fatalf("expected ProcessAction to force captured confused normal attack, got %+v", action)
+		}
+		if action.TargetHandle != "player_21432" && action.TargetHandle != "5431285114036433" {
+			t.Fatalf("expected confused target to be teammate or enemy, got %+v", action)
+		}
+		if action.Damage <= 0 {
+			t.Fatalf("expected confused normal attack to damage the chosen target, got %+v", action)
+		}
+		if runtime.cellByHandle("player_21424").MP != 414 {
+			t.Fatalf("expected forced normal attack not to spend requested skill MP, actor=%+v", runtime.cellByHandle("player_21424"))
+		}
+		if runtime.PendingConfusion["player_21424"] {
+			t.Fatalf("expected ProcessAction to consume pending confusion, got %+v", runtime.PendingConfusion)
+		}
+		if !found[action.TargetHandle] {
+			t.Logf("confusion ProcessAction rolled target %s in %s", action.TargetHandle, runtime.BattleID)
+		}
+		found[action.TargetHandle] = true
 		if found["player_21432"] && found["5431285114036433"] {
 			return
 		}

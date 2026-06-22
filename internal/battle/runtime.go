@@ -1642,6 +1642,8 @@ func (runtime *Runtime) resolveEnemyDeludeAction(enemy *CellInfoPush, target *Ce
 		ActionName:        profile.ActionName,
 		SourceMode:        sourceBattleActionMode(profile.SourceType),
 		SourceActionLabel: profile.SourceActionLabel,
+		TargetActionState: "none",
+		TargetActionStateCode: "3",
 		Damage:            0,
 		TargetHP:          target.HP,
 		TargetMP:          target.MP,

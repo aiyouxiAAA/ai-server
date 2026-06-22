@@ -985,6 +985,10 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		runtime.ActiveHandle = nextActor.Handle
 		runtime.Phase = PhasePlaying
 		runtime.advanceKuangBaoRound(nextActor.Handle)
+		if nextActor.HP <= 0 {
+			actor = nextActor
+			continue
+		}
 		if skipTurn && runtime.hasActiveAutoContinueSkipStatus(nextActor.Handle) {
 			continue
 		}
@@ -1635,22 +1639,22 @@ func (runtime *Runtime) resolveEnemyDeludeAction(enemy *CellInfoPush, target *Ce
 	runtime.applyStatusEffect(target.Handle, effect)
 	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(enemy, target, effect))
 	return ActionPush{
-		BattleID:          runtime.BattleID,
-		ActorHandle:       enemy.Handle,
-		TargetHandle:      target.Handle,
-		CommandID:         CommandEnemyDelude,
-		ActionName:        profile.ActionName,
-		SourceMode:        sourceBattleActionMode(profile.SourceType),
-		SourceActionLabel: profile.SourceActionLabel,
-		TargetActionState: "none",
+		BattleID:              runtime.BattleID,
+		ActorHandle:           enemy.Handle,
+		TargetHandle:          target.Handle,
+		CommandID:             CommandEnemyDelude,
+		ActionName:            profile.ActionName,
+		SourceMode:            sourceBattleActionMode(profile.SourceType),
+		SourceActionLabel:     profile.SourceActionLabel,
+		TargetActionState:     "none",
 		TargetActionStateCode: "3",
-		Damage:            0,
-		TargetHP:          target.HP,
-		TargetMP:          target.MP,
-		TargetDead:        target.HP <= 0,
-		RefreshInfos:      []CellInfoPush{*enemy, *target},
-		Round:             runtime.Round,
-		Sequence:          runtime.nextSequence,
+		Damage:                0,
+		TargetHP:              target.HP,
+		TargetMP:              target.MP,
+		TargetDead:            target.HP <= 0,
+		RefreshInfos:          []CellInfoPush{*enemy, *target},
+		Round:                 runtime.Round,
+		Sequence:              runtime.nextSequence,
 	}
 }
 

@@ -4093,6 +4093,181 @@ func TestPoisonTickRestoresDefenseWhenExpired(t *testing.T) {
 	}
 }
 
+func TestPoisonTickCanKillAndMarksTargetDead(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-poison-death",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"enemy_poison": {
+				Effects: map[string]BattleStatusEffect{
+					"中毒": {
+						Name:           "中毒",
+						Rounds:         2,
+						SourceHandle:   "player_poison",
+						SourceSkill:    "投毒",
+						SourceAttack:   240,
+						TickMinPercent: 20,
+						TickMaxPercent: 25,
+					},
+				},
+			},
+		},
+	}
+	target := &CellInfoPush{
+		BattleID: "battle-poison-death",
+		Handle:   "enemy_poison",
+		Camp:     CampEnemy,
+		HP:       30,
+		MaxHP:    500,
+	}
+
+	actions, skipTurn := runtime.resolveStatusStartActions(target)
+
+	if skipTurn || len(actions) != 1 {
+		t.Fatalf("expected one killing 中毒 tick without skip, actions=%+v skip=%v", actions, skipTurn)
+	}
+	action := actions[0]
+	if action.ActionName != "中毒" || action.TargetHP != 0 || !action.TargetDead || target.HP != 0 {
+		t.Fatalf("expected 中毒 tick to kill and mark target dead, action=%+v target=%+v", action, target)
+	}
+	if len(action.RefreshInfos) != 1 || action.RefreshInfos[0].Handle != target.Handle || action.RefreshInfos[0].HP != 0 {
+		t.Fatalf("expected killing 中毒 tick to include hp=0 refresh info, got %+v", action.RefreshInfos)
+	}
+}
+
+func TestPoisonTickDeathDoesNotQueueStartCommandForDeadActor(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-poison-next-actor-death",
+		Round:            1,
+		Phase:            PhasePlaying,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"player_next": {
+				Effects: map[string]BattleStatusEffect{
+					"中毒": {
+						Name:           "中毒",
+						Rounds:         2,
+						SourceHandle:   "player_leader",
+						SourceSkill:    "投毒",
+						SourceAttack:   240,
+						TickMinPercent: 20,
+						TickMaxPercent: 25,
+					},
+				},
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				Handle: "player_leader",
+				Camp:   CampTeam,
+				HP:     500,
+				MaxHP:  500,
+				Attack: 100,
+				Hit:    100,
+			},
+			{
+				Handle: "player_next",
+				Camp:   CampTeam,
+				HP:     30,
+				MaxHP:  500,
+				Attack: 100,
+				Hit:    100,
+			},
+			{
+				Handle:  "enemy_dummy",
+				Camp:    CampEnemy,
+				HP:      1000,
+				MaxHP:   1000,
+				Attack:  1,
+				Defense: 0,
+				Hit:     100,
+				Dog:     0,
+			},
+		},
+	}
+
+	result := runtime.resolveEnemyTurnAndNextCommand(runtime.cellByHandle("player_leader"), nil)
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected enemy turn flow to resolve, got %+v", result)
+	}
+	var poisonDeath *ActionPush
+	for index := range result.Actions {
+		action := result.Actions[index]
+		if action.ActionName == "中毒" && action.ActorHandle == "player_next" {
+			poisonDeath = &result.Actions[index]
+			break
+		}
+	}
+	if poisonDeath == nil || !poisonDeath.TargetDead || poisonDeath.TargetHP != 0 {
+		t.Fatalf("expected player_next poison tick death action, got action=%+v actions=%+v", poisonDeath, result.Actions)
+	}
+	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_leader" {
+		t.Fatalf("expected next startCommand to skip dead poison actor, pending=%+v", runtime.PendingStart)
+	}
+}
+
+func TestPoisonTickDeathEndsBattleWhenLastEnemyDies(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-poison-last-enemy-death",
+		Round:            1,
+		Phase:            PhasePlaying,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"enemy_poison": {
+				Effects: map[string]BattleStatusEffect{
+					"中毒": {
+						Name:           "中毒",
+						Rounds:         2,
+						SourceHandle:   "player_poison",
+						SourceSkill:    "投毒",
+						SourceAttack:   240,
+						TickMinPercent: 20,
+						TickMaxPercent: 25,
+					},
+				},
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				Handle: "player_poison",
+				Camp:   CampTeam,
+				HP:     500,
+				MaxHP:  500,
+				Attack: 100,
+				Hit:    100,
+			},
+			{
+				Handle: "enemy_poison",
+				Camp:   CampEnemy,
+				HP:     30,
+				MaxHP:  500,
+				Attack: 120,
+				Hit:    100,
+			},
+		},
+	}
+
+	result := runtime.resolveEnemyTurnAndNextCommand(runtime.cellByHandle("player_poison"), nil)
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected enemy turn flow to resolve, got %+v", result)
+	}
+	if len(result.Actions) != 1 || result.Actions[0].ActionName != "中毒" || !result.Actions[0].TargetDead || result.Actions[0].TargetHP != 0 {
+		t.Fatalf("expected only poison death action for last enemy, got %+v", result.Actions)
+	}
+	if runtime.Phase != PhaseFinished || runtime.PendingOver == nil || runtime.PendingOver.Winner != CampTeam {
+		t.Fatalf("expected poison death of last enemy to finish battle with team win, phase=%s pendingOver=%+v", runtime.Phase, runtime.PendingOver)
+	}
+	if runtime.PendingStart != nil {
+		t.Fatalf("expected no next startCommand after last enemy poison death, got %+v", runtime.PendingStart)
+	}
+}
+
 func TestJiFengCiDoesNotApplySlownessOnDodge(t *testing.T) {
 	runtime := newSlownessTestRuntime("player_slow_dodge", "enemy_slow_dodge")
 	actor := runtime.cellByHandle("player_slow_dodge")

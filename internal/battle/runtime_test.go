@@ -4555,6 +4555,152 @@ func TestEnemyPalsyAtkDoesNotApplyParalysisOnDodge(t *testing.T) {
 	}
 }
 
+func TestRobotawlRoundAtkAppliesArmorBreakOnHit(t *testing.T) {
+	var runtime *Runtime
+	var enemy *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 300; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-robotawl-xiejia-%d", index),
+			Round:            1,
+			nextSequence:     1,
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+		}
+		candidateEnemy := &CellInfoPush{
+			Handle:     "enemy_robotawl",
+			Name:       "机木锥兵",
+			DisplayURL: "monstermap/robotawl.swf",
+			Camp:       CampEnemy,
+			HP:         1330,
+			MaxHP:      1330,
+			Attack:     624,
+			Hit:        100,
+		}
+		candidateTarget := &CellInfoPush{
+			Handle:  "player_21432",
+			Camp:    CampTeam,
+			HP:      1215,
+			MaxHP:   1215,
+			Defense: 240,
+			Dog:     0,
+		}
+		if candidate.hashBattleRollWithSalt(candidateEnemy, candidateTarget, CommandEnemyRoundAtk, "status:卸甲") < enemyRobotawlArmorBreakChance {
+			runtime = candidate
+			enemy = candidateEnemy
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 轮转刺伤卸甲 roll below 70")
+	}
+
+	action := runtime.resolveAttack(enemy, target, CommandEnemyRoundAtk)
+
+	if action.ActionName != "轮转刺伤" || action.SourceActionLabel != "roundatk" || action.TargetActionStateCode == "1" {
+		t.Fatalf("expected captured 机木锥兵 轮转刺伤 hit action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected one 卸甲 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "卸甲" || buff.Display != "10.png" || buff.Round != 3 || buff.ReleaseHandle != enemy.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 卸甲 BuffInfo metadata, got %+v", buff)
+	}
+	if buff.Description != "降低对象62点物理防御力" {
+		t.Fatalf("expected captured 卸甲 description shape, got %q", buff.Description)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["卸甲"]
+	if effect.Name != "卸甲" || effect.DefenseReduction != 62 || effect.SourceAttack != 624 || effect.Rounds != 3 || effect.SourceSkill != "轮转刺伤" || effect.AppliedAction != "roundatk" {
+		t.Fatalf("expected runtime 卸甲 status to be recorded, got %+v", runtime.StatusEffects)
+	}
+	if target.Defense != 178 {
+		t.Fatalf("expected target physical defense to be reduced by captured source attack 10%%, got %+v", target)
+	}
+}
+
+func TestRobotawlRoundAtkDoesNotApplyArmorBreakOnDodge(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-robotawl-xiejia-dodge",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+	}
+	enemy := &CellInfoPush{
+		Handle:     "enemy_robotawl",
+		Name:       "机木锥兵",
+		DisplayURL: "monstermap/robotawl.swf",
+		Camp:       CampEnemy,
+		Attack:     624,
+		Hit:        0,
+	}
+	target := &CellInfoPush{
+		Handle:  "player_21432",
+		Camp:    CampTeam,
+		HP:      1215,
+		MaxHP:   1215,
+		Defense: 240,
+		Dog:     1,
+	}
+
+	action := runtime.resolveAttack(enemy, target, CommandEnemyRoundAtk)
+
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected 轮转刺伤 dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to suppress 卸甲 status, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+	if target.Defense != 240 {
+		t.Fatalf("expected dodge to keep target defense unchanged, got %+v", target)
+	}
+}
+
+func TestArmorBreakRestoresDefenseWhenExpired(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-xiejia-expire",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"player_21432": {
+				Effects: map[string]BattleStatusEffect{
+					"卸甲": {
+						Name:             "卸甲",
+						Rounds:           1,
+						DefenseReduction: 62,
+					},
+				},
+			},
+		},
+	}
+	target := &CellInfoPush{
+		BattleID: "battle-xiejia-expire",
+		Handle:   "player_21432",
+		Camp:     CampTeam,
+		HP:       1000,
+		MaxHP:    1000,
+		Defense:  178,
+	}
+
+	actions, skipTurn := runtime.resolveStatusStartActions(target)
+
+	if len(actions) != 0 || skipTurn {
+		t.Fatalf("expected 卸甲 to tick without action or skip, actions=%+v skip=%v", actions, skipTurn)
+	}
+	if target.Defense != 240 {
+		t.Fatalf("expected 卸甲 expiration to restore defense, got %+v", target)
+	}
+	if _, ok := runtime.StatusEffects["player_21432"]; ok {
+		t.Fatalf("expected expired 卸甲 status to clear, got %+v", runtime.StatusEffects)
+	}
+	if len(runtime.PendingClearBuffInfos) != 1 || runtime.PendingClearBuffInfos[0].Name != "卸甲" || runtime.PendingClearBuffInfos[0].TargetHandle != "player_21432" {
+		t.Fatalf("expected 卸甲 clear buff info, got %+v", runtime.PendingClearBuffInfos)
+	}
+}
+
 func TestEnemyPalsyAtkSkipsPlayerNextCommand(t *testing.T) {
 	var runtime *Runtime
 	for index := 0; index < 300; index += 1 {
@@ -5842,6 +5988,28 @@ func TestShihukuEnemyBattleCommandUsesCapturedActionRatios(t *testing.T) {
 	powerTiger := &CellInfoPush{Handle: "enemy_powertiger", Camp: CampEnemy, Name: "蛮虎怪", DisplayURL: "monstermap/powertiger.swf", HP: 3200, MaxHP: 3200, MP: 600}
 	if command := (&Runtime{BattleID: "battle-shihuku-powertiger", Round: 1, nextSequence: 1}).enemyBattleCommand(powerTiger, target); command != CommandEnemyAttack {
 		t.Fatalf("expected shihuku powertiger to keep normal attack only, got %s", command)
+	}
+}
+
+func TestRobotawlEnemyBattleCommandCanUseCapturedRoundAtk(t *testing.T) {
+	target := &CellInfoPush{Handle: "player_21424", Camp: CampTeam, HP: 1085, MaxHP: 1085}
+	enemy := &CellInfoPush{
+		Handle:     "enemy_robotawl",
+		Camp:       CampEnemy,
+		Name:       "机木锥兵",
+		DisplayURL: "monstermap/robotawl.swf",
+		HP:         1330,
+		MaxHP:      1330,
+		Attack:     624,
+	}
+	battleID, ok := findBattleIDForEnemyCommand(CommandEnemyRoundAtk, enemy, target)
+	if !ok {
+		t.Fatal("expected to find deterministic battle id for 机木锥兵 轮转刺伤 5/100")
+	}
+
+	runtime := &Runtime{BattleID: battleID, Round: 1, nextSequence: 1}
+	if command := runtime.enemyBattleCommand(enemy, target); command != CommandEnemyRoundAtk {
+		t.Fatalf("expected 机木锥兵 to choose captured 轮转刺伤/roundatk, got %s with battle id %s", command, battleID)
 	}
 }
 

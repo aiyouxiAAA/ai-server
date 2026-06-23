@@ -59,6 +59,7 @@ const (
 	CommandEnemyPieceAtk   = "enemy-piece-attack"
 	CommandEnemyLionRoars  = "enemy-lion-roars"
 	CommandEnemyGoldHit    = "enemy-gold-hit"
+	CommandEnemyRoundAtk   = "enemy-round-atk"
 	CommandDefense         = "defense"
 	CommandStore           = "battle-store"
 	CommandEscape          = "battle-escape"
@@ -109,6 +110,10 @@ const (
 	enemyShihukuPieceWoundRounds       = 5
 	enemyShihukuLionRoarsChance        = 20
 	enemyShihukuGoldHitChance          = 19
+	enemyRobotawlRoundAtkChance        = 5
+	enemyRobotawlArmorBreakChance      = 70
+	enemyRobotawlArmorBreakRounds      = 3
+	enemyRobotawlArmorBreakAttackPct   = 10
 	defaultBattleHit                   = 100
 	defaultBattleDog                   = 50
 	defaultBattleFat                   = 5
@@ -1176,6 +1181,8 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			runtime.applySlownessStatusEffect(actor, target, effect)
 		} else if strings.TrimSpace(effect.Name) == "中毒" {
 			runtime.applyPoisonStatusEffect(actor, target, effect)
+		} else if strings.TrimSpace(effect.Name) == "卸甲" {
+			runtime.applyArmorBreakStatusEffect(actor, target, effect)
 		} else {
 			runtime.applyStatusEffect(target.Handle, effect)
 			runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
@@ -1419,6 +1426,20 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			CanDodge:          true,
 			CanFat:            true,
 		}
+	case CommandEnemyRoundAtk:
+		return commandProfile{
+			ActionName:        "轮转刺伤",
+			SourceType:        "oneE",
+			SourceActionLabel: "roundatk",
+			DamageMultiplier:  1,
+			CanDodge:          true,
+			CanFat:            true,
+			StatusName:        "卸甲",
+			StatusDisplay:     "10.png",
+			StatusRounds:      enemyRobotawlArmorBreakRounds,
+			StatusChance:      enemyRobotawlArmorBreakChance,
+			StatusDescription: "降低对象物理防御力",
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
 		if actor == nil || strings.TrimSpace(actor.CommandLabel) == "" {
 			profile.ActionName = "普通攻击"
@@ -1433,6 +1454,9 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
 	if sourceEnemyCanShihukuGoldHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyGoldHit, enemyShihukuGoldHitChance) {
 		return CommandEnemyGoldHit
+	}
+	if sourceEnemyCanRobotawlRoundAtk(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRoundAtk, enemyRobotawlRoundAtkChance) {
+		return CommandEnemyRoundAtk
 	}
 	if sourceEnemyCanShihukuLionRoars(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyLionRoars, enemyShihukuLionRoarsChance) {
 		return CommandEnemyLionRoars
@@ -1516,6 +1540,14 @@ func sourceEnemyCanPalsyAtk(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	return strings.TrimSpace(enemy.Name) == "毒蜂" || strings.Contains(normalizedDisplay, "monstermap/drughornets.swf")
+}
+
+func sourceEnemyCanRobotawlRoundAtk(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "机木锥兵" || strings.Contains(normalizedDisplay, "monstermap/robotawl.swf")
 }
 
 func sourceEnemyCanRockRain(enemy *CellInfoPush) bool {
@@ -2819,6 +2851,37 @@ func (runtime *Runtime) applyPoisonStatusEffect(actor *CellInfoPush, target *Cel
 	if effect.TickMaxPercent < effect.TickMinPercent {
 		effect.TickMaxPercent = effect.TickMinPercent
 	}
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+	return true
+}
+
+func (runtime *Runtime) applyArmorBreakStatusEffect(actor *CellInfoPush, target *CellInfoPush, effect BattleStatusEffect) bool {
+	if runtime == nil || target == nil || strings.TrimSpace(effect.Name) == "" || effect.Rounds <= 0 {
+		return false
+	}
+	runtime.restoreExistingStatusEffect(target.Handle, "卸甲")
+	sourceAttack := effect.SourceAttack
+	if sourceAttack <= 0 && actor != nil {
+		sourceAttack = actor.Attack
+	}
+	defenseReduction := 0
+	if sourceAttack > 0 && enemyRobotawlArmorBreakAttackPct > 0 {
+		defenseReduction = maxInt(1, int(math.Floor(float64(sourceAttack)*float64(enemyRobotawlArmorBreakAttackPct)/100)))
+		if target.Defense < defenseReduction {
+			defenseReduction = maxInt(0, target.Defense)
+		}
+	}
+	if defenseReduction > 0 {
+		target.Defense = maxInt(0, target.Defense-defenseReduction)
+	}
+	effect.Name = "卸甲"
+	if strings.TrimSpace(effect.Display) == "" {
+		effect.Display = "10.png"
+	}
+	effect.Description = fmt.Sprintf("降低对象%d点物理防御力", defenseReduction)
+	effect.DefenseReduction = defenseReduction
+	effect.SourceAttack = sourceAttack
 	runtime.applyStatusEffect(target.Handle, effect)
 	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
 	return true

@@ -1,0 +1,4 @@
+profession_id,name,answer_handle,skill_shop_id,skill_cap,status,evidence
+warrior,战士,job_warrior,skill1,22,confirmed,cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go
+sorcerer,术士,job_sorcerer,skill2,24,confirmed,cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go
+ranger,游侠,job_ranger,skill3,26,confirmed,cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go

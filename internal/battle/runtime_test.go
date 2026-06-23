@@ -2295,6 +2295,20 @@ func TestProcessActionAllowsCapturedRangerSelfStatusSkill(t *testing.T) {
 		ConsumedSequence: map[int]bool{},
 		DefendingHandles: map[string]bool{},
 		StoredPower:      map[string]int{},
+		StatusEffects: map[string]BattleStatusEffects{
+			"player_21432": {
+				Effects: map[string]BattleStatusEffect{
+					"中毒": {
+						Name:                  "中毒",
+						Rounds:                3,
+						SourceHandle:          "enemy_1",
+						SourceSkill:           "投毒",
+						DefenseReduction:      9,
+						MagicDefenseReduction: 5,
+					},
+				},
+			},
+		},
 		RoleSkills: []session.RoleSkill{
 			{
 				Name:        "解毒术",
@@ -2305,14 +2319,16 @@ func TestProcessActionAllowsCapturedRangerSelfStatusSkill(t *testing.T) {
 		},
 		Cells: []CellInfoPush{
 			{
-				BattleID: "battle-command-ranger-self-status",
-				Handle:   "player_21432",
-				Camp:     CampTeam,
-				HP:       300,
-				MaxHP:    300,
-				MP:       100,
-				MaxMP:    100,
-				Attack:   100,
+				BattleID:   "battle-command-ranger-self-status",
+				Handle:     "player_21432",
+				Camp:       CampTeam,
+				HP:         300,
+				MaxHP:      300,
+				MP:         100,
+				MaxMP:      100,
+				Attack:     100,
+				Defense:    51,
+				MgcDefense: 31,
 			},
 			{
 				BattleID: "battle-command-ranger-self-status",
@@ -2323,6 +2339,17 @@ func TestProcessActionAllowsCapturedRangerSelfStatusSkill(t *testing.T) {
 				Defense:  40,
 			},
 		},
+	}
+	initialActor := *runtime.cellByHandle("player_21432")
+	initialEnemy := *runtime.cellByHandle("enemy_1")
+	initialPoisonBuff := BuffInfoPush{
+		BattleID:      runtime.BattleID,
+		ReleaseHandle: "enemy_1",
+		TargetHandle:  "player_21432",
+		Name:          "中毒",
+		Display:       "8.png",
+		Description:   "降低对象5点魔防和9点物防，每回合内减少对象20~25点气力",
+		Round:         3,
 	}
 
 	result := runtime.ProcessAction(ActionRequest{
@@ -2344,6 +2371,16 @@ func TestProcessActionAllowsCapturedRangerSelfStatusSkill(t *testing.T) {
 	if action.Damage != 0 || action.TargetHP != 300 || action.TargetMP != 80 || action.RefreshInfos[0].MP != 80 {
 		t.Fatalf("expected 解毒术 to consume MP without damage, got %+v", action)
 	}
+	if action.RefreshInfos[0].Defense != 60 || action.RefreshInfos[0].MgcDefense != 36 {
+		t.Fatalf("expected 解毒术 to restore poison defense reductions, got %+v", action.RefreshInfos[0])
+	}
+	if _, ok := runtime.StatusEffects["player_21432"]; ok {
+		t.Fatalf("expected 解毒术 to clear 中毒 status, got %+v", runtime.StatusEffects)
+	}
+	if len(result.ClearBuffInfos) != 1 || result.ClearBuffInfos[0].TargetHandle != "player_21432" || result.ClearBuffInfos[0].Name != "中毒" {
+		t.Fatalf("expected 解毒术 to push clearBuffInfo for 中毒, got %+v", result.ClearBuffInfos)
+	}
+	writeJieDuRealFlowFixture(t, initialActor, initialEnemy, initialPoisonBuff, result)
 }
 
 func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
@@ -3846,6 +3883,205 @@ func TestEquipmentInnerInjuryRestoresAttackWhenExpired(t *testing.T) {
 	}
 }
 
+func TestEquipmentSealAppliesCapturedBuffInfoOnHit(t *testing.T) {
+	var runtime *Runtime
+	var actor *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 1000; index += 1 {
+		candidate := newSealTestRuntime(fmt.Sprintf("player_seal_%d", index), "enemy_seal")
+		candidateActor := candidate.cellByHandle(fmt.Sprintf("player_seal_%d", index))
+		candidateTarget := candidate.cellByHandle("enemy_seal")
+		if candidate.hashBattleRollWithSalt(candidateActor, candidateTarget, CommandNormalAttack, "equipment:封印") < 1 {
+			runtime = candidate
+			actor = candidateActor
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 伏魔棍 seal roll below 1")
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.TargetActionStateCode != "0" || action.Damage <= 0 {
+		t.Fatalf("expected seal source hit to land, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected one 封印 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "封印" || buff.Display != "19.png" || buff.Description != "作用时间内对象无法使用技能" || buff.Round != 3 || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 封印 BuffInfo metadata, got %+v", buff)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["封印"]
+	if effect.Name != "封印" || effect.Display != "19.png" || effect.Rounds != 3 || effect.SourceHandle != actor.Handle || effect.SourceSkill != "伏魔棍" || effect.SkipTurn {
+		t.Fatalf("expected runtime 封印 status without skip-turn, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestEquipmentSealDoesNotApplyOnDodge(t *testing.T) {
+	runtime := newSealTestRuntime("player_seal_dodge", "enemy_seal_dodge")
+	actor := runtime.cellByHandle("player_seal_dodge")
+	target := runtime.cellByHandle("enemy_seal_dodge")
+	actor.Hit = 0
+	target.Dog = 1
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.TargetActionStateCode != "1" || action.Damage != 0 {
+		t.Fatalf("expected dodge action, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to suppress 封印 status, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+}
+
+func TestEquipmentSealIgnoresResistanceOnlyDescription(t *testing.T) {
+	runtime := newSealResistanceOnlyTestRuntime("player_seal_resist", "enemy_seal_resist")
+	actor := runtime.cellByHandle("player_seal_resist")
+	target := runtime.cellByHandle("enemy_seal_resist")
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.TargetActionStateCode != "0" || action.Damage <= 0 {
+		t.Fatalf("expected normal hit to land, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected 封印抗性 equipment text not to create 封印 status, buffs=%+v effects=%+v", runtime.PendingBuffInfos, runtime.StatusEffects)
+	}
+}
+
+func TestSealStatusActionForcesEnemyNormalAttackWithoutSkippingTurn(t *testing.T) {
+	var runtime *Runtime
+	for index := 0; index < 1000; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-seal-flow-%d", index),
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_21424",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StatusEffects: map[string]BattleStatusEffects{
+				"enemy_shaman": {
+					Effects: map[string]BattleStatusEffect{
+						"封印": {
+							Name:         "封印",
+							Display:      "19.png",
+							Description:  "作用时间内对象无法使用技能",
+							Rounds:       1,
+							SourceHandle: "player_21424",
+							SourceSkill:  "伏魔棍",
+						},
+					},
+				},
+			},
+			PendingSkillSeal: map[string]bool{},
+			Cells: []CellInfoPush{
+				{
+					BattleID: "battle-seal-flow",
+					Handle:   "player_21424",
+					Camp:     CampTeam,
+					HP:       500,
+					MaxHP:    500,
+					Attack:   10,
+					Defense:  0,
+					Dog:      0,
+				},
+				{
+					BattleID:   "battle-seal-flow",
+					Handle:     "enemy_shaman",
+					Name:       "咒巫师",
+					DisplayURL: "monstermap/incantationshaman.swf",
+					Camp:       CampEnemy,
+					HP:         300,
+					MaxHP:      300,
+					MP:         100,
+					MaxMP:      100,
+					Attack:     50,
+					Defense:    0,
+					Hit:        100,
+				},
+			},
+		}
+		enemy := candidate.cellByHandle("enemy_shaman")
+		target := candidate.cellByHandle("player_21424")
+		if candidate.resolveEnemySkillUse(enemy, target, CommandEnemyRockRain, enemyRockRainChance) {
+			runtime = candidate
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 咒巫师落石 roll")
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21424",
+		CommandID:    CommandDefense,
+		TargetHandle: "player_21424",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected defense to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 3 || result.Actions[0].ActionName != "防御" || result.Actions[1].ActionName != "封印" || result.Actions[2].ActionName != "普通攻击" {
+		t.Fatalf("expected 防御 -> 封印 -> 普通攻击 sequence, got %+v", result.Actions)
+	}
+	if result.Actions[1].SourceActionLabel != "battleStand" || result.Actions[1].ActorHandle != "enemy_shaman" || result.Actions[1].TargetHandle != "enemy_shaman" || result.Actions[1].Damage != 0 {
+		t.Fatalf("expected 封印 battleStand self action, got %+v", result.Actions[1])
+	}
+	for _, action := range result.Actions {
+		if action.ActionName == "落石" {
+			t.Fatalf("expected sealed enemy to avoid skill 落石, got actions=%+v", result.Actions)
+		}
+	}
+	if len(result.ClearBuffInfos) != 1 || result.ClearBuffInfos[0].Name != "封印" || result.ClearBuffInfos[0].TargetHandle != "enemy_shaman" {
+		t.Fatalf("expected final seal round to clear buff info, got %+v", result.ClearBuffInfos)
+	}
+	if runtime.PendingSkillSeal["enemy_shaman"] {
+		t.Fatalf("expected enemy seal marker to be consumed after forced normal attack, got %+v", runtime.PendingSkillSeal)
+	}
+}
+
+func TestSealRejectsPlayerSkillButAllowsNormalAttack(t *testing.T) {
+	runtime := newSealPlayerCommandRuntime()
+	skillResult := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21424",
+		CommandID:    CommandDuoDuanZhan,
+		TargetHandle: "enemy_seal_command",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if skillResult.ErrorCode != "sealed_skill" {
+		t.Fatalf("expected sealed player active skill to be rejected, got %+v", skillResult)
+	}
+	if !runtime.PendingSkillSeal["player_21424"] || runtime.ConsumedSequence[1] {
+		t.Fatalf("expected rejected sealed skill not to consume command, pendingSeal=%+v consumed=%+v", runtime.PendingSkillSeal, runtime.ConsumedSequence)
+	}
+
+	normalResult := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_21424",
+		CommandID:    CommandNormalAttack,
+		TargetHandle: "enemy_seal_command",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if normalResult.ErrorCode != "" {
+		t.Fatalf("expected sealed player normal attack to be accepted, got %+v", normalResult)
+	}
+	if runtime.PendingSkillSeal["player_21424"] {
+		t.Fatalf("expected normal attack to consume player seal marker, got %+v", runtime.PendingSkillSeal)
+	}
+}
+
 func TestJiFengCiAppliesSlownessBuffInfoOnHit(t *testing.T) {
 	var runtime *Runtime
 	var actor *CellInfoPush
@@ -4051,6 +4287,39 @@ func writePoisonRealFlowFixture(t *testing.T, actor CellInfoPush, target CellInf
 	}
 	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
 		t.Fatalf("write poison real flow fixture: %v", err)
+	}
+}
+
+func writeJieDuRealFlowFixture(t *testing.T, actor CellInfoPush, enemy CellInfoPush, poisonBuff BuffInfoPush, result ActionResult) {
+	t.Helper()
+	outputPath := strings.TrimSpace(os.Getenv("BATTLE_JIEDU_REAL_FLOW_OUT"))
+	if outputPath == "" {
+		return
+	}
+	payload := struct {
+		BattleID       string              `json:"battleId"`
+		Actor          CellInfoPush        `json:"actor"`
+		Enemy          CellInfoPush        `json:"enemy"`
+		BuffInfos      []BuffInfoPush      `json:"buffInfos"`
+		Actions        []ActionPush        `json:"actions"`
+		ClearBuffInfos []ClearBuffInfoPush `json:"clearBuffInfos"`
+	}{
+		BattleID:       actor.BattleID,
+		Actor:          actor,
+		Enemy:          enemy,
+		BuffInfos:      []BuffInfoPush{poisonBuff},
+		Actions:        result.Actions,
+		ClearBuffInfos: result.ClearBuffInfos,
+	}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal jiedu real flow fixture: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		t.Fatalf("create jiedu real flow fixture dir: %v", err)
+	}
+	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
+		t.Fatalf("write jiedu real flow fixture: %v", err)
 	}
 }
 
@@ -4480,6 +4749,105 @@ func newInnerInjuryTestRuntime(actorHandle string, targetHandle string) *Runtime
 				MgcDefense:   10,
 				Dog:          0,
 				CommandLabel: "普通攻击",
+			},
+		},
+	}
+}
+
+func newSealTestRuntime(actorHandle string, targetHandle string) *Runtime {
+	return &Runtime{
+		BattleID:         "battle-seal",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		RoleItemsByHandle: map[string][]session.RoleItem{
+			actorHandle: {
+				{
+					Type:        "装备",
+					Name:        "伏魔棍",
+					Display:     "56.png",
+					Description: "f_i_伏魔棍<br>特殊效果: 击中敌人时有1%的机率对敌人造成封印3回合",
+				},
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-seal",
+				Handle:   actorHandle,
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   100,
+				Hit:      100,
+			},
+			{
+				BattleID:     "battle-seal",
+				Handle:       targetHandle,
+				Camp:         CampEnemy,
+				HP:           1000,
+				MaxHP:        1000,
+				Attack:       180,
+				Defense:      0,
+				MgcDefense:   10,
+				Dog:          0,
+				CommandLabel: "普通攻击",
+			},
+		},
+	}
+}
+
+func newSealResistanceOnlyTestRuntime(actorHandle string, targetHandle string) *Runtime {
+	runtime := newSealTestRuntime(actorHandle, targetHandle)
+	runtime.RoleItemsByHandle[actorHandle] = []session.RoleItem{
+		{
+			Type:        "装备",
+			Name:        "骷髅戒指",
+			Display:     "759.png",
+			Description: "f_i_骷髅戒指<br>特殊效果: 封印抗性:+10%<br>[精炼+1] 每升一级 封印抗性+1%",
+		},
+	}
+	return runtime
+}
+
+func newSealPlayerCommandRuntime() *Runtime {
+	return &Runtime{
+		BattleID:         "battle-seal-command",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		PendingSkillSeal: map[string]bool{"player_21424": true},
+		RoleSkillsByHandle: map[string][]session.RoleSkill{
+			"player_21424": {
+				{Name: "多段斩", Level: 1, Type: "oneE", Description: fallbackDuoDuanDescription(1)},
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-seal-command",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Hit:      100,
+			},
+			{
+				BattleID: "battle-seal-command",
+				Handle:   "enemy_seal_command",
+				Camp:     CampEnemy,
+				HP:       1000,
+				MaxHP:    1000,
+				Attack:   1,
+				Defense:  0,
+				Hit:      100,
+				Dog:      0,
 			},
 		},
 	}

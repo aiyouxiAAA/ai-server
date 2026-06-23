@@ -1,0 +1,96 @@
+param(
+  [string]$ServerRoot = ''
+)
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+if ([string]::IsNullOrWhiteSpace($ServerRoot)) {
+  $ServerRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+}
+
+$sourceRoot = Join-Path $ServerRoot 'internal\classicdata\source'
+$generatedRoot = Join-Path $ServerRoot 'internal\classicdata\generated'
+
+if (!(Test-Path $sourceRoot)) {
+  throw "Classic data source directory not found: $sourceRoot"
+}
+if (!(Test-Path $generatedRoot)) {
+  New-Item -ItemType Directory -Path $generatedRoot | Out-Null
+}
+
+$tables = @(
+  @{
+    Name = 'drop'
+    Source = 'drop-table.csv'
+    RequiredColumns = @('map_id', 'source_monster_handle', 'exp_delta', 'item_observed_rates', 'status')
+  },
+  @{
+    Name = 'item'
+    Source = 'item-table.csv'
+    RequiredColumns = @('status', 'confidence', 'icon', 'name', 'item_type', 'category')
+  },
+  @{
+    Name = 'skill'
+    Source = 'skill-table.csv'
+    RequiredColumns = @('command_id', 'kind', 'label', 'source_type', 'action_name', 'source_action_label', 'target')
+  },
+  @{
+    Name = 'profession'
+    Source = 'profession-table.csv'
+    RequiredColumns = @('profession_id', 'name', 'answer_handle', 'skill_shop_id', 'skill_cap')
+  },
+  @{
+    Name = 'buff'
+    Source = 'buff-table.csv'
+    RequiredColumns = @('buff_id', 'name', 'display', 'status', 'mechanism')
+  },
+  @{
+    Name = 'monster'
+    Source = 'monster-table.csv'
+    RequiredColumns = @('monster_id', 'source_kind', 'map_id', 'handle', 'name', 'display_url', 'level', 'vocation', 'max_hp', 'max_mp')
+  }
+)
+
+function Test-RequiredColumns {
+  param(
+    [string]$Path,
+    [object[]]$Rows,
+    [string[]]$RequiredColumns
+  )
+
+  if ($Rows.Count -le 0) {
+    throw "Source table has no data rows: $Path"
+  }
+
+  $headers = @($Rows[0].PSObject.Properties.Name)
+  foreach ($column in $RequiredColumns) {
+    if ($headers -notcontains $column) {
+      throw "Source table $Path missing required column: $column"
+    }
+  }
+}
+
+foreach ($table in $tables) {
+  $sourcePath = Join-Path $sourceRoot $table.Source
+  if (!(Test-Path $sourcePath)) {
+    throw "Source CSV not found: $sourcePath"
+  }
+
+  $rows = @(Import-Csv -LiteralPath $sourcePath)
+  Test-RequiredColumns -Path $sourcePath -Rows $rows -RequiredColumns $table.RequiredColumns
+
+  $relativeSource = "internal/classicdata/source/$($table.Source)"
+  $payload = [ordered]@{
+    schemaVersion = 1
+    name = $table.Name
+    source = $relativeSource
+    rowCount = $rows.Count
+    rows = $rows
+  }
+
+  $destinationPath = Join-Path $generatedRoot "$($table.Name)-table.json"
+  $json = $payload | ConvertTo-Json -Depth 32
+  [System.IO.File]::WriteAllText($destinationPath, $json + "`n", [System.Text.UTF8Encoding]::new($false))
+  Write-Host "Generated $destinationPath from $sourcePath ($($rows.Count) rows)"
+}

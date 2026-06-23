@@ -121,6 +121,8 @@ const (
 	equipmentInnerInjuryDefaultRounds  = 3
 	equipmentInnerInjuryDefaultMin     = 10
 	equipmentInnerInjuryDefaultMax     = 15
+	equipmentSealDefaultChance         = 1
+	equipmentSealDefaultRounds         = 3
 	jiFengCiSlownessChance             = 92
 	jiFengCiSlownessRounds             = 3
 	jiFengCiSlownessPercent            = 50
@@ -328,6 +330,7 @@ type Runtime struct {
 	StoredPower           map[string]int
 	PendingBuffInfos      []BuffInfoPush
 	PendingClearBuffInfos []ClearBuffInfoPush
+	PendingSkillSeal      map[string]bool
 	PendingStart          *StartCommandPush
 	PendingOver           *OverPush
 	nextSequence          int
@@ -507,6 +510,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		DefendingHandles:    map[string]bool{},
 		StatusEffects:       map[string]BattleStatusEffects{},
 		PendingConfusion:    map[string]bool{},
+		PendingSkillSeal:    map[string]bool{},
 		StoredPower:         map[string]int{},
 		nextSequence:        1,
 	}
@@ -653,6 +657,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	runtime.PendingClearBuffInfos = nil
 	commandID := strings.TrimSpace(request.CommandID)
 	if runtime.consumePendingConfusion(actor.Handle) {
+		runtime.consumePendingSkillSeal(actor.Handle)
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, 0)
 		action := runtime.resolveConfusionNormalAttackAction(actor)
@@ -663,12 +668,16 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return runtime.resolveEnemyTurnAndNextCommand(actor, actions)
 	}
 	normalizedCommandID := normalizeBattleCommandID(commandID)
+	if runtime.hasPendingSkillSeal(actor.Handle) && isBattleSkillCommandBlockedBySeal(normalizedCommandID) {
+		return ActionResult{ErrorCode: "sealed_skill"}
+	}
 
 	switch normalizedCommandID {
 	case CommandEscape:
 		if !runtime.isSelfTarget(actor, request.TargetHandle) {
 			return ActionResult{ErrorCode: "invalid_target"}
 		}
+		runtime.consumePendingSkillSeal(actor.Handle)
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, 0)
 		runtime.Phase = PhasePlaying
@@ -683,6 +692,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		if !runtime.isSelfTarget(actor, request.TargetHandle) {
 			return ActionResult{ErrorCode: "invalid_target"}
 		}
+		runtime.consumePendingSkillSeal(actor.Handle)
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, 0)
 		if runtime.DefendingHandles == nil {
@@ -696,6 +706,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		if !runtime.isSelfTarget(actor, request.TargetHandle) {
 			return ActionResult{ErrorCode: "invalid_target"}
 		}
+		runtime.consumePendingSkillSeal(actor.Handle)
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, runtime.powerFor(actor.Handle)+1)
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
@@ -733,6 +744,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		if profile.MPCost > 0 {
 			actor.MP = maxInt(0, actor.MP-profile.MPCost)
 		}
+		runtime.clearStatusEffect(actor.Handle, "中毒")
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
 			runtime.resolveSelfAction(actor, commandID, "解毒术", "w3/releaseDrug"),
 		})
@@ -787,6 +799,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	}
 
 	runtime.ConsumedSequence[request.Sequence] = true
+	runtime.consumePendingSkillSeal(actor.Handle)
 	actions := []ActionPush{runtime.resolveAttack(actor, target, commandID)}
 	runtime.setStoredPower(actor.Handle, 0)
 	return runtime.resolveEnemyTurnAndNextCommand(actor, actions)
@@ -804,6 +817,7 @@ func (runtime *Runtime) ProcessItemAction(request ItemActionRequest, item ItemAc
 	}
 
 	if runtime.consumePendingConfusion(actor.Handle) {
+		runtime.consumePendingSkillSeal(actor.Handle)
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, 0)
 		action := runtime.resolveConfusionNormalAttackAction(actor)
@@ -829,6 +843,7 @@ func (runtime *Runtime) ProcessItemAction(request ItemActionRequest, item ItemAc
 	}
 
 	runtime.ConsumedSequence[request.Sequence] = true
+	runtime.consumePendingSkillSeal(actor.Handle)
 	runtime.setStoredPower(actor.Handle, 0)
 	if item.HealHP > 0 {
 		target.HP = clampInt(target.HP+item.HealHP, 0, target.MaxHP)
@@ -940,6 +955,9 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			actions = append(actions, runtime.resolveEnemyRampageActions(enemy)...)
 			targetHandle := team.Handle
 			commandID := runtime.enemyBattleCommand(enemy, team)
+			if runtime.consumePendingSkillSeal(enemy.Handle) {
+				commandID = CommandEnemyAttack
+			}
 			actions = append(actions, runtime.resolveEnemyCommandActions(enemy, team, commandID)...)
 			runtime.setStoredPower(enemy.Handle, 0)
 			if _, ok := teamHPBeforeEnemyTurn[targetHandle]; !ok {
@@ -1191,6 +1209,9 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 	runtime.applyCapturedStunOnHit(actor, target, commandID)
 	if target.HP > 0 {
 		runtime.applyEquipmentInnerInjuryOnHit(actor, target, commandID)
+	}
+	if target.HP > 0 {
+		runtime.applyEquipmentSealOnHit(actor, target, commandID)
 	}
 	refreshInfos := []CellInfoPush{*target}
 	if (consumeMP && profile.MPCost > 0) || profile.LifeStealChance > 0 {
@@ -2901,7 +2922,14 @@ type equipmentInnerInjuryEffect struct {
 	MaxPercent int
 }
 
+type equipmentSealEffect struct {
+	Chance     int
+	Rounds     int
+	SourceName string
+}
+
 var innerInjuryEquipmentPattern = regexp.MustCompile(`有(\d+)%机率.*进入内伤状态(\d+)回合.*降低敌人(\d+)%~(\d+)%`)
+var sealEquipmentPattern = regexp.MustCompile(`(?s)有(\d+)%机率.*造成封印(\d+)回合`)
 
 func (runtime *Runtime) applyEquipmentInnerInjuryOnHit(actor *CellInfoPush, target *CellInfoPush, commandID string) bool {
 	if runtime == nil || actor == nil || target == nil || target.HP <= 0 {
@@ -2980,6 +3008,61 @@ func sourceEquipmentInnerInjuryEffect(items []session.RoleItem) (equipmentInnerI
 	return equipmentInnerInjuryEffect{}, false
 }
 
+func (runtime *Runtime) applyEquipmentSealOnHit(actor *CellInfoPush, target *CellInfoPush, commandID string) bool {
+	if runtime == nil || actor == nil || target == nil || target.HP <= 0 {
+		return false
+	}
+	effectConfig, ok := sourceEquipmentSealEffect(runtime.itemsForHandle(actor.Handle))
+	if !ok {
+		return false
+	}
+	chance := clampInt(effectConfig.Chance, 0, 100)
+	if chance <= 0 {
+		return false
+	}
+	if chance < 100 && runtime.hashBattleRollWithSalt(actor, target, commandID, "equipment:封印") >= chance {
+		return false
+	}
+	effect := BattleStatusEffect{
+		Name:          "封印",
+		Display:       "19.png",
+		Description:   "作用时间内对象无法使用技能",
+		Rounds:        effectConfig.Rounds,
+		SourceHandle:  actor.Handle,
+		SourceSkill:   effectConfig.SourceName,
+		AppliedAction: "equipment:seal",
+	}
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+	return true
+}
+
+func sourceEquipmentSealEffect(items []session.RoleItem) (equipmentSealEffect, bool) {
+	for _, item := range items {
+		if strings.TrimSpace(item.Type) != "装备" {
+			continue
+		}
+		description := strings.TrimSpace(item.Description)
+		if !strings.Contains(description, "造成封印") {
+			continue
+		}
+		effect := equipmentSealEffect{
+			Chance:     equipmentSealDefaultChance,
+			Rounds:     equipmentSealDefaultRounds,
+			SourceName: strings.TrimSpace(item.Name),
+		}
+		if effect.SourceName == "" {
+			effect.SourceName = "装备封印"
+		}
+		if matches := sealEquipmentPattern.FindStringSubmatch(description); len(matches) == 3 {
+			effect.Chance = parsePositiveIntOrDefault(matches[1], effect.Chance)
+			effect.Rounds = parsePositiveIntOrDefault(matches[2], effect.Rounds)
+		}
+		return effect, true
+	}
+	return equipmentSealEffect{}, false
+}
+
 func parsePositiveIntOrDefault(raw string, fallback int) int {
 	value, err := strconv.Atoi(strings.TrimSpace(raw))
 	if err != nil || value <= 0 {
@@ -3006,6 +3089,34 @@ func (runtime *Runtime) restoreExistingStatusEffect(handle string, name string) 
 		return
 	}
 	runtime.restoreStatusEffect(runtime.cellByHandle(handle), effect)
+}
+
+func (runtime *Runtime) clearStatusEffect(handle string, name string) bool {
+	if runtime == nil || runtime.StatusEffects == nil {
+		return false
+	}
+	handle = strings.TrimSpace(handle)
+	name = strings.TrimSpace(name)
+	if handle == "" || name == "" {
+		return false
+	}
+	effects := runtime.StatusEffects[handle]
+	if effects.Effects == nil {
+		return false
+	}
+	effect, ok := effects.Effects[name]
+	if !ok {
+		return false
+	}
+	runtime.restoreStatusEffect(runtime.cellByHandle(handle), effect)
+	delete(effects.Effects, name)
+	if len(effects.Effects) == 0 && effects.KuangBaoRounds <= 0 {
+		delete(runtime.StatusEffects, handle)
+	} else {
+		runtime.StatusEffects[handle] = effects
+	}
+	runtime.queueClearBuffInfo(handle, effect.Name)
+	return true
 }
 
 func (runtime *Runtime) restoreStatusEffect(target *CellInfoPush, effect BattleStatusEffect) {
@@ -3112,6 +3223,12 @@ func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]Action
 				actions = append(actions, *action)
 				runtime.markPendingConfusion(actor.Handle)
 			}
+		case "封印":
+			action := runtime.resolveSkipTurnStatusAction(actor, effect)
+			if action != nil {
+				actions = append(actions, *action)
+				runtime.markPendingSkillSeal(actor.Handle)
+			}
 		}
 		effect.Rounds -= 1
 		if effect.Rounds <= 0 {
@@ -3165,6 +3282,44 @@ func (runtime *Runtime) consumePendingConfusion(handle string) bool {
 	}
 	delete(runtime.PendingConfusion, handle)
 	return true
+}
+
+func (runtime *Runtime) markPendingSkillSeal(handle string) {
+	if runtime == nil || strings.TrimSpace(handle) == "" {
+		return
+	}
+	if runtime.PendingSkillSeal == nil {
+		runtime.PendingSkillSeal = map[string]bool{}
+	}
+	runtime.PendingSkillSeal[handle] = true
+}
+
+func (runtime *Runtime) hasPendingSkillSeal(handle string) bool {
+	if runtime == nil || runtime.PendingSkillSeal == nil {
+		return false
+	}
+	return runtime.PendingSkillSeal[strings.TrimSpace(handle)]
+}
+
+func (runtime *Runtime) consumePendingSkillSeal(handle string) bool {
+	if runtime == nil || runtime.PendingSkillSeal == nil {
+		return false
+	}
+	handle = strings.TrimSpace(handle)
+	if !runtime.PendingSkillSeal[handle] {
+		return false
+	}
+	delete(runtime.PendingSkillSeal, handle)
+	return true
+}
+
+func isBattleSkillCommandBlockedBySeal(commandID string) bool {
+	switch strings.TrimSpace(commandID) {
+	case "", CommandNormalAttack, CommandDefense, CommandStore, CommandEscape, CommandItem:
+		return false
+	default:
+		return true
+	}
 }
 
 func (runtime *Runtime) resolveConfusionNormalAttackAction(actor *CellInfoPush) *ActionPush {

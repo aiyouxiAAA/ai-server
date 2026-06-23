@@ -1,0 +1,84 @@
+package classicdata
+
+import (
+	"embed"
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
+//go:embed generated/*.json
+var generatedTables embed.FS
+
+const (
+	TableDrop       = "drop"
+	TableItem       = "item"
+	TableSkill      = "skill"
+	TableProfession = "profession"
+	TableBuff       = "buff"
+	TableMonster    = "monster"
+)
+
+var KnownTables = []string{
+	TableDrop,
+	TableItem,
+	TableSkill,
+	TableProfession,
+	TableBuff,
+	TableMonster,
+}
+
+type Table struct {
+	SchemaVersion int                 `json:"schemaVersion"`
+	Name          string              `json:"name"`
+	Source        string              `json:"source"`
+	RowCount      int                 `json:"rowCount"`
+	Rows          []map[string]string `json:"rows"`
+}
+
+func LoadTable(name string) (Table, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return Table{}, fmt.Errorf("classic data table name is empty")
+	}
+	path := fmt.Sprintf("generated/%s-table.json", name)
+	data, err := generatedTables.ReadFile(path)
+	if err != nil {
+		return Table{}, fmt.Errorf("read classic data table %s: %w", name, err)
+	}
+
+	var table Table
+	if err := json.Unmarshal(data, &table); err != nil {
+		return Table{}, fmt.Errorf("decode classic data table %s: %w", name, err)
+	}
+	if table.SchemaVersion != 1 {
+		return Table{}, fmt.Errorf("classic data table %s has unsupported schema version %d", name, table.SchemaVersion)
+	}
+	if table.Name != name {
+		return Table{}, fmt.Errorf("classic data table %s has mismatched name %q", name, table.Name)
+	}
+	if table.RowCount != len(table.Rows) {
+		return Table{}, fmt.Errorf("classic data table %s rowCount=%d, rows=%d", name, table.RowCount, len(table.Rows))
+	}
+	return table, nil
+}
+
+func MustLoadTable(name string) Table {
+	table, err := LoadTable(name)
+	if err != nil {
+		panic(err)
+	}
+	return table
+}
+
+func LoadAllTables() (map[string]Table, error) {
+	tables := make(map[string]Table, len(KnownTables))
+	for _, name := range KnownTables {
+		table, err := LoadTable(name)
+		if err != nil {
+			return nil, err
+		}
+		tables[name] = table
+	}
+	return tables, nil
+}

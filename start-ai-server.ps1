@@ -17,11 +17,24 @@ function Test-HealthEndpoint {
     [string]$Url
   )
 
+  $handler = $null
+  $client = $null
   try {
-    $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 2
-    return $response.StatusCode -eq 200
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $handler.UseProxy = $false
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    $client.Timeout = [TimeSpan]::FromSeconds(2)
+    $response = $client.GetAsync($Url).GetAwaiter().GetResult()
+    return [int]$response.StatusCode -eq 200
   } catch {
     return $false
+  } finally {
+    if ($client -ne $null) {
+      $client.Dispose()
+    }
+    if ($handler -ne $null) {
+      $handler.Dispose()
+    }
   }
 }
 

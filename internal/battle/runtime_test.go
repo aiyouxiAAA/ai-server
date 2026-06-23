@@ -3154,6 +3154,41 @@ func TestLiShiGunShuAppliesCapturedFightingSpirit(t *testing.T) {
 	if effect.AttackIncrease != 15 || effect.AppliedAction != "w11/releasePower" {
 		t.Fatalf("expected 力释棍术 to persist reversible attack increase, got %+v", effect)
 	}
+
+	secondBuff := runtime.applyFightingSpiritStatusEffect(actor)
+	if actor.Attack != 115 {
+		t.Fatalf("expected reapplying 斗志 to restore the old increase before applying the new one, got actor=%+v secondBuff=%+v", actor, secondBuff)
+	}
+	effect = runtime.StatusEffects["player_21424"].Effects["斗志"]
+	if effect.AttackIncrease != 15 || effect.Rounds != liShiGunShuRounds || !strings.Contains(secondBuff.Description, "15点物理攻击") {
+		t.Fatalf("expected overwritten 斗志 to keep a single reversible attack increase, effect=%+v secondBuff=%+v", effect, secondBuff)
+	}
+	for turn := 1; turn < liShiGunShuRounds; turn += 1 {
+		actions, skipTurn := runtime.resolveStatusStartActions(actor)
+		if len(actions) != 0 || skipTurn {
+			t.Fatalf("expected 斗志 round %d to tick without action or skip, actions=%+v skip=%v", turn, actions, skipTurn)
+		}
+		if actor.Attack != 115 {
+			t.Fatalf("expected 斗志 round %d to keep boosted attack before expiry, got actor=%+v", turn, actor)
+		}
+		effect = runtime.StatusEffects["player_21424"].Effects["斗志"]
+		if effect.Rounds != liShiGunShuRounds-turn {
+			t.Fatalf("expected 斗志 round %d to decrement to %d, got %+v", turn, liShiGunShuRounds-turn, effect)
+		}
+	}
+	actions, skipTurn := runtime.resolveStatusStartActions(actor)
+	if len(actions) != 0 || skipTurn {
+		t.Fatalf("expected expiring 斗志 to tick without action or skip, actions=%+v skip=%v", actions, skipTurn)
+	}
+	if actor.Attack != 100 {
+		t.Fatalf("expected expired 斗志 to restore original attack, got actor=%+v", actor)
+	}
+	if _, ok := runtime.StatusEffects["player_21424"]; ok {
+		t.Fatalf("expected expired 斗志 status to clear, got %+v", runtime.StatusEffects)
+	}
+	if len(runtime.PendingClearBuffInfos) != 1 || runtime.PendingClearBuffInfos[0].Name != "斗志" || runtime.PendingClearBuffInfos[0].TargetHandle != "player_21424" {
+		t.Fatalf("expected 斗志 clear buff info, got %+v", runtime.PendingClearBuffInfos)
+	}
 }
 
 func TestLeiHunZhanRequiresCapturedSoulPowerAndUsesThunderSoulAtk(t *testing.T) {

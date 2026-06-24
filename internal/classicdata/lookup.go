@@ -73,6 +73,22 @@ func FindMonsterByID(id string) (map[string]string, bool, error) {
 	return FindRow(TableMonster, "monster_id", id)
 }
 
+func FindAttributeByID(id string) (map[string]string, bool, error) {
+	return FindRow(TableAttribute, "attribute_id", id)
+}
+
+func FindEffectRowsByBuffID(buffID string) ([]map[string]string, error) {
+	return FindRows(TableEffect, "buff_id", buffID)
+}
+
+func FindEffectSourceRowsByBuffID(buffID string) ([]map[string]string, error) {
+	return FindRows(TableEffectSource, "buff_id", buffID)
+}
+
+func FindEffectSourceRowsBySourceID(sourceID string) ([]map[string]string, error) {
+	return FindRows(TableEffectSource, "source_id", sourceID)
+}
+
 func FindDropRowsByMapID(mapID string) ([]map[string]string, error) {
 	return FindRows(TableDrop, "map_id", mapID)
 }

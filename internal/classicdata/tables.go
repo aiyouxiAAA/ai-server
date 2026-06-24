@@ -11,12 +11,15 @@ import (
 var generatedTables embed.FS
 
 const (
-	TableDrop       = "drop"
-	TableItem       = "item"
-	TableSkill      = "skill"
-	TableProfession = "profession"
-	TableBuff       = "buff"
-	TableMonster    = "monster"
+	TableDrop         = "drop"
+	TableItem         = "item"
+	TableSkill        = "skill"
+	TableProfession   = "profession"
+	TableBuff         = "buff"
+	TableMonster      = "monster"
+	TableAttribute    = "attribute"
+	TableEffect       = "effect"
+	TableEffectSource = "effect-source"
 )
 
 var KnownTables = []string{
@@ -26,6 +29,9 @@ var KnownTables = []string{
 	TableProfession,
 	TableBuff,
 	TableMonster,
+	TableAttribute,
+	TableEffect,
+	TableEffectSource,
 }
 
 type Table struct {

@@ -49,6 +49,21 @@ $tables = @(
     Name = 'monster'
     Source = 'monster-table.csv'
     RequiredColumns = @('monster_id', 'source_kind', 'map_id', 'handle', 'name', 'display_url', 'level', 'vocation', 'max_hp', 'max_mp')
+  },
+  @{
+    Name = 'attribute'
+    Source = 'attribute-table.csv'
+    RequiredColumns = @('attribute_id', 'display_name', 'kind', 'scope', 'status')
+  },
+  @{
+    Name = 'effect'
+    Source = 'effect-table.csv'
+    RequiredColumns = @('effect_id', 'buff_id', 'attribute_id', 'operation', 'status')
+  },
+  @{
+    Name = 'effect-source'
+    Source = 'effect-source-table.csv'
+    RequiredColumns = @('source_link_id', 'source_type', 'source_id', 'trigger', 'target', 'buff_id', 'status')
   }
 )
 

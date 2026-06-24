@@ -40,6 +40,18 @@ func TestGeneratedClassicTablesContainKnownRows(t *testing.T) {
 	assertHasRow(t, monsterTable, "monster_id", "wild-49-1914555684754474")
 	assertHasRow(t, monsterTable, "name", "蛤蟆精")
 
+	attributeTable := MustLoadTable(TableAttribute)
+	assertHasRow(t, attributeTable, "attribute_id", "phy_atk")
+	assertHasRow(t, attributeTable, "attribute_id", "dodge")
+
+	effectTable := MustLoadTable(TableEffect)
+	assertHasRow(t, effectTable, "effect_id", "poison-tick")
+	assertHasRow(t, effectTable, "effect_id", "fighting-spirit-phy-atk")
+
+	effectSourceTable := MustLoadTable(TableEffectSource)
+	assertHasRow(t, effectSourceTable, "source_link_id", "skill-tou-du-poison")
+	assertHasRow(t, effectSourceTable, "source_link_id", "equipment-feiyu-dagger-internal-injury")
+
 	dropTable := MustLoadTable(TableDrop)
 	assertHasRow(t, dropTable, "map_id", "49")
 }
@@ -103,6 +115,30 @@ func TestClassicDataLookupsReturnDetachedRows(t *testing.T) {
 	}
 	if len(drops) == 0 {
 		t.Fatalf("FindDropRowsByMapID() returned no rows")
+	}
+
+	attribute, ok, err := FindAttributeByID("phy_atk")
+	if err != nil {
+		t.Fatalf("FindAttributeByID() error = %v", err)
+	}
+	if !ok || attribute["battle_cell_field"] != "attack" {
+		t.Fatalf("FindAttributeByID() = %v %v, want battle attack field", ok, attribute)
+	}
+
+	effects, err := FindEffectRowsByBuffID("poison")
+	if err != nil {
+		t.Fatalf("FindEffectRowsByBuffID() error = %v", err)
+	}
+	if len(effects) < 3 {
+		t.Fatalf("FindEffectRowsByBuffID(poison) returned %d rows, want at least 3", len(effects))
+	}
+
+	sources, err := FindEffectSourceRowsBySourceID("skill-tou-du")
+	if err != nil {
+		t.Fatalf("FindEffectSourceRowsBySourceID() error = %v", err)
+	}
+	if len(sources) != 1 || sources[0]["buff_id"] != "poison" {
+		t.Fatalf("FindEffectSourceRowsBySourceID(skill-tou-du) = %+v, want poison source", sources)
 	}
 }
 

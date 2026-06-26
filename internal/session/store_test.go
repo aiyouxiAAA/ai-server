@@ -1,10 +1,16 @@
 package session
 
 import (
+	"encoding/csv"
+	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"ai-server/internal/classicdata"
 )
 
 func TestStoreLoginAccountSuccess(t *testing.T) {
@@ -1720,6 +1726,80 @@ func TestStoreCapturedMaterialTemplatesFillMissingIconFields(t *testing.T) {
 	}
 }
 
+func TestCapturedRoleItemTemplatesCoverConfiguredBattleRewardItems(t *testing.T) {
+	rewardSources := map[string]string{}
+	for _, row := range classicdata.MustLoadTable(classicdata.TableDrop).Rows {
+		collectConfiguredRewardItemNames(rewardSources, row["items"], "classicdata/drop-table")
+	}
+
+	candidateFile, err := os.Open(filepath.Join("..", "battle", "config", "classic-battle-reward-candidate.csv"))
+	if err != nil {
+		t.Fatalf("open classic battle reward candidate table: %v", err)
+	}
+	defer candidateFile.Close()
+	reader := csv.NewReader(candidateFile)
+	reader.FieldsPerRecord = -1
+	records, err := reader.ReadAll()
+	if err != nil {
+		t.Fatalf("read classic battle reward candidate table: %v", err)
+	}
+	if len(records) < 2 {
+		t.Fatal("expected classic battle reward candidate rows")
+	}
+	itemCountsIndex := -1
+	for index, name := range records[0] {
+		if name == "item_counts" {
+			itemCountsIndex = index
+			break
+		}
+	}
+	if itemCountsIndex < 0 {
+		t.Fatal("classic battle reward candidate table missing item_counts column")
+	}
+	for _, record := range records[1:] {
+		if itemCountsIndex >= len(record) {
+			continue
+		}
+		collectConfiguredRewardItemNames(rewardSources, record[itemCountsIndex], "battle/reward-candidate")
+	}
+
+	missing := []string{}
+	for name, source := range rewardSources {
+		template, ok := CapturedRoleItemTemplate(name)
+		if !ok || strings.TrimSpace(template.Display) == "" {
+			missing = append(missing, fmt.Sprintf("%s from %s", name, source))
+		}
+	}
+	sort.Strings(missing)
+	if len(missing) > 0 {
+		t.Fatalf("configured battle reward items missing icon templates: %s", strings.Join(missing, "; "))
+	}
+}
+
+func collectConfiguredRewardItemNames(out map[string]string, value string, source string) {
+	for _, part := range strings.Split(value, ";") {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+		if x := strings.LastIndex(name, "x"); x > 0 && x < len(name)-1 {
+			allDigits := true
+			for _, ch := range name[x+1:] {
+				if ch < '0' || ch > '9' {
+					allDigits = false
+					break
+				}
+			}
+			if allDigits {
+				name = strings.TrimSpace(name[:x])
+			}
+		}
+		if name != "" {
+			out[name] = source
+		}
+	}
+}
+
 func TestStoreCapturedHuangfengEquipmentDropTemplateFillsMissingIconFields(t *testing.T) {
 	template, ok := CapturedRoleItemTemplate("黄风腰带")
 	if !ok {
@@ -1850,6 +1930,44 @@ func TestStoreCapturedHuangfengCandidateRewardTemplatesFillMissingIconFields(t *
 		})
 		if item.Display != tc.display || item.ItemType != tc.itemType || item.Description == "" || item.ItemLevel != tc.itemLevel {
 			t.Fatalf("expected %s missing fields to be filled from template, got %+v", tc.name, item)
+		}
+	}
+}
+
+func TestStoreClassicDataEquipmentTemplatesFillRobberDropFallbacks(t *testing.T) {
+	cases := []struct {
+		name    string
+		display string
+		slot    int
+		token   string
+	}{
+		{name: "盗贼的鞋", display: "542.png", slot: 12, token: "护具·足部"},
+		{name: "盗贼护腿", display: "543.png", slot: 5, token: "护具·腿"},
+		{name: "盗贼布衣", display: "544.png", slot: 4, token: "护具·躯干"},
+		{name: "盗贼护臂", display: "545.png", slot: 2, token: "护具·护腕"},
+		{name: "盗贼腰带", display: "546.png", slot: 10, token: "护具·腰部"},
+	}
+
+	for _, tc := range cases {
+		template, ok := CapturedRoleItemTemplate(tc.name)
+		if !ok {
+			t.Fatalf("expected classicdata robber equipment template for %s", tc.name)
+		}
+		if template.Type != "装备" || template.ItemType != "equip" || template.Display != tc.display || template.Index != tc.slot || template.ItemLevel != 2 {
+			t.Fatalf("expected %s robber equipment template display=%s slot=%d, got %+v", tc.name, tc.display, tc.slot, template)
+		}
+		if !strings.Contains(template.Description, tc.token) {
+			t.Fatalf("expected %s description to include %q, got %q", tc.name, tc.token, template.Description)
+		}
+
+		item := normalizeRoleItem(RoleItem{
+			Type:  "背包",
+			Name:  tc.name,
+			Count: 1,
+			Index: 6,
+		})
+		if item.Display != tc.display || item.ItemType != "equip" || item.Description == "" || item.ItemLevel != 2 {
+			t.Fatalf("expected %s missing fields to be filled from classicdata template, got %+v", tc.name, item)
 		}
 	}
 }

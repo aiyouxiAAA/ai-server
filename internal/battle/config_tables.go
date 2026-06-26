@@ -5,10 +5,12 @@ import (
 	"encoding/csv"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
 	"ai-server/internal/classicactivity"
+	"ai-server/internal/classicdata"
 )
 
 //go:embed config/classic-wild-enemy.csv config/classic-visible-monster.csv config/classic-battle-reward.csv config/classic-battle-reward-candidate.csv
@@ -56,6 +58,9 @@ var (
 	sourceBattleRewardConfigByKey        = mustLoadSourceBattleRewardConfigs()
 	sourceBattleRewardCandidateByCellKey = mustLoadSourceBattleRewardCandidateConfigsByCellKey()
 	sourceBattleRewardCandidateByNameHP  = mustLoadSourceBattleRewardCandidateConfigsByNameHP()
+	sourceBattleRewardEquipmentItemNames = mustLoadSourceBattleRewardEquipmentItemNames()
+	sourceBattleRewardEquipmentItemOrder = mustLoadSourceBattleRewardEquipmentItemOrder()
+	sourceBattleRewardEquipmentPools     = mustLoadSourceBattleRewardEquipmentPools()
 )
 
 func sourceEnemyConfigForMap(mapID string) (sourceWildEnemyConfig, bool) {
@@ -101,12 +106,21 @@ func sourceBattleRewardConfigForMap(mapID string) (sourceBattleRewardConfig, boo
 	return reward, ok
 }
 
+func sourceBattleRewardConfigForExactEncounter(mapID string, sourceMonsterHandle string) (sourceBattleRewardConfig, bool) {
+	sourceMonsterHandle = strings.TrimSpace(sourceMonsterHandle)
+	if sourceMonsterHandle == "" {
+		return sourceBattleRewardConfig{}, false
+	}
+	if reward, ok := sourcePointCouponThiefRewardConfig(mapID, sourceMonsterHandle); ok {
+		return reward, true
+	}
+	reward, ok := sourceBattleRewardConfigByKey[battleRewardConfigKey(mapID, sourceMonsterHandle)]
+	return reward, ok
+}
+
 func sourceBattleRewardConfigForEncounter(mapID string, sourceMonsterHandle string) (sourceBattleRewardConfig, bool) {
 	if strings.TrimSpace(sourceMonsterHandle) != "" {
-		if reward, ok := sourcePointCouponThiefRewardConfig(mapID, sourceMonsterHandle); ok {
-			return reward, true
-		}
-		if reward, ok := sourceBattleRewardConfigByKey[battleRewardConfigKey(mapID, sourceMonsterHandle)]; ok {
+		if reward, ok := sourceBattleRewardConfigForExactEncounter(mapID, sourceMonsterHandle); ok {
 			return reward, true
 		}
 	}
@@ -161,11 +175,12 @@ func sourcePointCouponThiefRewardConfig(mapID string, handle string) (sourceBatt
 }
 
 func mustLoadSourceWildEnemyConfigs() map[string]sourceWildEnemyConfig {
-	records := mustReadBattleConfigCSV("config/classic-wild-enemy.csv")
-	header := battleConfigHeader(records[0])
 	configs := map[string]sourceWildEnemyConfig{}
-	for rowIndex, row := range records[1:] {
-		mapID, config := sourceWildEnemyConfigFromRow(row, header, rowIndex)
+	for rowIndex, row := range classicdata.MustRows(classicdata.TableMonster) {
+		if classicDataOptionalString(row, "source_kind") != "wild" {
+			continue
+		}
+		mapID, config := sourceWildEnemyConfigFromClassicDataRow(row, rowIndex)
 		if _, exists := configs[mapID]; exists {
 			continue
 		}
@@ -175,25 +190,62 @@ func mustLoadSourceWildEnemyConfigs() map[string]sourceWildEnemyConfig {
 }
 
 func mustLoadSourceWildEnemyConfigLists() map[string][]sourceWildEnemyConfig {
-	records := mustReadBattleConfigCSV("config/classic-wild-enemy.csv")
-	header := battleConfigHeader(records[0])
 	configs := map[string][]sourceWildEnemyConfig{}
-	for rowIndex, row := range records[1:] {
-		mapID, config := sourceWildEnemyConfigFromRow(row, header, rowIndex)
+	for rowIndex, row := range classicdata.MustRows(classicdata.TableMonster) {
+		if classicDataOptionalString(row, "source_kind") != "wild" {
+			continue
+		}
+		mapID, config := sourceWildEnemyConfigFromClassicDataRow(row, rowIndex)
 		configs[mapID] = append(configs[mapID], config)
 	}
 	return configs
 }
 
 func mustLoadSourceVisibleMonsterConfigs() map[string]sourceWildEnemyConfig {
-	records := mustReadBattleConfigCSV("config/classic-visible-monster.csv")
-	header := battleConfigHeader(records[0])
 	configs := map[string]sourceWildEnemyConfig{}
-	for rowIndex, row := range records[1:] {
-		mapID, config := sourceWildEnemyConfigFromRow(row, header, rowIndex)
+	for rowIndex, row := range classicdata.MustRows(classicdata.TableMonster) {
+		if classicDataOptionalString(row, "source_kind") != "visible" {
+			continue
+		}
+		mapID, config := sourceWildEnemyConfigFromClassicDataRow(row, rowIndex)
 		configs[visibleMonsterConfigKey(mapID, config.Cell.Handle)] = config
 	}
 	return configs
+}
+
+func sourceWildEnemyConfigFromClassicDataRow(row map[string]string, rowIndex int) (string, sourceWildEnemyConfig) {
+	mapID := requiredClassicDataString(row, "monster", "map_id", rowIndex)
+	maxHP := requiredClassicDataInt(row, "monster", "max_hp", rowIndex)
+	maxMP := requiredClassicDataInt(row, "monster", "max_mp", rowIndex)
+	return mapID, sourceWildEnemyConfig{
+		Cell: CellInfoPush{
+			Camp:              CampEnemy,
+			Handle:            requiredClassicDataString(row, "monster", "handle", rowIndex),
+			Name:              requiredClassicDataString(row, "monster", "name", rowIndex),
+			DisplayURL:        requiredClassicDataString(row, "monster", "display_url", rowIndex),
+			Level:             requiredClassicDataInt(row, "monster", "level", rowIndex),
+			Vocation:          requiredClassicDataString(row, "monster", "vocation", rowIndex),
+			XScale:            100,
+			YScale:            100,
+			MaxHP:             maxHP,
+			HP:                maxHP,
+			MaxMP:             maxMP,
+			MP:                maxMP,
+			Speed:             requiredClassicDataInt(row, "monster", "speed", rowIndex),
+			Attack:            requiredClassicDataInt(row, "monster", "attack", rowIndex),
+			Defense:           requiredClassicDataInt(row, "monster", "defense", rowIndex),
+			Hit:               defaultBattleHit,
+			Dog:               defaultBattleDog,
+			Fat:               defaultBattleFat,
+			CommandLabel:      requiredClassicDataString(row, "monster", "command_label", rowIndex),
+			DamageDefenseType: defaultString(classicDataOptionalString(row, "damage_defense_type"), "physical"),
+		},
+		QueueIndexTeam:   requiredClassicDataInt(row, "monster", "queue_index_team", rowIndex),
+		QueueIndexEnemy:  requiredClassicDataInt(row, "monster", "queue_index_enemy", rowIndex),
+		Vocation:         requiredClassicDataString(row, "monster", "vocation", rowIndex),
+		Source:           classicDataOptionalString(row, "source"),
+		EncounterHandles: splitBattleConfigList(classicDataOptionalString(row, "encounter_handles")),
+	}
 }
 
 func sourceWildEnemyConfigFromRow(row []string, header map[string]int, rowIndex int) (string, sourceWildEnemyConfig) {
@@ -240,24 +292,22 @@ func battleRewardConfigKey(mapID string, sourceMonsterHandle string) string {
 }
 
 func mustLoadSourceBattleRewardConfigs() map[string]sourceBattleRewardConfig {
-	records := mustReadBattleConfigCSV("config/classic-battle-reward.csv")
-	header := battleConfigHeader(records[0])
 	configs := map[string]sourceBattleRewardConfig{}
-	for rowIndex, row := range records[1:] {
-		mapID := requiredBattleConfigString(row, header, "map_id", rowIndex)
-		sourceMonsterHandle := optionalBattleConfigString(row, header, "source_monster_handle")
+	for rowIndex, row := range classicdata.MustRows(classicdata.TableDrop) {
+		mapID := requiredClassicDataString(row, "drop", "map_id", rowIndex)
+		sourceMonsterHandle := classicDataOptionalString(row, "source_monster_handle")
 		configs[battleRewardConfigKey(mapID, sourceMonsterHandle)] = sourceBattleRewardConfig{
 			SourceMonsterHandle: sourceMonsterHandle,
-			ExpDelta:            requiredBattleConfigInt(row, header, "exp_delta", rowIndex),
-			Items:               splitBattleConfigList(optionalBattleConfigString(row, header, "items")),
+			ExpDelta:            requiredClassicDataInt(row, "drop", "exp_delta", rowIndex),
+			Items:               splitBattleConfigList(classicDataOptionalString(row, "items")),
 			DropRates: parseSourceBattleRewardDropRates(
-				optionalBattleConfigString(row, header, "item_counts"),
-				optionalBattleConfigString(row, header, "item_drop_windows"),
-				optionalBattleConfigString(row, header, "item_observed_rates"),
-				optionalBattleConfigInt(row, header, "window_count"),
+				classicDataOptionalString(row, "item_counts"),
+				classicDataOptionalString(row, "item_drop_windows"),
+				classicDataOptionalString(row, "item_observed_rates"),
+				classicDataOptionalInt(row, "window_count"),
 			),
-			Source: optionalBattleConfigString(row, header, "source"),
-			Status: requiredBattleConfigString(row, header, "status", rowIndex),
+			Source: classicDataOptionalString(row, "source"),
+			Status: requiredClassicDataString(row, "drop", "status", rowIndex),
 		}
 	}
 	return configs
@@ -373,6 +423,42 @@ func optionalBattleConfigInt(row []string, header map[string]int, name string) i
 	return value
 }
 
+func requiredClassicDataString(row map[string]string, tableName string, column string, rowIndex int) string {
+	value := classicDataOptionalString(row, column)
+	if value == "" {
+		panic(fmt.Sprintf("classic data table %s row %d missing %s", tableName, rowIndex+2, column))
+	}
+	return value
+}
+
+func classicDataOptionalString(row map[string]string, column string) string {
+	if row == nil {
+		return ""
+	}
+	return strings.TrimSpace(row[column])
+}
+
+func requiredClassicDataInt(row map[string]string, tableName string, column string, rowIndex int) int {
+	raw := requiredClassicDataString(row, tableName, column, rowIndex)
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		panic(fmt.Sprintf("classic data table %s row %d invalid %s=%q", tableName, rowIndex+2, column, raw))
+	}
+	return value
+}
+
+func classicDataOptionalInt(row map[string]string, column string) int {
+	raw := classicDataOptionalString(row, column)
+	if raw == "" {
+		return 0
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
 func splitBattleConfigList(value string) []string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -403,6 +489,110 @@ func sourceBattleRewardCandidateForCell(mapID string, monsterName string, maxHP 
 	}
 	config, ok := sourceBattleRewardCandidateByNameHP[battleRewardCandidateNameHPKey(monsterName, maxHP)]
 	return config, ok
+}
+
+func sourceBattleRewardItemIsEquipment(itemName string) bool {
+	return sourceBattleRewardEquipmentItemNames[strings.TrimSpace(itemName)]
+}
+
+func sourceBattleRewardEquipmentFallbackPool(monsterName string, excluded map[string]bool) []string {
+	pool := sourceBattleRewardEquipmentPools[strings.TrimSpace(monsterName)]
+	if len(pool) == 0 {
+		return []string{}
+	}
+	result := make([]string, 0, len(pool))
+	for _, itemName := range pool {
+		if excluded[strings.TrimSpace(itemName)] {
+			continue
+		}
+		result = append(result, itemName)
+	}
+	return result
+}
+
+func mustLoadSourceBattleRewardEquipmentItemNames() map[string]bool {
+	items := map[string]bool{}
+	for _, row := range classicdata.MustRows(classicdata.TableItem) {
+		if classicDataOptionalString(row, "item_type") != "equip" {
+			continue
+		}
+		name := classicDataOptionalString(row, "name")
+		if name == "" {
+			continue
+		}
+		items[name] = true
+	}
+	return items
+}
+
+func mustLoadSourceBattleRewardEquipmentItemOrder() map[string]int {
+	order := map[string]int{}
+	for index, row := range classicdata.MustRows(classicdata.TableItem) {
+		if classicDataOptionalString(row, "item_type") != "equip" {
+			continue
+		}
+		name := classicDataOptionalString(row, "name")
+		if name == "" {
+			continue
+		}
+		order[name] = index
+	}
+	return order
+}
+
+func mustLoadSourceBattleRewardEquipmentPools() map[string][]string {
+	sets := map[string]map[string]bool{}
+	candidateRows := loadSourceBattleRewardCandidateConfigRows()
+	for _, config := range candidateRows {
+		monsterName := strings.TrimSpace(config.MonsterName)
+		if monsterName == "" {
+			continue
+		}
+		for _, drop := range config.DropRates {
+			if !sourceBattleRewardItemIsEquipment(drop.ItemName) {
+				continue
+			}
+			if _, ok := sets[monsterName]; !ok {
+				sets[monsterName] = map[string]bool{}
+			}
+			sets[monsterName][strings.TrimSpace(drop.ItemName)] = true
+		}
+	}
+
+	itemRows := classicdata.MustRows(classicdata.TableItem)
+	for monsterName, set := range sets {
+		for _, row := range itemRows {
+			if classicDataOptionalString(row, "item_type") != "equip" {
+				continue
+			}
+			itemName := classicDataOptionalString(row, "name")
+			if itemName == "" || !strings.HasPrefix(itemName, monsterName) {
+				continue
+			}
+			set[itemName] = true
+		}
+	}
+
+	pools := map[string][]string{}
+	for monsterName, set := range sets {
+		items := make([]string, 0, len(set))
+		for itemName := range set {
+			items = append(items, itemName)
+		}
+		sort.Slice(items, func(left int, right int) bool {
+			leftOrder, leftOK := sourceBattleRewardEquipmentItemOrder[items[left]]
+			rightOrder, rightOK := sourceBattleRewardEquipmentItemOrder[items[right]]
+			if leftOK && rightOK && leftOrder != rightOrder {
+				return leftOrder < rightOrder
+			}
+			if leftOK != rightOK {
+				return leftOK
+			}
+			return items[left] < items[right]
+		})
+		pools[monsterName] = items
+	}
+	return pools
 }
 
 func parseSourceBattleRewardDropRates(itemCounts string, itemDropWindows string, itemObservedRates string, windowCount int) []sourceBattleRewardDropRate {
@@ -482,6 +672,8 @@ func parseSourceBattleRewardObservedRate(value string) (string, int, int, bool) 
 func dominantSourceBattleRewardExperience(value string) int {
 	bestExp := 0
 	bestCount := -1
+	bestPositiveExp := 0
+	bestPositiveCount := -1
 	for _, part := range splitBattleConfigList(value) {
 		name, count := parseSourceBattleRewardItemStack(part)
 		exp, err := strconv.Atoi(name)
@@ -492,6 +684,13 @@ func dominantSourceBattleRewardExperience(value string) int {
 			bestExp = exp
 			bestCount = count
 		}
+		if exp > 0 && count > bestPositiveCount {
+			bestPositiveExp = exp
+			bestPositiveCount = count
+		}
+	}
+	if bestPositiveCount >= 0 {
+		return bestPositiveExp
 	}
 	return bestExp
 }

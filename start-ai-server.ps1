@@ -20,6 +20,7 @@ function Test-HealthEndpoint {
   $handler = $null
   $client = $null
   try {
+    Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue
     $handler = [System.Net.Http.HttpClientHandler]::new()
     $handler.UseProxy = $false
     $client = [System.Net.Http.HttpClient]::new($handler)
@@ -57,7 +58,23 @@ if (-not (Test-Path $mainEntry)) {
   throw "Server entry not found: $mainEntry"
 }
 
-$goCommand = Get-Command go -ErrorAction Stop
+$goCommand = Get-Command go -ErrorAction SilentlyContinue
+if (-not $goCommand) {
+  $workspaceRoot = Split-Path -Parent $serverRoot
+  $localGoCandidates = @(
+    (Join-Path $workspaceRoot '.tools\go\bin\go.exe'),
+    (Join-Path $workspaceRoot '.tools\go1.26.2\go\bin\go.exe')
+  )
+  foreach ($candidate in $localGoCandidates) {
+    if (Test-Path $candidate) {
+      $goCommand = [pscustomobject]@{ Source = $candidate }
+      break
+    }
+  }
+}
+if (-not $goCommand) {
+  throw "Go toolchain not found. Install Go or place portable Go under $(Join-Path (Split-Path -Parent $serverRoot) '.tools\go1.26.2\go\bin\go.exe')."
+}
 
 if (-not (Test-Path $logsDir)) {
   New-Item -ItemType Directory -Path $logsDir | Out-Null
@@ -86,6 +103,15 @@ if (Test-Path $pidFile) {
 
 $listeningPids = @(Get-ListeningProcessIds -Ports $listenPorts)
 if ($listeningPids.Count -gt 0) {
+  if ((Test-HealthEndpoint -Url $httpHealthUrl) -and (Test-HealthEndpoint -Url $wsHealthUrl)) {
+    $activePid = $listeningPids[0]
+    Set-Content -Path $pidFile -Value $activePid -Encoding ascii
+    Write-Host "ai-server is already running. PID: $activePid"
+    Write-Host "HTTP health: $httpHealthUrl"
+    Write-Host "WS health: $wsHealthUrl"
+    Write-Host "Log file: $stdoutLog"
+    exit 0
+  }
   throw "Ports $($listenPorts -join ', ') are already in use by PID: $($listeningPids -join ', ')."
 }
 
@@ -106,14 +132,17 @@ $started = $false
 while ((Get-Date) -lt $deadline) {
   Start-Sleep -Milliseconds 500
 
-  $runningProcess = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
-  if (-not $runningProcess) {
-    break
-  }
-
   if ((Test-HealthEndpoint -Url $httpHealthUrl) -and (Test-HealthEndpoint -Url $wsHealthUrl)) {
     $started = $true
     break
+  }
+
+  $runningProcess = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
+  if (-not $runningProcess) {
+    $childListeningPids = @(Get-ListeningProcessIds -Ports $listenPorts)
+    if ($childListeningPids.Count -le 0) {
+      break
+    }
   }
 }
 
@@ -124,6 +153,10 @@ if (-not $started) {
 
   if (Get-Process -Id $process.Id -ErrorAction SilentlyContinue) {
     Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+  }
+  $failedListeningPids = @(Get-ListeningProcessIds -Ports $listenPorts)
+  foreach ($failedPid in $failedListeningPids) {
+    Stop-Process -Id $failedPid -Force -ErrorAction SilentlyContinue
   }
 
   Write-Host 'ai-server failed to start. Recent logs:'
@@ -139,7 +172,14 @@ if (-not $started) {
   exit 1
 }
 
-Write-Host "ai-server started. PID: $($process.Id)"
+$startedListeningPids = @(Get-ListeningProcessIds -Ports $listenPorts)
+$activeProcessId = $process.Id
+if ($startedListeningPids.Count -gt 0) {
+  $activeProcessId = $startedListeningPids[0]
+  Set-Content -Path $pidFile -Value $activeProcessId -Encoding ascii
+}
+
+Write-Host "ai-server started. PID: $activeProcessId"
 Write-Host "HTTP health: $httpHealthUrl"
 Write-Host "WS health: $wsHealthUrl"
 Write-Host "stdout log: $stdoutLog"

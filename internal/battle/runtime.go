@@ -108,6 +108,10 @@ const (
 	enemyShihukuChilukingWoundMin      = 10
 	enemyShihukuChilukingWoundMax      = 15
 	enemyShihukuPieceWoundRounds       = 5
+	enemyShihukuSkillMPCost            = 10
+	enemyShihukuPieceDamageMultiplier  = 1.4
+	enemyShihukuLionDamageMultiplier   = 1.26
+	enemyShihukuGoldDamageMultiplier   = 1.72
 	enemyShihukuLionRoarsChance        = 20
 	enemyShihukuGoldHitChance          = 19
 	enemyRobotawlRoundAtkChance        = 5
@@ -1415,7 +1419,8 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			ActionName:        "撕裂",
 			SourceType:        "oneE",
 			SourceActionLabel: "pieceAttack",
-			DamageMultiplier:  1,
+			DamageMultiplier:  enemyShihukuPieceDamageMultiplier,
+			MPCost:            enemyShihukuSkillMPCost,
 			CanDodge:          true,
 			CanFat:            true,
 		}
@@ -1434,7 +1439,8 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			ActionName:        "狮吼",
 			SourceType:        "oneE",
 			SourceActionLabel: "lionroars",
-			DamageMultiplier:  1,
+			DamageMultiplier:  enemyShihukuLionDamageMultiplier,
+			MPCost:            enemyShihukuSkillMPCost,
 			CanDodge:          true,
 			CanFat:            true,
 		}
@@ -1443,7 +1449,8 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			ActionName:        "黄金穿刺",
 			SourceType:        "all",
 			SourceActionLabel: "goldhit",
-			DamageMultiplier:  1,
+			DamageMultiplier:  enemyShihukuGoldDamageMultiplier,
+			MPCost:            enemyShihukuSkillMPCost,
 			CanDodge:          true,
 			CanFat:            true,
 		}
@@ -1473,16 +1480,16 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
-	if sourceEnemyCanShihukuGoldHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyGoldHit, enemyShihukuGoldHitChance) {
+	if sourceEnemyCanShihukuGoldHit(enemy) && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyGoldHit, enemyShihukuGoldHitChance) {
 		return CommandEnemyGoldHit
 	}
 	if sourceEnemyCanRobotawlRoundAtk(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRoundAtk, enemyRobotawlRoundAtkChance) {
 		return CommandEnemyRoundAtk
 	}
-	if sourceEnemyCanShihukuLionRoars(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyLionRoars, enemyShihukuLionRoarsChance) {
+	if sourceEnemyCanShihukuLionRoars(enemy) && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyLionRoars, enemyShihukuLionRoarsChance) {
 		return CommandEnemyLionRoars
 	}
-	if pieceChance := sourceEnemyShihukuPieceAttackChance(enemy); pieceChance > 0 && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyPieceAtk, pieceChance) {
+	if pieceChance := sourceEnemyShihukuPieceAttackChance(enemy); pieceChance > 0 && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyPieceAtk, pieceChance) {
 		return CommandEnemyPieceAtk
 	}
 	if sourceEnemyCanFirePower(enemy) && enemy.MP >= enemyFirePowerMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyFirePower, enemyFirePowerChance) {
@@ -1924,24 +1931,60 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		level = 1
 	}
 	description := sourceBattleSkillProfileDescription(name, level, skill.Description)
+	hasCapturedFallback := strings.TrimSpace(fallbackSourceBattleSkill(name, level).Name) != ""
+	tableProfile, hasTableProfile := sourceBattleSkillProfileFromConfig(name)
+	sourceType := sourceBattleSkillSourceType(name, skill.Type)
+	if hasTableProfile && strings.TrimSpace(tableProfile.SourceType) != "" {
+		sourceType = strings.TrimSpace(tableProfile.SourceType)
+	}
+	actionName := name
+	if hasTableProfile && strings.TrimSpace(tableProfile.ActionName) != "" {
+		actionName = strings.TrimSpace(tableProfile.ActionName)
+	}
+	actionLabel := sourceBattleSkillActionLabel(name, level)
+	if actionLabel == "" && hasTableProfile {
+		actionLabel = strings.TrimSpace(tableProfile.SourceActionLabel)
+	}
 	profile := commandProfile{
-		ActionName:        name,
-		SourceType:        sourceBattleSkillSourceType(name, skill.Type),
-		SourceActionLabel: sourceBattleSkillActionLabel(name, level),
+		ActionName:        actionName,
+		SourceType:        sourceType,
+		SourceActionLabel: actionLabel,
 		DamageMultiplier:  sourceBattleSkillDamageMultiplier(description),
 		MPCost:            sourceBattleSkillMPCost(description),
 		CanDodge:          true,
 		CanFat:            true,
 	}
-	if profile.DamageMultiplier <= 0 {
+	if profile.DamageMultiplier <= 0 && hasCapturedFallback {
 		profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
 	}
-	if profile.MPCost <= 0 {
+	if profile.DamageMultiplier <= 0 {
+		if hasTableProfile {
+			profile.DamageMultiplier = tableProfile.DamageMultiplier
+		}
+		if profile.DamageMultiplier <= 0 {
+			profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
+		}
+	}
+	if profile.MPCost <= 0 && hasCapturedFallback {
 		profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
+	}
+	if profile.MPCost <= 0 {
+		if hasTableProfile {
+			profile.MPCost = tableProfile.MPCost
+		}
+		if profile.MPCost <= 0 {
+			profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
+		}
 	}
 	if name == "嗜血斩" {
 		profile.LifeStealChance = sourceBattleSkillLifeStealChance(description)
 		profile.LifeStealRatio = sourceBattleSkillLifeStealRatio(description)
+		if profile.LifeStealChance <= 0 && hasTableProfile {
+			profile.LifeStealChance = tableProfile.LifeStealChance
+		}
+		if profile.LifeStealRatio <= 0 && hasTableProfile {
+			profile.LifeStealRatio = tableProfile.LifeStealRatio
+		}
 		if profile.LifeStealChance <= 0 {
 			profile.LifeStealChance = fallbackShiXueLifeStealChance(level)
 		}
@@ -2000,16 +2043,7 @@ func sourceBattleSkillProfileDescription(name string, level int, description str
 
 func sourceBattleCommandDefinitions(skills []session.RoleSkill) []CommandDefinition {
 	commands := []CommandDefinition{
-		{
-			ID:                CommandNormalAttack,
-			Kind:              "skill",
-			Label:             "普通攻击",
-			SourceType:        "oneE",
-			ActionName:        "普通攻击",
-			SourceActionLabel: "nomalAtk",
-			Target:            "enemy",
-			DamageMultiplier:  1,
-		},
+		sourceBattleCommandDefinitionFromSkill("普通攻击", sourceBattleSkillProfile(session.RoleSkill{Name: "普通攻击", Level: 1, Type: "oneE"})),
 	}
 	seen := map[string]bool{"普通攻击": true}
 	for _, skill := range skills {
@@ -2025,17 +2059,7 @@ func sourceBattleCommandDefinitions(skills []session.RoleSkill) []CommandDefinit
 		if strings.TrimSpace(profile.ActionName) == "" {
 			continue
 		}
-		commands = append(commands, CommandDefinition{
-			ID:                commandID,
-			Kind:              "skill",
-			Label:             normalizedName,
-			SourceType:        sourceBattleSkillSourceType(normalizedName, skill.Type),
-			ActionName:        profile.ActionName,
-			SourceActionLabel: profile.SourceActionLabel,
-			Target:            sourceBattleCommandTarget(sourceBattleSkillSourceType(normalizedName, skill.Type)),
-			DamageMultiplier:  profile.DamageMultiplier,
-			MPCost:            profile.MPCost,
-		})
+		commands = append(commands, sourceBattleCommandDefinitionFromSkill(normalizedName, profile))
 		seen[normalizedName] = true
 	}
 	commands = append(commands,
@@ -2067,7 +2091,32 @@ func sourceBattleCommandDefinitions(skills []session.RoleSkill) []CommandDefinit
 	return commands
 }
 
+func sourceBattleCommandDefinitionFromSkill(label string, profile commandProfile) CommandDefinition {
+	commandID := sourceBattleSkillCommandID(label)
+	if commandID == "" && strings.TrimSpace(label) == "普通攻击" {
+		commandID = CommandNormalAttack
+	}
+	target := sourceBattleSkillTargetFromConfig(label)
+	if target == "" {
+		target = sourceBattleCommandTarget(profile.SourceType)
+	}
+	return CommandDefinition{
+		ID:                commandID,
+		Kind:              "skill",
+		Label:             strings.TrimSpace(label),
+		SourceType:        profile.SourceType,
+		ActionName:        profile.ActionName,
+		SourceActionLabel: profile.SourceActionLabel,
+		Target:            target,
+		DamageMultiplier:  profile.DamageMultiplier,
+		MPCost:            profile.MPCost,
+	}
+}
+
 func sourceBattleSkillCommandID(name string) string {
+	if commandID := sourceBattleSkillCommandIDFromConfig(name); commandID != "" {
+		return commandID
+	}
 	switch strings.TrimSpace(name) {
 	case "密斩":
 		return CommandMiZhan
@@ -2109,6 +2158,9 @@ func sourceBattleSkillCommandID(name string) string {
 }
 
 func sourceBattleSkillSourceType(name string, fallbackType string) string {
+	if sourceType := sourceBattleSkillSourceTypeFromConfig(name); sourceType != "" {
+		return sourceType
+	}
 	switch strings.TrimSpace(name) {
 	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "奥义.雷魂斩", "奥义.暗杀者", "奥义.六合棍法":
 		return "oneE"
@@ -2148,6 +2200,9 @@ var (
 )
 
 func normalizeBattleCommandID(commandID string) string {
+	if mapped := sourceBattleSkillCommandID(commandID); mapped != "" {
+		return mapped
+	}
 	switch strings.TrimSpace(commandID) {
 	case "密斩":
 		return CommandMiZhan
@@ -2498,7 +2553,7 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 	case "普通攻击":
 		return "nomalAtk"
 	default:
-		return ""
+		return sourceBattleSkillActionLabelFromConfig(name)
 	}
 }
 
@@ -3753,12 +3808,14 @@ func (runtime *Runtime) sourceBattleRewards(winner Camp, escaped bool) (int, []s
 		return 0, []string{}
 	}
 
-	if reward, ok := sourceBattleRewardConfigForEncounter(runtime.MapID, runtime.SourceMonsterHandle); ok && reward.Status == "confirmed" {
-		return reward.ExpDelta, rollSourceBattleRewardItems(reward.Items, reward.DropRates)
+	if reward, ok := runtime.sourceBattleRewardConfig(); ok && reward.Status == "confirmed" {
+		items := rollSourceBattleRewardItems(reward.Items, reward.DropRates)
+		return reward.ExpDelta, runtime.appendSourceBattleRewardEquipmentDrops(items, reward.DropRates)
 	}
 
 	if reward, ok := runtime.sourceBattleRewardCandidate(); ok {
-		return reward.ExpDelta, rollSourceBattleRewardItems(nil, reward.DropRates)
+		items := rollSourceBattleRewardItems(nil, reward.DropRates)
+		return reward.ExpDelta, runtime.appendSourceBattleRewardEquipmentDrops(items, reward.DropRates)
 	}
 	return 0, []string{}
 }
@@ -3777,26 +3834,115 @@ func (runtime *Runtime) hasSourceBattleRewardSource() bool {
 	if runtime == nil {
 		return false
 	}
-	if reward, ok := sourceBattleRewardConfigForEncounter(runtime.MapID, runtime.SourceMonsterHandle); ok && reward.Status == "confirmed" {
+	if reward, ok := runtime.sourceBattleRewardConfig(); ok && reward.Status == "confirmed" {
 		return true
 	}
 	_, ok := runtime.sourceBattleRewardCandidate()
 	return ok
 }
 
-func (runtime *Runtime) sourceBattleRewardCandidate() (sourceBattleRewardCandidateConfig, bool) {
+func (runtime *Runtime) sourceBattleRewardConfig() (sourceBattleRewardConfig, bool) {
 	if runtime == nil {
-		return sourceBattleRewardCandidateConfig{}, false
+		return sourceBattleRewardConfig{}, false
+	}
+	if strings.TrimSpace(runtime.SourceMonsterHandle) != "" {
+		return sourceBattleRewardConfigForEncounter(runtime.MapID, runtime.SourceMonsterHandle)
 	}
 	for _, cell := range runtime.Cells {
 		if cell.Camp != CampEnemy {
 			continue
 		}
+		if reward, ok := sourceBattleRewardConfigForExactEncounter(runtime.MapID, cell.Handle); ok {
+			return reward, true
+		}
+	}
+	return sourceBattleRewardConfigForMap(runtime.MapID)
+}
+
+func (runtime *Runtime) sourceBattleRewardCandidate() (sourceBattleRewardCandidateConfig, bool) {
+	if runtime == nil {
+		return sourceBattleRewardCandidateConfig{}, false
+	}
+	for _, cell := range runtime.sourceBattleRewardEnemyCells() {
 		if reward, ok := sourceBattleRewardCandidateForCell(runtime.MapID, cell.Name, cell.MaxHP); ok {
 			return reward, true
 		}
 	}
 	return sourceBattleRewardCandidateConfig{}, false
+}
+
+func (runtime *Runtime) appendSourceBattleRewardEquipmentDrops(items []string, baseDropRates []sourceBattleRewardDropRate) []string {
+	if runtime == nil {
+		return items
+	}
+	cell, ok := runtime.sourceBattleRewardEnemyCell()
+	if !ok {
+		return items
+	}
+
+	stattedItems := sourceBattleRewardDropRateItemSet(baseDropRates)
+	if candidate, ok := sourceBattleRewardCandidateForCell(runtime.MapID, cell.Name, cell.MaxHP); ok {
+		supplementalRates := sourceBattleRewardSupplementalEquipmentDropRates(candidate.DropRates, stattedItems)
+		items = append(items, rollSourceBattleRewardItems(nil, supplementalRates)...)
+	}
+
+	fallbackPool := sourceBattleRewardEquipmentFallbackPool(cell.Name, stattedItems)
+	if len(fallbackPool) == 0 {
+		return items
+	}
+	if sourceEncounterRoll(5) >= 1 {
+		return items
+	}
+	items = append(items, formatSourceBattleRewardItemStack(fallbackPool[sourceEncounterRoll(len(fallbackPool))], 1))
+	return items
+}
+
+func (runtime *Runtime) sourceBattleRewardEnemyCell() (CellInfoPush, bool) {
+	cells := runtime.sourceBattleRewardEnemyCells()
+	if len(cells) == 0 {
+		return CellInfoPush{}, false
+	}
+	return cells[0], true
+}
+
+func (runtime *Runtime) sourceBattleRewardEnemyCells() []CellInfoPush {
+	if runtime == nil {
+		return []CellInfoPush{}
+	}
+	cells := make([]CellInfoPush, 0, len(runtime.Cells))
+	for _, cell := range runtime.Cells {
+		if cell.Camp != CampEnemy {
+			continue
+		}
+		cells = append(cells, cell)
+	}
+	return cells
+}
+
+func sourceBattleRewardDropRateItemSet(dropRates []sourceBattleRewardDropRate) map[string]bool {
+	items := map[string]bool{}
+	for _, drop := range dropRates {
+		itemName := strings.TrimSpace(drop.ItemName)
+		if itemName == "" {
+			continue
+		}
+		items[itemName] = true
+	}
+	return items
+}
+
+func sourceBattleRewardSupplementalEquipmentDropRates(dropRates []sourceBattleRewardDropRate, stattedItems map[string]bool) []sourceBattleRewardDropRate {
+	result := make([]sourceBattleRewardDropRate, 0)
+	for _, drop := range dropRates {
+		itemName := strings.TrimSpace(drop.ItemName)
+		if itemName == "" || stattedItems[itemName] || !sourceBattleRewardItemIsEquipment(itemName) {
+			continue
+		}
+		stattedItems[itemName] = true
+		drop.ItemName = itemName
+		result = append(result, drop)
+	}
+	return result
 }
 
 func rollSourceBattleRewardItems(fallbackItems []string, dropRates []sourceBattleRewardDropRate) []string {

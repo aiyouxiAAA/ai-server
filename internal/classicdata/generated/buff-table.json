@@ -1,128 +1,138 @@
 {
-  "schemaVersion": 1,
-  "name": "buff",
-  "source": "internal/classicdata/source/buff-table.csv",
-  "rowCount": 12,
-  "rows": [
-    {
-      "buff_id": "hotblood",
-      "name": "热血",
-      "display": "24.png",
-      "default_rounds": "3",
-      "status": "confirmed",
-      "mechanism": "physical attack buff with defense reduction",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "狂爆来源已实现"
-    },
-    {
-      "buff_id": "fighting-spirit",
-      "name": "斗志",
-      "display": "23.png",
-      "default_rounds": "5",
-      "status": "confirmed",
-      "mechanism": "physical attack increase",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "力释棍术来源已实现"
-    },
-    {
-      "buff_id": "slow",
-      "name": "迟钝",
-      "display": "16.png",
-      "default_rounds": "3",
-      "status": "confirmed",
-      "mechanism": "hit and dodge reduction",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "疾风刺来源已确认"
-    },
-    {
-      "buff_id": "armor-break",
-      "name": "卸甲",
-      "display": "10.png",
-      "default_rounds": "3",
-      "status": "partial",
-      "mechanism": "physical defense reduction",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "怪物轮转刺伤已实现；强贯式来源仍未闭环"
-    },
-    {
-      "buff_id": "seal",
-      "name": "封印",
-      "display": "19.png",
-      "default_rounds": "3",
-      "status": "confirmed",
-      "mechanism": "cannot use skills",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "装备伏魔棍来源已确认"
-    },
-    {
-      "buff_id": "external-injury",
-      "name": "外伤",
-      "display": "25.png",
-      "default_rounds": "4",
-      "status": "partial",
-      "mechanism": "wound tick damage",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "血切与部分怪物来源已实现"
-    },
-    {
-      "buff_id": "poison",
-      "name": "中毒",
-      "display": "8.png",
-      "default_rounds": "4",
-      "status": "confirmed",
-      "mechanism": "defense reduction and tick damage",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "投毒来源已确认"
-    },
-    {
-      "buff_id": "internal-injury",
-      "name": "内伤",
-      "display": "26.png",
-      "default_rounds": "3",
-      "status": "confirmed",
-      "mechanism": "attack reduction",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "装备绯雨匕首来源已确认"
-    },
-    {
-      "buff_id": "paralysis",
-      "name": "麻痹",
-      "display": "17.png",
-      "default_rounds": "2",
-      "status": "confirmed",
-      "mechanism": "skip turn",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "毒蜂来源已确认"
-    },
-    {
-      "buff_id": "stun",
-      "name": "眩晕",
-      "display": "9.png",
-      "default_rounds": "2",
-      "status": "confirmed",
-      "mechanism": "skip turn with yun action",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "怪物来源已确认"
-    },
-    {
-      "buff_id": "confusion",
-      "name": "混乱",
-      "display": "20.png",
-      "default_rounds": "2",
-      "status": "confirmed",
-      "mechanism": "auto normal attack random living target",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
-      "notes": "黄风寨夫人魅惑术来源已确认"
-    },
-    {
-      "buff_id": "freeze",
-      "name": "冰冻",
-      "display": "18.png",
-      "default_rounds": "0",
-      "status": "partial",
-      "mechanism": "effect resource only; mechanism unknown",
-      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md",
-      "notes": "缺直接 BuffInfo/clearBuffInfo/实战机制样本"
-    }
-  ]
+    "schemaVersion":  1,
+    "name":  "buff",
+    "source":  "internal/classicdata/source/buff-table.csv",
+    "rowCount":  13,
+    "rows":  [
+                 {
+                     "buff_id":  "hotblood",
+                     "name":  "热血",
+                     "display":  "24.png",
+                     "default_rounds":  "3",
+                     "status":  "confirmed",
+                     "mechanism":  "physical attack buff with defense reduction",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "狂爆来源已实现"
+                 },
+                 {
+                     "buff_id":  "fighting-spirit",
+                     "name":  "斗志",
+                     "display":  "23.png",
+                     "default_rounds":  "5",
+                     "status":  "confirmed",
+                     "mechanism":  "physical attack increase",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "力释棍术来源已实现"
+                 },
+                 {
+                     "buff_id":  "slow",
+                     "name":  "迟钝",
+                     "display":  "16.png",
+                     "default_rounds":  "3",
+                     "status":  "confirmed",
+                     "mechanism":  "hit and dodge reduction",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "疾风刺来源已确认"
+                 },
+                 {
+                     "buff_id":  "armor-break",
+                     "name":  "卸甲",
+                     "display":  "10.png",
+                     "default_rounds":  "3",
+                     "status":  "partial",
+                     "mechanism":  "physical defense reduction",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "怪物轮转刺伤已实现；强贯式来源仍未闭环"
+                 },
+                 {
+                     "buff_id":  "seal",
+                     "name":  "封印",
+                     "display":  "19.png",
+                     "default_rounds":  "3",
+                     "status":  "confirmed",
+                     "mechanism":  "cannot use skills",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "装备伏魔棍来源已确认"
+                 },
+                 {
+                     "buff_id":  "external-injury",
+                     "name":  "外伤",
+                     "display":  "25.png",
+                     "default_rounds":  "4",
+                     "status":  "partial",
+                     "mechanism":  "wound tick damage",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "血切与部分怪物来源已实现"
+                 },
+                 {
+                     "buff_id":  "poison",
+                     "name":  "中毒",
+                     "display":  "8.png",
+                     "default_rounds":  "4",
+                     "status":  "confirmed",
+                     "mechanism":  "defense reduction and tick damage",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "投毒来源已确认"
+                 },
+                 {
+                     "buff_id":  "internal-injury",
+                     "name":  "内伤",
+                     "display":  "26.png",
+                     "default_rounds":  "3",
+                     "status":  "confirmed",
+                     "mechanism":  "attack reduction",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "装备绯雨匕首来源已确认"
+                 },
+                 {
+                     "buff_id":  "paralysis",
+                     "name":  "麻痹",
+                     "display":  "17.png",
+                     "default_rounds":  "2",
+                     "status":  "confirmed",
+                     "mechanism":  "skip turn",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "毒蜂来源已确认"
+                 },
+                 {
+                     "buff_id":  "stun",
+                     "name":  "眩晕",
+                     "display":  "9.png",
+                     "default_rounds":  "2",
+                     "status":  "confirmed",
+                     "mechanism":  "skip turn with yun action",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "怪物来源已确认"
+                 },
+                 {
+                     "buff_id":  "confusion",
+                     "name":  "混乱",
+                     "display":  "20.png",
+                     "default_rounds":  "2",
+                     "status":  "confirmed",
+                     "mechanism":  "auto normal attack random living target",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "黄风寨夫人魅惑术来源已确认"
+                 },
+                 {
+                     "buff_id":  "rampage-power",
+                     "name":  "暴走之力",
+                     "display":  "1595.png",
+                     "default_rounds":  "50",
+                     "status":  "partial",
+                     "mechanism":  "display countdown self status action",
+                     "evidence":  ".planning/FEIXIANDONG_PHASED_DEVELOPMENT_PLAN.md + .planning/SHIHUKU_PHASED_DEVELOPMENT_PLAN.md + internal/battle/runtime.go",
+                     "notes":  "只作为展示/倒计时动作；不按攻击或 MP 消耗处理"
+                 },
+                 {
+                     "buff_id":  "freeze",
+                     "name":  "冰冻",
+                     "display":  "18.png",
+                     "default_rounds":  "0",
+                     "status":  "partial",
+                     "mechanism":  "effect resource only; mechanism unknown",
+                     "evidence":  ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md",
+                     "notes":  "缺直接 BuffInfo/clearBuffInfo/实战机制样本"
+                 }
+             ]
 }

@@ -36,6 +36,11 @@ $tables = @(
     RequiredColumns = @('command_id', 'kind', 'label', 'source_type', 'action_name', 'source_action_label', 'target')
   },
   @{
+    Name = 'monster-skill'
+    Source = 'monster-skill-table.csv'
+    RequiredColumns = @('monster_skill_id', 'command_id', 'monster_name', 'display_url', 'action_name', 'source_type', 'source_action_label', 'target', 'runtime_chance_percent', 'evidence_status')
+  },
+  @{
     Name = 'profession'
     Source = 'profession-table.csv'
     RequiredColumns = @('profession_id', 'name', 'answer_handle', 'skill_shop_id', 'skill_cap')

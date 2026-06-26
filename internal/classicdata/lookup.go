@@ -61,6 +61,14 @@ func FindSkillByLabel(label string) (map[string]string, bool, error) {
 	return FindRow(TableSkill, "label", label)
 }
 
+func FindMonsterSkillByID(id string) (map[string]string, bool, error) {
+	return FindRow(TableMonsterSkill, "monster_skill_id", id)
+}
+
+func FindMonsterSkillRowsByDisplayURL(displayURL string) ([]map[string]string, error) {
+	return FindRows(TableMonsterSkill, "display_url", displayURL)
+}
+
 func FindProfessionByID(id string) (map[string]string, bool, error) {
 	return FindRow(TableProfession, "profession_id", id)
 }

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"ai-server/internal/classicdata"
 )
 
 var classicRoleLevelToExp = []int{
@@ -1257,6 +1259,9 @@ func CapturedRoleItemTemplate(name string) (RoleItem, bool) {
 			return item, true
 		}
 	}
+	if item, ok := classicDataRoleItemTemplate(name); ok {
+		return item, true
+	}
 	return RoleItem{}, false
 }
 
@@ -1266,6 +1271,78 @@ func CapturedRoleItemTemplates() []RoleItem {
 	items = append(items, capturedDefaultRoleItems()...)
 	items = append(items, capturedAdditionalRoleItemTemplates()...)
 	return cloneRoleItems(items)
+}
+
+func classicDataRoleItemTemplate(name string) (RoleItem, bool) {
+	row, ok, err := classicdata.FindItemByName(name)
+	if err != nil || !ok {
+		return RoleItem{}, false
+	}
+	icon := strings.TrimSpace(row["icon"])
+	itemType := strings.TrimSpace(row["item_type"])
+	if itemType == "" {
+		itemType = "own"
+	}
+	category := strings.TrimSpace(row["category"])
+	if category == "" {
+		category = itemType
+	}
+	maxStack := strings.TrimSpace(row["max_stack"])
+	if maxStack == "" {
+		maxStack = "1"
+	}
+	descriptionText := strings.TrimSpace(row["description"])
+	assetFamily := strings.TrimSpace(row["asset_family"])
+	templateType := "背包"
+	itemLevel := 1
+	if itemType == "equip" {
+		templateType = "装备"
+		itemLevel = 2
+	}
+	description := fmt.Sprintf("f_i_%s^5BC46D&24@%s&25@%s", name, category, maxStack)
+	if descriptionText != "" {
+		description += "&20@" + descriptionText
+	}
+	if assetFamily != "" {
+		description += "&27@" + assetFamily
+	}
+	if icon != "" {
+		description += "&101@" + icon
+	}
+	description += "&103@0&104@0&105@&107@&108@0"
+	return RoleItem{
+		Type:        templateType,
+		Name:        name,
+		ItemType:    itemType,
+		Display:     icon,
+		Description: description,
+		Count:       1,
+		Index:       classicDataRoleItemEquipmentSlot(category),
+		ItemLevel:   itemLevel,
+	}, true
+}
+
+func classicDataRoleItemEquipmentSlot(category string) int {
+	switch {
+	case strings.Contains(category, "护具·头部"):
+		return 0
+	case strings.Contains(category, "护具·肩部"):
+		return 1
+	case strings.Contains(category, "护具·护腕"):
+		return 2
+	case strings.Contains(category, "武器"):
+		return 3
+	case strings.Contains(category, "护具·躯干"):
+		return 4
+	case strings.Contains(category, "护具·腿"):
+		return 5
+	case strings.Contains(category, "护具·腰部"):
+		return 10
+	case strings.Contains(category, "护具·足部"):
+		return 12
+	default:
+		return 0
+	}
 }
 
 func CapturedRoleItemTemplateByID(itemID string) (RoleItem, bool) {

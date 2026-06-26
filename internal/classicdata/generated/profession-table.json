@@ -1,35 +1,35 @@
 {
-  "schemaVersion": 1,
-  "name": "profession",
-  "source": "internal/classicdata/source/profession-table.csv",
-  "rowCount": 3,
-  "rows": [
-    {
-      "profession_id": "warrior",
-      "name": "战士",
-      "answer_handle": "job_warrior",
-      "skill_shop_id": "skill1",
-      "skill_cap": "22",
-      "status": "confirmed",
-      "evidence": "cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go"
-    },
-    {
-      "profession_id": "sorcerer",
-      "name": "术士",
-      "answer_handle": "job_sorcerer",
-      "skill_shop_id": "skill2",
-      "skill_cap": "24",
-      "status": "confirmed",
-      "evidence": "cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go"
-    },
-    {
-      "profession_id": "ranger",
-      "name": "游侠",
-      "answer_handle": "job_ranger",
-      "skill_shop_id": "skill3",
-      "skill_cap": "26",
-      "status": "confirmed",
-      "evidence": "cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go"
-    }
-  ]
+    "schemaVersion":  1,
+    "name":  "profession",
+    "source":  "internal/classicdata/source/profession-table.csv",
+    "rowCount":  3,
+    "rows":  [
+                 {
+                     "profession_id":  "warrior",
+                     "name":  "战士",
+                     "answer_handle":  "job_warrior",
+                     "skill_shop_id":  "skill1",
+                     "skill_cap":  "22",
+                     "status":  "confirmed",
+                     "evidence":  "cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go"
+                 },
+                 {
+                     "profession_id":  "sorcerer",
+                     "name":  "术士",
+                     "answer_handle":  "job_sorcerer",
+                     "skill_shop_id":  "skill2",
+                     "skill_cap":  "24",
+                     "status":  "confirmed",
+                     "evidence":  "cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go"
+                 },
+                 {
+                     "profession_id":  "ranger",
+                     "name":  "游侠",
+                     "answer_handle":  "job_ranger",
+                     "skill_shop_id":  "skill3",
+                     "skill_cap":  "26",
+                     "status":  "confirmed",
+                     "evidence":  "cmd/ai-server/classic_town_vocation.go + cmd/ai-server/classic_town_skill_shop.go"
+                 }
+             ]
 }

@@ -27,6 +27,10 @@ func TestGeneratedClassicTablesContainKnownRows(t *testing.T) {
 	assertHasRow(t, skillTable, "label", "投毒")
 	assertHasRow(t, skillTable, "label", "强力飞镖")
 
+	monsterSkillTable := MustLoadTable(TableMonsterSkill)
+	assertHasRow(t, monsterSkillTable, "monster_skill_id", "monster-blackshadow-piece-attack")
+	assertHasRow(t, monsterSkillTable, "source_action_label", "goldhit")
+
 	professionTable := MustLoadTable(TableProfession)
 	assertHasRow(t, professionTable, "name", "战士")
 	assertHasRow(t, professionTable, "name", "术士")
@@ -83,6 +87,22 @@ func TestClassicDataLookupsReturnDetachedRows(t *testing.T) {
 	}
 	if !ok || skill["source_action_label"] != "w3/drugAtk" {
 		t.Fatalf("FindSkillByLabel() = %v %v, want 投毒 w3/drugAtk", ok, skill)
+	}
+
+	monsterSkill, ok, err := FindMonsterSkillByID("monster-chiluking-goldhit")
+	if err != nil {
+		t.Fatalf("FindMonsterSkillByID() error = %v", err)
+	}
+	if !ok || monsterSkill["source_action_label"] != "goldhit" || monsterSkill["target"] != "enemy" {
+		t.Fatalf("FindMonsterSkillByID() = %v %v, want chiluking goldhit enemy skill", ok, monsterSkill)
+	}
+
+	monsterSkills, err := FindMonsterSkillRowsByDisplayURL("monstermap/chiluking.swf")
+	if err != nil {
+		t.Fatalf("FindMonsterSkillRowsByDisplayURL() error = %v", err)
+	}
+	if len(monsterSkills) < 2 {
+		t.Fatalf("FindMonsterSkillRowsByDisplayURL(chiluking) returned %d rows, want at least 2", len(monsterSkills))
 	}
 
 	profession, ok, err := FindProfessionByID("warrior")

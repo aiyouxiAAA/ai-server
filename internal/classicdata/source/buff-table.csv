@@ -10,4 +10,5 @@ internal-injury,内伤,26.png,3,confirmed,attack reduction,.planning/BATTLE_BUFF
 paralysis,麻痹,17.png,2,confirmed,skip turn,.planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go,毒蜂来源已确认
 stun,眩晕,9.png,2,confirmed,skip turn with yun action,.planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go,怪物来源已确认
 confusion,混乱,20.png,2,confirmed,auto normal attack random living target,.planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go,黄风寨夫人魅惑术来源已确认
+rampage-power,暴走之力,1595.png,50,partial,display countdown self status action,.planning/FEIXIANDONG_PHASED_DEVELOPMENT_PLAN.md + .planning/SHIHUKU_PHASED_DEVELOPMENT_PLAN.md + internal/battle/runtime.go,只作为展示/倒计时动作；不按攻击或 MP 消耗处理
 freeze,冰冻,18.png,0,partial,effect resource only; mechanism unknown,.planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md,缺直接 BuffInfo/clearBuffInfo/实战机制样本

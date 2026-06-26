@@ -13,3 +13,4 @@
 "monster-robotawl-armor-break","monster_skill","monstermap/robotawl.swf:roundatk","机木锥兵/轮转刺伤","roundatk","on_hit","enemy","armor-break","70","3","partial","2026-06-23 robotawl roundatk BuffInfo closure","轮转刺伤选择概率约 5%；命中后状态 roll 约 70%"
 "monster-blackshadow-external-injury","monster_skill","monstermap/blackshadow.swf:pieceAttack","黑影/撕裂","pieceAttack","on_hit","enemy","external-injury","","5","partial","狮虎窟 pieceAttack clean tick samples","分怪百分比由 runtime 近似实现；不是统一 25%-30%"
 "monster-chiluking-external-injury","monster_skill","monstermap/chiluking.swf:pieceAttack","蚩颅王/撕裂","pieceAttack","on_hit","enemy","external-injury","","5","partial","狮虎窟 pieceAttack clean tick samples","分怪百分比由 runtime 近似实现；不是统一 25%-30%"
+"monster-rampage-power-display","monster_skill","boss:rampage-power","Boss/暴走之力","battleStand","on_turn_display","self","rampage-power","100","50","partial","FEIXIANDONG/SHIHUKU rampage action samples + runtime tests","展示/倒计时 self action；不作为攻击或 MP 消耗"

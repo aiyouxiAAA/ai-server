@@ -4,9 +4,26 @@ import (
 	"log"
 	"strings"
 
+	"ai-server/internal/classicdata"
 	"ai-server/internal/session"
 	"ai-server/internal/world"
 )
+
+var classicTownVocationByAnswerHandle = mustLoadClassicTownVocationsByAnswerHandle()
+
+func mustLoadClassicTownVocationsByAnswerHandle() map[string]string {
+	rows := classicdata.MustRows(classicdata.TableProfession)
+	result := make(map[string]string, len(rows))
+	for _, row := range rows {
+		answerHandle := strings.TrimSpace(row["answer_handle"])
+		name := strings.TrimSpace(row["name"])
+		if answerHandle == "" || name == "" {
+			continue
+		}
+		result[answerHandle] = name
+	}
+	return result
+}
 
 func buildClassicTownVocationResult(store *session.Store, socketSession *packetSession, request classicTownAnswerRequest) (packetResult, bool) {
 	vocation, ok := classicTownAnswerVocation(request)
@@ -48,14 +65,6 @@ func classicTownAnswerVocation(request classicTownAnswerRequest) (string, bool) 
 	if strings.TrimSpace(request.Handle) != sourceSkillTeacherHandle || strings.TrimSpace(request.MsgHandle) != "2" {
 		return "", false
 	}
-	switch strings.TrimSpace(request.AnswerHandle) {
-	case "job_warrior":
-		return "战士", true
-	case "job_sorcerer":
-		return "术士", true
-	case "job_ranger":
-		return "游侠", true
-	default:
-		return "", false
-	}
+	vocation, ok := classicTownVocationByAnswerHandle[strings.TrimSpace(request.AnswerHandle)]
+	return vocation, ok
 }

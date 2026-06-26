@@ -14,6 +14,7 @@ const (
 	TableDrop         = "drop"
 	TableItem         = "item"
 	TableSkill        = "skill"
+	TableMonsterSkill = "monster-skill"
 	TableProfession   = "profession"
 	TableBuff         = "buff"
 	TableMonster      = "monster"
@@ -26,6 +27,7 @@ var KnownTables = []string{
 	TableDrop,
 	TableItem,
 	TableSkill,
+	TableMonsterSkill,
 	TableProfession,
 	TableBuff,
 	TableMonster,

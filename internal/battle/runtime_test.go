@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
 	"ai-server/internal/classicactivity"
+	"ai-server/internal/classicdata"
 	"ai-server/internal/session"
 )
 
@@ -206,6 +208,68 @@ func TestBuildOverUsesCapturedMap49RobberRewardWithExperience(t *testing.T) {
 	expectedItems := []string{"铜钱x8", "盗贼的首级x1", "L小喇叭x1", "红方巾x1", "毛皮x1"}
 	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
 		t.Fatalf("expected captured map49 low-roll reward %+v, got %+v", expectedItems, over.Result.Items)
+	}
+}
+
+func TestBuildOverPrefersCapturedMap49RobberHandleReward(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+	over := (&Runtime{
+		BattleID: "battle-map49-robber-452",
+		MapID:    "49",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{
+				Handle: "3784555592010429",
+				Camp:   CampEnemy,
+				Name:   "盗贼",
+				MaxHP:  452,
+				Level:  16,
+			},
+		},
+	}).buildOver(CampTeam)
+	if over == nil {
+		t.Fatal("expected OverBattle push")
+	}
+	if over.Result.ExpDelta != 610 {
+		t.Fatalf("expected captured map49 452HP robber reward exp 610, got %d", over.Result.ExpDelta)
+	}
+	expectedItems := []string{"L小喇叭x1", "铜钱x6", "剔骨刀x1", "红方巾x1", "盗贼的首级x1", "毛皮x1", "盗贼布衣x1", "盗贼护臂x1", "盗贼的鞋x1"}
+	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
+		t.Fatalf("expected captured map49 452HP robber low-roll reward %+v, got %+v", expectedItems, over.Result.Items)
+	}
+}
+
+func TestBuildOverUsesTwentyPercentFallbackForUnstattedRobberEquipment(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int {
+		switch maxExclusive {
+		case 5:
+			return 0
+		case 3:
+			return 2
+		default:
+			return maxExclusive - 1
+		}
+	})()
+	over := (&Runtime{
+		BattleID: "battle-map49-robber-452-equipment-fallback",
+		MapID:    "49",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{
+				Handle: "3784555592010429",
+				Camp:   CampEnemy,
+				Name:   "盗贼",
+				MaxHP:  452,
+				Level:  16,
+			},
+		},
+	}).buildOver(CampTeam)
+	if over == nil {
+		t.Fatal("expected OverBattle push")
+	}
+	expectedItems := []string{"盗贼腰带x1"}
+	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
+		t.Fatalf("expected only 20%% unstatted robber equipment fallback %+v, got %+v", expectedItems, over.Result.Items)
 	}
 }
 
@@ -428,7 +492,7 @@ func TestBuildOverUsesCapturedShihukuRewardCandidates(t *testing.T) {
 	if bossOver.Result.ExpDelta != 558 {
 		t.Fatalf("expected shihuku boss captured candidate exp 558, got %d", bossOver.Result.ExpDelta)
 	}
-	expectedBossItems := []string{"兽血x1", "L小喇叭x1", "兽骨x1", "石块x1", "碎金片x1", "铁块x1", "蚩颅王的角x1", "蚩颅王的头x1", "蚩颅王护肩x1"}
+	expectedBossItems := []string{"兽血x1", "L小喇叭x1", "兽骨x2", "石块x1", "碎金片x1", "铁块x1", "蚩颅王的角x1", "蚩颅王的头x1", "蚩颅王护肩x1", "兽牙x1", "宝匣x1"}
 	if !reflect.DeepEqual(bossOver.Result.Items, expectedBossItems) {
 		t.Fatalf("expected shihuku boss low-roll reward %+v, got %+v", expectedBossItems, bossOver.Result.Items)
 	}
@@ -464,7 +528,7 @@ func TestBuildOverUsesCapturedHuangfengzhaiMap147RewardCandidate(t *testing.T) {
 	if over.Result.ExpDelta != 0 {
 		t.Fatalf("expected huangfengzhai map147 captured candidate exp 0, got %d", over.Result.ExpDelta)
 	}
-	expectedItems := []string{"铜钱x6"}
+	expectedItems := []string{"铜钱x5", "刀客布衣x1"}
 	if !reflect.DeepEqual(over.Result.Items, expectedItems) {
 		t.Fatalf("expected huangfengzhai map147 low-roll reward %+v, got %+v", expectedItems, over.Result.Items)
 	}
@@ -480,11 +544,11 @@ func TestHuangfengzhaiRewardCandidatesUseFullCaptureStatistics(t *testing.T) {
 		numerator   int
 		denominator int
 	}{
-		{mapID: "122", monsterName: "秃鹫", maxHP: 215, itemName: "刺", quantity: 1, numerator: 1, denominator: 1},
-		{mapID: "146", monsterName: "蛮族刀客", maxHP: 520, itemName: "红缨", quantity: 1, numerator: 4, denominator: 6},
+		{mapID: "122", monsterName: "秃鹫", maxHP: 215, itemName: "刺", quantity: 1, numerator: 2, denominator: 2},
+		{mapID: "146", monsterName: "蛮族刀客", maxHP: 520, itemName: "红缨", quantity: 1, numerator: 7, denominator: 9},
 		{mapID: "150", monsterName: "蛮族弓手", maxHP: 530, itemName: "铜钱", quantity: 8, numerator: 2, denominator: 2},
-		{mapID: "153", monsterName: "咒巫师", maxHP: 500, itemName: "图腾面具", quantity: 1, numerator: 1, denominator: 4},
-		{mapID: "156", monsterName: "咒巫师", maxHP: 550, itemName: "兽骨", quantity: 1, numerator: 6, denominator: 6},
+		{mapID: "153", monsterName: "咒巫师", maxHP: 500, itemName: "图腾面具", quantity: 1, numerator: 3, denominator: 8},
+		{mapID: "156", monsterName: "咒巫师", maxHP: 550, itemName: "兽骨", quantity: 1, numerator: 10, denominator: 11},
 	}
 
 	for _, testCase := range testCases {
@@ -670,6 +734,38 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 				t.Fatalf("expected captured enemy attack to be filled for map %s, got %+v", mapID, config.Cell)
 			}
 		}
+	}
+}
+
+func TestSourceBattleRuntimeConfigUsesClassicDataTables(t *testing.T) {
+	monsterRows, err := classicdata.FindRows(classicdata.TableMonster, "handle", "5176206909809579")
+	if err != nil {
+		t.Fatalf("FindRows monster error = %v", err)
+	}
+	if len(monsterRows) != 1 || monsterRows[0]["source_kind"] != "visible" {
+		t.Fatalf("expected classicdata visible monster row, got %+v", monsterRows)
+	}
+	monsterConfig, ok := sourceVisibleMonsterConfigForHandle("143", "5176206909809579")
+	if !ok {
+		t.Fatal("expected visible monster config from classicdata")
+	}
+	if monsterConfig.Cell.Name != monsterRows[0]["name"] || strconv.Itoa(monsterConfig.Cell.Attack) != monsterRows[0]["attack"] {
+		t.Fatalf("expected visible monster config to match classicdata row %+v, got %+v", monsterRows[0], monsterConfig.Cell)
+	}
+
+	dropRows, err := classicdata.FindDropRowsByMapID("49")
+	if err != nil {
+		t.Fatalf("FindDropRowsByMapID error = %v", err)
+	}
+	if len(dropRows) == 0 {
+		t.Fatal("expected classicdata drop rows for map49")
+	}
+	reward, ok := sourceBattleRewardConfigForMap("49")
+	if !ok {
+		t.Fatal("expected map49 reward from classicdata")
+	}
+	if strconv.Itoa(reward.ExpDelta) != dropRows[0]["exp_delta"] || reward.Status != dropRows[0]["status"] {
+		t.Fatalf("expected reward config to match classicdata row %+v, got %+v", dropRows[0], reward)
 	}
 }
 
@@ -2569,6 +2665,38 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 		if testCase.name == "强力飞镖" && profile.DefenseType != "direct" {
 			t.Fatalf("expected 强力飞镖 to ignore defense from captured description, got %+v", profile)
 		}
+	}
+}
+
+func TestSourceBattleSkillProfileUsesClassicDataSkillTable(t *testing.T) {
+	row, ok, err := classicdata.FindSkillByLabel("投毒")
+	if err != nil {
+		t.Fatalf("FindSkillByLabel error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected classicdata skill row for 投毒")
+	}
+	if commandID := sourceBattleSkillCommandID("投毒"); commandID != row["command_id"] {
+		t.Fatalf("expected 投毒 command id from classicdata %q, got %q", row["command_id"], commandID)
+	}
+	profile := sourceBattleSkillProfile(session.RoleSkill{
+		Name:  "投毒",
+		Level: 1,
+		Type:  "oneE",
+	})
+	if profile.ActionName != row["action_name"] || profile.SourceType != row["source_type"] || profile.SourceActionLabel != row["source_action_label"] {
+		t.Fatalf("expected 投毒 profile to use classicdata row %+v, got %+v", row, profile)
+	}
+	commands := sourceBattleCommandDefinitions([]session.RoleSkill{{Name: "投毒", Level: 1, Type: "oneE"}})
+	var touDu CommandDefinition
+	for _, command := range commands {
+		if command.ID == row["command_id"] {
+			touDu = command
+			break
+		}
+	}
+	if touDu.ID == "" || touDu.Target != row["target"] {
+		t.Fatalf("expected 投毒 command definition to use classicdata target row=%+v commands=%+v", row, commands)
 	}
 }
 
@@ -6192,13 +6320,22 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if lion.ActionName != "狮吼" || lion.SourceActionLabel != "lionroars" || lion.SourceMode != "1" {
 		t.Fatalf("expected shihuku whorllion 狮吼/lionroars action, got %+v", lion)
 	}
-	if runtime.cellByHandle("enemy_whorllion").MP != 384 {
-		t.Fatalf("expected 狮吼 to keep MP unchanged until source MP cost is proven, got %+v", runtime.cellByHandle("enemy_whorllion"))
+	if lion.Damage != 167 {
+		t.Fatalf("expected 狮吼 to use capture-backed 1.26 damage multiplier, got %+v", lion)
+	}
+	if runtime.cellByHandle("enemy_whorllion").MP != 374 {
+		t.Fatalf("expected 狮吼 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_whorllion"))
 	}
 
 	piece := runtime.resolveAttack(runtime.cellByHandle("enemy_chiluking"), runtime.cellByHandle("player_21424"), CommandEnemyPieceAtk)
 	if piece.ActionName != "撕裂" || piece.SourceActionLabel != "pieceAttack" || piece.SourceMode != "1" {
 		t.Fatalf("expected shihuku 撕裂/pieceAttack action, got %+v", piece)
+	}
+	if piece.Damage != 210 {
+		t.Fatalf("expected shihuku 撕裂 to use capture-backed 1.4 damage multiplier, got %+v", piece)
+	}
+	if runtime.cellByHandle("enemy_chiluking").MP != 590 {
+		t.Fatalf("expected shihuku 撕裂 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_chiluking"))
 	}
 	if len(runtime.PendingBuffInfos) != 1 {
 		t.Fatalf("expected shihuku 撕裂 hit to push 外伤 BuffInfo, got %+v", runtime.PendingBuffInfos)
@@ -6216,8 +6353,11 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if gold.ActionName != "黄金穿刺" || gold.SourceActionLabel != "goldhit" || gold.TargetHandle != "all" || gold.SourceMode != "1" {
 		t.Fatalf("expected shihuku 蚩颅王 黄金穿刺/goldhit all-target action, got %+v", gold)
 	}
-	if runtime.cellByHandle("enemy_chiluking").MP != 600 {
-		t.Fatalf("expected shihuku skill profiles to keep MP unchanged without source MP cost evidence, got %+v", runtime.cellByHandle("enemy_chiluking"))
+	if gold.Damage != 286 {
+		t.Fatalf("expected shihuku 黄金穿刺 to use capture-backed 1.72 damage multiplier, got %+v", gold)
+	}
+	if runtime.cellByHandle("enemy_chiluking").MP != 580 {
+		t.Fatalf("expected shihuku 黄金穿刺 to use captured 10 MP cost once, got %+v", runtime.cellByHandle("enemy_chiluking"))
 	}
 }
 

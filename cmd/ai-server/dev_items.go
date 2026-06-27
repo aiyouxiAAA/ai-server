@@ -401,15 +401,20 @@ func devCapturedRoleItemTemplates() []session.RoleItem {
 		"1830542611405809",
 		"2500542613172144",
 		"2520542613299551",
+		"4710542615621525",
+		"5300542617580783",
+		"5310542617702520",
 	} {
-		route, ok := sourceGuangqingItemShopRoutes[handle]
+		routes, ok := sourceGuangqingItemShopRoutes[handle]
 		if !ok {
 			continue
 		}
-		for _, line := range strings.Split(strings.TrimSpace(route.rows), "\n") {
-			row, ok := parseSourceItemShopRow(line)
-			if ok {
-				items = appendDevItemTemplate(items, sourceItemShopRowToRoleItem(row))
+		for _, route := range routes {
+			for _, line := range strings.Split(strings.TrimSpace(route.rows), "\n") {
+				row, ok := parseSourceItemShopRow(line)
+				if ok {
+					items = appendDevItemTemplate(items, sourceItemShopRowToRoleItem(row))
+				}
 			}
 		}
 	}

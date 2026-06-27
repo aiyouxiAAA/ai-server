@@ -1262,6 +1262,55 @@ func assertCapturedTownRole(
 	t.Fatalf("expected role %s", handle)
 }
 
+func TestBuildTownBootstrapIncludesBaiyuanNPCHeadTitles(t *testing.T) {
+	cases := []struct {
+		mapID     int
+		handle    string
+		guildName string
+		guildPic  string
+	}{
+		{mapID: 168, handle: "4710542615621525", guildName: "\u533b\u7597\u5e08", guildPic: "5002"},
+		{mapID: 168, handle: "4730542615655127", guildName: "\u5408\u6210\u9053\u5177", guildPic: "5001"},
+		{mapID: 169, handle: "5040542617131880", guildName: "\u6280\u80fd\u5bfc\u5e08", guildPic: "5003"},
+		{mapID: 169, handle: "5060542617335713", guildName: "\u4f20\u9001\u5927\u5e08", guildPic: "5005"},
+		{mapID: 169, handle: "5050542617322114", guildName: "\u4ed3\u5e93\u7ba1\u7406", guildPic: "5004"},
+		{mapID: 170, handle: "5310542617702520", guildName: "\u9053\u5177\u5546", guildPic: "5001"},
+		{mapID: 170, handle: "5300542617580783", guildName: "\u953b\u9020\u5e08", guildPic: "5000"},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-baiyuan-head-title",
+			DisplayName:  "test",
+			Level:        40,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        testCase.mapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+		snapshot := BuildTownBootstrap(role, playerBase)
+		var found *RolePush
+		for index := range snapshot.CreateRoles {
+			if snapshot.CreateRoles[index].Handle == testCase.handle {
+				found = &snapshot.CreateRoles[index]
+				break
+			}
+		}
+		if found == nil {
+			t.Fatalf("expected Baiyuan role %s on map%d", testCase.handle, testCase.mapID)
+		}
+		if found.GuildName != testCase.guildName || found.GuildPic != testCase.guildPic {
+			t.Fatalf("expected %s head title %q/%q got %q/%q", testCase.handle, testCase.guildName, testCase.guildPic, found.GuildName, found.GuildPic)
+		}
+	}
+}
+
 func TestBuildTownBootstrapUsesCapturedUnderworldTransportData(t *testing.T) {
 	cases := []struct {
 		mapID   int
@@ -1968,6 +2017,83 @@ func TestBuildTownBootstrapUsesCapturedMap191NPCs(t *testing.T) {
 	specialtyReply := BuildAnswerReply("6350542618650282", "1", "6q41os")
 	if specialtyReply == nil || specialtyReply.MsgHandle != "6q41d_2" || !hasAnswerOption(specialtyReply.Answers, "6q41a_2_1", "<m/>是啊。") {
 		t.Fatalf("expected Hanxiong specialty completion reply, got %+v", specialtyReply)
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedBaiyuanTownNPCs(t *testing.T) {
+	type expectedRole struct {
+		mapID       int
+		handle      string
+		name        string
+		sourceQuery string
+		spriteName  string
+		x           int
+		y           int
+	}
+	roles := []expectedRole{
+		{mapID: 168, handle: "4720542615647172", name: "白源镇告示栏", sourceQuery: "npc/公告牌.swf", spriteName: "gonggaopai", x: 724, y: 430},
+		{mapID: 168, handle: "4710542615621525", name: "向隐", sourceQuery: "npc/向隐.swf", spriteName: "xiangyin", x: 1170, y: 434},
+		{mapID: 168, handle: "4730542615655127", name: "通天八卦炉<ma>", sourceQuery: "npc/通天八卦炉.swf", spriteName: "bagualu", x: 1759, y: 440},
+		{mapID: 169, handle: "5040542617131880", name: "袁天纲", sourceQuery: "npc/袁天纲.swf", spriteName: "yuantiangang", x: 805, y: 400},
+		{mapID: 169, handle: "5060542617335713", name: "妖术狐狸", sourceQuery: "npc/狐狸.swf", spriteName: "huli", x: 1238, y: 450},
+		{mapID: 169, handle: "5050542617322114", name: "白叟", sourceQuery: "npc/白叟.swf", spriteName: "baisou", x: 1618, y: 468},
+		{mapID: 169, handle: "5070542617350720", name: "排行告示", sourceQuery: "npc/公告牌.swf", spriteName: "gonggaopai", x: 2208, y: 430},
+		{mapID: 170, handle: "5310542617702520", name: "游氏子", sourceQuery: "npc/游氏子.swf", spriteName: "youshizi", x: 745, y: 423},
+		{mapID: 170, handle: "5300542617580783", name: "苦虚无", sourceQuery: "npc/苦虚无.swf", spriteName: "kuxuwu", x: 1173, y: 430},
+	}
+
+	for _, expected := range roles {
+		t.Run(expected.handle, func(t *testing.T) {
+			role := session.RoleSummary{RoleID: "role-baiyuan-npc", DisplayName: "测试角色", Level: 30, MapID: expected.mapID}
+			playerBase := session.PlayerBaseData{PlayerID: "player-baiyuan-npc", RoleID: role.RoleID, DisplayName: role.DisplayName, Level: role.Level, MapID: expected.mapID}
+			snapshot := BuildTownBootstrap(role, playerBase)
+			for _, rolePush := range snapshot.CreateRoles {
+				if rolePush.Handle != expected.handle {
+					continue
+				}
+				if rolePush.DisplayName != expected.name || rolePush.SourceQuery != expected.sourceQuery {
+					t.Fatalf("expected %s/%s for %s, got name=%q source=%q", expected.name, expected.sourceQuery, expected.handle, rolePush.DisplayName, rolePush.SourceQuery)
+				}
+				if rolePush.SpawnFlash.X != expected.x || rolePush.SpawnFlash.Y != expected.y {
+					t.Fatalf("expected %s spawn %d,%d got %+v", expected.handle, expected.x, expected.y, rolePush.SpawnFlash)
+				}
+				expectedIRPath := "runtime/classic-npc/movieclips/" + expected.spriteName + "/" + expected.spriteName + "-movieclip-ir"
+				if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != expectedIRPath {
+					t.Fatalf("expected %s source visual %s, got %+v", expected.handle, expectedIRPath, rolePush.SourceNPCVisual)
+				}
+				return
+			}
+			t.Fatalf("expected map%d role %s", expected.mapID, expected.handle)
+		})
+	}
+
+	xiangyinSpeak := BuildAnswerSpeak("4710542615621525")
+	if !hasAnswerOption(xiangyinSpeak.Answers, "2", "进行治疗") || !hasAnswerOption(xiangyinSpeak.Answers, "1", "查看商店") || !hasAnswerOption(xiangyinSpeak.Answers, "5q5gs", "<ml><m/>三七伤药") {
+		t.Fatalf("expected Xiangyin healer/shop/quest answers, got %+v", xiangyinSpeak.Answers)
+	}
+	yuanSpeak := BuildAnswerSpeak("5040542617131880")
+	if !hasAnswerOption(yuanSpeak.Answers, "1", "学习技能") || !hasAnswerOption(yuanSpeak.Answers, "5q25gs", "<m/>魔王降世") {
+		t.Fatalf("expected Yuan Tiangang skill/quest answers, got %+v", yuanSpeak.Answers)
+	}
+	skillReply := BuildAnswerReply("5040542617131880", "1", "1")
+	if skillReply == nil || skillReply.MsgHandle != "10" || !hasAnswerOption(skillReply.Answers, "7", "战士技能") {
+		t.Fatalf("expected Yuan Tiangang skill category reply, got %+v", skillReply)
+	}
+	baisouSpeak := BuildAnswerSpeak("5050542617322114")
+	if !hasAnswerOption(baisouSpeak.Answers, "6", "使用仓库") || !hasAnswerOption(baisouSpeak.Answers, "5q60ns", "<mn/>奇怪的考验【进行中】") {
+		t.Fatalf("expected Baisou warehouse/quest answers, got %+v", baisouSpeak.Answers)
+	}
+	kuxuwuSpeak := BuildAnswerSpeak("5300542617580783")
+	if !hasAnswerOption(kuxuwuSpeak.Answers, "2", "购买武器") || !hasAnswerOption(kuxuwuSpeak.Answers, "3", "购买护具") || !hasAnswerOption(kuxuwuSpeak.Answers, "5q8gs", "<ml><m/>铁矿之需") {
+		t.Fatalf("expected Kuxuwu shop/quest answers, got %+v", kuxuwuSpeak.Answers)
+	}
+	youshiziSpeak := BuildAnswerSpeak("5310542617702520")
+	if !hasAnswerOption(youshiziSpeak.Answers, "1", "道具商店") || !hasAnswerOption(youshiziSpeak.Answers, "5q44gs", "<m/>千里送信") {
+		t.Fatalf("expected Youshizi shop/quest answers, got %+v", youshiziSpeak.Answers)
+	}
+	foxSpeak := BuildAnswerSpeak("5060542617335713")
+	if !hasAnswerOption(foxSpeak.Answers, "3", "传送到【广青镇】(铜钱x500)") || !hasAnswerOption(foxSpeak.Answers, "5", "传送到【葬龙潭】(铜钱x500)") {
+		t.Fatalf("expected Baiyuan fox transport answers, got %+v", foxSpeak.Answers)
 	}
 }
 

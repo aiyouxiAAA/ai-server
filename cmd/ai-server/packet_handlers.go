@@ -204,6 +204,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			result.dungeonInstance = syncDungeonInstanceState(store, socketSession, response.Role.MapID)
 			bootstrap := world.BuildTownBootstrap(response.Role, response.PlayerBase)
 			filterDefeatedVisibleMonsters(&bootstrap, socketSession)
+			applyAcceptedQuestStatesToBootstrap(&bootstrap, store, socketSession)
 			result.townBootstrap = &bootstrap
 		}
 		return result
@@ -534,7 +535,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 }
 
 func isClassicTownSkillTeacherRequest(request classicTownAnswerRequest) bool {
-	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle)
+	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle || request.Handle == baiyuanSkillTeacherHandle)
 }
 
 func isClassicTownVisibleMonsterCrossRole(request classicTownRoleInteractionRequest) bool {
@@ -2329,6 +2330,7 @@ func buildClassicTownTransferResult(
 		return packetResult{handled: true}
 	}
 	filterDefeatedVisibleMonsters(&bootstrap, socketSession)
+	applyAcceptedQuestStatesToBootstrap(&bootstrap, store, socketSession)
 	log.Printf("[ai-server] classic town transfer mapId=%s x=%d y=%d roleId=%s", mapIDText, spawn.X, spawn.Y, role.RoleID)
 	var teamSyncTransfer *classicTeamSyncTransfer
 	if syncPlan.Enabled {

@@ -3565,6 +3565,42 @@ func TestHandlePacketClassicTownGuangqingSkillTeacherPushesCapturedSkillShop(t *
 	}
 }
 
+func TestHandlePacketClassicTownBaiyuanSkillTeacherPushesCapturedSkillShop(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+
+	categoryResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownAnswerReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownAnswerRequest{
+			Handle:       baiyuanSkillTeacherHandle,
+			MsgHandle:    "1",
+			AnswerHandle: "1",
+		}),
+	}, socketSession)
+	if categoryResult.answerSpeak == nil || categoryResult.answerSpeak.MsgHandle != "10" {
+		t.Fatalf("expected captured Baiyuan skill category dialogue, got %+v", categoryResult.answerSpeak)
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownAnswerReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownAnswerRequest{
+			Handle:       baiyuanSkillTeacherHandle,
+			MsgHandle:    "10",
+			AnswerHandle: "7",
+		}),
+	}, socketSession)
+	if result.skillShop == nil {
+		t.Fatal("expected Baiyuan skill teacher to push skill shop")
+	}
+	if result.skillShop.Handle != baiyuanSkillTeacherHandle || result.skillShop.ShopID != "skill1" {
+		t.Fatalf("expected captured Baiyuan warrior skill shop, got %+v", result.skillShop)
+	}
+	if len(result.skillShop.Skills) != 22 || result.skillShop.Skills[0].Name != "武器专精" {
+		t.Fatalf("expected captured warrior skill rows, got %+v", result.skillShop.Skills)
+	}
+}
+
 func TestHandlePacketClassicTownGuangqingCapturedItemShopPushesSaleRows(t *testing.T) {
 	cases := []struct {
 		name           string
@@ -3749,6 +3785,80 @@ func TestHandlePacketClassicTownGuangqingCapturedItemShopPushesSaleRows(t *testi
 				"铜钱",
 			},
 			multiReqCounts: []int{10},
+		},
+		{
+			name:         "baiyuan healer",
+			handle:       "4710542615621525",
+			answerHandle: "1",
+			shopID:       "item:4710542615621525",
+			title:        "向隐的药品商店",
+			count:        9,
+			firstName:    "馒头",
+			firstIcon:    "0.png",
+			firstReqName: "铜钱",
+			firstReqCost: 10,
+			multiReqID:   3,
+			multiReqName: "小包还元散",
+			multiReqNames: []string{
+				"铜钱",
+			},
+			multiReqCounts: []int{350},
+		},
+		{
+			name:         "baiyuan weapon",
+			handle:       "5300542617580783",
+			answerHandle: "2",
+			shopID:       "item:5300542617580783:2",
+			title:        "苦虚无的武器商店",
+			count:        10,
+			firstName:    "真虹剑",
+			firstIcon:    "49.png",
+			firstReqName: "银元宝",
+			firstReqCost: 5,
+			multiReqID:   8,
+			multiReqName: "铜块",
+			multiReqNames: []string{
+				"铜钱",
+				"铜钱",
+			},
+			multiReqCounts: []int{10, 1000},
+		},
+		{
+			name:         "baiyuan armor",
+			handle:       "5300542617580783",
+			answerHandle: "3",
+			shopID:       "item:5300542617580783:3",
+			title:        "苦虚无的护具商店",
+			count:        24,
+			firstName:    "无双头盔",
+			firstIcon:    "357.png",
+			firstReqName: "铜钱",
+			firstReqCost: 800,
+			multiReqID:   21,
+			multiReqName: "铁块",
+			multiReqNames: []string{
+				"铜钱",
+				"碎铁矿",
+			},
+			multiReqCounts: []int{10, 10},
+		},
+		{
+			name:         "baiyuan grocery",
+			handle:       "5310542617702520",
+			answerHandle: "1",
+			shopID:       "item:5310542617702520",
+			title:        "游氏子的道具商店",
+			count:        11,
+			firstName:    "普通采集手套",
+			firstIcon:    "856.png",
+			firstReqName: "铜钱",
+			firstReqCost: 8,
+			multiReqID:   7,
+			multiReqName: "穿甲箭",
+			multiReqNames: []string{
+				"铜钱",
+			},
+			multiReqCounts: []int{80},
 		},
 	}
 
@@ -5161,6 +5271,9 @@ func TestHandlePacketClassicQuestAnswerAcceptsQuest(t *testing.T) {
 	if len(result.questInfos) != 1 || result.questInfos[0].Title != "丑七品的梦" {
 		t.Fatalf("expected accepted quest info push, got %+v", result.questInfos)
 	}
+	if len(result.questStates) != 1 || result.questStates[0].Handle != "7000542609490978" || result.questStates[0].State != 2 {
+		t.Fatalf("expected accepted quest NPC state push, got %+v", result.questStates)
+	}
 	if !packetChatMessagesContain(result.chatMessages, "接受了任务【丑七品的梦】") ||
 		!packetChatMessagesContain(result.chatMessages, "日志更新") {
 		t.Fatalf("expected accept and quest update chat feedback, got %+v", result.chatMessages)
@@ -5173,6 +5286,97 @@ func TestHandlePacketClassicQuestAnswerAcceptsQuest(t *testing.T) {
 	}, socketSession)
 	if len(logResult.questInfos) != 1 || logResult.questInfos[0].Title != "丑七品的梦" {
 		t.Fatalf("expected accepted quest to persist in quest log, got %+v", logResult.questInfos)
+	}
+}
+
+func TestHandlePacketClassicQuestAnswerPushesBaiyuanQuestStateAndTransferBootstrapKeepsIt(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+
+	transferToBaiyuan3 := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownTransferReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownTransferRequest{
+			MapID: "170",
+			X:     1173,
+			Y:     430,
+		}),
+	}, socketSession)
+	if !transferToBaiyuan3.handled || transferToBaiyuan3.townBootstrap == nil {
+		t.Fatalf("expected transfer to Baiyuan 3 bootstrap, got %+v", transferToBaiyuan3)
+	}
+
+	acceptResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownAnswerReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownAnswerRequest{
+			Handle:       "5300542617580783",
+			MsgHandle:    "1",
+			AnswerHandle: "5q22gs",
+		}),
+	}, socketSession)
+	if !acceptResult.handled {
+		t.Fatal("expected Baiyuan quest Answer to be handled")
+	}
+	if len(acceptResult.questInfos) != 1 || acceptResult.questInfos[0].Title != "最后的心愿" {
+		t.Fatalf("expected 最后的心愿 QuestInfo, got %+v", acceptResult.questInfos)
+	}
+	if len(acceptResult.questStates) != 1 || acceptResult.questStates[0].Handle != "4710542615621525" || acceptResult.questStates[0].State != 2 {
+		t.Fatalf("expected Baiyuan target NPC quest state push, got %+v", acceptResult.questStates)
+	}
+
+	transferToBaiyuan1 := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownTransferReq,
+		Seq: 4,
+		Payload: mustJSON(t, classicTownTransferRequest{
+			MapID: "168",
+			X:     1170,
+			Y:     434,
+		}),
+	}, socketSession)
+	if !transferToBaiyuan1.handled || transferToBaiyuan1.townBootstrap == nil {
+		t.Fatalf("expected transfer to Baiyuan 1 bootstrap, got %+v", transferToBaiyuan1)
+	}
+	state, ok := questStateForHandle(transferToBaiyuan1.townBootstrap.QuestStates, "4710542615621525")
+	if !ok || state != 2 {
+		t.Fatalf("expected accepted Baiyuan quest to restore Xiangyin QuestState=2 on transfer bootstrap, got state=%d ok=%v states=%+v", state, ok, transferToBaiyuan1.townBootstrap.QuestStates)
+	}
+}
+
+func TestHandlePacketRoleSelectOverlaysAcceptedBaiyuanQuestState(t *testing.T) {
+	store := session.NewStore()
+	login := store.Login(session.LoginRequest{
+		UserName: "mockuser",
+		Password: "magicpwd",
+	})
+	create := store.CreateRole(session.RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "白源任务测试",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	if !store.AcceptQuest(login.PlayerID, create.Role.RoleID, "最后的心愿") {
+		t.Fatal("expected to seed accepted Baiyuan quest")
+	}
+	if _, _, ok := store.UpdateRoleMap(login.PlayerID, create.Role.RoleID, 168); !ok {
+		t.Fatal("expected to move role to Baiyuan 1")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 2,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     login.PlayerID,
+			SessionToken: login.SessionToken,
+			RoleID:       create.Role.RoleID,
+		}),
+	}, &packetSession{})
+	if !result.handled || result.townBootstrap == nil {
+		t.Fatalf("expected role select bootstrap, got %+v", result)
+	}
+	state, ok := questStateForHandle(result.townBootstrap.QuestStates, "4710542615621525")
+	if !ok || state != 2 {
+		t.Fatalf("expected role select bootstrap to show accepted Baiyuan QuestState=2, got state=%d ok=%v states=%+v", state, ok, result.townBootstrap.QuestStates)
 	}
 }
 
@@ -5920,6 +6124,15 @@ func packetChatMessagesContain(messages []classicTownChatMessagePush, snippet st
 		}
 	}
 	return false
+}
+
+func questStateForHandle(states []world.QuestStatePush, handle string) (int, bool) {
+	for _, state := range states {
+		if state.Handle == handle {
+			return state.State, true
+		}
+	}
+	return 0, false
 }
 
 func assertItemInfo(t *testing.T, item classicTownItemInfoPush, itemType string, classicItemType string, display string, count int) {

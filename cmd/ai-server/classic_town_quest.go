@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 const sourceMainQuestTitle = "初入云隐"
 const sourceMainQuestNpcHandle = "1000542608713897"
 const classicQuestAcceptedLimit = 20
+const classicQuestAcceptedNpcState = 2
 
 type classicQuestInfoPush struct {
 	QuestID     string                 `json:"questId,omitempty"`
@@ -173,14 +175,16 @@ func buildClassicQuestAnswerResult(store *session.Store, socketSession *packetSe
 		return packetResult{handled: true}, true
 	}
 
-	return packetResult{
+	result := packetResult{
 		questInfos: []classicQuestInfoPush{classicQuestInfoFromCatalog(info)},
 		chatMessages: []classicTownChatMessagePush{
 			classicTownSystemChatMessage("接受了任务【" + info.Title + "】。"),
 			classicTownSystemChatMessage("日志更新"),
 		},
 		handled: true,
-	}, true
+	}
+	appendQuestStateForInfoOrRoute(&result, info, route, classicQuestAcceptedNpcState)
+	return result, true
 }
 
 func buildClassicQuestCompleteResult(store *session.Store, socketSession *packetSession, info quest.Info, title string) packetResult {
@@ -273,14 +277,118 @@ func questNpcHandleForTitle(title string) string {
 		return sourceMainQuestNpcHandle
 	}
 	if info, ok := quest.FindByTitle(title); ok {
-		if strings.TrimSpace(info.QuestStateHandle) != "" {
-			return strings.TrimSpace(info.QuestStateHandle)
-		}
-		if len(info.Routes) > 0 {
-			return info.Routes[0].Handle
-		}
+		return questNpcHandleForInfo(info)
 	}
 	return ""
+}
+
+func questNpcHandleForInfo(info quest.Info) string {
+	if strings.TrimSpace(info.QuestStateHandle) != "" {
+		return strings.TrimSpace(info.QuestStateHandle)
+	}
+	if len(info.Routes) > 0 {
+		return info.Routes[0].Handle
+	}
+	return ""
+}
+
+func appendQuestStateForInfo(result *packetResult, info quest.Info, state int) {
+	appendQuestStateForHandle(result, questNpcHandleForInfo(info), state)
+}
+
+func appendQuestStateForInfoOrRoute(result *packetResult, info quest.Info, route classicQuestAnswerRoute, state int) {
+	handle := questNpcHandleForInfo(info)
+	if handle == "" {
+		handle = strings.TrimSpace(route.handle)
+	}
+	appendQuestStateForHandle(result, handle, state)
+}
+
+func appendQuestStateForHandle(result *packetResult, handle string, state int) {
+	if result == nil {
+		return
+	}
+	if handle = strings.TrimSpace(handle); handle != "" {
+		result.questStates = append(result.questStates, world.QuestStatePush{
+			Handle: handle,
+			State:  state,
+		})
+	}
+}
+
+func applyAcceptedQuestStatesToBootstrap(snapshot *world.TownBootstrapSnapshot, store *session.Store, socketSession *packetSession) {
+	applyQuestStateOverrides(snapshot, acceptedQuestStatePushes(store, socketSession))
+}
+
+func acceptedQuestStatePushes(store *session.Store, socketSession *packetSession) []world.QuestStatePush {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return nil
+	}
+	accepted := store.AcceptedQuestTitles(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
+	if len(accepted) == 0 {
+		return nil
+	}
+
+	stateByHandle := map[string]int{}
+	for _, info := range quest.All() {
+		if !accepted[info.Title] {
+			continue
+		}
+		handle := questNpcHandleForInfo(info)
+		if handle == "" {
+			continue
+		}
+		stateByHandle[handle] = classicQuestAcceptedNpcState
+	}
+	if len(stateByHandle) == 0 {
+		return nil
+	}
+
+	handles := make([]string, 0, len(stateByHandle))
+	for handle := range stateByHandle {
+		handles = append(handles, handle)
+	}
+	sort.Strings(handles)
+
+	pushes := make([]world.QuestStatePush, 0, len(handles))
+	for _, handle := range handles {
+		pushes = append(pushes, world.QuestStatePush{
+			Handle: handle,
+			State:  stateByHandle[handle],
+		})
+	}
+	return pushes
+}
+
+func applyQuestStateOverrides(snapshot *world.TownBootstrapSnapshot, overrides []world.QuestStatePush) {
+	if snapshot == nil || len(overrides) == 0 {
+		return
+	}
+
+	questStateIndexByHandle := make(map[string]int, len(snapshot.QuestStates))
+	for index, questState := range snapshot.QuestStates {
+		questStateIndexByHandle[questState.Handle] = index
+	}
+	createRoleHandles := make(map[string]bool, len(snapshot.CreateRoles))
+	for _, role := range snapshot.CreateRoles {
+		createRoleHandles[role.Handle] = true
+	}
+
+	for _, override := range overrides {
+		if strings.TrimSpace(override.Handle) == "" {
+			continue
+		}
+		if index, ok := questStateIndexByHandle[override.Handle]; ok {
+			if snapshot.QuestStates[index].State == 0 {
+				snapshot.QuestStates[index].State = override.State
+			}
+			continue
+		}
+		if createRoleHandles[override.Handle] {
+			snapshot.QuestStates = append(snapshot.QuestStates, override)
+			questStateIndexByHandle[override.Handle] = len(snapshot.QuestStates) - 1
+		}
+	}
 }
 
 func findClassicQuestAnswerRoute(request classicTownAnswerRequest) (classicQuestAnswerRoute, bool) {

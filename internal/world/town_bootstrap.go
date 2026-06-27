@@ -105,7 +105,10 @@ type sourceNPCEntry struct {
 	Width                      int
 	Height                     int
 	SpawnFlash                 SpawnPoint
+	State                      int
 	QuestState                 int
+	GuildName                  string
+	GuildPic                   string
 	Kind                       string
 	IsGeneratedSourceTransport bool
 	Dialogue                   *sourceNPCDialogueEntry
@@ -616,6 +619,18 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneSixtySeven.SourceMonsters = map167SourceMonsters
 	definitions[167] = mapOneSixtySeven
 
+	mapOneSixtyEight := definitions[168]
+	mapOneSixtyEight.SourceNPCs = map168SourceNPCs
+	definitions[168] = mapOneSixtyEight
+
+	mapOneSixtyNine := definitions[169]
+	mapOneSixtyNine.SourceNPCs = map169SourceNPCs
+	definitions[169] = mapOneSixtyNine
+
+	mapOneSeventy := definitions[170]
+	mapOneSeventy.SourceNPCs = map170SourceNPCs
+	definitions[170] = mapOneSeventy
+
 	for _, point := range sourceCollectionPointsByHandle {
 		mapDefinition, ok := definitions[point.MapID]
 		if !ok {
@@ -902,6 +917,9 @@ func buildTownBootstrap(
 			SourceQuery:     npc.SourceQuery,
 			Kind:            kind,
 			SpawnFlash:      npc.SpawnFlash,
+			State:           npc.State,
+			GuildName:       npc.GuildName,
+			GuildPic:        npc.GuildPic,
 			SourceNPCVisual: buildNPCVisual(npc),
 		})
 		questStates = append(questStates, QuestStatePush{
@@ -1046,6 +1064,7 @@ func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *Ans
 		map2SourceNPCDialogueReplies,
 		map3SourceNPCDialogueReplies,
 		map46SourceNPCDialogueReplies,
+		map169SourceNPCDialogueReplies,
 		map191SourceNPCDialogueReplies,
 	} {
 		if dialogue, ok = replies[key]; ok {

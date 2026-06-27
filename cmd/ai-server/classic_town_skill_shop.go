@@ -10,6 +10,7 @@ import (
 const (
 	sourceSkillTeacherHandle    = "1000542608713897"
 	guangqingSkillTeacherHandle = "2220542612946566"
+	baiyuanSkillTeacherHandle   = "5040542617131880"
 	classicBattleLootType       = "战斗"
 	classicBattleLootCap        = 18
 )

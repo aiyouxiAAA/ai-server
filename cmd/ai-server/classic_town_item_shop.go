@@ -10,6 +10,7 @@ import (
 type sourceItemShopRoute struct {
 	handle       string
 	answerHandle string
+	shopID       string
 	title        string
 	vocation     string
 	rows         string
@@ -27,14 +28,14 @@ type sourceItemShopRow struct {
 }
 
 func buildClassicTownItemShopResult(request classicTownAnswerRequest) (packetResult, bool) {
-	route, ok := sourceGuangqingItemShopRoutes[request.Handle]
-	if !ok || request.AnswerHandle != route.answerHandle {
+	route, ok := findSourceItemShopRoute(request.Handle, request.AnswerHandle)
+	if !ok {
 		return packetResult{}, false
 	}
 	entries := sourceItemShopEntries(route.vocation, route.rows)
 	shop := classicTownSkillShopPush{
 		Handle:   route.handle,
-		ShopID:   "item:" + route.handle,
+		ShopID:   sourceItemShopRouteID(route),
 		Title:    route.title,
 		Vocation: route.vocation,
 		SkillCap: len(entries),
@@ -44,6 +45,26 @@ func buildClassicTownItemShopResult(request classicTownAnswerRequest) (packetRes
 		skillShop: &shop,
 		handled:   true,
 	}, true
+}
+
+func findSourceItemShopRoute(handle string, answerHandle string) (sourceItemShopRoute, bool) {
+	routes, ok := sourceGuangqingItemShopRoutes[strings.TrimSpace(handle)]
+	if !ok {
+		return sourceItemShopRoute{}, false
+	}
+	for _, route := range routes {
+		if strings.TrimSpace(answerHandle) == route.answerHandle {
+			return route, true
+		}
+	}
+	return sourceItemShopRoute{}, false
+}
+
+func sourceItemShopRouteID(route sourceItemShopRoute) string {
+	if strings.TrimSpace(route.shopID) != "" {
+		return route.shopID
+	}
+	return "item:" + route.handle
 }
 
 func sourceItemShopEntries(vocation string, rows string) []classicTownSkillShopEntry {
@@ -70,18 +91,22 @@ func sourceItemShopEntries(vocation string, rows string) []classicTownSkillShopE
 }
 
 func findSourceItemShopRow(shopID string, itemID int) (sourceItemShopRow, bool) {
-	handle, ok := strings.CutPrefix(strings.TrimSpace(shopID), "item:")
+	normalizedShopID := strings.TrimSpace(shopID)
+	_, ok := strings.CutPrefix(normalizedShopID, "item:")
 	if !ok {
 		return sourceItemShopRow{}, false
 	}
-	route, ok := sourceGuangqingItemShopRoutes[handle]
-	if !ok {
-		return sourceItemShopRow{}, false
-	}
-	for _, line := range strings.Split(strings.TrimSpace(route.rows), "\n") {
-		row, ok := parseSourceItemShopRow(line)
-		if ok && row.id == itemID {
-			return row, true
+	for _, routes := range sourceGuangqingItemShopRoutes {
+		for _, route := range routes {
+			if sourceItemShopRouteID(route) != normalizedShopID {
+				continue
+			}
+			for _, line := range strings.Split(strings.TrimSpace(route.rows), "\n") {
+				row, ok := parseSourceItemShopRow(line)
+				if ok && row.id == itemID {
+					return row, true
+				}
+			}
 		}
 	}
 	return sourceItemShopRow{}, false
@@ -169,77 +194,113 @@ func sourceItemCategory(description string) string {
 	return description[start : start+end]
 }
 
-var sourceGuangqingItemShopRoutes = map[string]sourceItemShopRoute{
-	"7000542609490978": {
+var sourceGuangqingItemShopRoutes = map[string][]sourceItemShopRoute{
+	"7000542609490978": {{
 		handle:       "7000542609490978",
 		answerHandle: "1",
 		title:        "丑七品的道具商店",
 		vocation:     "道具",
 		rows:         sourceYunyinGroceryShopRows,
-	},
-	"4090542614314425": {
+	}},
+	"4090542614314425": {{
 		handle:       "4090542614314425",
 		answerHandle: "1",
 		title:        "丑六品的道具商店",
 		vocation:     "道具",
 		rows:         sourceDafoGroceryShopRows,
-	},
-	"4960542616750900": {
+	}},
+	"4960542616750900": {{
 		handle:       "4960542616750900",
 		answerHandle: "1",
 		title:        "介象的道具商店",
 		vocation:     "道具",
 		rows:         sourceJiantingGroceryShopRows,
-	},
-	"1780542610743555": {
+	}},
+	"1780542610743555": {{
 		handle:       "1780542610743555",
 		answerHandle: "1",
 		title:        "伏天的武器商店",
 		vocation:     "武器",
 		rows:         sourceGuangqingWeaponShopRows,
-	},
-	"4000542609162635": {
+	}},
+	"4000542609162635": {{
 		handle:       "4000542609162635",
 		answerHandle: "1",
 		title:        "布衣娘的护具商店",
 		vocation:     "护具",
 		rows:         sourceYunyinArmorShopRows,
-	},
-	"1820542611400955": {
+	}},
+	"1820542611400955": {{
 		handle:       "1820542611400955",
 		answerHandle: "1",
 		title:        "丑五品的道具商店",
 		vocation:     "道具",
 		rows:         sourceGuangqingGroceryShopRows,
-	},
-	"1830542611405809": {
+	}},
+	"1830542611405809": {{
 		handle:       "1830542611405809",
 		answerHandle: "1",
 		title:        "八卦炉合成",
 		vocation:     "合成",
 		rows:         sourceGuangqingCraftShopRows,
-	},
-	"2500542613172144": {
+	}},
+	"2500542613172144": {{
 		handle:       "2500542613172144",
 		answerHandle: "1",
 		title:        "云衣娘的护具商店",
 		vocation:     "护具",
 		rows:         sourceGuangqingArmorShopRows,
-	},
-	"2520542613299551": {
+	}},
+	"2520542613299551": {{
 		handle:       "2520542613299551",
 		answerHandle: "1",
 		title:        "无颜的药品商店",
 		vocation:     "医疗",
 		rows:         sourceGuangqingHealerShopRows,
-	},
-	"6360542618722932": {
+	}},
+	"6360542618722932": {{
 		handle:       "6360542618722932",
 		answerHandle: "1",
 		title:        "虚中的药品商店",
 		vocation:     "医疗",
 		rows:         sourceGuangqingHealerShopRows,
-	},
+	}},
+	"4710542615621525": {{
+		handle:       "4710542615621525",
+		answerHandle: "1",
+		title:        "向隐的药品商店",
+		vocation:     "医疗",
+		rows:         sourceBaiyuanHealerShopRows,
+	}},
+	"4730542615655127": {{
+		handle:       "4730542615655127",
+		answerHandle: "1",
+		title:        "白源镇八卦炉合成",
+		vocation:     "合成",
+		rows:         sourceGuangqingCraftShopRows,
+	}},
+	"5300542617580783": {{
+		handle:       "5300542617580783",
+		answerHandle: "2",
+		shopID:       "item:5300542617580783:2",
+		title:        "苦虚无的武器商店",
+		vocation:     "武器",
+		rows:         sourceBaiyuanWeaponShopRows,
+	}, {
+		handle:       "5300542617580783",
+		answerHandle: "3",
+		shopID:       "item:5300542617580783:3",
+		title:        "苦虚无的护具商店",
+		vocation:     "护具",
+		rows:         sourceBaiyuanArmorShopRows,
+	}},
+	"5310542617702520": {{
+		handle:       "5310542617702520",
+		answerHandle: "1",
+		title:        "游氏子的道具商店",
+		vocation:     "道具",
+		rows:         sourceBaiyuanGroceryShopRows,
+	}},
 }
 
 const sourceGuangqingWeaponShopRows = `

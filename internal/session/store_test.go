@@ -386,12 +386,33 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 	}
 
 	skills, cap, ok := store.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
-	if !ok || cap != 12 {
+	if !ok || cap != 12 || len(skills) != 9 {
 		t.Fatalf("expected captured skills for 333, ok=%v cap=%d skills=%+v", ok, cap, skills)
+	}
+	expectedSkillOrder := []string{
+		"普通攻击",
+		"武器娴熟",
+		"灵力进修",
+		"精神力",
+		"爆发力",
+		"幻影",
+		"强射",
+		"贯甲连矢",
+		"强力飞镖",
+	}
+	for index, expectedName := range expectedSkillOrder {
+		if skills[index].Name != expectedName {
+			t.Fatalf("expected 333 captured skill order %v, got %+v", expectedSkillOrder, skills)
+		}
 	}
 	byName := map[string]RoleSkill{}
 	for _, skill := range skills {
 		byName[skill.Name] = skill
+	}
+	for _, staleName := range []string{"奥义.暗杀者", "投毒", "疾风刺", "解毒术", "魔力突刺"} {
+		if _, ok := byName[staleName]; ok {
+			t.Fatalf("expected 333 skillInfo to follow 20260627 capture without stale dagger skill %s, got %+v", staleName, skills)
+		}
 	}
 	if skill := byName["强力飞镖"]; skill.Level != 5 || skill.Icon != "261.png" || !strings.Contains(skill.Description, "&2@32") {
 		t.Fatalf("expected 333 captured 强力飞镖 Lv5, got %+v", skill)
@@ -399,11 +420,19 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 	if skill := byName["强射"]; skill.Level != 5 || skill.Icon != "231.png" {
 		t.Fatalf("expected 333 captured 强射 Lv5, got %+v", skill)
 	}
-	if skill := byName["贯甲连矢"]; skill.Level != 2 || skill.Icon != "236.png" {
-		t.Fatalf("expected 333 captured 贯甲连矢 Lv2, got %+v", skill)
+	if skill := byName["贯甲连矢"]; skill.Level != 5 || skill.Icon != "236.png" || !strings.Contains(skill.Description, "&2@28") {
+		t.Fatalf("expected 333 captured final 贯甲连矢 Lv5, got %+v", skill)
 	}
 	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
-	if !ok || len(fastPanel) != 9 || fastPanel[1].Name != "强力飞镖" || fastPanel[8].Name != "小瓶甘露" {
+	fastPanelByIndex := map[int]RoleFastPanelEntry{}
+	for _, entry := range fastPanel {
+		fastPanelByIndex[entry.Index] = entry
+	}
+	if !ok || len(fastPanel) != 9 ||
+		fastPanelByIndex[1].Name != "贯甲连矢" ||
+		fastPanelByIndex[2].Name != "强射" ||
+		fastPanelByIndex[8].Name != "馒头" ||
+		fastPanelByIndex[9].Name != "小瓶甘露" {
 		t.Fatalf("expected 333 captured fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
 	}
 }
@@ -636,6 +665,18 @@ func TestStorePersistentCapturedWoodcutter333KeepsLevel40Snapshot(t *testing.T) 
 	}
 	if !strings.Contains(role.SourceQuery, "p=64") || role.BattleSourceQuery != role.SourceQuery {
 		t.Fatalf("expected reopened 333 to keep captured appearance, role=%q battle=%q", role.SourceQuery, role.BattleSourceQuery)
+	}
+	skills, cap, ok := reopened.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || cap != 12 || len(skills) != 9 || skills[6].Name != "强射" || skills[7].Name != "贯甲连矢" || skills[7].Level != 5 {
+		t.Fatalf("expected reopened 333 to keep captured final skills, ok=%v cap=%d skills=%+v", ok, cap, skills)
+	}
+	fastPanel, ok := reopened.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
+	fastPanelByIndex := map[int]RoleFastPanelEntry{}
+	for _, entry := range fastPanel {
+		fastPanelByIndex[entry.Index] = entry
+	}
+	if !ok || fastPanelByIndex[1].Name != "贯甲连矢" || fastPanelByIndex[2].Name != "强射" {
+		t.Fatalf("expected reopened 333 to keep captured final fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
 	}
 }
 

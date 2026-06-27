@@ -926,6 +926,9 @@ func (store *Store) GetRoleFastPanel(playerID string, roleID string) ([]RoleFast
 		}
 
 		role = withRoleRuntimeDefaults(role)
+		if isCapturedWoodcutter333LocalRole(role) {
+			return cloneRoleFastPanel(filterRoleFastPanelEntries(role.FastPanel, capturedWoodcutter333ShortcutSkills())), true
+		}
 		return cloneRoleFastPanel(filterRoleFastPanelEntries(role.FastPanel, role.Skills)), true
 	}
 

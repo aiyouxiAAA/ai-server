@@ -660,27 +660,116 @@ func capturedWoodcutter40SourceQuery() string {
 }
 
 func capturedWoodcutter333RoleSkills() []RoleSkill {
-	skills := capturedWoodcutterRoleSkills()
+	return []RoleSkill{
+		{
+			Name:        "普通攻击",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "7.png",
+			Description: "f_s_普通攻击^ffffff&9@单体·攻击&10@通用&22@战斗&5@给予对手普通的物理攻击.",
+		},
+		{
+			Name:        "武器娴熟",
+			Level:       5,
+			Type:        "null",
+			Icon:        "226.png",
+			Description: "f_s_武器娴熟^ffffff&9@被动&8@游侠 &10@通用&12@20",
+		},
+		{
+			Name:        "灵力进修",
+			Level:       4,
+			Type:        "null",
+			Icon:        "227.png",
+			Description: "f_s_灵力进修^ffffff&9@被动&8@游侠 &10@通用&13@90%&4@精力上限 +45",
+		},
+		{
+			Name:        "精神力",
+			Level:       5,
+			Type:        "null",
+			Icon:        "230.png",
+			Description: "f_s_精神力^ffffff&9@被动&8@游侠 &10@通用&18@12",
+		},
+		{
+			Name:        "爆发力",
+			Level:       5,
+			Type:        "null",
+			Icon:        "228.png",
+			Description: "f_s_爆发力^ffffff&9@被动&8@游侠 &10@通用&20@190",
+		},
+		{
+			Name:        "幻影",
+			Level:       4,
+			Type:        "null",
+			Icon:        "229.png",
+			Description: "f_s_幻影^ffffff&9@被动&8@游侠 &10@通用&19@10",
+		},
+		{
+			Name:        "强射",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "231.png",
+			Description: "f_s_强射^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@18&4@提升45%的物理伤害",
+		},
+		{
+			Name:        "贯甲连矢",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "236.png",
+			Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升25%的物理伤害&0;进攻时增加30%（无视防御）的物理攻击力.",
+		},
+		{
+			Name:        "强力飞镖",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "261.png",
+			Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@32&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高55%（无视防御）的物理攻击力",
+		},
+	}
+}
+
+func capturedWoodcutter333FastPanel() []RoleFastPanelEntry {
+	return []RoleFastPanelEntry{
+		{Index: 0, Type: "skill", Name: "普通攻击"},
+		{Index: 1, Type: "skill", Name: "贯甲连矢"},
+		{Index: 2, Type: "skill", Name: "强射"},
+		{Index: 3, Type: "skill", Name: "投毒"},
+		{Index: 4, Type: "skill", Name: "疾风刺"},
+		{Index: 5, Type: "skill", Name: "解毒术"},
+		{Index: 6, Type: "skill", Name: "魔力突刺"},
+		{Index: 8, Type: "item", Name: "馒头"},
+		{Index: 9, Type: "item", Name: "小瓶甘露"},
+	}
+}
+
+func capturedWoodcutter333ShortcutSkills() []RoleSkill {
+	skills := capturedWoodcutter333RoleSkills()
 	skills = upsertCapturedRoleSkill(skills, RoleSkill{
-		Name:        "强力飞镖",
-		Level:       5,
+		Name:        "投毒",
+		Level:       1,
 		Type:        "oneE",
-		Icon:        "261.png",
-		Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@32&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高55%（无视防御）的物理攻击力",
+		Icon:        "166.png",
+		Description: "f_s_投毒^5BC46D&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@16&4@<font color='#00cc00'>特殊发动条件:需要【毒药x1】<br>叠加施放将削弱其造成中毒的功效</font><br>有80%的机率使敌人中毒，4回合内降低对方15%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的20%~25%",
 	})
 	skills = upsertCapturedRoleSkill(skills, RoleSkill{
-		Name:        "强射",
-		Level:       5,
+		Name:        "疾风刺",
+		Level:       1,
 		Type:        "oneE",
-		Icon:        "231.png",
-		Description: "f_s_强射^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@18&4@提升45%的物理伤害",
+		Icon:        "259.png",
+		Description: "f_s_疾风刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@对敌人造成40%的物理伤害&0;击中敌人时有92%的机率使对方进入迟钝状态(削减对方50%的命中和回避)3回合<br><font color='#00cc00'>叠加施放将削弱其造成迟钝的功效</font>",
 	})
 	skills = upsertCapturedRoleSkill(skills, RoleSkill{
-		Name:        "贯甲连矢",
-		Level:       2,
+		Name:        "解毒术",
+		Level:       1,
+		Type:        "own",
+		Icon:        "260.png",
+		Description: "f_s_解毒术^ffffff&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@20&4@解除自身中毒状态",
+	})
+	skills = upsertCapturedRoleSkill(skills, RoleSkill{
+		Name:        "魔力突刺",
+		Level:       1,
 		Type:        "oneE",
-		Icon:        "236.png",
-		Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@25&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升10%的物理伤害&0;进攻时增加15%（无视防御）的物理攻击力.",
+		Icon:        "258.png",
+		Description: "f_s_魔力突刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@造成敌人100%的物理伤害&0;并追加80%的魔法伤害",
 	})
 	return skills
 }
@@ -1553,7 +1642,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	if isWarrior444 {
 		role.FastPanel = capturedWarrior444FastPanel()
 	} else if isWoodcutter333 {
-		role.FastPanel = capturedWoodcutterFastPanel()
+		role.FastPanel = capturedWoodcutter333FastPanel()
 	} else if isWoodcutter222 {
 		role.FastPanel = capturedWoodcutterFastPanel()
 	} else if len(role.FastPanel) == 0 {

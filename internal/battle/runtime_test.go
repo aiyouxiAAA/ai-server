@@ -563,6 +563,34 @@ func TestHuangfengzhaiRewardCandidatesUseFullCaptureStatistics(t *testing.T) {
 	}
 }
 
+func TestBaiyuanYaozhisenRewardCandidatesIncludeLateMapChain(t *testing.T) {
+	testCases := []struct {
+		mapID       string
+		monsterName string
+		maxHP       int
+		itemName    string
+		quantity    int
+		numerator   int
+		denominator int
+	}{
+		{mapID: "201", monsterName: "机木玄师", maxHP: 1189, itemName: "木材", quantity: 1, numerator: 169, denominator: 282},
+		{mapID: "201", monsterName: "机木玄师", maxHP: 1189, itemName: "机木护腰", quantity: 1, numerator: 10, denominator: 282},
+		{mapID: "202", monsterName: "机木锥兵", maxHP: 1330, itemName: "木材", quantity: 1, numerator: 38, denominator: 50},
+		{mapID: "202", monsterName: "机木锥兵", maxHP: 1330, itemName: "神奇朽木", quantity: 1, numerator: 2, denominator: 50},
+	}
+
+	for _, testCase := range testCases {
+		config, ok := sourceBattleRewardCandidateForCell(testCase.mapID, testCase.monsterName, testCase.maxHP)
+		if !ok {
+			t.Fatalf("expected Baiyuan/Yaozhisen reward candidate %+v", testCase)
+		}
+		rate := requireSourceBattleRewardDropRate(t, config.DropRates, testCase.itemName)
+		if rate.Quantity != testCase.quantity || rate.Numerator != testCase.numerator || rate.Denominator != testCase.denominator {
+			t.Fatalf("expected Baiyuan/Yaozhisen reward candidate drop %+v, got %+v", testCase, rate)
+		}
+	}
+}
+
 func TestBuildOverRollsCapturedObservedDropRates(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
 	over := (&Runtime{BattleID: "battle-map5-high-roll", MapID: "5", Round: 1}).buildOver(CampTeam)
@@ -2935,6 +2963,18 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_解毒术^ffffff&9@单体·状态&8@游侠 &10@匕首&22@战斗&2@20&4@解除自身中毒状态",
 		},
 		{
+			Name:        "强射",
+			Level:       5,
+			Type:        "oneE",
+			Description: "f_s_强射^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@18&4@提升45%的物理伤害",
+		},
+		{
+			Name:        "贯甲连矢",
+			Level:       2,
+			Type:        "oneE",
+			Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@25&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升10%的物理伤害&0;进攻时增加15%（无视防御）的物理攻击力.",
+		},
+		{
 			Name:        "奥义.雷魂斩",
 			Level:       1,
 			Type:        "oneE",
@@ -3007,6 +3047,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	if command := byID[CommandJieDuShu]; command.Label != "解毒术" || command.SourceType != "own" || command.Target != "self" || command.SourceActionLabel != "w3/releaseDrug" || command.MPCost != 20 || command.DamageMultiplier != 0 {
 		t.Fatalf("expected captured 解毒术 self command, got %+v", command)
 	}
+	if command := byID[CommandQiangShe]; command.Label != "强射" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/powerShoot" || command.MPCost != 18 || command.DamageMultiplier != 1.45 {
+		t.Fatalf("expected captured 强射 Lv5 command, got %+v", command)
+	}
+	if command := byID[CommandGuanJiaLianShi]; command.Label != "贯甲连矢" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/breakArmorShoot2" || command.MPCost != 25 || command.DamageMultiplier != 1.1 {
+		t.Fatalf("expected captured 贯甲连矢 Lv2 command, got %+v", command)
+	}
 	if command := byID[CommandLeiHunZhan]; command.Label != "奥义.雷魂斩" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/thunderSoulAtk" || command.MPCost != 24 || command.DamageMultiplier != 3.4 {
 		t.Fatalf("expected captured 奥义.雷魂斩 single-target command, got %+v", command)
 	}
@@ -3021,6 +3067,52 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if byID[CommandStore].SourceActionLabel != "def" || byID[CommandEscape].SourceActionLabel != "escapeSuccess" {
 		t.Fatalf("expected utility commands to use source labels, got %+v", commands)
+	}
+}
+
+func TestGuanJiaLianShiUsesCapturedDirectAttackBonus(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-ranger-bow",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "贯甲连矢",
+				Level:       2,
+				Type:        "oneE",
+				Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@25&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升10%的物理伤害&0;进攻时增加15%（无视防御）的物理攻击力.",
+			},
+		},
+	}
+	actor := &CellInfoPush{
+		Handle: "player_21432",
+		Camp:   CampTeam,
+		Attack: 100,
+		Hit:    1000,
+		MaxMP:  100,
+		MP:     100,
+		Fat:    0,
+	}
+	target := &CellInfoPush{
+		Handle:  "enemy_bow_target",
+		Camp:    CampEnemy,
+		MaxHP:   500,
+		HP:      500,
+		Defense: 50,
+		Dog:     0,
+	}
+
+	action := runtime.resolveAttack(actor, target, CommandGuanJiaLianShi)
+
+	if action.ActionName != "贯甲连矢" || action.SourceActionLabel != "w1/breakArmorShoot2" || action.TargetActionStateCode != "0" {
+		t.Fatalf("expected captured 贯甲连矢 hit action, got %+v", action)
+	}
+	if action.Damage != 75 || action.TargetHP != 425 || target.HP != 425 {
+		t.Fatalf("expected round(100*1.1)-50 plus round(100*0.15)=75 damage, got action=%+v target=%+v", action, target)
+	}
+	if actor.MP != 75 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 75 {
+		t.Fatalf("expected captured 贯甲连矢 MP cost 25, got actor=%+v action=%+v", actor, action)
 	}
 }
 

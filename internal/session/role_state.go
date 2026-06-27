@@ -655,6 +655,48 @@ func capturedWoodcutterBaseSourceQuery() string {
 	return "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&"
 }
 
+func capturedWoodcutter40SourceQuery() string {
+	return "human/human.swf?=&a=29&b=22&c=26&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=64&se=19&wr=39&w3=49&"
+}
+
+func capturedWoodcutter333RoleSkills() []RoleSkill {
+	skills := capturedWoodcutterRoleSkills()
+	skills = upsertCapturedRoleSkill(skills, RoleSkill{
+		Name:        "强力飞镖",
+		Level:       5,
+		Type:        "oneE",
+		Icon:        "261.png",
+		Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@32&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高55%（无视防御）的物理攻击力",
+	})
+	skills = upsertCapturedRoleSkill(skills, RoleSkill{
+		Name:        "强射",
+		Level:       5,
+		Type:        "oneE",
+		Icon:        "231.png",
+		Description: "f_s_强射^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@18&4@提升45%的物理伤害",
+	})
+	skills = upsertCapturedRoleSkill(skills, RoleSkill{
+		Name:        "贯甲连矢",
+		Level:       2,
+		Type:        "oneE",
+		Icon:        "236.png",
+		Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@25&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升10%的物理伤害&0;进攻时增加15%（无视防御）的物理攻击力.",
+	})
+	return skills
+}
+
+func upsertCapturedRoleSkill(skills []RoleSkill, skill RoleSkill) []RoleSkill {
+	skill = normalizeRoleSkill(skill)
+	for index := range skills {
+		if skills[index].Name != skill.Name {
+			continue
+		}
+		skills[index] = skill
+		return skills
+	}
+	return append(skills, skill)
+}
+
 func capturedWoodcutterEquipmentItems() []RoleItem {
 	return []RoleItem{
 		{
@@ -799,6 +841,315 @@ func syncCapturedWoodcutterEquipmentItems(items []RoleItem) []RoleItem {
 
 func isCapturedWoodcutterLocalRole(role RoleSummary) bool {
 	return strings.TrimSpace(role.DisplayName) == "222" || strings.Contains(role.RoleID, "-role-222")
+}
+
+func isCapturedWoodcutter333LocalRole(role RoleSummary) bool {
+	roleID := strings.TrimSpace(role.RoleID)
+	return strings.HasPrefix(roleID, "acct-333-role-") || strings.HasPrefix(roleID, "acct-33333333-role-")
+}
+
+func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
+	role.Voc = "游侠"
+	role.DisplayName = "333"
+	if role.Level < 40 || role.Exp <= 0 {
+		role.Level = 40
+		role.Exp = 4361496
+	}
+	if role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0 {
+		role.AGI = 162
+		role.STR = 66
+		role.INT = 19
+		role.CON = 0
+		role.LCK = 19
+	}
+	if role.MapID <= 1 {
+		role.MapID = 15
+	}
+	if role.VisualRoleID <= 0 {
+		role.VisualRoleID = 1
+	}
+	if role.RoleState == nil || role.RoleState.Lv < 40 || role.RoleState.Exp <= 0 {
+		roleState := capturedWoodcutter40RoleState(role.RoleID)
+		role.RoleState = &roleState
+	}
+	if role.RolePhysique == nil || role.RolePhysique.MaxHP <= 0 || role.RolePhysique.MaxMP <= 0 {
+		rolePhysique := capturedWoodcutter40RolePhysique(role.RoleID)
+		role.RolePhysique = &rolePhysique
+	}
+	return role
+}
+
+func capturedWoodcutter40RoleState(roleID string) RoleState {
+	return RoleState{
+		Handle: roleID,
+		HP:     1265,
+		MP:     669,
+		Exp:    4361496,
+		Lv:     40,
+		Speed:  140,
+		OutG:   0,
+		InG:    0,
+	}
+}
+
+func capturedWoodcutter40RolePhysique(roleID string) RolePhysique {
+	return RolePhysique{
+		Handle:    roleID,
+		ResPros:   []string{"冰冻|8", "眩晕|15", "封印|10", "混乱|10", "麻痹|5"},
+		AGI:       162,
+		STR:       66,
+		INT:       19,
+		CON:       0,
+		LCK:       19,
+		MaxHP:     1265,
+		MaxMP:     669,
+		PhyAtk:    264,
+		MgcAtk:    36,
+		PhyDef:    260,
+		MgcDef:    87,
+		Hit:       453,
+		Dog:       253,
+		Fat:       578,
+		LastPoint: 0,
+	}
+}
+
+func isCapturedWarrior444LocalRole(role RoleSummary) bool {
+	roleID := strings.TrimSpace(role.RoleID)
+	return strings.HasPrefix(roleID, "acct-444-role-") || strings.HasPrefix(roleID, "acct-44444444-role-")
+}
+
+func capturedWarrior40SourceQuery() string {
+	return "human/human.swf?=&a=19&b=21&c=39&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=22&se=29&w11=53&wr=19&"
+}
+
+func capturedWoodcutter40BodySourceQuery() string {
+	return clearRoleEquipmentAppearanceSourceQuery(capturedWoodcutter40SourceQuery())
+}
+
+func capturedWarrior40BodySourceQuery() string {
+	return clearRoleEquipmentAppearanceSourceQuery(capturedWarrior40SourceQuery())
+}
+
+type capturedRoleEquipmentSpec struct {
+	name  string
+	index int
+}
+
+func capturedWoodcutter333EquipmentItems() []RoleItem {
+	return capturedRoleEquipmentItems([]capturedRoleEquipmentSpec{
+		{name: "黄风围巾", index: 0},
+		{name: "蚩颅王护肩", index: 1},
+		{name: "机木护腕", index: 2},
+		{name: "绯雨匕首", index: 3},
+		{name: "寒影锁甲", index: 4},
+		{name: "机木护腿", index: 5},
+		{name: "炎火兽", index: 9},
+		{name: "寒影护腰", index: 10},
+		{name: "寒影靴", index: 12},
+	})
+}
+
+func capturedWarrior444EquipmentItems() []RoleItem {
+	return capturedRoleEquipmentItems([]capturedRoleEquipmentSpec{
+		{name: "黄风围巾", index: 0},
+		{name: "龙颜单肩", index: 1},
+		{name: "龙颜护腕", index: 2},
+		{name: "伏魔棍", index: 3},
+		{name: "寨夫人上衣", index: 4},
+		{name: "龙颜护腿", index: 5},
+		{name: "怪木机", index: 9},
+		{name: "龙颜护腰", index: 10},
+		{name: "蛤蟆精战靴", index: 12},
+	})
+}
+
+func capturedRoleEquipmentItems(specs []capturedRoleEquipmentSpec) []RoleItem {
+	items := make([]RoleItem, 0, len(specs))
+	for _, spec := range specs {
+		item, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			item = RoleItem{
+				Name:        spec.name,
+				ItemType:    "equip",
+				Description: fmt.Sprintf("f_i_%s&24@装备", spec.name),
+			}
+		}
+		item.Type = "装备"
+		item.ItemType = "equip"
+		item.Count = 1
+		item.Index = spec.index
+		items = append(items, normalizeRoleItem(item))
+	}
+	return normalizeRoleItems(items)
+}
+
+func capturedWarrior444RoleSkills() []RoleSkill {
+	return []RoleSkill{
+		{
+			Name:        "强体质",
+			Level:       5,
+			Type:        "null",
+			Icon:        "167.png",
+			Description: "f_s_强体质^ffffff&9@被动&8@战士 &10@通用&4@气力上限 +140",
+		},
+		{
+			Name:        "奥义.雷魂斩",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "183.png",
+			Description: "f_s_奥义.雷魂斩^00ccff&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升240%的物理伤害",
+		},
+		{
+			Name:        "盘龙棍法",
+			Level:       2,
+			Type:        "all",
+			Icon:        "187.png",
+			Description: "f_s_盘龙棍法^ffffff&9@群体·攻击&8@战士 &10@棍&22@战斗&2@18&4@对所有敌人造成84%的物理伤害",
+		},
+		{
+			Name:        "红月斩",
+			Level:       2,
+			Type:        "all",
+			Icon:        "181.png",
+			Description: "f_s_红月斩^ffffff&9@群体·攻击&8@战士 &10@单刀&22@战斗&2@45&4@对所有敌人造成74%的物理伤害",
+		},
+		{
+			Name:        "力释棍术",
+			Level:       1,
+			Type:        "own",
+			Icon:        "186.png",
+			Description: "f_s_力释棍术^5BC46D&9@单体·状态&8@战士 &10@棍&22@战斗&2@10&4@5回合内提升物理攻击15%",
+		},
+		{
+			Name:        "武器专精",
+			Level:       5,
+			Type:        "null",
+			Icon:        "165.png",
+			Description: "f_s_武器专精^ffffff&9@被动&8@战士 &10@通用&12@19",
+		},
+		{
+			Name:        "抗击打",
+			Level:       5,
+			Type:        "null",
+			Icon:        "168.png",
+			Description: "f_s_抗击打^ffffff&9@被动&8@战士 &10@通用&14@16",
+		},
+		{
+			Name:        "普通攻击",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "7.png",
+			Description: "f_s_普通攻击^ffffff&9@单体·攻击&10@通用&22@战斗&5@给予对手普通的物理攻击.",
+		},
+		{
+			Name:        "嗜血斩",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "179.png",
+			Description: "f_s_嗜血斩^5BC46D&9@单体·攻击&8@战士 &10@单刀&22@战斗&2@40&4@对敌人造成100%的物理伤害&0;并有100%机率将对敌人造成伤害的70%转换为气力</font>",
+		},
+		{
+			Name:        "奥义.六合棍法",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "190.png",
+			Description: "f_s_奥义.六合棍法^00ccff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时候增加300%的命中",
+		},
+		{
+			Name:        "夜叉棍法",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "188.png",
+			Description: "f_s_夜叉棍法^5BC46D&9@单体·攻击&8@战士 &10@棍&22@战斗&2@15&4@提升12%的物理伤害&0;击中敌人时有90%的机率对敌人造成内伤(削减敌人32%的物理攻击和魔法攻击)3回合<br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font>",
+		},
+		{
+			Name:        "劈山棍法",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "185.png",
+			Description: "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@16&4@提升75%的物理伤害",
+		},
+	}
+}
+
+func capturedWarrior444FastPanel() []RoleFastPanelEntry {
+	return []RoleFastPanelEntry{
+		{Index: 0, Type: "skill", Name: "普通攻击"},
+		{Index: 1, Type: "skill", Name: "劈山棍法"},
+		{Index: 2, Type: "skill", Name: "夜叉棍法"},
+		{Index: 3, Type: "skill", Name: "盘龙棍法"},
+		{Index: 4, Type: "skill", Name: "力释棍术"},
+		{Index: 5, Type: "skill", Name: "奥义.六合棍法"},
+		{Index: 8, Type: "item", Name: "馒头"},
+		{Index: 9, Type: "item", Name: "小瓶甘露"},
+	}
+}
+
+func withCapturedWarrior444RuntimeDefaults(role RoleSummary) RoleSummary {
+	role.Voc = "战士"
+	role.DisplayName = "444"
+	if role.Level < 40 || role.Exp <= 0 {
+		role.Level = 40
+		role.Exp = 4396996
+	}
+	if role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0 {
+		role.AGI = 63
+		role.STR = 155
+		role.INT = 5
+		role.CON = 3
+		role.LCK = 0
+	}
+	if role.MapID <= 1 {
+		role.MapID = 15
+	}
+	if role.VisualRoleID <= 0 {
+		role.VisualRoleID = 1
+	}
+	if role.RoleState == nil || role.RoleState.Lv < 40 || role.RoleState.Exp <= 0 {
+		roleState := capturedWarrior40RoleState(role.RoleID)
+		role.RoleState = &roleState
+	}
+	if role.RolePhysique == nil || role.RolePhysique.MaxHP <= 0 || role.RolePhysique.MaxMP <= 0 {
+		rolePhysique := capturedWarrior40RolePhysique(role.RoleID)
+		role.RolePhysique = &rolePhysique
+	}
+	return role
+}
+
+func capturedWarrior40RoleState(roleID string) RoleState {
+	return RoleState{
+		Handle: roleID,
+		HP:     1668,
+		MP:     436,
+		Exp:    4396996,
+		Lv:     40,
+		Speed:  147,
+		OutG:   0,
+		InG:    0,
+	}
+}
+
+func capturedWarrior40RolePhysique(roleID string) RolePhysique {
+	return RolePhysique{
+		Handle:    roleID,
+		ResPros:   []string{"冰冻|8", "眩晕|15", "封印|10", "混乱|40", "麻痹|15"},
+		AGI:       63,
+		STR:       155,
+		INT:       5,
+		CON:       3,
+		LCK:       0,
+		MaxHP:     1691,
+		MaxMP:     484,
+		PhyAtk:    325,
+		MgcAtk:    5,
+		PhyDef:    231,
+		MgcDef:    73,
+		Hit:       329,
+		Dog:       146,
+		Fat:       256,
+		LastPoint: 0,
+	}
 }
 
 func ensureDefaultRoleSkills(skills []RoleSkill) []RoleSkill {
@@ -1179,7 +1530,19 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.Voc = defaultRoleVoc
 	}
 	isWoodcutter222 := isCapturedWoodcutterLocalRole(role)
-	if isWoodcutter222 {
+	isWoodcutter333 := isCapturedWoodcutter333LocalRole(role)
+	isWarrior444 := isCapturedWarrior444LocalRole(role)
+	if isWoodcutter333 {
+		role = withCapturedWoodcutter333RuntimeDefaults(role)
+	}
+	if isWarrior444 {
+		role = withCapturedWarrior444RuntimeDefaults(role)
+	}
+	if isWarrior444 {
+		role.Skills = capturedWarrior444RoleSkills()
+	} else if isWoodcutter333 {
+		role.Skills = capturedWoodcutter333RoleSkills()
+	} else if isWoodcutter222 {
 		role.Voc = "游侠"
 		role.Skills = capturedWoodcutterRoleSkills()
 	} else if len(role.Skills) == 0 {
@@ -1187,7 +1550,11 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.Skills = cloneRoleSkills(role.Skills)
 	}
-	if isWoodcutter222 {
+	if isWarrior444 {
+		role.FastPanel = capturedWarrior444FastPanel()
+	} else if isWoodcutter333 {
+		role.FastPanel = capturedWoodcutterFastPanel()
+	} else if isWoodcutter222 {
 		role.FastPanel = capturedWoodcutterFastPanel()
 	} else if len(role.FastPanel) == 0 {
 		role.FastPanel = defaultRoleFastPanel()
@@ -1202,17 +1569,27 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	if isWoodcutter222 {
 		role.Items = syncCapturedWoodcutterEquipmentItems(role.Items)
 	} else if len(role.Items) == 0 {
-		role.Items = defaultRoleItems()
+		if isWoodcutter333 {
+			role.Items = capturedWoodcutter333EquipmentItems()
+		} else if isWarrior444 {
+			role.Items = capturedWarrior444EquipmentItems()
+		} else {
+			role.Items = defaultRoleItems()
+		}
 	} else {
 		role.Items = ensureStarterAxeItem(removeCapturedDefaultBagSeeds(normalizeRoleItems(role.Items)))
 	}
 	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
 	if isWoodcutter222 {
 		role.SourceQuery = capturedWoodcutterBaseSourceQuery()
+	} else if isWoodcutter333 {
+		role.SourceQuery = capturedWoodcutter40BodySourceQuery()
+	} else if isWarrior444 {
+		role.SourceQuery = capturedWarrior40BodySourceQuery()
 	}
 	role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
 	role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
-	if isWoodcutter222 {
+	if isWarrior444 || isWoodcutter333 || isWoodcutter222 {
 		role.BattleSourceQuery = role.SourceQuery
 	}
 	return role

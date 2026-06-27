@@ -233,6 +233,13 @@ var sourceGuangqingItemShopRoutes = map[string]sourceItemShopRoute{
 		vocation:     "医疗",
 		rows:         sourceGuangqingHealerShopRows,
 	},
+	"6360542618722932": {
+		handle:       "6360542618722932",
+		answerHandle: "1",
+		title:        "虚中的药品商店",
+		vocation:     "医疗",
+		rows:         sourceGuangqingHealerShopRows,
+	},
 }
 
 const sourceGuangqingWeaponShopRows = `

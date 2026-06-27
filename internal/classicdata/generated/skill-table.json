@@ -2,7 +2,7 @@
     "schemaVersion":  1,
     "name":  "skill",
     "source":  "internal/classicdata/source/skill-table.csv",
-    "rowCount":  18,
+    "rowCount":  20,
     "rows":  [
                  {
                      "command_id":  "skill-normal-attack",
@@ -15,7 +15,8 @@
                      "damage_multiplier":  "1",
                      "mp_cost":  "0",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-mi-zhan",
@@ -28,7 +29,8 @@
                      "damage_multiplier":  "1.4",
                      "mp_cost":  "5",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-duo-duan-zhan",
@@ -41,7 +43,8 @@
                      "damage_multiplier":  "1.65",
                      "mp_cost":  "12",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-shi-xue-zhan",
@@ -54,7 +57,8 @@
                      "damage_multiplier":  "0.96",
                      "mp_cost":  "28",
                      "hp_drain_chance_percent":  "86",
-                     "hp_drain_multiplier":  "0.7"
+                     "hp_drain_multiplier":  "0.7",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-kuang-bao",
@@ -67,7 +71,8 @@
                      "damage_multiplier":  "0",
                      "mp_cost":  "15",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-hong-yue-zhan",
@@ -80,7 +85,8 @@
                      "damage_multiplier":  "0.72",
                      "mp_cost":  "40",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-xue-qie",
@@ -93,7 +99,8 @@
                      "damage_multiplier":  "0.3",
                      "mp_cost":  "19",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-li-shi-gun-shu",
@@ -106,7 +113,8 @@
                      "damage_multiplier":  "0",
                      "mp_cost":  "10",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-pan-long-gun-fa",
@@ -119,7 +127,8 @@
                      "damage_multiplier":  "0.82",
                      "mp_cost":  "14",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-duo-duan-ci",
@@ -132,7 +141,8 @@
                      "damage_multiplier":  "1.45",
                      "mp_cost":  "18",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-qiang-li-fei-biao",
@@ -145,7 +155,8 @@
                      "damage_multiplier":  "1.5",
                      "mp_cost":  "24",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-tou-du",
@@ -158,7 +169,8 @@
                      "damage_multiplier":  "0",
                      "mp_cost":  "16",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-mo-li-tu-ci",
@@ -171,7 +183,8 @@
                      "damage_multiplier":  "1",
                      "mp_cost":  "20",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-ji-feng-ci",
@@ -184,7 +197,8 @@
                      "damage_multiplier":  "0.4",
                      "mp_cost":  "20",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-jie-du-shu",
@@ -197,7 +211,8 @@
                      "damage_multiplier":  "0",
                      "mp_cost":  "20",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-lei-hun-zhan",
@@ -210,7 +225,8 @@
                      "damage_multiplier":  "3.4",
                      "mp_cost":  "24",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-ao-yi-an-sha-zhe",
@@ -223,7 +239,8 @@
                      "damage_multiplier":  "2.8",
                      "mp_cost":  "26",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-ao-yi-liu-he-gun-fa",
@@ -236,7 +253,36 @@
                      "damage_multiplier":  "3.1",
                      "mp_cost":  "24",
                      "hp_drain_chance_percent":  "0",
-                     "hp_drain_multiplier":  "0"
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
+                 },
+                 {
+                     "command_id":  "skill-qiang-she",
+                     "kind":  "skill",
+                     "label":  "强射",
+                     "source_type":  "oneE",
+                     "action_name":  "强射",
+                     "source_action_label":  "w1/powerShoot",
+                     "target":  "enemy",
+                     "damage_multiplier":  "1.45",
+                     "mp_cost":  "18",
+                     "hp_drain_chance_percent":  "0",
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
+                 },
+                 {
+                     "command_id":  "skill-guan-jia-lian-shi",
+                     "kind":  "skill",
+                     "label":  "贯甲连矢",
+                     "source_type":  "oneE",
+                     "action_name":  "贯甲连矢",
+                     "source_action_label":  "w1/breakArmorShoot2",
+                     "target":  "enemy",
+                     "damage_multiplier":  "1.1",
+                     "mp_cost":  "25",
+                     "hp_drain_chance_percent":  "0",
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0.15"
                  }
              ]
 }

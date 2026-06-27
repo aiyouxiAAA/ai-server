@@ -341,6 +341,140 @@ func TestStoreCapturedWoodcutter222UsesCapturedSkillsAndFastPanel(t *testing.T) 
 	}
 }
 
+func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "33333333", "33333333")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "333",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !createResponse.Success {
+		t.Fatalf("expected 333 role create success, got %+v", createResponse)
+	}
+
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected 333 captured role runtime data")
+	}
+	if role.DisplayName != "333" || playerBase.DisplayName != "333" {
+		t.Fatalf("expected 333 account to keep local role name 333, role=%q base=%q", role.DisplayName, playerBase.DisplayName)
+	}
+	if role.Level != 40 || role.Exp != 4361496 || role.Voc != "游侠" ||
+		role.AGI != 162 || role.STR != 66 || role.INT != 19 || role.CON != 0 || role.LCK != 19 {
+		t.Fatalf("expected captured level 40 woodcutter summary, got %+v", role)
+	}
+	if role.MapID != 15 || playerBase.MapID != 15 {
+		t.Fatalf("expected captured final map 15, role=%d base=%d", role.MapID, playerBase.MapID)
+	}
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1265 || playerBase.RoleState.MP != 669 ||
+		playerBase.RoleState.Lv != 40 || playerBase.RoleState.Exp != 4361496 || playerBase.RoleState.Speed != 140 {
+		t.Fatalf("expected captured level 40 role state, got %+v", playerBase.RoleState)
+	}
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1265 || playerBase.RolePhysique.MaxMP != 669 ||
+		playerBase.RolePhysique.PhyAtk != 264 || playerBase.RolePhysique.MgcAtk != 36 ||
+		playerBase.RolePhysique.PhyDef != 260 || playerBase.RolePhysique.MgcDef != 87 ||
+		playerBase.RolePhysique.Hit != 453 || playerBase.RolePhysique.Dog != 253 || playerBase.RolePhysique.Fat != 578 {
+		t.Fatalf("expected captured level 40 role physique, got %+v", playerBase.RolePhysique)
+	}
+	for _, part := range []string{"a=29", "b=22", "c=26", "p=64", "se=19", "wr=39", "w3=49"} {
+		if !strings.Contains(role.SourceQuery, part) || !strings.Contains(playerBase.BattleSourceQuery, part) {
+			t.Fatalf("expected captured 40 source query to include %s, role=%q base=%q", part, role.SourceQuery, playerBase.BattleSourceQuery)
+		}
+	}
+
+	skills, cap, ok := store.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || cap != 12 {
+		t.Fatalf("expected captured skills for 333, ok=%v cap=%d skills=%+v", ok, cap, skills)
+	}
+	byName := map[string]RoleSkill{}
+	for _, skill := range skills {
+		byName[skill.Name] = skill
+	}
+	if skill := byName["强力飞镖"]; skill.Level != 5 || skill.Icon != "261.png" || !strings.Contains(skill.Description, "&2@32") {
+		t.Fatalf("expected 333 captured 强力飞镖 Lv5, got %+v", skill)
+	}
+	if skill := byName["强射"]; skill.Level != 5 || skill.Icon != "231.png" {
+		t.Fatalf("expected 333 captured 强射 Lv5, got %+v", skill)
+	}
+	if skill := byName["贯甲连矢"]; skill.Level != 2 || skill.Icon != "236.png" {
+		t.Fatalf("expected 333 captured 贯甲连矢 Lv2, got %+v", skill)
+	}
+	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(fastPanel) != 9 || fastPanel[1].Name != "强力飞镖" || fastPanel[8].Name != "小瓶甘露" {
+		t.Fatalf("expected 333 captured fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
+	}
+}
+
+func TestStoreCapturedWarrior444UsesCapturedLevel40Runtime(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "44444444", "44444444")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "444",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !createResponse.Success {
+		t.Fatalf("expected 444 role create success, got %+v", createResponse)
+	}
+
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected 444 captured warrior runtime data")
+	}
+	if role.DisplayName != "444" || playerBase.DisplayName != "444" {
+		t.Fatalf("expected 444 account to keep local role name 444, role=%q base=%q", role.DisplayName, playerBase.DisplayName)
+	}
+	if role.Level != 40 || role.Exp != 4396996 || role.Voc != "战士" ||
+		role.AGI != 63 || role.STR != 155 || role.INT != 5 || role.CON != 3 || role.LCK != 0 {
+		t.Fatalf("expected captured level 40 warrior summary, got %+v", role)
+	}
+	if role.MapID != 15 || playerBase.MapID != 15 {
+		t.Fatalf("expected captured final map 15, role=%d base=%d", role.MapID, playerBase.MapID)
+	}
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1668 || playerBase.RoleState.MP != 436 ||
+		playerBase.RoleState.Lv != 40 || playerBase.RoleState.Exp != 4396996 || playerBase.RoleState.Speed != 147 {
+		t.Fatalf("expected captured warrior role state, got %+v", playerBase.RoleState)
+	}
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1691 || playerBase.RolePhysique.MaxMP != 484 ||
+		playerBase.RolePhysique.PhyAtk != 325 || playerBase.RolePhysique.MgcAtk != 5 ||
+		playerBase.RolePhysique.PhyDef != 231 || playerBase.RolePhysique.MgcDef != 73 ||
+		playerBase.RolePhysique.Hit != 329 || playerBase.RolePhysique.Dog != 146 || playerBase.RolePhysique.Fat != 256 {
+		t.Fatalf("expected captured warrior physique, got %+v", playerBase.RolePhysique)
+	}
+	for _, part := range []string{"a=19", "b=21", "c=39", "p=22", "se=29", "w11=53", "wr=19"} {
+		if !strings.Contains(role.SourceQuery, part) || !strings.Contains(playerBase.BattleSourceQuery, part) {
+			t.Fatalf("expected captured warrior source query to include %s, role=%q base=%q", part, role.SourceQuery, playerBase.BattleSourceQuery)
+		}
+	}
+
+	skills, cap, ok := store.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || cap != 12 {
+		t.Fatalf("expected captured skills for 444, ok=%v cap=%d skills=%+v", ok, cap, skills)
+	}
+	byName := map[string]RoleSkill{}
+	for _, skill := range skills {
+		byName[skill.Name] = skill
+	}
+	if skill := byName["劈山棍法"]; skill.Level != 5 || skill.Icon != "185.png" || !strings.Contains(skill.Description, "&2@16") {
+		t.Fatalf("expected 444 captured 劈山棍法 Lv5, got %+v", skill)
+	}
+	if skill := byName["盘龙棍法"]; skill.Level != 2 || skill.Type != "all" || skill.Icon != "187.png" {
+		t.Fatalf("expected 444 captured 盘龙棍法 Lv2, got %+v", skill)
+	}
+	if skill := byName["奥义.六合棍法"]; skill.Level != 1 || skill.Icon != "190.png" {
+		t.Fatalf("expected 444 captured 奥义.六合棍法, got %+v", skill)
+	}
+	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(fastPanel) != 8 || fastPanel[1].Name != "劈山棍法" || fastPanel[5].Name != "奥义.六合棍法" || fastPanel[7].Name != "小瓶甘露" {
+		t.Fatalf("expected 444 captured fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
+	}
+}
+
 func TestStoreCapturedWoodcutter222UsesCapturedEquipmentAndAppearance(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -455,6 +589,100 @@ func TestStorePersistentCapturedWoodcutter222KeepsCapturedSkills(t *testing.T) {
 	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
 	if !ok || !strings.Contains(role.SourceQuery, "w3=49") || !strings.Contains(playerBase.BattleSourceQuery, "w3=49") {
 		t.Fatalf("expected reopened 222 to keep captured appearance, ok=%v role=%+v base=%+v", ok, role, playerBase)
+	}
+}
+
+func TestStorePersistentCapturedWoodcutter333KeepsLevel40Snapshot(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store: %v", err)
+	}
+	login := firstStore.Login(LoginRequest{
+		UserName: "33333333",
+		Password: "33333333",
+	})
+	createResponse := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "333",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !createResponse.Success {
+		t.Fatalf("expected captured 333 role create success, got %+v", createResponse)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("expected close persistent store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected reopened 333 captured role")
+	}
+	if role.DisplayName != "333" || role.Level != 40 || role.Exp != 4361496 || role.Voc != "游侠" {
+		t.Fatalf("expected reopened 333 to keep captured level 40 role, got %+v", role)
+	}
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1265 || playerBase.RoleState.MP != 669 || playerBase.RoleState.Lv != 40 {
+		t.Fatalf("expected reopened 333 to keep captured role state, got %+v", playerBase.RoleState)
+	}
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1265 || playerBase.RolePhysique.MaxMP != 669 || playerBase.RolePhysique.PhyAtk != 264 {
+		t.Fatalf("expected reopened 333 to keep captured role physique, got %+v", playerBase.RolePhysique)
+	}
+	if !strings.Contains(role.SourceQuery, "p=64") || role.BattleSourceQuery != role.SourceQuery {
+		t.Fatalf("expected reopened 333 to keep captured appearance, role=%q battle=%q", role.SourceQuery, role.BattleSourceQuery)
+	}
+}
+
+func TestStorePersistentCapturedWarrior444KeepsLevel40Snapshot(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store: %v", err)
+	}
+	login := firstStore.Login(LoginRequest{
+		UserName: "44444444",
+		Password: "44444444",
+	})
+	createResponse := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "444",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !createResponse.Success {
+		t.Fatalf("expected captured 444 role create success, got %+v", createResponse)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("expected close persistent store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected reopened 444 captured role")
+	}
+	if role.DisplayName != "444" || role.Level != 40 || role.Exp != 4396996 || role.Voc != "战士" {
+		t.Fatalf("expected reopened 444 to keep captured level 40 role, got %+v", role)
+	}
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1668 || playerBase.RoleState.MP != 436 || playerBase.RoleState.Lv != 40 {
+		t.Fatalf("expected reopened 444 to keep captured role state, got %+v", playerBase.RoleState)
+	}
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1691 || playerBase.RolePhysique.MaxMP != 484 || playerBase.RolePhysique.PhyAtk != 325 {
+		t.Fatalf("expected reopened 444 to keep captured role physique, got %+v", playerBase.RolePhysique)
+	}
+	if !strings.Contains(role.SourceQuery, "w11=53") || role.BattleSourceQuery != role.SourceQuery {
+		t.Fatalf("expected reopened 444 to keep captured appearance, role=%q battle=%q", role.SourceQuery, role.BattleSourceQuery)
 	}
 }
 
@@ -1079,6 +1307,113 @@ func TestStoreEquipStarterAxeMovesBagItemToWeaponSlot(t *testing.T) {
 	equipItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
 	if !ok || len(equipItems) != 1 || equipItems[0].Name != "铁斧" || equipItems[0].Index != 3 {
 		t.Fatalf("expected equipment list to contain axe at index 3, ok=%v items=%+v", ok, equipItems)
+	}
+}
+
+func TestStoreCapturedWoodcutter333EquipBowReplacesDaggerAndRebuildsAppearance(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "33333333", "33333333")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "333",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !createResponse.Success {
+		t.Fatalf("expected 333 role create success, got %+v", createResponse)
+	}
+
+	grantedBow, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "万相",
+		ItemType:    "equip",
+		Display:     "58.png",
+		Description: "f_i_万相&24@武器·弓系&25@1&22@游侠",
+		Count:       1,
+		Index:       20,
+		ItemLevel:   2,
+	})
+	if !ok {
+		t.Fatal("expected to grant captured bow")
+	}
+
+	result := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, grantedBow.Type, grantedBow.Index, 1)
+
+	if !result.Found || !result.Equipped {
+		t.Fatalf("expected captured bow equip success, got %+v", result)
+	}
+	if result.EquippedItem.Type != "装备" || result.EquippedItem.Index != 3 || result.EquippedItem.Name != "万相" {
+		t.Fatalf("expected bow to equip into weapon slot 3, got %+v", result.EquippedItem)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Type != "背包" || result.UpdatedItems[0].Index != grantedBow.Index || result.UpdatedItems[0].Name != "绯雨匕首" {
+		t.Fatalf("expected replaced dagger to return to source bag slot, got %+v", result.UpdatedItems)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != grantedBow.Type || result.ClearedItems[0].Index != grantedBow.Index {
+		t.Fatalf("expected bow source bag slot clear, got %+v", result.ClearedItems)
+	}
+	if !strings.Contains(result.Role.SourceQuery, "w1=55") || strings.Contains(result.Role.SourceQuery, "w3=49") {
+		t.Fatalf("expected bow appearance w1=55 and no stale dagger w3=49, got %q", result.Role.SourceQuery)
+	}
+	if result.Role.BattleSourceQuery != result.Role.SourceQuery {
+		t.Fatalf("expected battle source query to follow dynamic equipment appearance, role=%q battle=%q", result.Role.SourceQuery, result.Role.BattleSourceQuery)
+	}
+
+	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag list after bow equip")
+	}
+	foundDagger := false
+	for _, item := range bagItems {
+		if item.Index == grantedBow.Index && item.Name == "绯雨匕首" {
+			foundDagger = true
+		}
+		if item.Name == "万相" {
+			t.Fatalf("expected bow to leave bag after equip, got %+v", bagItems)
+		}
+	}
+	if !foundDagger {
+		t.Fatalf("expected dagger to occupy bow source bag slot after equip, got %+v", bagItems)
+	}
+
+	revertResult := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", grantedBow.Index)
+	if !revertResult.Found || !revertResult.Used || !revertResult.Equipped {
+		t.Fatalf("expected backpack dagger activeItem to equip back, got %+v", revertResult)
+	}
+	if len(revertResult.UpdatedItems) != 2 {
+		t.Fatalf("expected activeItem equip to push replaced bow and equipped dagger, got %+v", revertResult.UpdatedItems)
+	}
+	if revertResult.UpdatedItems[0].Type != "背包" || revertResult.UpdatedItems[0].Index != grantedBow.Index || revertResult.UpdatedItems[0].Name != "万相" {
+		t.Fatalf("expected replaced bow to return to dagger source bag slot, got %+v", revertResult.UpdatedItems)
+	}
+	if revertResult.UpdatedItems[1].Type != "装备" || revertResult.UpdatedItems[1].Index != 3 || revertResult.UpdatedItems[1].Name != "绯雨匕首" {
+		t.Fatalf("expected dagger equipment push after activeItem equip, got %+v", revertResult.UpdatedItems)
+	}
+	if len(revertResult.ClearedItems) != 1 || revertResult.ClearedItems[0].Type != "背包" || revertResult.ClearedItems[0].Index != grantedBow.Index {
+		t.Fatalf("expected dagger source bag slot clear before replacement item push, got %+v", revertResult.ClearedItems)
+	}
+	if !strings.Contains(revertResult.Role.SourceQuery, "w3=49") || strings.Contains(revertResult.Role.SourceQuery, "w1=55") {
+		t.Fatalf("expected dagger appearance w3=49 and no stale bow w1=55, got %q", revertResult.Role.SourceQuery)
+	}
+	if revertResult.Role.BattleSourceQuery != revertResult.Role.SourceQuery {
+		t.Fatalf("expected battle source query to follow reverted dagger appearance, role=%q battle=%q", revertResult.Role.SourceQuery, revertResult.Role.BattleSourceQuery)
+	}
+
+	bagItems, _, ok = store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag list after dagger re-equip")
+	}
+	foundBow := false
+	for _, item := range bagItems {
+		if item.Index == grantedBow.Index && item.Name == "万相" {
+			foundBow = true
+		}
+		if item.Name == "绯雨匕首" {
+			t.Fatalf("expected dagger to leave bag after re-equip, got %+v", bagItems)
+		}
+	}
+	if !foundBow {
+		t.Fatalf("expected bow to occupy dagger source bag slot after re-equip, got %+v", bagItems)
 	}
 }
 

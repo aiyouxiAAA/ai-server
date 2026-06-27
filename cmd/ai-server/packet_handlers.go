@@ -726,6 +726,8 @@ func classicBattleActionRequiredItemName(commandID string) string {
 		return "飞镖"
 	case battle.CommandTouDu, "投毒":
 		return "毒药"
+	case battle.CommandGuanJiaLianShi, "贯甲连矢":
+		return "穿甲箭"
 	default:
 		return ""
 	}
@@ -1658,13 +1660,17 @@ func buildClassicTownEquipItemResult(store *session.Store, socketSession *packet
 	socketSession.playerBase = &equipResult.PlayerBase
 	equippedItem := equipResult.EquippedItem
 	equippedItem.Handle = equipResult.Role.RoleID
+	itemInfos := make([]classicTownItemInfoPush, 0, 1+len(equipResult.UpdatedItems))
+	itemInfos = append(itemInfos, classicTownItemInfoPushFromRoleItem(equippedItem))
+	for _, updatedItem := range equipResult.UpdatedItems {
+		updatedItem.Handle = equipResult.Role.RoleID
+		itemInfos = append(itemInfos, classicTownItemInfoPushFromRoleItem(updatedItem))
+	}
 	result := packetResult{
 		createPlayer: buildClassicTownCreatePlayerPush(equipResult.Role, equipResult.PlayerBase),
-		itemInfos: []classicTownItemInfoPush{
-			classicTownItemInfoPushFromRoleItem(equippedItem),
-		},
-		itemClears: make([]classicTownItemInfoClearPush, 0, len(equipResult.ClearedItems)),
-		handled:    true,
+		itemInfos:    itemInfos,
+		itemClears:   make([]classicTownItemInfoClearPush, 0, len(equipResult.ClearedItems)),
+		handled:      true,
 	}
 	for _, clear := range equipResult.ClearedItems {
 		result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
@@ -1957,7 +1963,8 @@ func isClassicTownHealerAnswer(handle string, answerHandle string) bool {
 		"4110542614676637",
 		"2520542613299551",
 		"4950542616589339",
-		"4710542615621525":
+		"4710542615621525",
+		"6360542618722932":
 		return true
 	default:
 		return false

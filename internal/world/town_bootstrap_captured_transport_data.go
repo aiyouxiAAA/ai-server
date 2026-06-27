@@ -553,4 +553,61 @@ var capturedSourceTransportsByMapID = map[int][]sourceNPCEntry{
 		buildCapturedSourceTransportMovieClip("transp_175", "transp/flag2.swf", "flag2", 158, 258, 2704, 720),
 		buildCapturedSourceTransportMovieClip("transp_176", "transp/flag2.swf", "flag2", 158, 258, 568, 730),
 	},
+	175: {
+		buildCapturedSourceTransportMovieClip("transp_174", "transp/flag2.swf", "flag2", 158, 258, 2763, 437),
+		buildCapturedSourceTransportMovieClip("transp_177", "transp/flag2.swf", "flag2", 158, 258, 272, 700),
+	},
+	177: {
+		buildCapturedSourceTransportMovieClip("transp_175", "transp/flag2.swf", "flag2", 158, 258, 2620, 430),
+		buildCapturedSourceTransportMovieClip("transp_176", "transp/flag2.swf", "flag2", 158, 258, 400, 450),
+		buildCapturedSourceTransportMovieClip("transp_178", "transp/flag2.swf", "flag2", 158, 258, 85, 720),
+	},
+	178: {
+		buildCapturedSourceTransportMovieClip("transp_177", "transp/flag2.swf", "flag2", 158, 258, 2777, 460),
+		buildCapturedSourceTransportMovieClip("transp_190", "transp/flag2.swf", "flag2", 158, 258, 513, 730),
+	},
+	190: {
+		buildCapturedSourceTransportMovieClip("transp_178", "transp/flag2.swf", "flag2", 158, 258, 2785, 420),
+		buildCapturedSourceTransportMovieClip("transp_191", "transp/flag2.swf", "flag2", 158, 258, 40, 560),
+	},
+	191: {
+		buildCapturedSourceTransportMovieClip("transp_190", "transp/flag2.swf", "flag2", 158, 258, 2939, 530),
+		buildCapturedSourceTransportMovieClip("transp_192", "transp/flag2.swf", "flag2", 158, 258, 40, 560),
+	},
+	192: {
+		buildCapturedSourceTransportMovieClip("transp_191", "transp/flag2.swf", "flag2", 158, 258, 2939, 560),
+		buildCapturedSourceTransportMovieClip("transp_193", "transp/flag2.swf", "flag2", 158, 258, 40, 600),
+	},
+	193: {
+		buildCapturedSourceTransportMovieClip("transp_192", "transp/flag2.swf", "flag2", 158, 258, 2939, 580),
+		buildCapturedSourceTransportMovieClip("transp_194", "transp/flag2.swf", "flag2", 158, 258, 1557, 470),
+		buildCapturedSourceTransportMovieClip("transp_198", "transp/flag2.swf", "flag2", 158, 258, 40, 600),
+	},
+	196: {
+		buildCapturedSourceTransportMovieClip("transp_195", "transp/flag2.swf", "flag2", 158, 258, 2950, 580),
+		buildCapturedSourceTransportMovieClip("transp_197", "transp/flag2.swf", "flag2", 158, 258, 40, 600),
+		buildCapturedSourceTransportMovieClip("transp_199", "transp/flag2.swf", "flag2", 158, 258, 1517, 730),
+	},
+	198: {
+		buildCapturedSourceTransportMovieClip("transp_193", "transp/flag2.swf", "flag2", 158, 258, 2939, 560),
+		buildCapturedSourceTransportMovieClip("transp_199", "transp/flag2.swf", "flag2", 158, 258, 40, 600),
+		buildCapturedSourceTransportMovieClip("transp_200", "transp/flag2.swf", "flag2", 158, 258, 1130, 730),
+	},
+	199: {
+		buildCapturedSourceTransportMovieClip("transp_196", "transp/flag2.swf", "flag2", 158, 258, 258, 470),
+		buildCapturedSourceTransportMovieClip("transp_198", "transp/flag2.swf", "flag2", 158, 258, 2450, 590),
+	},
+	200: {
+		buildCapturedSourceTransportMovieClip("transp_198", "transp/flag2.swf", "flag2", 158, 258, 2840, 420),
+		buildCapturedSourceTransportMovieClip("transp_201", "transp/flag2.swf", "flag2", 158, 258, 40, 580),
+	},
+	201: {
+		buildCapturedSourceTransportMovieClip("transp_200", "transp/flag2.swf", "flag2", 158, 258, 2939, 550),
+		buildCapturedSourceTransportMovieClip("transp_202", "transp/flag2.swf", "flag2", 158, 258, 40, 520),
+	},
+	202: {
+		buildCapturedSourceTransportMovieClip("transp_197", "transp/flag2.swf", "flag2", 158, 258, 1674, 425),
+		buildCapturedSourceTransportMovieClip("transp_201", "transp/flag2.swf", "flag2", 158, 258, 2800, 730),
+		buildCapturedSourceTransportMovieClip("transp_205", "transp/flag2.swf", "flag2", 158, 258, 40, 600),
+	},
 }

@@ -272,6 +272,14 @@ func questNpcHandleForTitle(title string) string {
 	if strings.TrimSpace(title) == sourceMainQuestTitle {
 		return sourceMainQuestNpcHandle
 	}
+	if info, ok := quest.FindByTitle(title); ok {
+		if strings.TrimSpace(info.QuestStateHandle) != "" {
+			return strings.TrimSpace(info.QuestStateHandle)
+		}
+		if len(info.Routes) > 0 {
+			return info.Routes[0].Handle
+		}
+	}
 	return ""
 }
 
@@ -279,6 +287,18 @@ func findClassicQuestAnswerRoute(request classicTownAnswerRequest) (classicQuest
 	handle := strings.TrimSpace(request.Handle)
 	msgHandle := strings.TrimSpace(request.MsgHandle)
 	answerHandle := strings.TrimSpace(request.AnswerHandle)
+	for _, info := range quest.All() {
+		for _, route := range info.Routes {
+			if route.Handle == handle && route.MsgHandle == msgHandle && route.AnswerHandle == answerHandle {
+				return classicQuestAnswerRoute{
+					handle:       route.Handle,
+					msgHandle:    route.MsgHandle,
+					answerHandle: route.AnswerHandle,
+					title:        info.Title,
+				}, true
+			}
+		}
+	}
 	for _, route := range classicQuestAnswerRoutes {
 		if route.handle == handle && route.msgHandle == msgHandle && route.answerHandle == answerHandle {
 			return route, true
@@ -349,57 +369,87 @@ func applyClassicQuestReward(store *session.Store, socketSession *packetSession,
 	}
 	playerID := socketSession.playerBase.PlayerID
 	roleID := socketSession.selectedRole.RoleID
-
-	if info.Reward.Experience > 0 {
-		expResult := store.GrantRoleExperience(playerID, roleID, info.Reward.Experience)
-		if expResult.Granted {
-			socketSession.selectedRole = &expResult.Role
-			socketSession.playerBase = &expResult.PlayerBase
-			result.roleState = &expResult.RoleState
-			result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("获得经验:"+strconv.Itoa(info.Reward.Experience)))
-			if expResult.LevelChanged {
-				result.rolePhysique = &expResult.RolePhysique
-			}
-		}
+	entries := info.RewardEntries
+	if len(entries) == 0 {
+		entries = quest.BuildRewardEntries(quest.RewardEntrySourceQuest, info.ID, info.Reward)
 	}
 
-	for _, item := range info.Reward.Items {
-		if item.Name == "铜钱" || item.Name == "银元宝" {
-			if currencies, ok := store.AddRoleCurrency(playerID, roleID, item.Name, item.Count); ok {
+	for _, entry := range entries {
+		if entry.Phase != quest.RewardEntryPhaseGrant {
+			continue
+		}
+		if entry.Probability != quest.RewardEntryProbabilityCertain {
+			log.Printf("[ai-server] classic quest reward entry skipped non-deterministic questId=%s kind=%s name=%s probability=%d", info.ID, entry.Kind, entry.Name, entry.Probability)
+			continue
+		}
+		count := classicQuestRewardEntryCount(entry)
+		switch entry.Kind {
+		case quest.RewardEntryKindExperience:
+			expResult := store.GrantRoleExperience(playerID, roleID, count)
+			if expResult.Granted {
+				socketSession.selectedRole = &expResult.Role
+				socketSession.playerBase = &expResult.PlayerBase
+				result.roleState = &expResult.RoleState
+				result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("获得经验:"+strconv.Itoa(count)))
+				if expResult.LevelChanged {
+					result.rolePhysique = &expResult.RolePhysique
+				}
+			}
+		case quest.RewardEntryKindCurrency:
+			if currencies, ok := store.AddRoleCurrency(playerID, roleID, entry.Name, count); ok {
 				result.currencyPush = buildClassicTownCurrencyPush(roleID, currencies)
-				result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(classicQuestRewardItemSystemMessage(item)))
+				result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(classicQuestRewardItemSystemMessage(classicQuestRewardItemFromEntry(entry))))
 			}
-			continue
+		case quest.RewardEntryKindItem:
+			item := classicQuestRewardItemFromEntry(entry)
+			rewardItem := classicQuestRewardRoleItem(item)
+			granted, ok := store.GrantRoleItem(playerID, roleID, rewardItem)
+			if !ok {
+				log.Printf("[ai-server] classic quest reward item grant failed roleId=%s questId=%s item=%s count=%d", roleID, info.ID, item.Name, item.Count)
+				continue
+			}
+			granted.Handle = roleID
+			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(granted))
+			result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(classicQuestRewardItemSystemMessage(item)))
+		case quest.RewardEntryKindSkill:
+			roleSkill, ok := classicQuestRewardRoleSkill(quest.RewardSkill{Name: entry.Name})
+			if !ok {
+				log.Printf("[ai-server] classic quest reward skill missing template questId=%s skill=%s", info.ID, entry.Name)
+				continue
+			}
+			_, skillCap, found, learned := store.LearnRoleSkill(playerID, roleID, roleSkill)
+			if !found || !learned {
+				continue
+			}
+			result.skillCap = &classicTownSkillCapPush{Count: skillCap}
+			result.skillInfos = append(result.skillInfos, classicTownSkillInfoPushFromRoleSkill(roleID, roleSkill))
+			result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("习得【"+roleSkill.Name+"】Lv."+strconv.Itoa(roleSkill.Level)))
 		}
-		rewardItem := classicQuestRewardRoleItem(item)
-		granted, ok := store.GrantRoleItem(playerID, roleID, rewardItem)
-		if !ok {
-			log.Printf("[ai-server] classic quest reward item grant failed roleId=%s questId=%s item=%s count=%d", roleID, info.ID, item.Name, item.Count)
-			continue
-		}
-		granted.Handle = roleID
-		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(granted))
-		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(classicQuestRewardItemSystemMessage(item)))
-	}
-
-	for _, skill := range info.Reward.Skills {
-		roleSkill, ok := classicQuestRewardRoleSkill(skill)
-		if !ok {
-			log.Printf("[ai-server] classic quest reward skill missing template questId=%s skill=%s", info.ID, skill.Name)
-			continue
-		}
-		_, skillCap, found, learned := store.LearnRoleSkill(playerID, roleID, roleSkill)
-		if !found || !learned {
-			continue
-		}
-		result.skillCap = &classicTownSkillCapPush{Count: skillCap}
-		result.skillInfos = append(result.skillInfos, classicTownSkillInfoPushFromRoleSkill(roleID, roleSkill))
-		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("习得【"+roleSkill.Name+"】Lv."+strconv.Itoa(roleSkill.Level)))
 	}
 
 	if selectedRole, playerBase, ok := store.GetRoleRuntimeData(playerID, roleID); ok {
 		socketSession.selectedRole = &selectedRole
 		socketSession.playerBase = &playerBase
+	}
+}
+
+func classicQuestRewardEntryCount(entry quest.RewardEntry) int {
+	if entry.CountMin > 0 {
+		return entry.CountMin
+	}
+	if entry.CountMax > 0 {
+		return entry.CountMax
+	}
+	return 1
+}
+
+func classicQuestRewardItemFromEntry(entry quest.RewardEntry) quest.RewardItem {
+	return quest.RewardItem{
+		Name:        entry.Name,
+		Count:       classicQuestRewardEntryCount(entry),
+		Display:     entry.Display,
+		Description: entry.Description,
+		SourceMeta:  entry.SourceMeta,
 	}
 }
 

@@ -1728,6 +1728,83 @@ func TestHandlePacketClassicTownEquipItemMovesAxeAndPushesAppearance(t *testing.
 	}
 }
 
+func TestHandlePacketClassicTownEquipItemPushesReplacedDaggerFor333Bow(t *testing.T) {
+	store := session.NewStore()
+	login := store.Login(session.LoginRequest{
+		UserName: "33333333",
+		Password: "33333333",
+	})
+	create := store.CreateRole(session.RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "333",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !create.Success {
+		t.Fatalf("expected 333 role create success, got %+v", create)
+	}
+	socketSession := &packetSession{}
+	selectResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 1,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     login.PlayerID,
+			SessionToken: login.SessionToken,
+			RoleID:       create.Role.RoleID,
+		}),
+	}, socketSession)
+	if !selectResult.handled || selectResult.townBootstrap == nil {
+		t.Fatalf("expected 333 role select to seed town bootstrap, got %+v", selectResult)
+	}
+	grantedBow, ok := store.GrantRoleItem(login.PlayerID, create.Role.RoleID, session.RoleItem{
+		Type:        "背包",
+		Name:        "万相",
+		ItemType:    "equip",
+		Display:     "58.png",
+		Description: "f_i_万相&24@武器·弓系&25@1&22@游侠",
+		Count:       1,
+		Index:       20,
+		ItemLevel:   2,
+	})
+	if !ok {
+		t.Fatal("expected to grant captured bow")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownEquipItemReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownEquipItemRequest{
+			Type:  grantedBow.Type,
+			Index: grantedBow.Index,
+			Count: 1,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected EquipItem to be handled")
+	}
+	if result.createPlayer == nil || !strings.Contains(result.createPlayer.SourceQuery, "w1=55") || strings.Contains(result.createPlayer.SourceQuery, "w3=49") {
+		t.Fatalf("expected bow source query and no stale dagger appearance, got %+v", result.createPlayer)
+	}
+	if len(result.itemClears) != 1 || result.itemClears[0].Type != "背包" || result.itemClears[0].Index != grantedBow.Index {
+		t.Fatalf("expected bow source bag slot to clear, got %+v", result.itemClears)
+	}
+	byTypeIndex := map[string]classicTownItemInfoPush{}
+	for _, item := range result.itemInfos {
+		byTypeIndex[item.Type+":"+strconv.Itoa(item.Index)] = item
+	}
+	if item := byTypeIndex["装备:3"]; item.Name != "万相" || item.Display != "58.png" {
+		t.Fatalf("expected bow equipment itemInfo, got %+v from %+v", item, result.itemInfos)
+	}
+	if item := byTypeIndex["背包:"+strconv.Itoa(grantedBow.Index)]; item.Name != "绯雨匕首" {
+		t.Fatalf("expected replaced dagger bag itemInfo, got %+v from %+v", item, result.itemInfos)
+	}
+	if socketSession.selectedRole == nil || !strings.Contains(socketSession.selectedRole.SourceQuery, "w1=55") || strings.Contains(socketSession.selectedRole.SourceQuery, "w3=49") {
+		t.Fatalf("expected socket selected role to keep bow appearance, got %+v", socketSession.selectedRole)
+	}
+}
+
 func TestHandlePacketClassicTownActiveItemExchangesSilverToCopper(t *testing.T) {
 	store := session.NewStore()
 	socketSession, role := seedSelectedRoleSessionInStore(t, store, "元宝兑换测试")
@@ -4370,6 +4447,15 @@ func TestHandlePacketClassicBattleQiangLiFeiBiaoRejectsMissingDart(t *testing.T)
 	}
 	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
 		t.Fatalf("expected missing 飞镖 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)
+	}
+}
+
+func TestClassicBattleActionRequiredItemNameIncludesCapturedRangerBowArrows(t *testing.T) {
+	if got := classicBattleActionRequiredItemName(battle.CommandGuanJiaLianShi); got != "穿甲箭" {
+		t.Fatalf("expected 贯甲连矢 to require 穿甲箭, got %q", got)
+	}
+	if got := classicBattleActionRequiredItemName(battle.CommandQiangShe); got != "" {
+		t.Fatalf("expected 强射 to have no item requirement, got %q", got)
 	}
 }
 

@@ -82,6 +82,7 @@ func sourceBattleSkillProfileFromConfig(label string) (commandProfile, bool) {
 		CanFat:            true,
 		LifeStealChance:   classicDataInt(row["hp_drain_chance_percent"]),
 		LifeStealRatio:    classicDataFloat(row["hp_drain_multiplier"]),
+		DirectAttackBonus: classicDataFloat(row["direct_attack_bonus_multiplier"]),
 	}
 	if profile.ActionName == "" {
 		profile.ActionName = strings.TrimSpace(row["label"])

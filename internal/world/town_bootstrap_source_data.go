@@ -1460,6 +1460,62 @@ var map157SourceNPCs = []sourceNPCEntry{
 	buildCapturedSourceTransport("transp_156", 2963, 515),
 }
 
+var map191SourceNPCs = []sourceNPCEntry{
+	{
+		Handle:      "6360542618722932",
+		DisplayName: "虚中",
+		SourceQuery: "npc/虚中.swf",
+		SpriteName:  "xuzhong",
+		Width:       121,
+		Height:      172,
+		SpawnFlash:  SpawnPoint{X: 1082, Y: 450},
+		QuestState:  0,
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message: `((妙手拂尘轻拨面，虚中有实往气盛。但愿从此无战事，乌梁枯木必逢春。))
+我乃前锋营地药师虚中，行军打仗必然会受伤，有什么需要就直接来找我吧。`,
+			Answers: []AnswerOption{
+				{Handle: "2", Msg: "进行治疗"},
+				{Handle: "1", Msg: "查看商店"},
+				{Handle: "0", Msg: "<c/>取消"},
+			},
+		},
+	},
+	{
+		Handle:      "6370542618853300",
+		DisplayName: "虞莫",
+		SourceQuery: "npc/虞莫.swf",
+		SpriteName:  "yumo",
+		Width:       115,
+		Height:      190,
+		SpawnFlash:  SpawnPoint{X: 2483, Y: 380},
+		QuestState:  0,
+	},
+	{
+		Handle:      "6350542618650282",
+		DisplayName: "汉雄",
+		SourceQuery: "npc/汉雄.swf",
+		SpriteName:  "hanxiong",
+		Width:       56,
+		Height:      160,
+		SpawnFlash:  SpawnPoint{X: 1514, Y: 471},
+		QuestState:  1,
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message: `((魔军再现天地间，掐指念算必是劫。乌梁一战背水旅，千方百计胜利返。))
+我是广青军前锋营军策汉雄，这次与魔军交战不能蛮斗只能智取。让我仔细想想对付它们的办法。`,
+			Answers: []AnswerOption{
+				{Handle: "6q2gs", Msg: "<ml><m/>侦查敌营"},
+				{Handle: "6q40gs", Msg: "<m/>拜访故人"},
+				{Handle: "6", Msg: "使用仓库"},
+				{Handle: "2", Msg: "收发信件"},
+				{Handle: "1", Msg: "绑定乌梁营地"},
+				{Handle: "0", Msg: "<c/>取消"},
+			},
+		},
+	},
+}
+
 var map146SourceMonsters = []sourceMonsterEntry{
 	buildCapturedSourceMonster("6887685480585492", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 12, "战士", 784, 325),
 	buildCapturedSourceMonster("6889685480586263", "蛮族刀客", "monstermap/barbarianweapons.swf", "barbarianweapons", 12, "战士", 212, 279),
@@ -2433,6 +2489,356 @@ var map2SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialog
 		Answers: []AnswerOption{
 			{Handle: "4q69a_2_1", Msg: "<m/>我这就去。"},
 			{Handle: "4q69a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+}
+
+var map3SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialogueEntry{
+	{
+		Handle:       "4940542616468969",
+		MsgHandle:    "1",
+		AnswerHandle: "6q40os",
+	}: {
+		MsgHandle: "6q40d_2",
+		Message:   "汉雄？你是说当年我和爹爹在涧庭村外救下的那个叫汉雄的人吗？",
+		Answers: []AnswerOption{
+			{Handle: "6q40a_2_1", Msg: "<m/>不错，正是他。"},
+			{Handle: "6q40a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "4940542616468969",
+		MsgHandle:    "1",
+		AnswerHandle: "6q41gs",
+	}: {
+		MsgHandle: "6q41d_1",
+		Message: `汉雄现在是广青前锋营的军策了？！真是了不起！当年还只是路过这里的一个普通书生呢，没想到如今都成军策啦！呵呵，回头告诉爹爹，他一定会大吃一惊呢！这里有((一些涧庭的土特产，麻烦你给汉雄送去吧))，就说谢谢他啦。
+
+[g]=经验25000 [i=f_i_银元宝^C156C7&24@材料 消耗品&25@9999&19@双击可兑换为1000铜币&20@游戏中的货币,用于流通买卖&27@sitem_jhj&101@39.png&103@0&104@0&105@&107@&108@0]银元宝[/]x1`,
+		Answers: []AnswerOption{
+			{Handle: "6q41a_1_1", Msg: "<m/>好的，我马上就去。"},
+			{Handle: "6q41a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+}
+
+var map191SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialogueEntry{
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q2gs",
+	}: {
+		MsgHandle: "6q2d_1",
+		Message: `妖之森里面的魔军都是巨大的机关傀儡，进攻手段相当凶狠。这些机关人定是被注入了邪恶的意识，现在派你((去【妖之森_1】侦察下敌情，消灭15个机木斧兵))，刺探一下他们的实力如何。
+
+[g]=经验15000 [i=f_i_银元宝^C156C7&24@材料 消耗品&25@9999&19@双击可兑换为1000铜币&20@游戏中的货币,用于流通买卖&27@sitem_jhj&101@39.png&103@0&104@0&105@&107@&108@0]银元宝[/]x2`,
+		Answers: []AnswerOption{
+			{Handle: "6q2a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q2a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q2os",
+	}: {
+		MsgHandle: "6q2d_2",
+		Message:   "那些机木斧兵，早前归属在擎天山术院的那拨大术士旗下，现在怎么会被魔军所操控呢？擎天山术院里必定出了问题啊......",
+		Answers: []AnswerOption{
+			{Handle: "6q2a_2_1", Msg: "<m/>有何良策。"},
+			{Handle: "6q2a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q3gs",
+	}: {
+		MsgHandle: "6q3d_1",
+		Message: `现在看来，部分机木傀儡已经落入魔军掌控，情势大为不利。你((现在就去【妖之森_2】消灭那些机木斧兵，从他们身上获得10个玄机件))给我，现在只能拿机木傀儡独有的玄机件进行分析，才能考虑下一步对付机木军的办法。
+
+[g]=经验22000 [i=f_i_银元宝^C156C7&24@材料 消耗品&25@9999&19@双击可兑换为1000铜币&20@游戏中的货币,用于流通买卖&27@sitem_jhj&101@39.png&103@0&104@0&105@&107@&108@0]银元宝[/]x1`,
+		Answers: []AnswerOption{
+			{Handle: "6q3a_1_1", Msg: "<m/>属下遵命。"},
+			{Handle: "6q3a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q40gs",
+	}: {
+		MsgHandle: "6q40d_1",
+		Message: `这些日子来，每每夜里梦回百转，总会想起那年路过一个叫((涧庭))的美丽小村庄和一个叫((叶眉))的俏皮小女孩，想起她和她父亲当时救我的场景。一晃这么多年过去了，不知他们父女俩过得怎样，你能不能替我走一趟？((去【涧庭村】拜访一下叶眉姑娘))。
+
+[g]=经验10000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q40a_1_1", Msg: "<m/>我现在就去。"},
+			{Handle: "6q40a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q8gs",
+	}: {
+		MsgHandle: "6q8d_1",
+		Message: `根据我的推算，魔军就是用它推动控制机木妖兵的。不过，眼下这也只是推测，要是你能((去【妖之森_3】击败机木锥兵，取到15个暗力之源))给我，应该就能分析出到底是怎么回事了。
+
+[g]=经验22000 [i=f_i_银元宝^C156C7&24@材料 消耗品&25@9999&19@双击可兑换为1000铜币&20@游戏中的货币,用于流通买卖&27@sitem_jhj&101@39.png&103@0&104@0&105@&107@&108@0]银元宝[/]x1`,
+		Answers: []AnswerOption{
+			{Handle: "6q8a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q8a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q8os",
+	}: {
+		MsgHandle: "6q8d_2",
+		Message:   "辛苦了，我当和营长禀报你的功绩。",
+		Answers: []AnswerOption{
+			{Handle: "6q8a_2_1", Msg: "<m/>这是应该做的。"},
+			{Handle: "6q8a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q9gs",
+	}: {
+		MsgHandle: "6q9d_1",
+		Message: `我明白了！玄机件就像积木军团的心脏，而暗力之源就是它们的大脑。玄机件需要水来运作，控制水源等于控制住了积木军团的行动。现在你就((去找一旁的工匠虞莫))，商量截断水源的事。
+
+[g]=经验10000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q9a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q9a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q15gs",
+	}: {
+		MsgHandle: "6q15d_1",
+		Message: `依我之见，当务之急是马上建造一个巨型水车，把水流带回上游，这样就能快速地控制水源，进而控制住机木怪人的行动。这里是我刚绘制好的水车图纸，你((快拿去交给一旁的虞莫))，让他以最快的速度建造出来。
+
+[g]=经验8000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q15a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q15a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q3os",
+	}: {
+		MsgHandle: "6q3d_2",
+		Message:   "呵呵，果然身手敏捷，赶紧递过来，让我好好瞧瞧这机关人的玄机件里到底暗藏的是何玄机。",
+		Answers: []AnswerOption{
+			{Handle: "6q3a_2_1", Msg: "<m/>军策请看。"},
+			{Handle: "6q3a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q41os",
+	}: {
+		MsgHandle: "6q41d_2",
+		Message:   "辛苦，多谢你了！这些是叶眉带给我的吗?呵呵，不知那小叶头现在长成什么样啦。应该亭亭玉立，是个大姑娘了吧？",
+		Answers: []AnswerOption{
+			{Handle: "6q41a_2_1", Msg: "<m/>是啊。"},
+			{Handle: "6q41a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q4gs",
+	}: {
+		MsgHandle: "6q4d_1",
+		Message: `此次，有((独臂神医))之称的((虚中))也随我军远征乌梁而来，他医术了得，他就在一旁，你可以((和他去聊聊。))
+[g]=经验10000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q4a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q4a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q28os",
+	}: {
+		MsgHandle: "6q28d_2",
+		Message:   "是，我正要找你，听说你击杀机木锥兵表现神勇，大家广为称颂。我现在有个问题，和机木锥兵的战斗中你有否见到((暗力之源))这个物品？",
+		Answers: []AnswerOption{
+			{Handle: "6q28a_2_1", Msg: "<m/>暗力之源？"},
+			{Handle: "6q28a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q30os",
+	}: {
+		MsgHandle: "6q30d_2",
+		Message:   "你回来了？现在的局势相当危急，石坝被毁，河水在向下游不断流淌，机木军团很快就会复苏了。",
+		Answers: []AnswerOption{
+			{Handle: "6q30a_2_1", Msg: "<m/>不知有何妙计？"},
+			{Handle: "6q30a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q4os",
+	}: {
+		MsgHandle: "6q4d_2",
+		Message:   "独臂神医？呵呵，言过其实了。我早年在战斗中丢失了一只手臂，于是给自己装了一只假手。",
+		Answers: []AnswerOption{
+			{Handle: "6q4a_2_1", Msg: "<m/>真是佩服。"},
+			{Handle: "6q4a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q5gs",
+	}: {
+		MsgHandle: "6q5d_1",
+		Message: `听说营长这次要和魔军展开一场大战了，我担心营内金银花储备不够，你能不能帮我((去【妖之森_7】的金银花采集点采10个金银花回来))呢？
+[g]=经验14000 [i=f_i_银元宝^C156C7&24@材料 消耗品&25@9999&19@双击可兑换为1000铜币&20@游戏中的货币,用于流通买卖&27@sitem_jhj&101@39.png&103@0&104@0&105@&107@&108@0]银元宝[/]x1`,
+		Answers: []AnswerOption{
+			{Handle: "6q5a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q5a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q5os",
+	}: {
+		MsgHandle: "6q5d_2",
+		Message:   "这下就不用担心金银花的储备问题了，呵呵，改天请你喝酒！",
+		Answers: []AnswerOption{
+			{Handle: "6q5a_2_1", Msg: "<m/>客气了。"},
+			{Handle: "6q5a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q6gs",
+	}: {
+		MsgHandle: "6q6d_1",
+		Message: `营外的风沙大起，机木军团要对营地发起进攻了。你快((去【乌梁营地_1】的镇山威那报到！))这次战斗对手很强大，希望能用你的勇气和力量战胜敌人，凯旋而归。
+[g]=经验12000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q6a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q6a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q52os",
+	}: {
+		MsgHandle: "6q52d_2",
+		Message:   "军令如山，我自当奉命就是。不就是挨个板子么，我身体结实，受得住。你不用歉疚，来吧，板子尽管打上来吧！用点力！",
+		Answers: []AnswerOption{
+			{Handle: "6q52a_2_1", Msg: "<m/>那我就对不住了..."},
+			{Handle: "6q52a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q53gs",
+	}: {
+		MsgHandle: "6q53d_1",
+		Message:   "（经过你一阵狂风暴雨般的杖打之后，虚中已呼吸不上，脸色煞白）\n我说，((恐龙抗狼1))，你下手还真狠啊？",
+		Answers: []AnswerOption{
+			{Handle: "6q53a_1_1", Msg: "<m/>对不住，没控制好..."},
+			{Handle: "6q53a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "6q53d_1",
+		AnswerHandle: "6q53a_1_1",
+	}: {
+		MsgHandle: "6q53d_2",
+		Message: `唉，算了，你也是执行军令而已。只是我现在肚子咕咕直叫，比挨板子还难受，要不((你帮我找5块肉来))，我饿的不行了。
+[g]=经验10000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q53a_2_1", Msg: "<m/>好的，我这就去。"},
+			{Handle: "6q53a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q53os",
+	}: {
+		MsgHandle: "6q53d_3",
+		Message:   "哦，上好的五花肉啊，喷香！哈哈！",
+		Answers: []AnswerOption{
+			{Handle: "6q53a_3_1", Msg: "<m/>你先享用吧。"},
+			{Handle: "6q53a_3_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q54gs",
+	}: {
+		MsgHandle: "6q54d_1",
+		Message:   "哎呦~哎哟~好痛！！",
+		Answers: []AnswerOption{
+			{Handle: "6q54a_1_1", Msg: "<m/>怎么了？"},
+			{Handle: "6q54a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "6q54d_1",
+		AnswerHandle: "6q54a_1_1",
+	}: {
+		MsgHandle: "6q54d_2",
+		Message: `方才只顾着吃肉，竟忘了腚被打得皮开肉绽，也没上药，就那样暴露在空气中,风一吹，疼得很，((快帮我去【沼泽_3】采集10个当归来。))以前帮别人治病，如今摊在这里只能让别人为我上药了！
+[g]=经验12000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q54a_2_1", Msg: "<m/>好，我这就去。"},
+			{Handle: "6q54a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6360542618722932",
+		MsgHandle:    "1",
+		AnswerHandle: "6q54os",
+	}: {
+		MsgHandle: "6q54d_3",
+		Message:   "哦，好的，就是这些，幸亏有你在啊，要不然我这几天就起不来了。",
+		Answers: []AnswerOption{
+			{Handle: "6q54a_3_1", Msg: "<m/>不必客气。"},
+			{Handle: "6q54a_3_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q11os",
+	}: {
+		MsgHandle: "6q11d_1",
+		Message: `石坝终于建造完毕，白河之水可以截断了，那些机木人的日子要到头了。你赶紧把这个好消息((向【乌梁营地_1】的镇山威营长汇报))下吧。
+[g]=经验12000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q11a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q11a_1_2", Msg: "<c/>关闭"},
 		},
 	},
 }

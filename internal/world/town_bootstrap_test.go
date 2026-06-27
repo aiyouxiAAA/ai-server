@@ -38,8 +38,8 @@ func TestTownBootstrapAppliesCapturedSourceTransportPoints(t *testing.T) {
 			checked++
 		}
 	}
-	if checked != 297 {
-		t.Fatalf("expected 297 captured transport points, checked %d", checked)
+	if checked != 328 {
+		t.Fatalf("expected 328 captured transport points, checked %d", checked)
 	}
 }
 
@@ -939,6 +939,187 @@ func TestBuildTownTransferBootstrapUsesCapturedMapThirtyThreeTransportData(t *te
 	assertTransportRole("transp_37", 1124, 750)
 }
 
+func TestBuildTownBootstrapUsesCapturedBaiyuanTownTransportData(t *testing.T) {
+	type expectedTransport struct {
+		handle      string
+		spawn       SpawnPoint
+		sourceQuery string
+	}
+	cases := []struct {
+		mapID      int
+		transports []expectedTransport
+	}{
+		{mapID: 56, transports: []expectedTransport{
+			{handle: "transp_55", spawn: SpawnPoint{X: 50, Y: 544}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_57", spawn: SpawnPoint{X: 2940, Y: 562}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 57, transports: []expectedTransport{
+			{handle: "transp_56", spawn: SpawnPoint{X: 50, Y: 544}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_58", spawn: SpawnPoint{X: 2630, Y: 722}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 58, transports: []expectedTransport{
+			{handle: "transp_57", spawn: SpawnPoint{X: 2241, Y: 414}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_59", spawn: SpawnPoint{X: 460, Y: 720}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_61", spawn: SpawnPoint{X: 2940, Y: 562}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 59, transports: []expectedTransport{
+			{handle: "transp_58", spawn: SpawnPoint{X: 322, Y: 440}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_60", spawn: SpawnPoint{X: 2940, Y: 562}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 60, transports: []expectedTransport{
+			{handle: "transp_59", spawn: SpawnPoint{X: 50, Y: 544}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_62", spawn: SpawnPoint{X: 2940, Y: 562}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 61, transports: []expectedTransport{
+			{handle: "transp_58", spawn: SpawnPoint{X: 50, Y: 544}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_63", spawn: SpawnPoint{X: 2940, Y: 602}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 62, transports: []expectedTransport{
+			{handle: "transp_168", spawn: SpawnPoint{X: 2940, Y: 562}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_60", spawn: SpawnPoint{X: 45, Y: 504}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 63, transports: []expectedTransport{
+			{handle: "transp_179", spawn: SpawnPoint{X: 1394, Y: 510}, sourceQuery: "transp/fl.swf"},
+			{handle: "transp_61", spawn: SpawnPoint{X: 50, Y: 504}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 168, transports: []expectedTransport{
+			{handle: "transp_62", spawn: SpawnPoint{X: 45, Y: 504}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_169", spawn: SpawnPoint{X: 2450, Y: 554}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 169, transports: []expectedTransport{
+			{handle: "transp_168", spawn: SpawnPoint{X: 45, Y: 564}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_170", spawn: SpawnPoint{X: 2467, Y: 585}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_173", spawn: SpawnPoint{X: 1406, Y: 720}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 170, transports: []expectedTransport{
+			{handle: "transp_169", spawn: SpawnPoint{X: 45, Y: 544}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_171", spawn: SpawnPoint{X: 2467, Y: 585}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 171, transports: []expectedTransport{
+			{handle: "transp_170", spawn: SpawnPoint{X: 50, Y: 544}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_172", spawn: SpawnPoint{X: 2630, Y: 722}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 172, transports: []expectedTransport{
+			{handle: "transp_171", spawn: SpawnPoint{X: 2041, Y: 500}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_173", spawn: SpawnPoint{X: 33, Y: 591}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_174", spawn: SpawnPoint{X: 955, Y: 700}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 173, transports: []expectedTransport{
+			{handle: "transp_169", spawn: SpawnPoint{X: 1019, Y: 441}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_172", spawn: SpawnPoint{X: 1960, Y: 569}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 174, transports: []expectedTransport{
+			{handle: "transp_172", spawn: SpawnPoint{X: 2047, Y: 451}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_175", spawn: SpawnPoint{X: 2704, Y: 720}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_176", spawn: SpawnPoint{X: 568, Y: 730}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 175, transports: []expectedTransport{
+			{handle: "transp_174", spawn: SpawnPoint{X: 2763, Y: 437}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_177", spawn: SpawnPoint{X: 272, Y: 700}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 177, transports: []expectedTransport{
+			{handle: "transp_175", spawn: SpawnPoint{X: 2620, Y: 430}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_176", spawn: SpawnPoint{X: 400, Y: 450}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_178", spawn: SpawnPoint{X: 85, Y: 720}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 178, transports: []expectedTransport{
+			{handle: "transp_177", spawn: SpawnPoint{X: 2777, Y: 460}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_190", spawn: SpawnPoint{X: 513, Y: 730}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 190, transports: []expectedTransport{
+			{handle: "transp_178", spawn: SpawnPoint{X: 2785, Y: 420}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_191", spawn: SpawnPoint{X: 40, Y: 560}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 191, transports: []expectedTransport{
+			{handle: "transp_190", spawn: SpawnPoint{X: 2939, Y: 530}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_192", spawn: SpawnPoint{X: 40, Y: 560}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 192, transports: []expectedTransport{
+			{handle: "transp_191", spawn: SpawnPoint{X: 2939, Y: 560}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_193", spawn: SpawnPoint{X: 40, Y: 600}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 193, transports: []expectedTransport{
+			{handle: "transp_192", spawn: SpawnPoint{X: 2939, Y: 580}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_194", spawn: SpawnPoint{X: 1557, Y: 470}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_198", spawn: SpawnPoint{X: 40, Y: 600}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 196, transports: []expectedTransport{
+			{handle: "transp_195", spawn: SpawnPoint{X: 2950, Y: 580}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_197", spawn: SpawnPoint{X: 40, Y: 600}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_199", spawn: SpawnPoint{X: 1517, Y: 730}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 198, transports: []expectedTransport{
+			{handle: "transp_193", spawn: SpawnPoint{X: 2939, Y: 560}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_199", spawn: SpawnPoint{X: 40, Y: 600}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_200", spawn: SpawnPoint{X: 1130, Y: 730}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 199, transports: []expectedTransport{
+			{handle: "transp_196", spawn: SpawnPoint{X: 258, Y: 470}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_198", spawn: SpawnPoint{X: 2450, Y: 590}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 200, transports: []expectedTransport{
+			{handle: "transp_198", spawn: SpawnPoint{X: 2840, Y: 420}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_201", spawn: SpawnPoint{X: 40, Y: 580}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 201, transports: []expectedTransport{
+			{handle: "transp_200", spawn: SpawnPoint{X: 2939, Y: 550}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_202", spawn: SpawnPoint{X: 40, Y: 520}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 202, transports: []expectedTransport{
+			{handle: "transp_197", spawn: SpawnPoint{X: 1674, Y: 425}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_201", spawn: SpawnPoint{X: 2800, Y: 730}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_205", spawn: SpawnPoint{X: 40, Y: 600}, sourceQuery: "transp/flag2.swf"},
+		}},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{
+			RoleID:       "acct-test-role-baiyuan",
+			DisplayName:  "测试女侠",
+			Level:        20,
+			MapID:        testCase.mapID,
+			VisualRoleID: 1,
+		}
+		playerBase := session.PlayerBaseData{
+			PlayerID:     "acct-test",
+			RoleID:       role.RoleID,
+			DisplayName:  role.DisplayName,
+			Level:        role.Level,
+			MapID:        role.MapID,
+			VisualRoleID: role.VisualRoleID,
+		}
+
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
+			t.Fatalf("expected map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected map%d enemyShow to stay false", testCase.mapID)
+		}
+		transportsByHandle := map[string]RolePush{}
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.RoleID == "-3" {
+				transportsByHandle[rolePush.Handle] = rolePush
+			}
+		}
+		if len(transportsByHandle) != len(testCase.transports) {
+			t.Fatalf("expected map%d transport count %d got %d", testCase.mapID, len(testCase.transports), len(transportsByHandle))
+		}
+		for _, expected := range testCase.transports {
+			rolePush, ok := transportsByHandle[expected.handle]
+			if !ok {
+				t.Fatalf("expected map%d transport handle %s, got %+v", testCase.mapID, expected.handle, transportsByHandle)
+			}
+			if rolePush.DisplayName != "" || rolePush.SourceQuery != expected.sourceQuery {
+				t.Fatalf("expected source transport role for %s, got %+v", expected.handle, rolePush)
+			}
+			if rolePush.SpawnFlash != expected.spawn {
+				t.Fatalf("expected map%d %s spawn %+v got %+v", testCase.mapID, expected.handle, expected.spawn, rolePush.SpawnFlash)
+			}
+		}
+	}
+}
+
 func TestBuildTownBootstrapUsesCapturedGuangqingTownData(t *testing.T) {
 	cases := []struct {
 		mapID     int
@@ -1717,6 +1898,76 @@ func TestBuildAnswerSpeakMap3PandaHealerIncludesTreatment(t *testing.T) {
 	}
 	if !hasAnswerOption(speak.Answers, "2", "进行治疗") {
 		t.Fatalf("expected panda healer treatment answer, got %+v", speak.Answers)
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedMap191NPCs(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "acct-test-role-191",
+		DisplayName: "测试游侠",
+		Level:       32,
+		MapID:       191,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:    "acct-test",
+		RoleID:      role.RoleID,
+		DisplayName: role.DisplayName,
+		Level:       role.Level,
+		MapID:       191,
+	}
+
+	snapshot := BuildTownBootstrap(role, playerBase)
+	if snapshot.LoadMap.MapID != "191" || snapshot.LoadMap.XMLURL != "xml/191.xml" {
+		t.Fatalf("expected map191 loadMap, got %+v", snapshot.LoadMap)
+	}
+
+	assertRole := func(handle string, name string, sourceQuery string, spriteName string, x int, y int) {
+		t.Helper()
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.Handle != handle {
+				continue
+			}
+			if rolePush.DisplayName != name || rolePush.SourceQuery != sourceQuery {
+				t.Fatalf("expected %s/%s for %s, got name=%q source=%q", name, sourceQuery, handle, rolePush.DisplayName, rolePush.SourceQuery)
+			}
+			if rolePush.SpawnFlash.X != x || rolePush.SpawnFlash.Y != y {
+				t.Fatalf("expected %s spawn %d,%d got %+v", handle, x, y, rolePush.SpawnFlash)
+			}
+			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-npc/movieclips/"+spriteName+"/"+spriteName+"-movieclip-ir" {
+				t.Fatalf("expected %s source visual, got %+v", handle, rolePush.SourceNPCVisual)
+			}
+			return
+		}
+		t.Fatalf("expected map191 role %s", handle)
+	}
+
+	assertRole("6360542618722932", "虚中", "npc/虚中.swf", "xuzhong", 1082, 450)
+	assertRole("6370542618853300", "虞莫", "npc/虞莫.swf", "yumo", 2483, 380)
+	assertRole("6350542618650282", "汉雄", "npc/汉雄.swf", "hanxiong", 1514, 471)
+
+	xuzhongSpeak := BuildAnswerSpeak("6360542618722932")
+	if !hasAnswerOption(xuzhongSpeak.Answers, "2", "进行治疗") || !hasAnswerOption(xuzhongSpeak.Answers, "1", "查看商店") {
+		t.Fatalf("expected Xuzhong healer/shop answers, got %+v", xuzhongSpeak.Answers)
+	}
+
+	reply := BuildAnswerReply("6350542618650282", "1", "6q2gs")
+	if reply == nil || reply.MsgHandle != "6q2d_1" || !hasAnswerOption(reply.Answers, "6q2a_1_1", "<m/>我这就去。") {
+		t.Fatalf("expected Hanxiong scout quest reply, got %+v", reply)
+	}
+
+	xuzhongQuestReply := BuildAnswerReply("6350542618650282", "1", "6q4gs")
+	if xuzhongQuestReply == nil || xuzhongQuestReply.MsgHandle != "6q4d_1" || !hasAnswerOption(xuzhongQuestReply.Answers, "6q4a_1_1", "<m/>我这就去。") {
+		t.Fatalf("expected Hanxiong Xuzhong quest reply, got %+v", xuzhongQuestReply)
+	}
+
+	meatReply := BuildAnswerReply("6360542618722932", "6q53d_1", "6q53a_1_1")
+	if meatReply == nil || meatReply.MsgHandle != "6q53d_2" || !hasAnswerOption(meatReply.Answers, "6q53a_2_1", "<m/>好的，我这就去。") {
+		t.Fatalf("expected Xuzhong meat quest continuation, got %+v", meatReply)
+	}
+
+	specialtyReply := BuildAnswerReply("6350542618650282", "1", "6q41os")
+	if specialtyReply == nil || specialtyReply.MsgHandle != "6q41d_2" || !hasAnswerOption(specialtyReply.Answers, "6q41a_2_1", "<m/>是啊。") {
+		t.Fatalf("expected Hanxiong specialty completion reply, got %+v", specialtyReply)
 	}
 }
 

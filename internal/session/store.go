@@ -315,6 +315,7 @@ type RoleEquipItemResult struct {
 	Role         RoleSummary
 	PlayerBase   PlayerBaseData
 	EquippedItem RoleItem
+	UpdatedItems []RoleItem
 	ClearedItems []RoleItemClear
 	Found        bool
 	Equipped     bool
@@ -2455,6 +2456,7 @@ func (store *Store) useEquipmentItemLocked(
 	targetIndex int,
 ) RoleUseItemResult {
 	updatedItems := make([]RoleItem, 0, len(roles[roleIndex].Items)+1)
+	updatedResultItems := make([]RoleItem, 0, 2)
 	var replacedItem *RoleItem
 	for _, item := range roles[roleIndex].Items {
 		if item.Type == sourceType && item.Index == sourceIndex {
@@ -2471,13 +2473,17 @@ func (store *Store) useEquipmentItemLocked(
 	if replacedItem != nil && sourceType != "装备" {
 		replacedItem.Type = sourceType
 		replacedItem.Index = sourceIndex
-		updatedItems = append(updatedItems, normalizeRoleItem(*replacedItem))
+		normalized := normalizeRoleItem(*replacedItem)
+		updatedItems = append(updatedItems, normalized)
+		updatedResultItems = append(updatedResultItems, normalized)
 	}
 
 	equippedItem := sourceItem
 	equippedItem.Type = "装备"
 	equippedItem.Index = targetIndex
-	updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
+	normalizedEquippedItem := normalizeRoleItem(equippedItem)
+	updatedItems = append(updatedItems, normalizedEquippedItem)
+	updatedResultItems = append(updatedResultItems, normalizedEquippedItem)
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	roles[roleIndex].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[roleIndex].SourceQuery, roles[roleIndex].Items)
 	roles[roleIndex] = syncRoleProgressionRuntimeData(roles[roleIndex])
@@ -2491,7 +2497,7 @@ func (store *Store) useEquipmentItemLocked(
 		Role:         role,
 		PlayerBase:   playerBaseDataFromRole(playerID, role),
 		Item:         sourceItem,
-		UpdatedItems: []RoleItem{normalizeRoleItem(equippedItem)},
+		UpdatedItems: updatedResultItems,
 		ClearedItems: []RoleItemClear{{
 			Type:  sourceType,
 			Index: sourceIndex,
@@ -2633,6 +2639,7 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 		}
 
 		updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
+		updatedResultItems := make([]RoleItem, 0, 1)
 		var replacedItem *RoleItem
 		for _, item := range roles[index].Items {
 			if item.Type == sourceType && item.Index == sourceIndex {
@@ -2649,7 +2656,9 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 		if replacedItem != nil && sourceType != "装备" {
 			replacedItem.Type = sourceType
 			replacedItem.Index = sourceIndex
-			updatedItems = append(updatedItems, normalizeRoleItem(*replacedItem))
+			normalized := normalizeRoleItem(*replacedItem)
+			updatedItems = append(updatedItems, normalized)
+			updatedResultItems = append(updatedResultItems, normalized)
 		}
 
 		equippedItem := sourceItem
@@ -2672,6 +2681,7 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 			Role:         role,
 			PlayerBase:   playerBaseDataFromRole(playerID, role),
 			EquippedItem: equippedItem,
+			UpdatedItems: updatedResultItems,
 			ClearedItems: []RoleItemClear{{
 				Type:  sourceType,
 				Index: sourceIndex,
@@ -3352,6 +3362,10 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "w3", "43", true
 	case "绯雨匕首":
 		return "w3", "49", true
+	case "万相":
+		return "w1", "55", true
+	case "伏魔棍":
+		return "w11", "53", true
 	case "蓝布衣":
 		return "c", "1", true
 	case "蛮力护甲":
@@ -3360,6 +3374,10 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "c", "35", true
 	case "神风护甲":
 		return "c", "17", true
+	case "寒影锁甲":
+		return "c", "26", true
+	case "寨夫人上衣":
+		return "c", "39", true
 	case "蓝布裤":
 		return "p", "1", true
 	case "蛮力护腿":
@@ -3368,6 +3386,10 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "p", "13", true
 	case "神风护腿":
 		return "p", "16", true
+	case "机木护腿":
+		return "p", "64", true
+	case "龙颜护腿":
+		return "p", "22", true
 	case "布鞋":
 		return "se", "1", true
 	case "蛮力战靴":
@@ -3380,6 +3402,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "se", "26", true
 	case "神风战靴":
 		return "se", "12", true
+	case "寒影靴":
+		return "se", "19", true
 	case "蛮力面甲":
 		return "h", "8", true
 	case "威武面甲":
@@ -3392,6 +3416,10 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "b", "31", true
 	case "神风护腰":
 		return "b", "14", true
+	case "寒影护腰":
+		return "b", "22", true
+	case "龙颜护腰":
+		return "b", "21", true
 	case "蛮力肩甲":
 		return "a", "4", true
 	case "威武护肩":
@@ -3400,12 +3428,18 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "a", "34", true
 	case "蚩颅王护肩":
 		return "a", "29", true
+	case "龙颜单肩":
+		return "a", "19", true
 	case "蛮力护腕":
 		return "wr", "7", true
 	case "威武护腕":
 		return "wr", "11", true
 	case "黄风护腕":
 		return "wr", "25", true
+	case "机木护腕":
+		return "wr", "39", true
+	case "龙颜护腕":
+		return "wr", "19", true
 	}
 	return "", "", false
 }

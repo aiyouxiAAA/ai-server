@@ -39,6 +39,8 @@ const (
 	CommandMoLiTuCi        = "skill-mo-li-tu-ci"
 	CommandJiFengCi        = "skill-ji-feng-ci"
 	CommandJieDuShu        = "skill-jie-du-shu"
+	CommandQiangShe        = "skill-qiang-she"
+	CommandGuanJiaLianShi  = "skill-guan-jia-lian-shi"
 	CommandLeiHunZhan      = "skill-lei-hun-zhan"
 	CommandAoYiAnShaZhe    = "skill-ao-yi-an-sha-zhe"
 	CommandAoYiLiuHeGunFa  = "skill-ao-yi-liu-he-gun-fa"
@@ -391,6 +393,7 @@ type commandProfile struct {
 	CanFat            bool
 	LifeStealChance   int
 	LifeStealRatio    float64
+	DirectAttackBonus float64
 	DefenseType       string
 	HitMultiplier     float64
 	TargetMPDamage    int
@@ -1283,6 +1286,10 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "疾风刺", 1)
 	case CommandJieDuShu:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "解毒术", 1)
+	case CommandQiangShe:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "强射", 5)
+	case CommandGuanJiaLianShi:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "贯甲连矢", 2)
 	case CommandLeiHunZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
 	case CommandAoYiAnShaZhe:
@@ -1954,6 +1961,9 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		CanDodge:          true,
 		CanFat:            true,
 	}
+	if hasTableProfile {
+		profile.DirectAttackBonus = tableProfile.DirectAttackBonus
+	}
 	if profile.DamageMultiplier <= 0 && hasCapturedFallback {
 		profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
 	}
@@ -2146,6 +2156,10 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandJiFengCi
 	case "解毒术":
 		return CommandJieDuShu
+	case "强射":
+		return CommandQiangShe
+	case "贯甲连矢":
+		return CommandGuanJiaLianShi
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	case "奥义.暗杀者":
@@ -2162,7 +2176,7 @@ func sourceBattleSkillSourceType(name string, fallbackType string) string {
 		return sourceType
 	}
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "奥义.雷魂斩", "奥义.暗杀者", "奥义.六合棍法":
+	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "强射", "贯甲连矢", "奥义.雷魂斩", "奥义.暗杀者", "奥义.六合棍法":
 		return "oneE"
 	case "狂爆", "解毒术", "力释棍术":
 		return "own"
@@ -2544,6 +2558,10 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w3/windCut"
 	case "解毒术":
 		return "w3/releaseDrug"
+	case "强射":
+		return "w1/powerShoot"
+	case "贯甲连矢":
+		return "w1/breakArmorShoot2"
 	case "奥义.雷魂斩":
 		return "w8/thunderSoulAtk"
 	case "奥义.暗杀者":
@@ -2797,7 +2815,13 @@ func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandPro
 	if runtime.hasKuangBao(actor.Handle) {
 		attack *= 2
 	}
-	return maxInt(1, int(math.Round(float64(attack)*profile.DamageMultiplier))-defense)
+	damage := maxInt(1, int(math.Round(float64(attack)*profile.DamageMultiplier))-defense)
+	if profile.DirectAttackBonus > 0 {
+		if bonus := int(math.Round(float64(attack) * profile.DirectAttackBonus)); bonus > 0 {
+			damage += bonus
+		}
+	}
+	return damage
 }
 
 func (runtime *Runtime) applyStoredPowerFromSingleHPLoss(target *CellInfoPush, hpLoss int) {

@@ -562,6 +562,10 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneFiftySeven.SourceMonsters = map157SourceMonsters
 	definitions[157] = mapOneFiftySeven
 
+	mapOneNinetyOne := definitions[191]
+	mapOneNinetyOne.SourceNPCs = map191SourceNPCs
+	definitions[191] = mapOneNinetyOne
+
 	mapOneFiftyEight := definitions[158]
 	mapOneFiftyEight.SourceNPCs = map158SourceNPCs
 	mapOneFiftyEight.SourceMonsters = map158SourceMonsters
@@ -1035,15 +1039,21 @@ func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *Ans
 		MsgHandle:    msgHandle,
 		AnswerHandle: answerHandle,
 	}
-	dialogue, ok := map1SourceNPCDialogueReplies[key]
-	if !ok {
-		dialogue, ok = map2SourceNPCDialogueReplies[key]
-		if !ok {
-			dialogue, ok = map46SourceNPCDialogueReplies[key]
-			if !ok {
-				return nil
-			}
+	var dialogue sourceNPCDialogueEntry
+	ok := false
+	for _, replies := range []map[sourceNPCDialogueReplyKey]sourceNPCDialogueEntry{
+		map1SourceNPCDialogueReplies,
+		map2SourceNPCDialogueReplies,
+		map3SourceNPCDialogueReplies,
+		map46SourceNPCDialogueReplies,
+		map191SourceNPCDialogueReplies,
+	} {
+		if dialogue, ok = replies[key]; ok {
+			break
 		}
+	}
+	if !ok {
+		return nil
 	}
 	if dialogue.MsgHandle == "1" && dialogue.Message == "" && dialogue.Answers == nil {
 		returnValue := BuildAnswerSpeak(handle)

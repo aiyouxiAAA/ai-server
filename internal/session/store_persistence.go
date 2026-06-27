@@ -491,37 +491,37 @@ func (store *Store) persistPlayerStateLocked(playerID string) error {
 		if encodeErr != nil {
 			return fmt.Errorf("encode role items for %s: %w", role.RoleID, encodeErr)
 		}
-		roleStateJSON, encodeErr := encodeRoleState(role.RoleState)
+		roleStateJSON, encodeErr := encodeRoleState(runtimeRole.RoleState)
 		if encodeErr != nil {
 			return fmt.Errorf("encode role state for %s: %w", role.RoleID, encodeErr)
 		}
-		rolePhysiqueJSON, encodeErr := encodeRolePhysique(role.RolePhysique)
+		rolePhysiqueJSON, encodeErr := encodeRolePhysique(runtimeRole.RolePhysique)
 		if encodeErr != nil {
 			return fmt.Errorf("encode role physique for %s: %w", role.RoleID, encodeErr)
 		}
-		dungeonInstancesJSON, encodeErr := encodeDungeonInstances(role.DungeonInstances)
+		dungeonInstancesJSON, encodeErr := encodeDungeonInstances(runtimeRole.DungeonInstances)
 		if encodeErr != nil {
 			return fmt.Errorf("encode dungeon instances for %s: %w", role.RoleID, encodeErr)
 		}
 		if _, err = tx.Exec(
 			`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json, dungeon_instances_json)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			role.RoleID,
+			runtimeRole.RoleID,
 			playerID,
-			role.DisplayName,
-			role.Level,
-			role.Exp,
+			runtimeRole.DisplayName,
+			runtimeRole.Level,
+			runtimeRole.Exp,
 			runtimeRole.Voc,
-			role.AGI,
-			role.STR,
-			role.INT,
-			role.CON,
-			role.LCK,
-			role.MapID,
-			role.VisualRoleID,
-			role.PresetID,
+			runtimeRole.AGI,
+			runtimeRole.STR,
+			runtimeRole.INT,
+			runtimeRole.CON,
+			runtimeRole.LCK,
+			runtimeRole.MapID,
+			runtimeRole.VisualRoleID,
+			runtimeRole.PresetID,
 			runtimeRole.SourceQuery,
-			role.BattleSourceQuery,
+			runtimeRole.BattleSourceQuery,
 			appearanceJSON,
 			skillsJSON,
 			fastPanelJSON,
@@ -612,36 +612,36 @@ func (store *Store) saveLocked() error {
 			if encodeErr != nil {
 				return fmt.Errorf("encode role items for %s: %w", role.RoleID, encodeErr)
 			}
-			roleStateJSON, encodeErr := encodeRoleState(role.RoleState)
+			roleStateJSON, encodeErr := encodeRoleState(runtimeRole.RoleState)
 			if encodeErr != nil {
 				return fmt.Errorf("encode role state for %s: %w", role.RoleID, encodeErr)
 			}
-			rolePhysiqueJSON, encodeErr := encodeRolePhysique(role.RolePhysique)
+			rolePhysiqueJSON, encodeErr := encodeRolePhysique(runtimeRole.RolePhysique)
 			if encodeErr != nil {
 				return fmt.Errorf("encode role physique for %s: %w", role.RoleID, encodeErr)
 			}
-			dungeonInstancesJSON, encodeErr := encodeDungeonInstances(role.DungeonInstances)
+			dungeonInstancesJSON, encodeErr := encodeDungeonInstances(runtimeRole.DungeonInstances)
 			if encodeErr != nil {
 				return fmt.Errorf("encode dungeon instances for %s: %w", role.RoleID, encodeErr)
 			}
 			if _, err = tx.Exec(
 				`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, role_state_json, role_physique_json, dungeon_instances_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				role.RoleID,
+				runtimeRole.RoleID,
 				playerID,
-				role.DisplayName,
-				role.Level,
-				role.Exp,
+				runtimeRole.DisplayName,
+				runtimeRole.Level,
+				runtimeRole.Exp,
 				runtimeRole.Voc,
-				role.AGI,
-				role.STR,
-				role.INT,
-				role.CON,
-				role.LCK,
-				role.MapID,
-				role.VisualRoleID,
-				role.PresetID,
+				runtimeRole.AGI,
+				runtimeRole.STR,
+				runtimeRole.INT,
+				runtimeRole.CON,
+				runtimeRole.LCK,
+				runtimeRole.MapID,
+				runtimeRole.VisualRoleID,
+				runtimeRole.PresetID,
 				runtimeRole.SourceQuery,
-				role.BattleSourceQuery,
+				runtimeRole.BattleSourceQuery,
 				appearanceJSON,
 				skillsJSON,
 				fastPanelJSON,

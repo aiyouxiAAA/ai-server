@@ -2029,17 +2029,18 @@ func TestBuildTownBootstrapUsesCapturedBaiyuanTownNPCs(t *testing.T) {
 		spriteName  string
 		x           int
 		y           int
+		questState  int
 	}
 	roles := []expectedRole{
-		{mapID: 168, handle: "4720542615647172", name: "白源镇告示栏", sourceQuery: "npc/公告牌.swf", spriteName: "gonggaopai", x: 724, y: 430},
-		{mapID: 168, handle: "4710542615621525", name: "向隐", sourceQuery: "npc/向隐.swf", spriteName: "xiangyin", x: 1170, y: 434},
-		{mapID: 168, handle: "4730542615655127", name: "通天八卦炉<ma>", sourceQuery: "npc/通天八卦炉.swf", spriteName: "bagualu", x: 1759, y: 440},
-		{mapID: 169, handle: "5040542617131880", name: "袁天纲", sourceQuery: "npc/袁天纲.swf", spriteName: "yuantiangang", x: 805, y: 400},
-		{mapID: 169, handle: "5060542617335713", name: "妖术狐狸", sourceQuery: "npc/狐狸.swf", spriteName: "huli", x: 1238, y: 450},
-		{mapID: 169, handle: "5050542617322114", name: "白叟", sourceQuery: "npc/白叟.swf", spriteName: "baisou", x: 1618, y: 468},
-		{mapID: 169, handle: "5070542617350720", name: "排行告示", sourceQuery: "npc/公告牌.swf", spriteName: "gonggaopai", x: 2208, y: 430},
-		{mapID: 170, handle: "5310542617702520", name: "游氏子", sourceQuery: "npc/游氏子.swf", spriteName: "youshizi", x: 745, y: 423},
-		{mapID: 170, handle: "5300542617580783", name: "苦虚无", sourceQuery: "npc/苦虚无.swf", spriteName: "kuxuwu", x: 1173, y: 430},
+		{mapID: 168, handle: "4720542615647172", name: "白源镇告示栏", sourceQuery: "npc/公告牌.swf", spriteName: "gonggaopai", x: 724, y: 430, questState: 0},
+		{mapID: 168, handle: "4710542615621525", name: "向隐", sourceQuery: "npc/向隐.swf", spriteName: "xiangyin", x: 1170, y: 434, questState: 2},
+		{mapID: 168, handle: "4730542615655127", name: "通天八卦炉<ma>", sourceQuery: "npc/通天八卦炉.swf", spriteName: "bagualu", x: 1759, y: 440, questState: 0},
+		{mapID: 169, handle: "5040542617131880", name: "袁天纲", sourceQuery: "npc/袁天纲.swf", spriteName: "yuantiangang", x: 805, y: 400, questState: 2},
+		{mapID: 169, handle: "5060542617335713", name: "妖术狐狸", sourceQuery: "npc/狐狸.swf", spriteName: "huli", x: 1238, y: 450, questState: 0},
+		{mapID: 169, handle: "5050542617322114", name: "白叟", sourceQuery: "npc/白叟.swf", spriteName: "baisou", x: 1618, y: 468, questState: 2},
+		{mapID: 169, handle: "5070542617350720", name: "排行告示", sourceQuery: "npc/公告牌.swf", spriteName: "gonggaopai", x: 2208, y: 430, questState: 0},
+		{mapID: 170, handle: "5310542617702520", name: "游氏子", sourceQuery: "npc/游氏子.swf", spriteName: "youshizi", x: 745, y: 423, questState: 2},
+		{mapID: 170, handle: "5300542617580783", name: "苦虚无", sourceQuery: "npc/苦虚无.swf", spriteName: "kuxuwu", x: 1173, y: 430, questState: 4},
 	}
 
 	for _, expected := range roles {
@@ -2061,7 +2062,16 @@ func TestBuildTownBootstrapUsesCapturedBaiyuanTownNPCs(t *testing.T) {
 				if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != expectedIRPath {
 					t.Fatalf("expected %s source visual %s, got %+v", expected.handle, expectedIRPath, rolePush.SourceNPCVisual)
 				}
-				return
+				for _, statePush := range snapshot.QuestStates {
+					if statePush.Handle != expected.handle {
+						continue
+					}
+					if statePush.State != expected.questState {
+						t.Fatalf("expected %s quest state %d got %d", expected.handle, expected.questState, statePush.State)
+					}
+					return
+				}
+				t.Fatalf("expected %s quest state", expected.handle)
 			}
 			t.Fatalf("expected map%d role %s", expected.mapID, expected.handle)
 		})

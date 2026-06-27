@@ -19,7 +19,7 @@ var map168SourceNPCs = []sourceNPCEntry{
 		Width:       69,
 		Height:      151,
 		SpawnFlash:  SpawnPoint{X: 1170, Y: 434},
-		QuestState:  0,
+		QuestState:  2,
 		GuildName:   "\u533b\u7597\u5e08",
 		GuildPic:    "5002",
 		Dialogue: &sourceNPCDialogueEntry{
@@ -74,7 +74,7 @@ var map169SourceNPCs = []sourceNPCEntry{
 		Width:       75,
 		Height:      164,
 		SpawnFlash:  SpawnPoint{X: 805, Y: 400},
-		QuestState:  0,
+		QuestState:  2,
 		GuildName:   "\u6280\u80fd\u5bfc\u5e08",
 		GuildPic:    "5003",
 		Dialogue: &sourceNPCDialogueEntry{
@@ -125,7 +125,7 @@ var map169SourceNPCs = []sourceNPCEntry{
 		Width:       45,
 		Height:      148,
 		SpawnFlash:  SpawnPoint{X: 1618, Y: 468},
-		QuestState:  0,
+		QuestState:  2,
 		GuildName:   "\u4ed3\u5e93\u7ba1\u7406",
 		GuildPic:    "5004",
 		Dialogue: &sourceNPCDialogueEntry{
@@ -165,7 +165,7 @@ var map170SourceNPCs = []sourceNPCEntry{
 		Width:       149,
 		Height:      172,
 		SpawnFlash:  SpawnPoint{X: 745, Y: 423},
-		QuestState:  0,
+		QuestState:  2,
 		GuildName:   "\u9053\u5177\u5546",
 		GuildPic:    "5001",
 		Dialogue: &sourceNPCDialogueEntry{
@@ -190,7 +190,7 @@ var map170SourceNPCs = []sourceNPCEntry{
 		Width:       88,
 		Height:      145,
 		SpawnFlash:  SpawnPoint{X: 1173, Y: 430},
-		QuestState:  0,
+		QuestState:  4,
 		GuildName:   "\u953b\u9020\u5e08",
 		GuildPic:    "5000",
 		Dialogue: &sourceNPCDialogueEntry{

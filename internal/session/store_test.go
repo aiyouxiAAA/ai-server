@@ -743,6 +743,11 @@ func TestStoreRoleInventoryDefaultsAndCapacity(t *testing.T) {
 		t.Fatalf("expected default bag capacity 30, got ok=%v capacity=%d", ok, capacity)
 	}
 
+	warehouseCapacity, ok := store.GetRoleContainerCapacity(login.PlayerID, createResponse.Role.RoleID, "\u4ed3\u5e93")
+	if !ok || warehouseCapacity != 40 {
+		t.Fatalf("expected default warehouse capacity 40, got ok=%v capacity=%d", ok, warehouseCapacity)
+	}
+
 	items, itemCapacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
 	if !ok || itemCapacity != 30 {
 		t.Fatalf("expected default bag item capacity 30, got ok=%v capacity=%d", ok, itemCapacity)
@@ -773,6 +778,74 @@ func TestStoreRoleInventoryRemovesOldCapturedBagSeeds(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].Name != "铁斧" || items[0].Index != 19 {
 		t.Fatalf("expected old captured bag seeds to be filtered down to starter axe, got %+v", items)
+	}
+}
+
+func TestStoreGetRolePetInfoUsesEquippedCapturedPet(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "222",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	info := store.GetRolePetInfo(login.PlayerID, createResponse.Role.RoleID)
+	if !info.Found || !info.HasPet {
+		t.Fatalf("expected equipped pet info, got %+v", info)
+	}
+	if info.Name != "炎火兽" || info.PetType != "炎火兽" || info.Level != 5 || info.Fullness != 100 {
+		t.Fatalf("expected captured fire pet level/fullness, got %+v", info)
+	}
+	if info.DisplayURL != "petmap/yhs1.swf" || !strings.Contains(info.SkillHTML, "喜好食物") {
+		t.Fatalf("expected captured pet display/skill info, got %+v", info)
+	}
+}
+
+func TestStoreFeedRolePetConsumesNutritionWaterAndRefreshesPetInfo(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "222",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	water, ok := CapturedRoleItemTemplate("宠物用营养水")
+	if !ok {
+		t.Fatal("expected captured nutrition water template")
+	}
+	water.Type = "背包"
+	water.Index = 0
+	water.Count = 2
+	store.rolesByPID[login.PlayerID][0].Items = append(store.rolesByPID[login.PlayerID][0].Items, water)
+	equipment, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
+	if !ok || len(equipment) == 0 {
+		t.Fatalf("expected default captured equipment, got ok=%v equipment=%+v", ok, equipment)
+	}
+
+	before := store.GetRolePetInfo(login.PlayerID, createResponse.Role.RoleID)
+	result := store.FeedRolePet(login.PlayerID, createResponse.Role.RoleID, "背包", 0, 1)
+	if !result.Found || !result.Fed {
+		t.Fatalf("expected pet feed success, got %+v", result)
+	}
+	if result.Level != before.Level || result.Exp != before.Exp+5 || result.Fullness != 100 {
+		t.Fatalf("expected water to add growth 5 and clamp fullness, before=%+v after=%+v", before, result.RolePetInfoResult)
+	}
+	if result.UpdatedItem == nil || result.UpdatedItem.Name != "宠物用营养水" || result.UpdatedItem.Count != 1 {
+		t.Fatalf("expected remaining nutrition water stack, got %+v", result.UpdatedItem)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag items after feed")
+	}
+	remaining, ok := findRoleItem(items, "背包", 0)
+	if !ok || remaining.Count != 1 {
+		t.Fatalf("expected persisted water count 1, ok=%v item=%+v items=%+v", ok, remaining, items)
 	}
 }
 
@@ -827,6 +900,52 @@ func TestStoreRoleInventoryPreservesCapturedFullInventoryDefaultLikeSlots(t *tes
 		if item.Name == "铁斧" {
 			t.Fatalf("expected captured full inventory without starter axe pollution, got %+v", items)
 		}
+	}
+}
+
+func TestStoreRemoveExpiredTownBuffsClearsAvoidBuff(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "town-buff-expiry",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	item, ok := CapturedRoleItemTemplate("\u004c\u907f\u602a\u7b26")
+	if !ok {
+		t.Fatal("expected captured avoid buff item template")
+	}
+	item.Type = "\u80cc\u5305"
+	item.Index = -1
+	item.Count = 1
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, item)
+	if !ok {
+		t.Fatal("expected avoid buff item grant")
+	}
+
+	useResult := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	if !useResult.Found || !useResult.Used || useResult.TownBuff == nil {
+		t.Fatalf("expected avoid buff to be applied, got %+v", useResult)
+	}
+
+	removeResult := store.RemoveExpiredRoleTownBuffs(
+		login.PlayerID,
+		createResponse.Role.RoleID,
+		useResult.TownBuff.EndTime+1,
+	)
+	if !removeResult.Found || !removeResult.Removed || len(removeResult.Buffs) != 1 {
+		t.Fatalf("expected expired town buff removal, got %+v", removeResult)
+	}
+	if removeResult.Buffs[0].Name != "\u907f\u602a" || removeResult.Buffs[0].Display != "574.png" {
+		t.Fatalf("expected expired avoid buff details, got %+v", removeResult.Buffs[0])
+	}
+
+	buffs, ok := store.GetRoleTownBuffs(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(buffs) != 0 {
+		t.Fatalf("expected expired town buff to be removed, ok=%v buffs=%+v", ok, buffs)
 	}
 }
 
@@ -1351,6 +1470,45 @@ func TestStoreEquipStarterAxeMovesBagItemToWeaponSlot(t *testing.T) {
 	}
 }
 
+func TestStoreTryEquipSupportsCapturedTreasureAndMountSlots(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "法宝试穿",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?co=5&sex=1&hr=12&e=14&m=5&",
+	})
+
+	preview := store.PreviewTryEquip(login.PlayerID, createResponse.Role.RoleID, "筋斗云")
+	if !preview.Found || !preview.Previewed || preview.Item.Name != "筋斗云" {
+		t.Fatalf("expected captured treasure TryEquip preview, got %+v", preview)
+	}
+
+	for _, spec := range []struct {
+		name          string
+		expectedIndex int
+	}{
+		{name: "筋斗云", expectedIndex: 14},
+		{name: "狰狞神骑", expectedIndex: 18},
+	} {
+		template, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			t.Fatalf("expected template for %s", spec.name)
+		}
+		granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template)
+		if !ok {
+			t.Fatalf("expected grant for %s", spec.name)
+		}
+		result := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index, 1)
+		if !result.Found || !result.Equipped || result.EquippedItem.Index != spec.expectedIndex {
+			t.Fatalf("expected %s to equip to source slot %d, got %+v", spec.name, spec.expectedIndex, result)
+		}
+	}
+}
+
 func TestStoreCapturedWoodcutter333EquipBowReplacesDaggerAndRebuildsAppearance(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "33333333", "33333333")
@@ -1571,6 +1729,56 @@ func TestStoreMoveRoleItemStacksSameNameBagItems(t *testing.T) {
 	}
 	if _, exists := itemsByIndex[1]; exists {
 		t.Fatalf("expected slot 1 to be cleared after stacking, got %+v", bagItems)
+	}
+}
+
+func TestStoreMoveRoleItemStacksSameNameWarehouseItems(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "warehouse stack test",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	template, ok := CapturedRoleItemTemplate("\u8089")
+	if !ok {
+		t.Fatal("expected captured meat template")
+	}
+	template.Type = "\u4ed3\u5e93"
+	template.Index = 0
+	template.Count = 2
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template); !ok {
+		t.Fatal("expected first warehouse meat grant to succeed")
+	}
+	template.Index = 1
+	template.Count = 3
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template); !ok {
+		t.Fatal("expected second warehouse meat grant to succeed")
+	}
+
+	result := store.MoveRoleItem(login.PlayerID, createResponse.Role.RoleID, "\u4ed3\u5e93", 1, "\u4ed3\u5e93", 0, 0)
+	if !result.Found || !result.Moved {
+		t.Fatalf("expected warehouse item stack success, got %+v", result)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Type != "\u4ed3\u5e93" || result.UpdatedItems[0].Index != 0 || result.UpdatedItems[0].Count != 5 || result.UpdatedItems[0].Name != "\u8089" {
+		t.Fatalf("expected single stacked warehouse meat push at slot 0 count 5, got %+v", result.UpdatedItems)
+	}
+	warehouseItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "\u4ed3\u5e93")
+	if !ok {
+		t.Fatal("expected warehouse list after stacking")
+	}
+	itemsByIndex := map[int]RoleItem{}
+	for _, item := range warehouseItems {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[0].Name != "\u8089" || itemsByIndex[0].Count != 5 {
+		t.Fatalf("expected warehouse meat count 5 at slot 0 after stacking, got %+v", itemsByIndex[0])
+	}
+	if _, exists := itemsByIndex[1]; exists {
+		t.Fatalf("expected warehouse slot 1 to be cleared after stacking, got %+v", warehouseItems)
 	}
 }
 
@@ -1836,6 +2044,54 @@ func TestPersistentStoreLoadsCapturedRolePanelOverrides(t *testing.T) {
 	}
 	if playerBase.RolePhysique == nil || playerBase.RolePhysique.AGI != 42 || playerBase.RolePhysique.STR != 83 || playerBase.RolePhysique.MaxHP != 1075 || playerBase.RolePhysique.PhyAtk != 198 || playerBase.RolePhysique.Hit != 224 {
 		t.Fatalf("expected captured role physique override, got %+v", playerBase.RolePhysique)
+	}
+}
+
+func TestPersistentStoreLoadsTownBuffs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "避怪测试",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	endTime := time.Now().Add(5 * time.Minute).UnixMilli()
+	store.mu.Lock()
+	store.rolesByPID[login.PlayerID][0].TownBuffs = []RoleTownBuff{{
+		Handle:        createResponse.Role.RoleID,
+		Name:          classicTownAvoidBuffName,
+		Display:       "574.png",
+		Description:   classicTownAvoidBuffDescription,
+		EndTime:       endTime,
+		BattleOnly:    0,
+		SourceCapture: classicTownAvoidBuffSourceCapture,
+	}}
+	if err := store.persistPlayerStateLocked(login.PlayerID); err != nil {
+		store.mu.Unlock()
+		t.Fatalf("persist town buff: %v", err)
+	}
+	store.mu.Unlock()
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	buffs, ok := reopened.GetRoleTownBuffs(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(buffs) != 1 {
+		t.Fatalf("expected persisted town buff after reopen, ok=%v buffs=%+v", ok, buffs)
+	}
+	if buffs[0].Name != classicTownAvoidBuffName || buffs[0].Display != "574.png" || buffs[0].EndTime != endTime {
+		t.Fatalf("expected persisted avoid buff, got %+v", buffs[0])
 	}
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"ai-server/internal/session"
 )
@@ -70,6 +71,17 @@ type classicTownEquipItemRequest struct {
 	Count int    `json:"count"`
 }
 
+type classicTownTryEquipRequest struct {
+	Name string `json:"name"`
+}
+
+type classicTownTryEquipPush struct {
+	SourceQuery   string `json:"sourceQuery"`
+	ItemName      string `json:"itemName,omitempty"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+	Partial       bool   `json:"partial,omitempty"`
+}
+
 type classicTownActiveItemRequest struct {
 	Type  string `json:"type"`
 	Index int    `json:"index"`
@@ -86,6 +98,10 @@ type classicTownSaleItemRequest struct {
 	Type   string `json:"type"`
 	Index  int    `json:"index"`
 	Count  int    `json:"count"`
+}
+
+type classicTownBuyBackRequest struct {
+	Index int `json:"index"`
 }
 
 type classicTownChatSendRequest struct {
@@ -130,6 +146,11 @@ type classicTownRemoveSkillRequest struct {
 	Name string `json:"name"`
 }
 
+type classicTownAbilityCountPush struct {
+	Handle string `json:"handle"`
+	Count  int    `json:"count"`
+}
+
 type classicTownSkillCapPush struct {
 	Count int `json:"count"`
 }
@@ -146,8 +167,34 @@ type classicTownSetFastPanelRequest struct {
 	Name  string `json:"name"`
 }
 
+type classicTownRemoveFastPanelRequest struct {
+	Index int `json:"index"`
+}
+
 type classicTownFastPanelPush struct {
 	Entries []classicTownFastPanelEntry `json:"entries"`
+}
+
+type classicTownBuffInfoPush struct {
+	Handle        string `json:"handle"`
+	Name          string `json:"name"`
+	Display       string `json:"display"`
+	Description   string `json:"description"`
+	BattleOnly    int    `json:"battleOnly"`
+	EndTime       int64  `json:"endTime"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+	Partial       bool   `json:"partial,omitempty"`
+}
+
+type classicTownClearBuffInfoPush struct {
+	Handle        string `json:"handle"`
+	Name          string `json:"name"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+	Partial       bool   `json:"partial,omitempty"`
+}
+
+type classicTownRemoveBuffRequest struct {
+	Name string `json:"name"`
 }
 
 type classicTownCurrencyPush struct {
@@ -190,6 +237,21 @@ type classicTownItemInfoClearPush struct {
 	Handle string `json:"handle"`
 	Type   string `json:"type"`
 	Index  int    `json:"index"`
+}
+
+type classicTownBuyBackRefreshPush struct {
+	SourceCapture string `json:"sourceCapture,omitempty"`
+	Partial       bool   `json:"partial,omitempty"`
+}
+
+type classicTownBuyBackInfoPush struct {
+	Handle          string                    `json:"handle"`
+	Type            string                    `json:"type"`
+	Index           int                       `json:"index"`
+	Item            classicTownItemInfoPush   `json:"item"`
+	EquivalentInfos []classicTownItemInfoPush `json:"equivalentInfos"`
+	SourceCapture   string                    `json:"sourceCapture,omitempty"`
+	Partial         bool                      `json:"partial,omitempty"`
 }
 
 type classicTownSkillShopPush struct {
@@ -270,6 +332,19 @@ func buildClassicTownSetFastPanelResult(store *session.Store, socketSession *pac
 	return classicTownFastPanelPacketResult(entries)
 }
 
+func buildClassicTownRemoveFastPanelResult(store *session.Store, socketSession *packetSession, request classicTownRemoveFastPanelRequest) packetResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return packetResult{handled: true}
+	}
+
+	entries, ok := store.RemoveRoleFastPanelEntry(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Index)
+	if !ok {
+		return packetResult{handled: true}
+	}
+
+	return classicTownFastPanelPacketResult(entries)
+}
+
 func classicTownFastPanelPacketResult(entries []session.RoleFastPanelEntry) packetResult {
 	pushEntries := make([]classicTownFastPanelEntry, 0, len(entries))
 	for _, entry := range entries {
@@ -285,6 +360,199 @@ func classicTownFastPanelPacketResult(entries []session.RoleFastPanelEntry) pack
 		},
 		handled: true,
 	}
+}
+
+func buildClassicTownBuffListResult(store *session.Store, socketSession *packetSession) packetResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return packetResult{handled: true}
+	}
+
+	buffs, ok := store.GetRoleTownBuffs(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
+	if !ok {
+		return packetResult{handled: true}
+	}
+
+	result := packetResult{
+		townBuffs: make([]classicTownBuffInfoPush, 0, len(buffs)),
+		handled:   true,
+	}
+	for _, buff := range buffs {
+		result.townBuffs = append(result.townBuffs, classicTownBuffInfoPushFromRoleTownBuff(buff))
+	}
+	return result
+}
+
+func buildClassicTownRemoveBuffResult(store *session.Store, socketSession *packetSession, request classicTownRemoveBuffRequest) packetResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return packetResult{handled: true}
+	}
+
+	removeResult := store.RemoveRoleTownBuff(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Name)
+	if !removeResult.Found {
+		return packetResult{handled: true}
+	}
+
+	socketSession.selectedRole = &removeResult.Role
+	socketSession.playerBase = &removeResult.PlayerBase
+	name := strings.TrimSpace(request.Name)
+	if removeResult.Buff.Name != "" {
+		name = removeResult.Buff.Name
+	}
+	return packetResult{
+		townBuffClears: []classicTownClearBuffInfoPush{{
+			Handle:        removeResult.Role.RoleID,
+			Name:          name,
+			SourceCapture: removeResult.Buff.SourceCapture,
+			Partial:       removeResult.Buff.Partial,
+		}},
+		handled: true,
+	}
+}
+
+func buildClassicTownRemoveABateBuffResult(store *session.Store, socketSession *packetSession) packetResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return packetResult{handled: true}
+	}
+
+	removeResult := store.RemoveExpiredRoleTownBuffs(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, time.Now().UnixMilli())
+	if !removeResult.Found {
+		return packetResult{handled: true}
+	}
+
+	socketSession.selectedRole = &removeResult.Role
+	socketSession.playerBase = &removeResult.PlayerBase
+	clears := make([]classicTownClearBuffInfoPush, 0, len(removeResult.Buffs))
+	for _, buff := range removeResult.Buffs {
+		clears = append(clears, classicTownClearBuffInfoPush{
+			Handle:        removeResult.Role.RoleID,
+			Name:          buff.Name,
+			SourceCapture: buff.SourceCapture,
+			Partial:       buff.Partial,
+		})
+	}
+	return packetResult{
+		townBuffClears: clears,
+		handled:        true,
+	}
+}
+
+type classicTownSourceBuyBackEntry struct {
+	Index         int
+	Name          string
+	ItemType      string
+	Display       string
+	Description   string
+	Count         int
+	ItemLevel     int
+	Price         int
+	SourceCapture string
+}
+
+const classicTownBuyBackRefreshSourceCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_215548_514_conn_0005/raw/server-to-client-0001.bin#5717"
+
+const classicTownBuyBackCopperDescription = "f_i_铜钱^ffffff&24@材料 消耗品&25@1000&19@1000枚时双击可兑换为银元宝.&20@游戏中的货币&0;用于流通买卖.&27@sitem_tq&103@0&104@0&105@&107@&108@0"
+
+var classicTownSourceBuyBackEntries = []classicTownSourceBuyBackEntry{
+	{
+		Index:         0,
+		Name:          "藤条",
+		ItemType:      "null",
+		Display:       "90.png",
+		Description:   "f_i_藤条&24@材料&25@99&20@密实坚固又轻巧坚韧的天然材料&0;具有不怕挤&0;不怕压&0;柔韧有弹性的特性.&103@0&104@0&105@&107@&108@31",
+		Count:         5,
+		ItemLevel:     1,
+		Price:         155,
+		SourceCapture: "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_215548_514_conn_0005/raw/server-to-client-0001.bin#2250",
+	},
+	{
+		Index:         1,
+		Name:          "花瓣",
+		ItemType:      "null",
+		Display:       "89.png",
+		Description:   "f_i_花瓣&24@材料&25@99&20@花瓣具有显著的斑纹&0;或有蜜腺可以分泌蜜汁&0;产生含糖的花蜜&0;吸引昆虫.&103@0&104@0&105@&107@&108@33",
+		Count:         6,
+		ItemLevel:     1,
+		Price:         198,
+		SourceCapture: "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_215548_514_conn_0005/raw/server-to-client-0001.bin#2254",
+	},
+}
+
+func classicTownBuyBackInfoPushes(handle string, taken map[int]bool) []classicTownBuyBackInfoPush {
+	result := make([]classicTownBuyBackInfoPush, 0, len(classicTownSourceBuyBackEntries))
+	for _, entry := range classicTownSourceBuyBackEntries {
+		if taken != nil && taken[entry.Index] {
+			continue
+		}
+		result = append(result, classicTownBuyBackInfoPushFromSourceEntry(handle, entry))
+	}
+	return result
+}
+
+func classicTownBuyBackInfoPushFromSourceEntry(handle string, entry classicTownSourceBuyBackEntry) classicTownBuyBackInfoPush {
+	return classicTownBuyBackInfoPush{
+		Handle: handle,
+		Type:   "",
+		Index:  entry.Index,
+		Item: classicTownItemInfoPush{
+			Handle:      handle,
+			Type:        "",
+			Name:        entry.Name,
+			ItemType:    entry.ItemType,
+			Display:     entry.Display,
+			Description: entry.Description,
+			Count:       entry.Count,
+			Index:       entry.Index,
+			Level:       0,
+			EndTime:     0,
+			Owner:       "",
+			ItemLevel:   entry.ItemLevel,
+		},
+		EquivalentInfos: []classicTownItemInfoPush{{
+			Handle:      handle,
+			Type:        "",
+			Name:        "铜钱",
+			ItemType:    "own",
+			Display:     "163.png",
+			Description: classicTownBuyBackCopperDescription,
+			Count:       entry.Price,
+			Index:       entry.Index,
+			Level:       0,
+			EndTime:     0,
+			Owner:       "",
+			ItemLevel:   1,
+		}},
+		SourceCapture: entry.SourceCapture,
+		Partial:       true,
+	}
+}
+
+func findClassicTownSourceBuyBackEntry(index int) (classicTownSourceBuyBackEntry, bool) {
+	for _, entry := range classicTownSourceBuyBackEntries {
+		if entry.Index == index {
+			return entry, true
+		}
+	}
+	return classicTownSourceBuyBackEntry{}, false
+}
+
+func classicTownSourceBuyBackEntryToRoleItem(entry classicTownSourceBuyBackEntry) session.RoleItem {
+	return session.RoleItem{
+		Type:        "背包",
+		Name:        entry.Name,
+		ItemType:    entry.ItemType,
+		Display:     entry.Display,
+		Description: entry.Description,
+		Count:       entry.Count,
+		Index:       -1,
+		ItemLevel:   entry.ItemLevel,
+	}
+}
+
+func classicTownSourceBuyBackRequirements(entry classicTownSourceBuyBackEntry) []session.RoleItemRequirement {
+	return []session.RoleItemRequirement{{
+		Name:  "铜钱",
+		Count: entry.Price,
+	}}
 }
 
 var sourceSkillTeacherShops = map[string]classicTownSkillShopPush{
@@ -733,6 +1001,19 @@ func classicTownItemInfoPushFromRoleItem(item session.RoleItem) classicTownItemI
 		EndTime:     item.EndTime,
 		Owner:       item.Owner,
 		ItemLevel:   item.ItemLevel,
+	}
+}
+
+func classicTownBuffInfoPushFromRoleTownBuff(buff session.RoleTownBuff) classicTownBuffInfoPush {
+	return classicTownBuffInfoPush{
+		Handle:        buff.Handle,
+		Name:          buff.Name,
+		Display:       buff.Display,
+		Description:   buff.Description,
+		BattleOnly:    buff.BattleOnly,
+		EndTime:       buff.EndTime,
+		SourceCapture: buff.SourceCapture,
+		Partial:       buff.Partial,
 	}
 }
 

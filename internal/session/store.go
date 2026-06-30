@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,14 +18,20 @@ import (
 )
 
 const (
-	defaultRoleVoc  = "新手"
-	defaultSkillCap = 12
-	defaultBagCap   = 30
-	bagCapacityStep = 6
-	defaultEquipCap = 20
-	defaultMallCap  = 30
-	defaultCopper   = 5000
-	defaultSilver   = 1
+	defaultRoleVoc         = "新手"
+	defaultSkillCap        = 12
+	defaultBagCap          = 30
+	bagCapacityStep        = 6
+	defaultEquipCap        = 20
+	defaultMallCap         = 30
+	defaultWarehouseCap    = 40
+	defaultCopper          = 5000
+	defaultSilver          = 1
+	defaultPetFullness     = 100
+	defaultPetID           = "-1"
+	rolePetEquipIndex      = 9
+	roleTreasureEquipIndex = 14
+	roleMountEquipIndex    = 18
 
 	DungeonInstanceShuiliandong  = "shuiliandong"
 	DungeonInstanceHuangfengzhai = "huangfengzhai"
@@ -33,6 +40,24 @@ const (
 )
 
 const dungeonInstanceTTL = time.Hour
+const roleTownAvoidBuffDuration = 5 * time.Minute
+
+const (
+	classicTownAvoidBuffName          = "\u907f\u602a"
+	classicTownAvoidBuffItemName      = "\u907f\u602a\u7b26"
+	classicTownAvoidBuffLocalItemName = "\u004c\u907f\u602a\u7b26"
+	classicTownAvoidBuffDescription   = "\u70b9\u51fb\u53d6\u6d88\u8be5\u72b6\u6001\uff1b5\u5206\u949f\u5185\u4e0d\u4f1a\u9047\u654c\uff1b\u660e\u602a\u65e0\u6548\u3002"
+	classicTownAvoidBuffSourceCapture = "woc-proxy-captures/20260612_211741_424_session_38832/connections/20260612_211756_199_conn_0002/raw/client-to-server-0001.bin#packetIndex=1433 RemoveBuff"
+	classicTownRemoveAbateBuffCapture = "instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260607_013640_125_conn_0011/raw/client-to-server-0001.bin#packetIndex=368 RemoveABateBuff"
+)
+
+var classicPetLevelToExp = []int{
+	0, 200, 500, 900, 1400, 2100, 3000, 4100, 5400, 6900,
+	8700, 10800, 13200, 15900, 19000, 22500, 26500, 31000, 36100, 41800,
+	48200, 55300, 63200, 72000, 81800, 92700, 104800, 118200, 133000, 149400,
+	167500, 187500, 209600, 234000, 261000, 290800, 323700, 360000, 400000, 444100,
+	492700, 546300, 605400, 670500, 742200, 821200, 908200, 1004000, 1109500, 1225700,
+}
 
 func DungeonInstanceTTLSeconds() int64 {
 	return int64(dungeonInstanceTTL / time.Second)
@@ -65,18 +90,37 @@ type RoleFastPanelEntry struct {
 }
 
 type RoleItem struct {
-	Handle      string `json:"handle,omitempty"`
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	ItemType    string `json:"itemType"`
-	Display     string `json:"display"`
-	Description string `json:"description"`
-	Count       int    `json:"count"`
-	Index       int    `json:"index"`
-	Level       int    `json:"level"`
-	EndTime     int    `json:"endTime"`
-	Owner       string `json:"owner"`
-	ItemLevel   int    `json:"itemLevel"`
+	Handle      string            `json:"handle,omitempty"`
+	Type        string            `json:"type"`
+	Name        string            `json:"name"`
+	ItemType    string            `json:"itemType"`
+	Display     string            `json:"display"`
+	Description string            `json:"description"`
+	Count       int               `json:"count"`
+	Index       int               `json:"index"`
+	Level       int               `json:"level"`
+	EndTime     int               `json:"endTime"`
+	Owner       string            `json:"owner"`
+	ItemLevel   int               `json:"itemLevel"`
+	PetState    *RolePetItemState `json:"petState,omitempty"`
+}
+
+type RolePetItemState struct {
+	Level    int    `json:"level"`
+	Exp      int    `json:"exp"`
+	Fullness int    `json:"fullness"`
+	PetID    string `json:"petId,omitempty"`
+}
+
+type RoleTownBuff struct {
+	Handle        string `json:"handle"`
+	Name          string `json:"name"`
+	Display       string `json:"display"`
+	Description   string `json:"description"`
+	BattleOnly    int    `json:"battleOnly"`
+	EndTime       int64  `json:"endTime"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+	Partial       bool   `json:"partial,omitempty"`
 }
 
 type LoginRequest struct {
@@ -114,6 +158,7 @@ type RoleSummary struct {
 	Appearance        RoleAppearance                  `json:"appearance,omitempty"`
 	Skills            []RoleSkill                     `json:"skills,omitempty"`
 	FastPanel         []RoleFastPanelEntry            `json:"fastPanel,omitempty"`
+	TownBuffs         []RoleTownBuff                  `json:"townBuffs,omitempty"`
 	Currencies        RoleCurrencies                  `json:"currencies,omitempty"`
 	Items             []RoleItem                      `json:"items,omitempty"`
 	RoleState         *RoleState                      `json:"-"`
@@ -323,6 +368,17 @@ type RoleEquipItemResult struct {
 	ErrorMessage string
 }
 
+type RoleTryEquipPreviewResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	Item         RoleItem
+	SourceQuery  string
+	Found        bool
+	Previewed    bool
+	ErrorCode    string
+	ErrorMessage string
+}
+
 type RoleMoveItemResult struct {
 	Role         RoleSummary
 	PlayerBase   PlayerBaseData
@@ -350,6 +406,7 @@ type RoleUseItemResult struct {
 	PlayerBase       PlayerBaseData
 	Item             RoleItem
 	LearnedSkill     *RoleSkill
+	TownBuff         *RoleTownBuff
 	UpdatedItem      *RoleItem
 	UpdatedItems     []RoleItem
 	ClearedItems     []RoleItemClear
@@ -360,6 +417,51 @@ type RoleUseItemResult struct {
 	RoleStateChanged bool
 	ErrorCode        string
 	ErrorMessage     string
+}
+
+type RoleTownBuffRemoveResult struct {
+	Role       RoleSummary
+	PlayerBase PlayerBaseData
+	Buff       RoleTownBuff
+	Found      bool
+	Removed    bool
+}
+
+type RoleTownBuffsRemoveResult struct {
+	Role       RoleSummary
+	PlayerBase PlayerBaseData
+	Buffs      []RoleTownBuff
+	Found      bool
+	Removed    bool
+}
+
+type RolePetInfoResult struct {
+	Role         RoleSummary
+	PlayerBase   PlayerBaseData
+	Item         RoleItem
+	Found        bool
+	HasPet       bool
+	Level        int
+	Exp          int
+	Fullness     int
+	Name         string
+	PetType      string
+	DisplayURL   string
+	SourceX      int
+	SourceY      int
+	SkillHTML    string
+	PetID        string
+	Status       string
+	ErrorCode    string
+	ErrorMessage string
+}
+
+type RolePetFeedResult struct {
+	RolePetInfoResult
+	FeedItem     RoleItem
+	UpdatedItem  *RoleItem
+	ClearedItems []RoleItemClear
+	Fed          bool
 }
 
 type RoleTownHealResult struct {
@@ -935,6 +1037,120 @@ func (store *Store) GetRoleFastPanel(playerID string, roleID string) ([]RoleFast
 	return []RoleFastPanelEntry{}, false
 }
 
+func (store *Store) GetRoleTownBuffs(playerID string, roleID string) ([]RoleTownBuff, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		filtered, changed := filterActiveRoleTownBuffs(roles[index].TownBuffs, time.Now().UnixMilli())
+		if changed {
+			roles[index].TownBuffs = filtered
+			store.rolesByPID[playerID] = roles
+			if err := store.persistPlayerStateLocked(playerID); err != nil {
+				log.Printf("[session.Store] persist pruned town buffs failed: %v", err)
+			}
+		}
+		return cloneRoleTownBuffs(filtered), true
+	}
+
+	return []RoleTownBuff{}, false
+}
+
+func (store *Store) RemoveRoleTownBuff(playerID string, roleID string, name string) RoleTownBuffRemoveResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	name = strings.TrimSpace(name)
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		activeBuffs, _ := filterActiveRoleTownBuffs(roles[index].TownBuffs, time.Now().UnixMilli())
+		updated := make([]RoleTownBuff, 0, len(activeBuffs))
+		var removed RoleTownBuff
+		for _, buff := range activeBuffs {
+			if buff.Name == name && removed.Name == "" {
+				removed = buff
+				continue
+			}
+			updated = append(updated, buff)
+		}
+		roles[index].TownBuffs = normalizeRoleTownBuffs(updated)
+		store.rolesByPID[playerID] = roles
+		if removed.Name != "" {
+			if err := store.persistPlayerStateLocked(playerID); err != nil {
+				log.Printf("[session.Store] persist removed town buff failed: %v", err)
+			}
+		}
+		role := withRoleRuntimeDefaults(roles[index])
+		return RoleTownBuffRemoveResult{
+			Role:       role,
+			PlayerBase: playerBaseDataFromRole(playerID, role),
+			Buff:       removed,
+			Found:      true,
+			Removed:    removed.Name != "",
+		}
+	}
+
+	return RoleTownBuffRemoveResult{Found: false}
+}
+
+func (store *Store) RemoveExpiredRoleTownBuffs(playerID string, roleID string, nowMs int64) RoleTownBuffsRemoveResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if nowMs <= 0 {
+		nowMs = time.Now().UnixMilli()
+	}
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		normalized := normalizeRoleTownBuffs(roles[index].TownBuffs)
+		updated := make([]RoleTownBuff, 0, len(normalized))
+		removed := make([]RoleTownBuff, 0, len(normalized))
+		for _, buff := range normalized {
+			if buff.EndTime > 0 && buff.EndTime <= nowMs {
+				if buff.SourceCapture == "" {
+					buff.SourceCapture = classicTownRemoveAbateBuffCapture
+				}
+				removed = append(removed, buff)
+				continue
+			}
+			updated = append(updated, buff)
+		}
+		roles[index].TownBuffs = normalizeRoleTownBuffs(updated)
+		store.rolesByPID[playerID] = roles
+		if len(removed) > 0 {
+			if err := store.persistPlayerStateLocked(playerID); err != nil {
+				log.Printf("[session.Store] persist expired town buffs failed: %v", err)
+			}
+		}
+		role := withRoleRuntimeDefaults(roles[index])
+		return RoleTownBuffsRemoveResult{
+			Role:       role,
+			PlayerBase: playerBaseDataFromRole(playerID, role),
+			Buffs:      cloneRoleTownBuffs(removed),
+			Found:      true,
+			Removed:    len(removed) > 0,
+		}
+	}
+
+	return RoleTownBuffsRemoveResult{Found: false}
+}
+
 func (store *Store) SetRoleFastPanelEntry(playerID string, roleID string, entry RoleFastPanelEntry) ([]RoleFastPanelEntry, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -977,6 +1193,43 @@ func (store *Store) SetRoleFastPanelEntry(playerID string, roleID string, entry 
 	return []RoleFastPanelEntry{}, false
 }
 
+func (store *Store) RemoveRoleFastPanelEntry(playerID string, roleID string, slotIndex int) ([]RoleFastPanelEntry, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if slotIndex < 0 || slotIndex >= defaultRoleFastPanelSlotCount {
+		return []RoleFastPanelEntry{}, false
+	}
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		updated := make([]RoleFastPanelEntry, 0, len(roles[index].FastPanel))
+		removed := false
+		for _, existing := range roles[index].FastPanel {
+			if existing.Index == slotIndex {
+				removed = true
+				continue
+			}
+			updated = append(updated, existing)
+		}
+		roles[index].FastPanel = filterRoleFastPanelEntries(normalizeRoleFastPanel(updated), roles[index].Skills)
+		store.rolesByPID[playerID] = roles
+		if removed {
+			if err := store.persistPlayerStateLocked(playerID); err != nil {
+				log.Printf("[session.Store] persist removed fast panel failed: %v", err)
+			}
+		}
+		return cloneRoleFastPanel(roles[index].FastPanel), true
+	}
+
+	return []RoleFastPanelEntry{}, false
+}
+
 func roleHasBagItemNamed(items []RoleItem, name string) bool {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -989,6 +1242,20 @@ func roleHasBagItemNamed(items []RoleItem, name string) bool {
 		}
 	}
 	return false
+}
+
+func filterActiveRoleTownBuffs(buffs []RoleTownBuff, nowMs int64) ([]RoleTownBuff, bool) {
+	normalized := normalizeRoleTownBuffs(buffs)
+	result := make([]RoleTownBuff, 0, len(normalized))
+	changed := len(normalized) != len(buffs)
+	for _, buff := range normalized {
+		if buff.EndTime > 0 && buff.EndTime <= nowMs {
+			changed = true
+			continue
+		}
+		result = append(result, buff)
+	}
+	return result, changed || len(result) != len(normalized)
 }
 
 func (store *Store) GetRoleCurrencies(playerID string, roleID string) (RoleCurrencies, bool) {
@@ -1859,6 +2126,130 @@ func (store *Store) ConsumeRoleItem(playerID string, roleID string, sourceType s
 	}
 }
 
+func (store *Store) GetRolePetInfo(playerID string, roleID string) RolePetInfoResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		role := roles[index]
+		petItem, _, ok := findEquippedRolePetItem(role.Items)
+		if !ok {
+			return RolePetInfoResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Found:        true,
+				ErrorCode:    "pet_missing",
+				ErrorMessage: "你没有装备宠物。",
+			}
+		}
+		return buildRolePetInfoResult(playerID, role, petItem)
+	}
+
+	return RolePetInfoResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) FeedRolePet(playerID string, roleID string, sourceType string, sourceIndex int, count int) RolePetFeedResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	sourceType = strings.TrimSpace(sourceType)
+	if sourceType == "" {
+		sourceType = "背包"
+	}
+	if count <= 0 {
+		count = 1
+	}
+
+	roles := store.rolesByPID[playerID]
+	for roleIndex := range roles {
+		if roles[roleIndex].RoleID != roleID {
+			continue
+		}
+
+		roles[roleIndex] = withRoleRuntimeDefaults(roles[roleIndex])
+		petItem, petItemIndex, ok := findEquippedRolePetItem(roles[roleIndex].Items)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			return RolePetFeedResult{
+				RolePetInfoResult: RolePetInfoResult{
+					Role:         role,
+					PlayerBase:   playerBaseDataFromRole(playerID, role),
+					Found:        true,
+					ErrorCode:    "pet_missing",
+					ErrorMessage: "你没有装备宠物。",
+				},
+			}
+		}
+
+		feedItem, feedItemIndex, ok := findRolePetFeedItem(roles[roleIndex].Items, sourceType, sourceIndex)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			info := buildRolePetInfoResult(playerID, role, petItem)
+			return RolePetFeedResult{
+				RolePetInfoResult: withRolePetInfoError(info, "feed_missing", "背包内没有可喂食的宠物食品。"),
+			}
+		}
+		if feedItem.Count < count {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			info := buildRolePetInfoResult(playerID, role, petItem)
+			return RolePetFeedResult{
+				RolePetInfoResult: withRolePetInfoError(info, "feed_not_enough", "宠物食品数量不足。"),
+				FeedItem:          normalizeRoleItem(feedItem),
+			}
+		}
+
+		growthGain, fullnessGain := rolePetFeedGains(feedItem)
+		petItem = applyRolePetFeedState(petItem, growthGain, fullnessGain)
+		updatedItems := cloneRoleItems(roles[roleIndex].Items)
+		updatedItems[petItemIndex] = normalizeRoleItem(petItem)
+		result := RolePetFeedResult{
+			FeedItem: normalizeRoleItem(feedItem),
+			Fed:      true,
+		}
+		if feedItem.Count > count {
+			feedItem.Count -= count
+			updatedItems[feedItemIndex] = normalizeRoleItem(feedItem)
+			updatedItem := normalizeRoleItem(feedItem)
+			result.UpdatedItem = &updatedItem
+		} else {
+			updatedItems = append(updatedItems[:feedItemIndex], updatedItems[feedItemIndex+1:]...)
+			result.ClearedItems = []RoleItemClear{{
+				Type:  feedItem.Type,
+				Index: feedItem.Index,
+			}}
+		}
+
+		roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist pet feed failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		persistedPetItem, _, _ := findEquippedRolePetItem(role.Items)
+		result.RolePetInfoResult = buildRolePetInfoResult(playerID, role, persistedPetItem)
+		return result
+	}
+
+	return RolePetFeedResult{
+		RolePetInfoResult: RolePetInfoResult{
+			Found:        false,
+			ErrorCode:    "role_missing",
+			ErrorMessage: "角色不存在。",
+		},
+	}
+}
+
 func (store *Store) SellRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, count int) RoleItemSaleResult {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -2101,6 +2492,9 @@ func (store *Store) UseRoleItem(playerID string, roleID string, sourceType strin
 		case "铜钱":
 			return store.useCurrencyExchangeItemLocked(playerID, roles, index, sourceItem, 1000, "银元宝", 1)
 		default:
+			if isAvoidMonsterBuffItem(sourceItem) {
+				return store.useAvoidMonsterBuffItemLocked(playerID, roles, index, sourceItem)
+			}
 			if skill, ok := roleSkillFromItem(sourceItem); ok {
 				return store.useSkillItemLocked(playerID, roles, index, sourceItem, skill)
 			}
@@ -2128,6 +2522,63 @@ func (store *Store) UseRoleItem(playerID string, roleID string, sourceType strin
 		ErrorCode:    "role_missing",
 		ErrorMessage: "角色不存在。",
 	}
+}
+
+func isAvoidMonsterBuffItem(item RoleItem) bool {
+	name := strings.TrimSpace(item.Name)
+	return name == classicTownAvoidBuffItemName || name == classicTownAvoidBuffLocalItemName
+}
+
+func (store *Store) useAvoidMonsterBuffItemLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+) RoleUseItemResult {
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	buff := RoleTownBuff{
+		Handle:        roles[roleIndex].RoleID,
+		Name:          classicTownAvoidBuffName,
+		Display:       strings.TrimSpace(sourceItem.Display),
+		Description:   classicTownAvoidBuffDescription,
+		BattleOnly:    0,
+		EndTime:       time.Now().Add(roleTownAvoidBuffDuration).UnixMilli(),
+		SourceCapture: classicTownAvoidBuffSourceCapture,
+		Partial:       true,
+	}
+	if buff.Display == "" {
+		buff.Display = "574.png"
+	}
+	activeBuffs, _ := filterActiveRoleTownBuffs(roles[roleIndex].TownBuffs, time.Now().UnixMilli())
+	nextBuffs := make([]RoleTownBuff, 0, len(activeBuffs)+1)
+	for _, existing := range activeBuffs {
+		if existing.Name != buff.Name {
+			nextBuffs = append(nextBuffs, existing)
+		}
+	}
+	nextBuffs = append(nextBuffs, buff)
+
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	roles[roleIndex].TownBuffs = normalizeRoleTownBuffs(nextBuffs)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used avoid buff item failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	result := RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		TownBuff:     &buff,
+		ClearedItems: clearedItems,
+		Found:        true,
+		Used:         true,
+	}
+	if updatedSource != nil {
+		result.UpdatedItems = []RoleItem{*updatedSource}
+	}
+	return result
 }
 
 func (store *Store) useSkillItemLocked(
@@ -2701,6 +3152,75 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 	}
 }
 
+func (store *Store) PreviewTryEquip(playerID string, roleID string, itemName string) RoleTryEquipPreviewResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	itemName = strings.TrimSpace(itemName)
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		sourceItem, ok := findRoleItemByName(role.Items, itemName)
+		if !ok {
+			sourceItem, ok = CapturedRoleItemTemplate(itemName)
+		}
+		if !ok {
+			return RoleTryEquipPreviewResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Found:        true,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "item missing",
+			}
+		}
+
+		sourceItem = normalizeRoleItem(sourceItem)
+		targetIndex, ok := roleEquipTargetIndex(sourceItem)
+		if !ok {
+			return RoleTryEquipPreviewResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "not_equipment",
+				ErrorMessage: "not equipment",
+			}
+		}
+
+		previewItems := make([]RoleItem, 0, len(role.Items)+1)
+		for _, item := range role.Items {
+			if item.Type == "装备" && item.Index == targetIndex {
+				continue
+			}
+			previewItems = append(previewItems, item)
+		}
+		previewItem := sourceItem
+		previewItem.Type = "装备"
+		previewItem.Index = targetIndex
+		previewItems = append(previewItems, normalizeRoleItem(previewItem))
+
+		sourceQuery := rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, previewItems)
+		return RoleTryEquipPreviewResult{
+			Role:        role,
+			PlayerBase:  playerBaseDataFromRole(playerID, role),
+			Item:        sourceItem,
+			SourceQuery: sourceQuery,
+			Found:       true,
+			Previewed:   true,
+		}
+	}
+
+	return RoleTryEquipPreviewResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "role missing",
+	}
+}
+
 func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, targetType string, targetIndex int, count int) RoleMoveItemResult {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -2756,7 +3276,7 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 		moveCount := count
 		targetItem, hasTarget := findRoleItem(roles[index].Items, targetType, targetIndex)
 		canStack := hasTarget && sourceType == targetType && strings.TrimSpace(sourceItem.Name) != "" && sourceItem.Name == targetItem.Name
-		canSplitMove := sourceType == targetType && targetType == "背包" && moveCount < sourceItem.Count && !hasTarget
+		canSplitMove := moveCount < sourceItem.Count && !hasTarget
 		updatedItems := make([]RoleItem, 0, len(roles[index].Items)+1)
 		updatedResultItems := make([]RoleItem, 0, 3)
 		for _, item := range roles[index].Items {
@@ -2978,6 +3498,8 @@ func roleContainerCapacity(containerType string) (int, bool) {
 		return defaultEquipCap, true
 	case "商城":
 		return defaultMallCap, true
+	case "\u4ed3\u5e93":
+		return defaultWarehouseCap, true
 	default:
 		return 0, false
 	}
@@ -3097,6 +3619,237 @@ func findRoleItem(items []RoleItem, itemType string, index int) (RoleItem, bool)
 		}
 	}
 	return RoleItem{}, false
+}
+
+func findRoleItemByName(items []RoleItem, name string) (RoleItem, bool) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return RoleItem{}, false
+	}
+	for _, item := range items {
+		if item.Name == name {
+			return item, true
+		}
+	}
+	return RoleItem{}, false
+}
+
+func findEquippedRolePetItem(items []RoleItem) (RoleItem, int, bool) {
+	for index, item := range items {
+		if item.Type == "装备" && item.Index == rolePetEquipIndex && isRolePetItem(item) {
+			return normalizeRoleItem(item), index, true
+		}
+	}
+	return RoleItem{}, -1, false
+}
+
+func isRolePetItem(item RoleItem) bool {
+	return strings.Contains(item.Description, "&24@宠物") || strings.Contains(item.Description, "&27@sitem_pet")
+}
+
+func buildRolePetInfoResult(playerID string, role RoleSummary, petItem RoleItem) RolePetInfoResult {
+	state := rolePetStateFromItem(petItem)
+	return RolePetInfoResult{
+		Role:       role,
+		PlayerBase: playerBaseDataFromRole(playerID, role),
+		Item:       normalizeRoleItem(petItem),
+		Found:      true,
+		HasPet:     true,
+		Level:      state.Level,
+		Exp:        state.Exp,
+		Fullness:   state.Fullness,
+		Name:       petItem.Name,
+		PetType:    petItem.Name,
+		DisplayURL: rolePetDisplayURL(petItem),
+		SourceX:    100,
+		SourceY:    100,
+		SkillHTML:  rolePetSkillHTML(petItem),
+		PetID:      state.PetID,
+		Status:     rolePetStatus(state.Fullness),
+	}
+}
+
+func withRolePetInfoError(info RolePetInfoResult, code string, message string) RolePetInfoResult {
+	info.ErrorCode = code
+	info.ErrorMessage = message
+	return info
+}
+
+func findRolePetFeedItem(items []RoleItem, sourceType string, sourceIndex int) (RoleItem, int, bool) {
+	for index, item := range items {
+		if item.Type == sourceType && item.Index == sourceIndex && isRolePetFeedItem(item) && item.Count > 0 {
+			return normalizeRoleItem(item), index, true
+		}
+	}
+
+	for _, name := range []string{"奇效宠物药剂", "宠物成长药剂", "宠物用营养水"} {
+		for index, item := range items {
+			if item.Type == "背包" && item.Name == name && isRolePetFeedItem(item) && item.Count > 0 {
+				return normalizeRoleItem(item), index, true
+			}
+		}
+	}
+
+	return RoleItem{}, -1, false
+}
+
+func isRolePetFeedItem(item RoleItem) bool {
+	switch item.Name {
+	case "奇效宠物药剂", "宠物成长药剂", "宠物用营养水":
+		return true
+	default:
+		return strings.Contains(item.Name, "宠物") && (strings.Contains(item.Description, "饱食") || strings.Contains(item.Description, "成长"))
+	}
+}
+
+func rolePetFeedGains(item RoleItem) (int, int) {
+	growth := parsePositiveNumberAfterMarker(item.Description, "成长")
+	fullness := parsePositiveNumberAfterMarker(item.Description, "饱食")
+	if item.Name == "宠物用营养水" {
+		if growth <= 0 {
+			growth = 5
+		}
+		if fullness <= 0 {
+			fullness = 10
+		}
+	}
+	if item.Name == "奇效宠物药剂" || item.Name == "宠物成长药剂" {
+		if fullness <= 0 {
+			fullness = 2
+		}
+	}
+	return growth, fullness
+}
+
+func applyRolePetFeedState(item RoleItem, growthGain int, fullnessGain int) RoleItem {
+	state := rolePetStateFromItem(item)
+	state.Exp += maxInt(0, growthGain)
+	state.Fullness = clampInt(state.Fullness+maxInt(0, fullnessGain), 0, 100)
+	state.Level = rolePetLevelForExp(state.Exp)
+	item.PetState = &state
+	return normalizeRoleItem(item)
+}
+
+func rolePetStateFromItem(item RoleItem) RolePetItemState {
+	level := parseRolePetLevel(item.Description)
+	exp := rolePetExpForLevel(level - 1)
+	fullness := defaultPetFullness
+	petID := defaultPetID
+	if item.PetState != nil {
+		if item.PetState.Level > 0 {
+			level = item.PetState.Level
+		}
+		if item.PetState.Exp >= 0 {
+			exp = item.PetState.Exp
+		}
+		fullness = clampInt(item.PetState.Fullness, 0, 100)
+		if strings.TrimSpace(item.PetState.PetID) != "" {
+			petID = strings.TrimSpace(item.PetState.PetID)
+		}
+	}
+	if level < 1 {
+		level = rolePetLevelForExp(exp)
+	}
+	return RolePetItemState{
+		Level:    level,
+		Exp:      maxInt(0, exp),
+		Fullness: fullness,
+		PetID:    petID,
+	}
+}
+
+func parseRolePetLevel(description string) int {
+	level := parsePositiveNumberAfterMarker(description, "宠物等级:")
+	if level <= 0 {
+		return 1
+	}
+	return level
+}
+
+func rolePetExpForLevel(level int) int {
+	if level <= 0 {
+		return 0
+	}
+	if level >= len(classicPetLevelToExp) {
+		return classicPetLevelToExp[len(classicPetLevelToExp)-1]
+	}
+	return classicPetLevelToExp[level]
+}
+
+func rolePetLevelForExp(exp int) int {
+	level := 1
+	for index := 1; index < len(classicPetLevelToExp); index += 1 {
+		if exp < classicPetLevelToExp[index] {
+			break
+		}
+		level = index + 1
+	}
+	return level
+}
+
+func rolePetStatus(fullness int) string {
+	if fullness <= 10 {
+		return "paralyzed"
+	}
+	return "good"
+}
+
+func rolePetDisplayURL(item RoleItem) string {
+	switch item.Name {
+	case "炎火兽":
+		return "petmap/yhs1.swf"
+	default:
+		return ""
+	}
+}
+
+func rolePetSkillHTML(item RoleItem) string {
+	description := item.Description
+	index := strings.LastIndex(description, "&19@")
+	if index < 0 {
+		return description
+	}
+	return description[index:]
+}
+
+func parsePositiveNumberAfterMarker(text string, marker string) int {
+	index := strings.Index(text, marker)
+	if index < 0 {
+		return 0
+	}
+	rest := text[index+len(marker):]
+	start := -1
+	end := -1
+	for offset, value := range rest {
+		if value >= '0' && value <= '9' {
+			if start < 0 {
+				start = offset
+			}
+			end = offset + 1
+			continue
+		}
+		if start >= 0 {
+			break
+		}
+	}
+	if start < 0 || end <= start {
+		return 0
+	}
+	value, err := strconv.Atoi(rest[start:end])
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
+func clampInt(value int, minValue int, maxValue int) int {
+	if value < minValue {
+		return minValue
+	}
+	if value > maxValue {
+		return maxValue
+	}
+	return value
 }
 
 func normalizeRoleItemRequirements(requirements []RoleItemRequirement) []RoleItemRequirement {
@@ -3268,6 +4021,12 @@ func roleEquipTargetIndex(item RoleItem) (int, bool) {
 	}
 	if strings.Contains(item.Description, "护具·足部") || strings.Contains(item.Description, "护具·脚部") {
 		return 12, true
+	}
+	if strings.Contains(item.Description, "法宝") || strings.Contains(item.Description, "宝1") || strings.Contains(item.Description, "宝2") || strings.Contains(item.Description, "宝3") || strings.Contains(item.Description, "宝4") {
+		return roleTreasureEquipIndex, true
+	}
+	if strings.Contains(item.Description, "坐骑") {
+		return roleMountEquipIndex, true
 	}
 	return 0, false
 }
@@ -3443,6 +4202,9 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "wr", "39", true
 	case "龙颜护腕":
 		return "wr", "19", true
+	}
+	if item.ItemType == "equip" && strings.TrimSpace(item.Display) == "29.png" {
+		return "w8", "5", true
 	}
 	return "", "", false
 }

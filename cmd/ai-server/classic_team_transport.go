@@ -148,6 +148,9 @@ func (hub *classicTeamConnectionHub) syncTransfer(store *session.Store, transfer
 			if err := connection.writer.writePush(cmdClassicTownDungeonInstance, encodePayload(*dungeonInstance)); err != nil {
 				log.Printf("[ai-server] write classic team sync dungeon instance failed roleId=%s: %v", member.RoleID, err)
 			}
+			if err := connection.writer.writePush(cmdClassicTownMapSpecialPush, encodePayload(*buildClassicTownMapSpecialPush(dungeonInstance))); err != nil {
+				log.Printf("[ai-server] write classic team sync map special failed roleId=%s: %v", member.RoleID, err)
+			}
 		}
 		hub.broadcast(classicTeamManager.UpsertOnline(classicTeamMemberFromSession(connection.session)))
 		// world scene:队员被服务端同步切图后,同样要迁移 scene hub——给旧图(FromMapID)
@@ -179,8 +182,12 @@ func (hub *classicTeamConnectionHub) resetDungeonInstances(store *session.Store,
 			continue
 		}
 		setDefeatedVisibleMonsterHandles(connection.session, nil)
-		if err := connection.writer.writePush(cmdClassicTownDungeonInstance, encodePayload(*inactiveDungeonInstancePush(reset.InstanceKey, reset.MapID))); err != nil {
+		inactiveDungeon := inactiveDungeonInstancePush(reset.InstanceKey, reset.MapID)
+		if err := connection.writer.writePush(cmdClassicTownDungeonInstance, encodePayload(*inactiveDungeon)); err != nil {
 			log.Printf("[ai-server] write classic team reset dungeon failed roleId=%s: %v", member.RoleID, err)
+		}
+		if err := connection.writer.writePush(cmdClassicTownMapSpecialPush, encodePayload(*buildClassicTownMapSpecialPush(inactiveDungeon))); err != nil {
+			log.Printf("[ai-server] write classic team reset map special failed roleId=%s: %v", member.RoleID, err)
 		}
 	}
 }

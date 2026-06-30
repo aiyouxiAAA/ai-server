@@ -179,6 +179,29 @@ func decodeRoleItems(raw string) ([]RoleItem, error) {
 	return result, nil
 }
 
+func encodeRoleTownBuffs(buffs []RoleTownBuff) (string, error) {
+	normalized := normalizeRoleTownBuffs(buffs)
+	if len(normalized) == 0 {
+		return "", nil
+	}
+	data, err := json.Marshal(normalized)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func decodeRoleTownBuffs(raw string) ([]RoleTownBuff, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var buffs []RoleTownBuff
+	if err := json.Unmarshal([]byte(raw), &buffs); err != nil {
+		return nil, err
+	}
+	return normalizeRoleTownBuffs(buffs), nil
+}
+
 func encodeRoleState(roleState *RoleState) (string, error) {
 	if roleState == nil {
 		return "", nil
@@ -274,6 +297,16 @@ func cloneRoleFastPanel(entries []RoleFastPanelEntry) []RoleFastPanelEntry {
 
 	result := make([]RoleFastPanelEntry, len(entries))
 	copy(result, entries)
+	return result
+}
+
+func cloneRoleTownBuffs(buffs []RoleTownBuff) []RoleTownBuff {
+	if len(buffs) == 0 {
+		return []RoleTownBuff{}
+	}
+
+	result := make([]RoleTownBuff, len(buffs))
+	copy(result, buffs)
 	return result
 }
 
@@ -439,6 +472,23 @@ func normalizeRoleItem(item RoleItem) RoleItem {
 	item.Display = strings.TrimSpace(item.Display)
 	item.Description = strings.TrimSpace(item.Description)
 	item.Owner = strings.TrimSpace(item.Owner)
+	if item.PetState != nil {
+		state := *item.PetState
+		state.PetID = strings.TrimSpace(state.PetID)
+		if state.Level < 1 {
+			state.Level = 1
+		}
+		if state.Exp < 0 {
+			state.Exp = 0
+		}
+		if state.Fullness < 0 {
+			state.Fullness = 0
+		}
+		if state.Fullness > 100 {
+			state.Fullness = 100
+		}
+		item.PetState = &state
+	}
 	item = fillMissingRoleItemTemplateFields(item)
 	if item.Count < 0 {
 		item.Count = 0
@@ -915,7 +965,11 @@ func capturedWoodcutterEquipmentItems() []RoleItem {
 func syncCapturedWoodcutterEquipmentItems(items []RoleItem) []RoleItem {
 	normalized := normalizeRoleItems(items)
 	result := make([]RoleItem, 0, len(normalized)+len(capturedWoodcutterEquipmentItems()))
+	petStates := make(map[int]RolePetItemState)
 	for _, item := range normalized {
+		if item.Type == "装备" && item.PetState != nil {
+			petStates[item.Index] = *item.PetState
+		}
 		if item.Type == "装备" {
 			continue
 		}
@@ -924,7 +978,12 @@ func syncCapturedWoodcutterEquipmentItems(items []RoleItem) []RoleItem {
 		}
 		result = append(result, item)
 	}
-	result = append(result, capturedWoodcutterEquipmentItems()...)
+	for _, item := range capturedWoodcutterEquipmentItems() {
+		if state, ok := petStates[item.Index]; ok && item.Index == 9 {
+			item.PetState = &state
+		}
+		result = append(result, item)
+	}
 	return normalizeRoleItems(result)
 }
 
@@ -1650,6 +1709,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.FastPanel = normalizeRoleFastPanel(role.FastPanel)
 	}
+	role.TownBuffs = normalizeRoleTownBuffs(role.TownBuffs)
 	if len(role.Currencies) == 0 {
 		role.Currencies = defaultRoleCurrencies()
 	} else {
@@ -1699,6 +1759,35 @@ func normalizeRoleItems(items []RoleItem) []RoleItem {
 		return result[left].Type < result[right].Type
 	})
 	return result
+}
+
+func normalizeRoleTownBuffs(buffs []RoleTownBuff) []RoleTownBuff {
+	result := make([]RoleTownBuff, 0, len(buffs))
+	for _, buff := range buffs {
+		normalized := normalizeRoleTownBuff(buff)
+		if normalized.Name != "" {
+			result = append(result, normalized)
+		}
+	}
+	sort.SliceStable(result, func(left int, right int) bool {
+		if result[left].EndTime == result[right].EndTime {
+			return result[left].Name < result[right].Name
+		}
+		return result[left].EndTime < result[right].EndTime
+	})
+	return result
+}
+
+func normalizeRoleTownBuff(buff RoleTownBuff) RoleTownBuff {
+	buff.Handle = strings.TrimSpace(buff.Handle)
+	buff.Name = strings.TrimSpace(buff.Name)
+	buff.Display = strings.TrimSpace(buff.Display)
+	buff.Description = strings.TrimSpace(buff.Description)
+	buff.SourceCapture = strings.TrimSpace(buff.SourceCapture)
+	if buff.BattleOnly < 0 {
+		buff.BattleOnly = 0
+	}
+	return buff
 }
 
 func defaultRoleItems() []RoleItem {

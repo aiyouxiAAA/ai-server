@@ -8,6 +8,37 @@ import (
 	"ai-server/internal/world"
 )
 
+const (
+	classicTownCollectionSubGameSourceCapture = "tmp/capture-timeline-feature-gap-audit.json#command=50068+c_subGame+pro:5"
+	classicTownCollectionRequestSourceCapture = "tmp/capture-timeline-feature-gap-audit.json#command=198+Collection"
+	classicTownCollectionSubGameSourcePayload = "pro:5|"
+	classicTownCollectionDurationSeconds      = 5
+)
+
+type classicTownCollectionRequest struct {
+	Handle string `json:"handle"`
+	MapID  string `json:"mapId"`
+	Score  int    `json:"score"`
+	Code   string `json:"code"`
+	Time   int64  `json:"time,omitempty"`
+}
+
+type classicTownSubGamePush struct {
+	Kind            string `json:"kind"`
+	Handle          string `json:"handle"`
+	MapID           string `json:"mapId"`
+	DurationSeconds int    `json:"durationSeconds"`
+	SourcePayload   string `json:"sourcePayload,omitempty"`
+	SourceCapture   string `json:"sourceCapture,omitempty"`
+}
+
+type classicTownCollectionCompletePush struct {
+	Handle        string `json:"handle"`
+	MapID         string `json:"mapId"`
+	Msg           string `json:"msg"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+}
+
 func buildClassicTownCollectionResult(
 	store *session.Store,
 	socketSession *packetSession,
@@ -36,9 +67,59 @@ func buildClassicTownCollectionResult(
 		}, true
 	}
 
+	return packetResult{
+		subGame: &classicTownSubGamePush{
+			Kind:            "progress",
+			Handle:          point.Handle,
+			MapID:           fmt.Sprintf("%d", point.MapID),
+			DurationSeconds: classicTownCollectionDurationSeconds,
+			SourcePayload:   classicTownCollectionSubGameSourcePayload,
+			SourceCapture:   classicTownCollectionSubGameSourceCapture,
+		},
+		handled: true,
+	}, true
+}
+
+func buildClassicTownCollectionRewardResult(
+	store *session.Store,
+	socketSession *packetSession,
+	request classicTownCollectionRequest,
+) packetResult {
+	point, ok := world.FindSourceCollectionPoint(request.Handle)
+	if !ok {
+		return packetResult{handled: true}
+	}
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil || store == nil {
+		return packetResult{handled: true}
+	}
+	if strings.TrimSpace(request.MapID) != fmt.Sprintf("%d", point.MapID) {
+		return packetResult{handled: true}
+	}
+	if socketSession.playerBase.MapID != point.MapID {
+		return packetResult{handled: true}
+	}
+	if !roleHasCollectionRequiredItem(store, socketSession, point.RequiredItemName) {
+		return packetResult{
+			answerSpeak: buildCollectionAnswerSpeak(request.Handle, "collect-missing-tool", "需要携带普通采集手套才能进行采集。"),
+			handled:     true,
+		}
+	}
+
 	rewardItem, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, buildCollectionRewardItem(point))
 	if !ok {
-		return packetResult{handled: true}, true
+		message := "背包空间不足，采集物未能放入背包。"
+		return packetResult{
+			collectionComplete: &classicTownCollectionCompletePush{
+				Handle:        point.Handle,
+				MapID:         fmt.Sprintf("%d", point.MapID),
+				Msg:           message,
+				SourceCapture: classicTownCollectionRequestSourceCapture,
+			},
+			chatMessages: []classicTownChatMessagePush{
+				classicTownSystemWarningMessage(message),
+			},
+			handled: true,
+		}
 	}
 	rewardItem.Handle = socketSession.selectedRole.RoleID
 
@@ -48,7 +129,12 @@ func buildClassicTownCollectionResult(
 	}
 
 	return packetResult{
-		answerSpeak: buildCollectionAnswerSpeak(request.Handle, "collect-success", "你获得了【"+point.RewardItemName+"】。"),
+		collectionComplete: &classicTownCollectionCompletePush{
+			Handle:        point.Handle,
+			MapID:         fmt.Sprintf("%d", point.MapID),
+			Msg:           "你获得了【" + point.RewardItemName + "】。",
+			SourceCapture: classicTownCollectionRequestSourceCapture,
+		},
 		itemInfos: []classicTownItemInfoPush{
 			classicTownItemInfoPushFromRoleItem(rewardItem),
 		},
@@ -67,7 +153,7 @@ func buildClassicTownCollectionResult(
 			State:  point.QuestState,
 		}},
 		handled: true,
-	}, true
+	}
 }
 
 func roleHasCollectionRequiredItem(store *session.Store, socketSession *packetSession, itemName string) bool {

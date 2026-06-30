@@ -2,8 +2,11 @@ package main
 
 import (
 	"log"
+	"sort"
 	"strings"
 )
+
+const classicSocialFriendSeedCapture = "tmp/capture-timeline-feature-gap-audit.json#GetFrienInfos(132)+c_friendInfo(50028):\u6050\u9f99\u6297\u72fc1|45|29|\u6218\u58eb"
 
 type classicSocialEntryBase struct {
 	RoleID   string `json:"roleId"`
@@ -37,6 +40,14 @@ type classicSocialMutateRequest struct {
 	RoleID   string `json:"roleId,omitempty"`
 	RoleName string `json:"roleName"`
 }
+
+type classicSocialTradeRequest struct {
+	Handle   string `json:"handle"`
+	RoleID   string `json:"roleId,omitempty"`
+	RoleName string `json:"roleName"`
+}
+
+const classicSocialTradeTemporarilyClosed = "交易临时关闭"
 
 func buildClassicSocialAddFriendResult(socketSession *packetSession, request classicSocialMutateRequest) packetResult {
 	if !hasSelectedSocialRole(socketSession) {
@@ -72,6 +83,28 @@ func buildClassicSocialRemoveFriendResult(socketSession *packetSession, request 
 	}
 }
 
+func buildClassicSocialGetFriendListResult(socketSession *packetSession) packetResult {
+	if !hasSelectedSocialRole(socketSession) {
+		log.Printf("[ai-server] classic social GetFrienInfos ignored without selected role")
+		return packetResult{handled: true}
+	}
+	ensureClassicSocialCapturedFriendSeed(socketSession)
+	entries := make([]classicSocialFriendEntry, 0, len(socketSession.friends))
+	for _, entry := range socketSession.friends {
+		entries = append(entries, entry)
+	}
+	sort.Slice(entries, func(left int, right int) bool {
+		if entries[left].RoleName != entries[right].RoleName {
+			return entries[left].RoleName < entries[right].RoleName
+		}
+		return entries[left].RoleID < entries[right].RoleID
+	})
+	return packetResult{
+		friendInfos: entries,
+		handled:     true,
+	}
+}
+
 func buildClassicSocialAddBlackResult(socketSession *packetSession, request classicSocialMutateRequest) packetResult {
 	if !hasSelectedSocialRole(socketSession) {
 		log.Printf("[ai-server] classic social AddBlack ignored without selected role roleName=%s", request.RoleName)
@@ -103,6 +136,56 @@ func buildClassicSocialRemoveBlackResult(socketSession *packetSession, request c
 	return packetResult{
 		blackClears: []classicSocialClearEntry{clear},
 		handled:     true,
+	}
+}
+
+func buildClassicSocialGetBlackListResult(socketSession *packetSession) packetResult {
+	if !hasSelectedSocialRole(socketSession) {
+		log.Printf("[ai-server] classic social GetBlackListInfos ignored without selected role")
+		return packetResult{handled: true}
+	}
+	entries := make([]classicSocialBlackEntry, 0, len(socketSession.blackList))
+	for _, entry := range socketSession.blackList {
+		entries = append(entries, entry)
+	}
+	sort.Slice(entries, func(left int, right int) bool {
+		if entries[left].RoleName != entries[right].RoleName {
+			return entries[left].RoleName < entries[right].RoleName
+		}
+		return entries[left].RoleID < entries[right].RoleID
+	})
+	return packetResult{
+		blackInfos: entries,
+		handled:    true,
+	}
+}
+
+func buildClassicSocialTradeRequestResult(socketSession *packetSession, request classicSocialTradeRequest) packetResult {
+	if !hasSelectedSocialRole(socketSession) {
+		log.Printf("[ai-server] classic social TradeRequest ignored without selected role handle=%s roleName=%s", request.Handle, request.RoleName)
+		return packetResult{handled: true}
+	}
+	return packetResult{
+		chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(classicSocialTradeTemporarilyClosed)},
+		handled:      true,
+	}
+}
+
+func ensureClassicSocialCapturedFriendSeed(socketSession *packetSession) {
+	if socketSession == nil || socketSession.friends != nil {
+		return
+	}
+	socketSession.friends = map[string]classicSocialFriendEntry{
+		"social-\u6050\u9f99\u6297\u72fc1": {
+			classicSocialEntryBase: classicSocialEntryBase{
+				RoleID:   "social-\u6050\u9f99\u6297\u72fc1",
+				RoleName: "\u6050\u9f99\u6297\u72fc1",
+				Level:    29,
+				MapName:  "\u5e7f\u9752\u9547_1",
+				Online:   true,
+			},
+			Relation: "friend",
+		},
 	}
 }
 

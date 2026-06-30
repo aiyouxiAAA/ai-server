@@ -17,60 +17,87 @@ import (
 )
 
 type packetResult struct {
-	responseCmd       uint64
-	responsePayload   []byte
-	townBootstrap     *world.TownBootstrapSnapshot
-	answerSpeak       *world.AnswerSpeakPush
-	createPlayer      *world.RolePush
-	roleState         *session.RoleState
-	rolePhysique      *session.RolePhysique
-	chatMessages      []classicTownChatMessagePush
-	chatBroadcasts    []classicTownChatBroadcast
-	skillCap          *classicTownSkillCapPush
-	skillInfos        []classicTownSkillInfoPush
-	skillClears       []classicTownClearSkillInfoPush
-	skillShop         *classicTownSkillShopPush
-	currencyPush      *classicTownCurrencyPush
-	fastPanel         *classicTownFastPanelPush
-	buySkillResult    *classicTownBuySkillResultPush
-	containerCap      *classicTownContainerCapacityPush
-	itemInfos         []classicTownItemInfoPush
-	itemClears        []classicTownItemInfoClearPush
-	questInfos        []classicQuestInfoPush
-	questClears       []classicQuestClearPush
-	questStates       []world.QuestStatePush
-	dungeonInstance   *classicTownDungeonInstancePush
-	friendInfos       []classicSocialFriendEntry
-	friendClears      []classicSocialClearEntry
-	blackInfos        []classicSocialBlackEntry
-	blackClears       []classicSocialClearEntry
-	enemyInfos        []classicSocialEnemyEntry
-	enemyClears       []classicSocialClearEntry
-	guildInfo         *guild.Guild
-	guildMembers      []guild.Member
-	guildAuth         *guild.Auth
-	guildNotice       *classicGuildNoticePush
-	guildResult       *classicGuildResultPush
-	guildMemberClears []classicGuildMemberClearPush
-	mallCategories    []mall.Category
-	mallSearchCount   *mall.SearchCountPush
-	mallSearchPage    *mall.SearchPagePush
-	mallCurrency      *mall.CurrencyPush
-	mallPurchase      *mall.PurchaseResult
-	teamEvents        []team.Event
-	teamSyncTransfer  *classicTeamSyncTransfer
-	teamDungeonReset  *classicTeamDungeonReset
-	teamBattleStart   *classicTeamBattleStart
-	teamBattleSync    *classicTeamBattleSync
-	battleStart       *battle.StartPush
-	battleCells       []battle.CellInfoPush
-	battleCommand     *battle.StartCommandPush
-	battleActions     []battle.ActionPush
-	battleBuffs       []battle.BuffInfoPush
-	battleClearBuffs  []battle.ClearBuffInfoPush
-	battleOver        *battle.OverPush
-	removeRoleHandles []string
-	moveRole          *world.RoleMovePush
+	responseCmd        uint64
+	responsePayload    []byte
+	serverTime         *classicTownServerTimePush
+	townBootstrap      *world.TownBootstrapSnapshot
+	answerSpeak        *world.AnswerSpeakPush
+	subGame            *classicTownSubGamePush
+	collectionComplete *classicTownCollectionCompletePush
+	openContainer      *classicTownOpenContainerPush
+	careState          *classicTownCareStatePush
+	createPlayer       *world.RolePush
+	roleState          *session.RoleState
+	rolePhysique       *session.RolePhysique
+	chatMessages       []classicTownChatMessagePush
+	chatBroadcasts     []classicTownChatBroadcast
+	abilityCount       *classicTownAbilityCountPush
+	skillCap           *classicTownSkillCapPush
+	skillInfos         []classicTownSkillInfoPush
+	skillClears        []classicTownClearSkillInfoPush
+	skillShop          *classicTownSkillShopPush
+	currencyPush       *classicTownCurrencyPush
+	fastPanel          *classicTownFastPanelPush
+	townBuffs          []classicTownBuffInfoPush
+	townBuffClears     []classicTownClearBuffInfoPush
+	buySkillResult     *classicTownBuySkillResultPush
+	buyBackRefresh     *classicTownBuyBackRefreshPush
+	buyBackInfos       []classicTownBuyBackInfoPush
+	containerCap       *classicTownContainerCapacityPush
+	itemInfos          []classicTownItemInfoPush
+	itemClears         []classicTownItemInfoClearPush
+	otherEquipment     *classicTownOtherEquipmentPush
+	tryEquip           *classicTownTryEquipPush
+	questInfos         []classicQuestInfoPush
+	questClears        []classicQuestClearPush
+	questStates        []world.QuestStatePush
+	dungeonInstance    *classicTownDungeonInstancePush
+	mapSpecial         *classicTownMapSpecialPush
+	autoBattleInfo     *classicAutoBattleInfoPush
+	friendInfos        []classicSocialFriendEntry
+	friendClears       []classicSocialClearEntry
+	blackInfos         []classicSocialBlackEntry
+	blackClears        []classicSocialClearEntry
+	enemyInfos         []classicSocialEnemyEntry
+	enemyClears        []classicSocialClearEntry
+	guildInfo          *guild.Guild
+	guildMembers       []guild.Member
+	guildAuth          *guild.Auth
+	guildNotice        *classicGuildNoticePush
+	guildResult        *classicGuildResultPush
+	guildMemberClears  []classicGuildMemberClearPush
+	mallCategories     []mall.Category
+	mallSearchCount    *mall.SearchCountPush
+	mallSearchPage     *mall.SearchPagePush
+	mallCurrency       *mall.CurrencyPush
+	mallPurchase       *mall.PurchaseResult
+	petInfo            *classicPetInfoPush
+	petFeedResult      *classicPetFeedResultPush
+	auctionOpen        *classicAuctionOpenPush
+	auctionList        *classicAuctionListPush
+	mailOpen           *classicMailOpenPush
+	mailList           *classicMailListPush
+	mailInfo           *classicMailInfoPush
+	dailyRewardInfo    *classicDailyRewardInfoPush
+	maskCodeChallenge  *classicMaskCodeChallengePush
+	maskCodeResult     *classicMaskCodeResultPush
+	teamEvents         []team.Event
+	teamSyncTransfer   *classicTeamSyncTransfer
+	teamDungeonReset   *classicTeamDungeonReset
+	teamBattleStart    *classicTeamBattleStart
+	teamBattleSync     *classicTeamBattleSync
+	battleStart        *battle.StartPush
+	battleCells        []battle.CellInfoPush
+	battleCellCount    *classicBattleCellCountPush
+	battleCommand      *battle.StartCommandPush
+	battleActions      []battle.ActionPush
+	battleBuffs        []battle.BuffInfoPush
+	battleClearBuffs   []battle.ClearBuffInfoPush
+	battleOver         *battle.OverPush
+	battleLoadProgress *classicBattleLoadProgressPush
+	battleRelive       *classicBattleRelivePush
+	removeRoleHandles  []string
+	moveRole           *world.RoleMovePush
 	// sceneTransferFromMapID 标记本次结果是由"传送/切图"触发的,值为玩家传送前的旧 mapId。
 	// main.go 收到 townBootstrap 后据此调用 announceWorldSceneTransfer:给旧图邻居推 removeRole,
 	// 在新图重新互推。首次进图(选角)不走这里,它的互推在 register 区的 syncWorldScenePresence 完成。
@@ -118,6 +145,72 @@ type classicTownDungeonInstancePush struct {
 	DefeatedVisibleMonsterHandles []string `json:"defeatedVisibleMonsterHandles,omitempty"`
 }
 
+type classicTownMapSpecialRequest struct {
+	ID    string `json:"id,omitempty"`
+	MapID string `json:"mapId,omitempty"`
+}
+
+type classicTownMapSpecialPush struct {
+	LastTime      int64    `json:"lastTime,omitempty"`
+	Entries       []string `json:"entries,omitempty"`
+	SourceCapture string   `json:"sourceCapture,omitempty"`
+}
+
+type classicTownServerTimePush struct {
+	ServerTime    int64  `json:"serverTime"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+}
+
+const classicTownServerTimeSourceCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#c_serverTime"
+const classicTownMapSpecialLastTimeSourceCapture = "tmp/capture-timeline-feature-gap-audit.json#command=50084+c_mapSpecial+lastTime"
+
+const (
+	classicBattleCellCountSourceCapture     = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#297+c_battleCellCount"
+	classicBattleLoadProgressSourceCapture  = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#300+c_battleLoadPro"
+	classicBattleLoadProgressRequestCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/client-to-server-0001.bin#159+BattleLoadPro"
+	classicBattleRoleReadyRequestCapture    = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/client-to-server-0001.bin#160+BattleRoleReady"
+	classicBattleReliveSourceCapture        = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/server-to-client-0001.bin#11601+c_doRelive"
+	classicBattleReliveRequestCapture       = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/client-to-server-0001.bin#6170+DoRelive"
+	classicBattleReliveMissingItemCapture   = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/server-to-client-0001.bin#11616+c_Error"
+	classicBattleReliveItemName             = "千年灵芝"
+	classicBattleReliveMissingItemError     = "用于复活的物品不足"
+	classicBattleReliveNeedItemMarkup       = "[i=f_i_千年灵芝^f9e000&24@特殊&25@999&19@如果放在背包里,在副本内死亡后可立即原地复活。&20@灵芝自古以来就被认为是吉祥,富贵,美好,长寿的象征,有 仙草 瑞草之称.民间传说灵芝有起死回生,长生不老之功效.&101@588.png&103@0&104@0&105@&107@&108@0]千年灵芝[/]x1"
+)
+
+type classicBattleCellCountPush struct {
+	BattleID      string `json:"battleId,omitempty"`
+	Count         int    `json:"count"`
+	PKWarning     bool   `json:"pkWarning,omitempty"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+}
+
+type classicBattleLoadProgressPush struct {
+	BattleID      string `json:"battleId,omitempty"`
+	Name          string `json:"name"`
+	Progress      int    `json:"progress"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+}
+
+type classicBattleLoadProgressRequest struct {
+	BattleID string `json:"battleId,omitempty"`
+	Progress int    `json:"progress"`
+}
+
+type classicBattleRoleReadyRequest struct {
+	BattleID string `json:"battleId,omitempty"`
+}
+
+type classicBattleRelivePush struct {
+	BattleID      string `json:"battleId,omitempty"`
+	Ltim          int64  `json:"ltim"`
+	NeedItem      string `json:"needItem"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+}
+
+type classicBattleDoReliveRequest struct {
+	BattleID string `json:"battleId,omitempty"`
+}
+
 type classicTownAddPointRequest struct {
 	Stat string `json:"stat"`
 }
@@ -147,6 +240,7 @@ type packetSession struct {
 	friends                 map[string]classicSocialFriendEntry
 	blackList               map[string]classicSocialBlackEntry
 	enemies                 map[string]classicSocialEnemyEntry
+	buyBackTaken            map[int]bool
 }
 
 func handlePacket(store *session.Store, packet protocol.Packet) packetResult {
@@ -201,7 +295,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if response.Success {
 			socketSession.selectedRole = &response.Role
 			socketSession.playerBase = &response.PlayerBase
+			result.serverTime = buildClassicTownServerTimePush(time.Now().UnixMilli())
 			result.dungeonInstance = syncDungeonInstanceState(store, socketSession, response.Role.MapID)
+			result.mapSpecial = buildClassicTownMapSpecialPush(result.dungeonInstance)
 			bootstrap := world.BuildTownBootstrap(response.Role, response.PlayerBase)
 			filterDefeatedVisibleMonsters(&bootstrap, socketSession)
 			applyAcceptedQuestStatesToBootstrap(&bootstrap, store, socketSession)
@@ -235,6 +331,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if result, ok := buildClassicTownCollectionResult(store, socketSession, request); ok {
 			return result
 		}
+		if result, ok := buildClassicAuctionOpenResult(request); ok {
+			return result
+		}
 		if destination, ok := resolveClassicTownTransportAnswer(socketSession, request.MapID, request.Handle, "goto"); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
@@ -243,6 +342,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			answerSpeak: &answerSpeak,
 			handled:     true,
 		}
+	case cmdClassicTownCollectionReq:
+		var request classicTownCollectionRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownCollectionRewardResult(store, socketSession, request)
 	case cmdClassicTownCrossRoleReq:
 		var request classicTownRoleInteractionRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -280,6 +385,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if result, ok := buildClassicTownItemShopResult(request); ok {
 			return result
 		}
+		if result, ok := buildClassicMailOpenResult(request); ok {
+			return result
+		}
+		if result, ok := buildClassicWarehouseOpenResult(socketSession, request); ok {
+			return result
+		}
 		if isClassicTownSkillTeacherRequest(request) {
 			if result, ok := buildClassicTownSkillShopResult(store, socketSession, request.Handle, request.AnswerHandle); ok {
 				return result
@@ -307,6 +418,17 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{handled: true}
 		}
 		return buildClassicTownTransferResult(store, socketSession, request.MapID, world.SpawnPoint{X: request.X, Y: request.Y})
+	case cmdClassicTownGetMapSpecialReq:
+		var request classicTownMapSpecialRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		mapID := resolveClassicTownMapSpecialMapID(socketSession, request)
+		dungeonInstance := syncDungeonInstanceState(store, socketSession, mapID)
+		return packetResult{
+			mapSpecial: buildClassicTownMapSpecialPush(dungeonInstance),
+			handled:    true,
+		}
 	case cmdClassicTownMoveRoleReq:
 		var request classicTownMoveRoleRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -315,26 +437,72 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		return buildClassicTownMoveRoleResult(socketSession, request)
 	case cmdClassicTownGetSkillListReq:
 		return buildClassicTownSkillListResult(store, socketSession)
+	case cmdClassicTownGetAbilityCountReq:
+		return buildClassicTownAbilityCountResult(store, socketSession)
+	case cmdClassicAutoBattleInfoReq:
+		var request classicAutoBattleInfoRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicAutoBattleInfoResult(socketSession, request)
+	case cmdClassicAutoBattleStartReq:
+		var request classicAutoBattleStartRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicAutoBattleStartResult(socketSession, request)
+	case cmdClassicAutoBattleStopReq:
+		var request classicAutoBattleStopRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicAutoBattleStopResult(socketSession, request)
 	case cmdClassicTownGetFastPanelReq:
 		return buildClassicTownFastPanelResult(store, socketSession)
+	case cmdClassicTownGetBuffsListReq:
+		return buildClassicTownBuffListResult(store, socketSession)
 	case cmdClassicTownSetFastPanelReq:
 		var request classicTownSetFastPanelRequest
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
 		return buildClassicTownSetFastPanelResult(store, socketSession, request)
+	case cmdClassicTownRemoveFastPanelReq:
+		var request classicTownRemoveFastPanelRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownRemoveFastPanelResult(store, socketSession, request)
 	case cmdClassicTownBuySkillReq:
 		var request classicTownBuySkillRequest
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
 		return buildClassicTownBuySkillResult(store, socketSession, request)
+	case cmdClassicTownGetBuyBackListReq:
+		return buildClassicTownBuyBackListResult(socketSession)
+	case cmdClassicTownBuyBackReq:
+		var request classicTownBuyBackRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownBuyBackResult(store, socketSession, request)
 	case cmdClassicTownRemoveSkillReq:
 		var request classicTownRemoveSkillRequest
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
 		return buildClassicTownRemoveSkillResult(store, socketSession, request)
+	case cmdClassicTownRemoveBuffReq:
+		var request classicTownRemoveBuffRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownRemoveBuffResult(store, socketSession, request)
+	case cmdClassicTownRemoveABateBuff:
+		return buildClassicTownRemoveABateBuffResult(store, socketSession)
+	case cmdClassicTownCareStateReq:
+		return buildClassicWarehouseCareStateResult(socketSession)
 	case cmdClassicTownGetCapacityReq:
 		var request classicTownContainerRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -347,6 +515,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicTownItemListResult(store, socketSession, request.Type)
+	case cmdClassicTownOtherEquipmentReq:
+		var request classicTownOtherEquipmentRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownOtherEquipmentResult(request)
 	case cmdClassicTownContainerMove:
 		var request classicTownContainerMoveRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -365,6 +539,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicTownEquipItemResult(store, socketSession, request)
+	case cmdClassicTownTryEquipReq:
+		var request classicTownTryEquipRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicTownTryEquipResult(store, socketSession, request)
 	case cmdClassicTownAddPointReq:
 		var request classicTownAddPointRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -377,6 +557,66 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicTownActiveItemResult(store, socketSession, request)
+	case cmdClassicPetInfoReq:
+		var request classicPetInfoRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicPetInfoResult(store, socketSession, request)
+	case cmdClassicPetFeedReq:
+		var request classicPetFeedRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicPetFeedResult(store, socketSession, request)
+	case cmdClassicAuctionListReq:
+		var request classicAuctionListRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicAuctionListResult(request)
+	case cmdClassicAuctionAddReq:
+		var request classicAuctionAddRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicAuctionAddResult(request)
+	case cmdClassicMailInfoReq:
+		var request classicMailInfoRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicMailInfoResult(request)
+	case cmdClassicMailSendReq:
+		var request classicMailSendRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicMailSendResult(request)
+	case cmdClassicDailyRewardInfoReq:
+		var request classicDailyRewardInfoRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicDailyRewardInfoResult(socketSession, request)
+	case cmdClassicDailyRewardClaimReq:
+		var request classicDailyRewardClaimRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicDailyRewardClaimResult(socketSession, request)
+	case cmdClassicMaskCodeRefreshReq:
+		var request classicMaskCodeRefreshRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicMaskCodeRefreshResult(request)
+	case cmdClassicMaskCodeSubmitReq:
+		var request classicMaskCodeSubmitRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicMaskCodeSubmitResult(request)
 	case cmdClassicTownDestroyItemReq:
 		var request classicTownDestroyItemRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -409,6 +649,8 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicSocialAddFriendResult(socketSession, request)
+	case cmdClassicSocialGetFriendListReq:
+		return buildClassicSocialGetFriendListResult(socketSession)
 	case cmdClassicSocialRemoveFriend:
 		var request classicSocialMutateRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -427,6 +669,14 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicSocialRemoveBlackResult(socketSession, request)
+	case cmdClassicSocialGetBlackListReq:
+		return buildClassicSocialGetBlackListResult(socketSession)
+	case cmdClassicSocialTradeReq:
+		var request classicSocialTradeRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicSocialTradeRequestResult(socketSession, request)
 	case cmdClassicGuildInfoReq:
 		return buildClassicGuildInfoResult(store, socketSession)
 	case cmdClassicGuildCreateReq:
@@ -529,6 +779,24 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicBattlePlayOverResult(store, socketSession, request)
+	case cmdClassicBattleLoadProReq:
+		var request classicBattleLoadProgressRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicBattleLoadProgressResult(socketSession, request)
+	case cmdClassicBattleRoleReadyReq:
+		var request classicBattleRoleReadyRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicBattleRoleReadyResult(socketSession, request)
+	case cmdClassicBattleDoReliveReq:
+		var request classicBattleDoReliveRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicBattleDoReliveResult(store, socketSession, request)
 	default:
 		return packetResult{}
 	}
@@ -583,6 +851,11 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 	return packetResult{
 		battleStart: &bundle.Start,
 		battleCells: bundle.Cells,
+		battleCellCount: buildClassicBattleCellCountPush(
+			bundle.Start.BattleID,
+			len(bundle.Cells),
+			false,
+		),
 		battleCommand: &battle.StartCommandPush{
 			BattleID:    bundle.StartCommand.BattleID,
 			ActorHandle: bundle.StartCommand.ActorHandle,
@@ -597,6 +870,18 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 			Members:     sharedMembers,
 		},
 		handled: true,
+	}
+}
+
+func buildClassicBattleCellCountPush(battleID string, count int, pkWarning bool) *classicBattleCellCountPush {
+	if count < 0 {
+		count = 0
+	}
+	return &classicBattleCellCountPush{
+		BattleID:      strings.TrimSpace(battleID),
+		Count:         count,
+		PKWarning:     pkWarning,
+		SourceCapture: classicBattleCellCountSourceCapture,
 	}
 }
 
@@ -659,6 +944,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		battleClearBuffs:  result.ClearBuffInfos,
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
+		battleRelive:      buildClassicBattleRelivePush(result.Over),
 		roleState:         roleState,
 		rolePhysique:      rolePhysique,
 		chatMessages:      chatMessages,
@@ -672,7 +958,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
-			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver},
+			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
 		}
 	}
 	return packet
@@ -738,7 +1024,7 @@ func findClassicBattleRequiredBagItem(store *session.Store, socketSession *packe
 	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		return session.RoleItem{}, false
 	}
-	items, _, ok := store.GetRoleItems(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "背包")
+	items, _, ok := store.GetRoleItems(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, classicTownBagContainerType)
 	if !ok {
 		return session.RoleItem{}, false
 	}
@@ -823,6 +1109,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		battleClearBuffs:  result.ClearBuffInfos,
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
+		battleRelive:      buildClassicBattleRelivePush(result.Over),
 		roleState:         roleState,
 		rolePhysique:      rolePhysique,
 		chatMessages:      chatMessages,
@@ -847,7 +1134,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
-			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver},
+			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
 		}
 	}
 	return packet
@@ -890,6 +1177,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 	packet := packetResult{
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
+		battleRelive:      buildClassicBattleRelivePush(result.Over),
 		roleState:         roleState,
 		rolePhysique:      rolePhysique,
 		chatMessages:      chatMessages,
@@ -900,10 +1188,80 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
-			Result:      packetResult{battleCommand: packet.battleCommand, battleOver: packet.battleOver},
+			Result:      packetResult{battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
 		}
 	}
 	return packet
+}
+
+func buildClassicBattleRelivePush(over *battle.OverPush) *classicBattleRelivePush {
+	if over == nil || over.Result.Winner != battle.CampEnemy || over.Result.Escaped {
+		return nil
+	}
+	return &classicBattleRelivePush{
+		BattleID:      over.BattleID,
+		Ltim:          time.Now().Add(time.Minute).UnixMilli(),
+		NeedItem:      classicBattleReliveNeedItemMarkup,
+		SourceCapture: classicBattleReliveSourceCapture,
+	}
+}
+
+func buildClassicBattleLoadProgressResult(socketSession *packetSession, request classicBattleLoadProgressRequest) packetResult {
+	return packetResult{
+		battleLoadProgress: buildClassicBattleLoadProgressPush(socketSession, request.BattleID, request.Progress, classicBattleLoadProgressRequestCapture),
+		handled:            true,
+	}
+}
+
+func buildClassicBattleRoleReadyResult(socketSession *packetSession, request classicBattleRoleReadyRequest) packetResult {
+	return packetResult{
+		battleLoadProgress: buildClassicBattleLoadProgressPush(socketSession, request.BattleID, 100, classicBattleRoleReadyRequestCapture),
+		handled:            true,
+	}
+}
+
+func buildClassicBattleLoadProgressPush(socketSession *packetSession, battleID string, progress int, sourceCapture string) *classicBattleLoadProgressPush {
+	name := "battleLoad"
+	if socketSession != nil && socketSession.selectedRole != nil {
+		if displayName := strings.TrimSpace(socketSession.selectedRole.DisplayName); displayName != "" {
+			name = displayName
+		}
+	}
+	if sourceCapture == "" {
+		sourceCapture = classicBattleLoadProgressSourceCapture
+	}
+	return &classicBattleLoadProgressPush{
+		BattleID:      strings.TrimSpace(battleID),
+		Name:          name,
+		Progress:      clampClassicBattleLoadProgress(progress),
+		SourceCapture: sourceCapture,
+	}
+}
+
+func clampClassicBattleLoadProgress(progress int) int {
+	if progress < 0 {
+		return 0
+	}
+	if progress > 100 {
+		return 100
+	}
+	return progress
+}
+
+func buildClassicBattleDoReliveResult(store *session.Store, socketSession *packetSession, request classicBattleDoReliveRequest) packetResult {
+	result := packetResult{handled: true}
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic battle DoRelive ignored without selected role battleId=%s sourceCapture=%s", request.BattleID, classicBattleReliveRequestCapture)
+		return result
+	}
+	if _, ok := findClassicBattleRequiredBagItem(store, socketSession, classicBattleReliveItemName); !ok {
+		log.Printf("[ai-server] classic battle DoRelive rejected missing item roleId=%s battleId=%s item=%s sourceCapture=%s", socketSession.selectedRole.RoleID, request.BattleID, classicBattleReliveItemName, classicBattleReliveMissingItemCapture)
+		result.chatMessages = []classicTownChatMessagePush{classicTownSystemWarningMessage(classicBattleReliveMissingItemError)}
+		return result
+	}
+
+	log.Printf("[ai-server] classic battle DoRelive success branch blocked pending capture evidence roleId=%s battleId=%s item=%s", socketSession.selectedRole.RoleID, request.BattleID, classicBattleReliveItemName)
+	return result
 }
 
 func classicBattleOverChatMessages(socketSession *packetSession, over *battle.OverPush) []classicTownChatMessagePush {
@@ -1283,6 +1641,25 @@ func buildClassicTownItemListResult(store *session.Store, socketSession *packetS
 	return result
 }
 
+func isClassicTownIndexedContainerMoveSupported(sourceType string, targetType string) bool {
+	if sourceType == classicTownBagContainerType && targetType == classicTownBagContainerType {
+		return true
+	}
+	if sourceType == classicTownBagContainerType && targetType == classicWarehouseContainerType {
+		return true
+	}
+	if sourceType == "商城" && (targetType == classicTownBagContainerType || targetType == "商城") {
+		return true
+	}
+	if sourceType == classicWarehouseContainerType && targetType == classicTownBagContainerType {
+		return true
+	}
+	if sourceType == classicWarehouseContainerType && targetType == classicWarehouseContainerType {
+		return true
+	}
+	return false
+}
+
 func buildClassicTownContainerMoveResult(store *session.Store, socketSession *packetSession, request classicTownContainerMoveRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		log.Printf("[ai-server] classic town ContainerMove ignored without selected role source=%s target=%s", request.SourceType, request.TargetType)
@@ -1356,7 +1733,7 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 			handled:      true,
 		}
 	}
-	if sourceType == "背包" && targetType == "背包" && request.SourceIndex != nil && request.TargetIndex != nil {
+	if request.SourceIndex != nil && request.TargetIndex != nil && isClassicTownIndexedContainerMoveSupported(sourceType, targetType) {
 		moveCount := 0
 		if request.Count != nil {
 			moveCount = *request.Count
@@ -1371,7 +1748,7 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 			moveCount,
 		)
 		if !moveResult.Found || !moveResult.Moved {
-			log.Printf("[ai-server] classic town ContainerMove bag noop roleId=%s source=%s[%v] target=%s[%v] error=%s", socketSession.selectedRole.RoleID, sourceType, request.SourceIndex, targetType, request.TargetIndex, moveResult.ErrorCode)
+			log.Printf("[ai-server] classic town ContainerMove item noop roleId=%s source=%s[%v] target=%s[%v] error=%s", socketSession.selectedRole.RoleID, sourceType, request.SourceIndex, targetType, request.TargetIndex, moveResult.ErrorCode)
 			return packetResult{handled: true}
 		}
 		result := packetResult{
@@ -1685,6 +2062,36 @@ func buildClassicTownEquipItemResult(store *session.Store, socketSession *packet
 	return result
 }
 
+func buildClassicTownTryEquipResult(store *session.Store, socketSession *packetSession, request classicTownTryEquipRequest) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic town TryEquip ignored without selected role item=%s", request.Name)
+		return packetResult{handled: true}
+	}
+
+	previewResult := store.PreviewTryEquip(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		request.Name,
+	)
+	if !previewResult.Found {
+		log.Printf("[ai-server] classic town TryEquip ignored missing role roleId=%s item=%s", socketSession.selectedRole.RoleID, request.Name)
+		return packetResult{handled: true}
+	}
+	if !previewResult.Previewed {
+		log.Printf("[ai-server] classic town TryEquip rejected roleId=%s item=%s error=%s", socketSession.selectedRole.RoleID, request.Name, previewResult.ErrorCode)
+		return packetResult{handled: true}
+	}
+
+	return packetResult{
+		tryEquip: &classicTownTryEquipPush{
+			SourceQuery:   previewResult.SourceQuery,
+			ItemName:      previewResult.Item.Name,
+			SourceCapture: "TryEquip(231)->c_tryEquip(50092)",
+		},
+		handled: true,
+	}
+}
+
 func buildClassicTownActiveItemResult(store *session.Store, socketSession *packetSession, request classicTownActiveItemRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		log.Printf("[ai-server] classic town ActiveItem ignored without selected role type=%s index=%d", request.Type, request.Index)
@@ -1733,6 +2140,12 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(
 			"习得【"+useResult.LearnedSkill.Name+"】Lv."+strconv.Itoa(useResult.LearnedSkill.Level),
 		))
+	}
+	if useResult.TownBuff != nil {
+		result.townBuffs = []classicTownBuffInfoPush{
+			classicTownBuffInfoPushFromRoleTownBuff(*useResult.TownBuff),
+		}
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("\u4f7f\u7528\u4e86\u907f\u602a\u7b26"))
 	}
 	if useResult.Equipped {
 		result.createPlayer = buildClassicTownCreatePlayerPush(useResult.Role, useResult.PlayerBase)
@@ -1996,6 +2409,13 @@ func buildClassicTownCreatePlayerPush(role session.RoleSummary, playerBase sessi
 	return &bootstrap.CreatePlayer
 }
 
+func buildClassicTownServerTimePush(serverTime int64) *classicTownServerTimePush {
+	return &classicTownServerTimePush{
+		ServerTime:    serverTime,
+		SourceCapture: classicTownServerTimeSourceCapture,
+	}
+}
+
 func buildClassicTownAddPointResult(
 	store *session.Store,
 	socketSession *packetSession,
@@ -2018,6 +2438,27 @@ func buildClassicTownAddPointResult(
 	return packetResult{
 		rolePhysique: &result.RolePhysique,
 		handled:      true,
+	}
+}
+
+func buildClassicTownAbilityCountResult(store *session.Store, socketSession *packetSession) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic town GetAbilityCount ignored without selected role")
+		return packetResult{handled: true}
+	}
+
+	_, cap, ok := store.GetRoleSkills(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
+	if !ok {
+		log.Printf("[ai-server] classic town GetAbilityCount ignored missing role roleId=%s", socketSession.selectedRole.RoleID)
+		return packetResult{handled: true}
+	}
+
+	return packetResult{
+		abilityCount: &classicTownAbilityCountPush{
+			Handle: socketSession.selectedRole.RoleID,
+			Count:  cap,
+		},
+		handled: true,
 	}
 }
 
@@ -2235,6 +2676,109 @@ func buildClassicTownBuyItemResult(
 	return result
 }
 
+func buildClassicTownBuyBackListResult(socketSession *packetSession) packetResult {
+	if socketSession == nil || socketSession.selectedRole == nil {
+		log.Printf("[ai-server] classic town GetBuyBackList ignored without selected role")
+		return packetResult{handled: true}
+	}
+
+	return packetResult{
+		buyBackRefresh: &classicTownBuyBackRefreshPush{
+			SourceCapture: classicTownBuyBackRefreshSourceCapture,
+			Partial:       true,
+		},
+		buyBackInfos: classicTownBuyBackInfoPushes(
+			socketSession.selectedRole.RoleID,
+			socketSession.buyBackTaken,
+		),
+		handled: true,
+	}
+}
+
+func buildClassicTownBuyBackResult(
+	store *session.Store,
+	socketSession *packetSession,
+	request classicTownBuyBackRequest,
+) packetResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		log.Printf("[ai-server] classic town BuyBack ignored without selected role index=%d", request.Index)
+		return packetResult{handled: true}
+	}
+
+	entry, ok := findClassicTownSourceBuyBackEntry(request.Index)
+	if !ok || (socketSession.buyBackTaken != nil && socketSession.buyBackTaken[request.Index]) {
+		log.Printf("[ai-server] classic town BuyBack ignored missing source entry roleId=%s index=%d", socketSession.selectedRole.RoleID, request.Index)
+		return packetResult{
+			buyBackRefresh: &classicTownBuyBackRefreshPush{
+				SourceCapture: classicTownBuyBackRefreshSourceCapture,
+				Partial:       true,
+			},
+			buyBackInfos: classicTownBuyBackInfoPushes(
+				socketSession.selectedRole.RoleID,
+				socketSession.buyBackTaken,
+			),
+			handled: true,
+		}
+	}
+
+	purchase := store.PurchaseRoleItem(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		classicTownSourceBuyBackEntryToRoleItem(entry),
+		classicTownSourceBuyBackRequirements(entry),
+	)
+	if !purchase.Found {
+		log.Printf("[ai-server] classic town BuyBack ignored missing role roleId=%s index=%d", socketSession.selectedRole.RoleID, request.Index)
+		return packetResult{handled: true}
+	}
+
+	socketSession.selectedRole = &purchase.Role
+	socketSession.playerBase = &purchase.PlayerBase
+	result := packetResult{
+		currencyPush: buildClassicTownCurrencyPush(
+			purchase.Role.RoleID,
+			purchase.Currencies,
+		),
+		buyBackRefresh: &classicTownBuyBackRefreshPush{
+			SourceCapture: classicTownBuyBackRefreshSourceCapture,
+			Partial:       true,
+		},
+		itemInfos:  make([]classicTownItemInfoPush, 0, 1+len(purchase.Consumed)),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(purchase.ClearedItems)),
+		handled:    true,
+	}
+	if purchase.Purchased {
+		if socketSession.buyBackTaken == nil {
+			socketSession.buyBackTaken = make(map[int]bool)
+		}
+		socketSession.buyBackTaken[entry.Index] = true
+		grantedItem := purchase.Item
+		grantedItem.Handle = purchase.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(grantedItem))
+		for _, consumedItem := range purchase.Consumed {
+			consumedItem.Handle = purchase.Role.RoleID
+			result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(consumedItem))
+		}
+		for _, clear := range purchase.ClearedItems {
+			result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+				Handle: purchase.Role.RoleID,
+				Type:   clear.Type,
+				Index:  clear.Index,
+			})
+		}
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("回购了【"+entry.Name+"】x"+strconv.Itoa(entry.Count)+"。"))
+		log.Printf("[ai-server] classic town BuyBack purchased roleId=%s index=%d item=%s count=%d price=%d", purchase.Role.RoleID, entry.Index, entry.Name, entry.Count, entry.Price)
+	} else {
+		result.chatMessages = append(result.chatMessages, classicTownSystemWarningMessage(purchase.ErrorMessage))
+		log.Printf("[ai-server] classic town BuyBack rejected roleId=%s index=%d item=%s error=%s", purchase.Role.RoleID, request.Index, entry.Name, purchase.ErrorCode)
+	}
+	result.buyBackInfos = classicTownBuyBackInfoPushes(
+		purchase.Role.RoleID,
+		socketSession.buyBackTaken,
+	)
+	return result
+}
+
 func buildClassicTownMoveRoleResult(socketSession *packetSession, request classicTownMoveRoleRequest) packetResult {
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		return packetResult{handled: true}
@@ -2349,6 +2893,7 @@ func buildClassicTownTransferResult(
 	return packetResult{
 		townBootstrap:          &bootstrap,
 		dungeonInstance:        dungeonInstance,
+		mapSpecial:             buildClassicTownMapSpecialPush(dungeonInstance),
 		itemInfos:              entryResult.itemInfos,
 		itemClears:             entryResult.itemClears,
 		chatMessages:           entryResult.chatMessages,
@@ -2546,6 +3091,34 @@ func inactiveDungeonInstancePush(instanceKey string, mapID int) *classicTownDung
 		MapID:           strconv.Itoa(mapID),
 		Active:          false,
 		DurationSeconds: session.DungeonInstanceTTLSeconds(),
+	}
+}
+
+func resolveClassicTownMapSpecialMapID(socketSession *packetSession, request classicTownMapSpecialRequest) int {
+	if mapID, err := strconv.Atoi(strings.TrimSpace(request.MapID)); err == nil && mapID > 0 {
+		return mapID
+	}
+	if mapID, err := strconv.Atoi(strings.TrimSpace(request.ID)); err == nil && mapID > 0 {
+		return mapID
+	}
+	if socketSession != nil && socketSession.selectedRole != nil {
+		return socketSession.selectedRole.MapID
+	}
+	return 0
+}
+
+func buildClassicTownMapSpecialPush(dungeonInstance *classicTownDungeonInstancePush) *classicTownMapSpecialPush {
+	if dungeonInstance == nil || !dungeonInstance.Active || dungeonInstance.ExpiresAtUnix <= 0 {
+		return &classicTownMapSpecialPush{
+			LastTime:      0,
+			SourceCapture: classicTownMapSpecialLastTimeSourceCapture,
+		}
+	}
+	lastTime := dungeonInstance.ExpiresAtUnix * 1000
+	return &classicTownMapSpecialPush{
+		LastTime:      lastTime,
+		Entries:       []string{"lastTime:" + strconv.FormatInt(lastTime, 10)},
+		SourceCapture: classicTownMapSpecialLastTimeSourceCapture,
 	}
 }
 

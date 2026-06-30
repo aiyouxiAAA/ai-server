@@ -25,97 +25,149 @@ const (
 	cmdRoleRemoveRequest  = 1017
 	cmdRoleRemoveResponse = 1018
 
-	cmdClassicTownLoadMapPush       = 1101
-	cmdClassicTownCreatePlayerPush  = 1102
-	cmdClassicTownCreateRolePush    = 1103
-	cmdClassicTownRemoveRolePush    = 1104
-	cmdClassicTownQuestStatePush    = 1105
-	cmdClassicTownAnswerSpeakPush   = 1106
-	cmdClassicTownSkillInfoPush     = 1107
-	cmdClassicTownSkillCapPush      = 1108
-	cmdClassicTownSkillShopPush     = 1109
-	cmdClassicTownCurrencyPush      = 1110
-	cmdClassicTownTargetRoleReq     = 1111
-	cmdClassicTownActiveRoleReq     = 1112
-	cmdClassicTownAnswerReq         = 1113
-	cmdClassicTownTransferReq       = 1114
-	cmdClassicTownCrossRoleReq      = 1115
-	cmdClassicTownGetSkillListReq   = 1116
-	cmdClassicTownBuySkillReq       = 1117
-	cmdClassicTownBuySkillResult    = 1118
-	cmdClassicTownGetCapacityReq    = 1119
-	cmdClassicTownGetItemListReq    = 1120
-	cmdClassicTownCapacityPush      = 1121
-	cmdClassicTownItemInfoPush      = 1122
-	cmdClassicTownItemInfoClear     = 1123
-	cmdClassicTownEquipItemReq      = 1124
-	cmdClassicTownFastPanelPush     = 1125
-	cmdClassicTownGetFastPanelReq   = 1126
-	cmdClassicTownSetFastPanelReq   = 1180
-	cmdClassicTownGetQuestLogReq    = 1127
-	cmdClassicTownQuestInfoPush     = 1128
-	cmdClassicTownClearQuestInfo    = 1129
-	cmdClassicTownRemoveQuestReq    = 1130
-	cmdClassicTownRoleStatePush     = 1131
-	cmdClassicTownRolePhysiquePush  = 1132
-	cmdClassicTownContainerMove     = 1133
-	cmdClassicTownAddPointReq       = 1134
-	cmdClassicTownActiveItemReq     = 1135
-	cmdClassicTownClearSkillInfo    = 1136
-	cmdClassicTownRemoveSkillReq    = 1137
-	cmdClassicTownChatMessagePush   = 1138
-	cmdClassicTownChatSendReq       = 1139
-	cmdClassicTownDestroyItemReq    = 1181
-	cmdClassicTownSaleItemReq       = 1182
-	cmdClassicTownMoveRoleReq       = 1184
-	cmdClassicTownMoveRolePush      = 1185
-	cmdClassicTownFollowRolePush    = 1186
-	cmdClassicSocialFriendInfo      = 1140
-	cmdClassicSocialClearFriend     = 1141
-	cmdClassicSocialBlackListInfo   = 1142
-	cmdClassicSocialClearBlackList  = 1143
-	cmdClassicSocialEnemyInfo       = 1144
-	cmdClassicSocialClearEnemy      = 1145
-	cmdClassicSocialAddFriendReq    = 1146
-	cmdClassicSocialRemoveFriend    = 1147
-	cmdClassicSocialAddBlackReq     = 1148
-	cmdClassicSocialRemoveBlack     = 1149
-	cmdClassicGuildInfoReq          = 1150
-	cmdClassicGuildInfoPush         = 1151
-	cmdClassicGuildMemberPush       = 1152
-	cmdClassicGuildMemberClear      = 1153
-	cmdClassicGuildAuthPush         = 1154
-	cmdClassicGuildNoticePush       = 1155
-	cmdClassicGuildCreateReq        = 1156
-	cmdClassicGuildCreateResult     = 1157
-	cmdClassicGuildLeaveReq         = 1158
-	cmdClassicGuildKickReq          = 1159
-	cmdClassicGuildDismissReq       = 1160
-	cmdClassicGuildNoticeUpdateReq  = 1161
-	cmdClassicTownDungeonInstance   = 1162
-	cmdClassicTeamInviteReq         = 1163
-	cmdClassicTeamInvitePush        = 1164
-	cmdClassicTeamInviteReplyReq    = 1165
-	cmdClassicTeamLeaveReq          = 1166
-	cmdClassicTeamKickReq           = 1167
-	cmdClassicTeamTransferLeaderReq = 1168
-	cmdClassicTeamSyncChangeMapReq  = 1169
-	cmdClassicMallCategoryListReq   = 1170
-	cmdClassicMallCategoryListPush  = 1171
-	cmdClassicMallSearchCountReq    = 1172
-	cmdClassicMallSearchCountPush   = 1173
-	cmdClassicMallSearchPageReq     = 1174
-	cmdClassicMallSearchPagePush    = 1175
-	cmdClassicMallCurrencyPush      = 1176
-	cmdClassicMallPurchaseReq       = 1177
-	cmdClassicMallPurchaseResult    = 1178
-	cmdClassicMallPaymentDisabled   = 1179
-	cmdClassicTeamResetDungeonReq   = 1183
-	cmdClassicTeamMemberPush        = 1190
-	cmdClassicTeamMemberClearPush   = 1191
-	cmdClassicTeamClearPush         = 1192
-	cmdClassicTeamInfoPush          = 1193
-	cmdClassicTeamResultPush        = 1194
+	cmdClassicTownLoadMapPush        = 1101
+	cmdClassicTownCreatePlayerPush   = 1102
+	cmdClassicTownCreateRolePush     = 1103
+	cmdClassicTownRemoveRolePush     = 1104
+	cmdClassicTownQuestStatePush     = 1105
+	cmdClassicTownAnswerSpeakPush    = 1106
+	cmdClassicTownSkillInfoPush      = 1107
+	cmdClassicTownSkillCapPush       = 1108
+	cmdClassicTownSkillShopPush      = 1109
+	cmdClassicTownCurrencyPush       = 1110
+	cmdClassicTownTargetRoleReq      = 1111
+	cmdClassicTownActiveRoleReq      = 1112
+	cmdClassicTownAnswerReq          = 1113
+	cmdClassicTownTransferReq        = 1114
+	cmdClassicTownCrossRoleReq       = 1115
+	cmdClassicTownGetSkillListReq    = 1116
+	cmdClassicTownBuySkillReq        = 1117
+	cmdClassicTownBuySkillResult     = 1118
+	cmdClassicTownGetAbilityCountReq = 1231
+	cmdClassicTownAbilityCountPush   = 1232
+	cmdClassicTownGetMapSpecialReq   = 1233
+	cmdClassicTownMapSpecialPush     = 1234
+	cmdClassicAutoBattleInfoReq      = 1235
+	cmdClassicAutoBattleInfoPush     = 1236
+	cmdClassicAutoBattleStartReq     = 1237
+	cmdClassicAutoBattleStopReq      = 1238
+	cmdClassicTownCollectionReq      = 1239
+	cmdClassicTownSubGamePush        = 1240
+	cmdClassicTownCollectionComplete = 1241
+	cmdClassicTownOpenContainerPush  = 1242
+	cmdClassicTownCareStateReq       = 1243
+	cmdClassicTownCareStatePush      = 1244
+	cmdClassicTownOtherEquipmentReq  = 1245
+	cmdClassicTownOtherEquipmentPush = 1246
+	cmdClassicTownGetCapacityReq     = 1119
+	cmdClassicTownGetItemListReq     = 1120
+	cmdClassicTownCapacityPush       = 1121
+	cmdClassicTownItemInfoPush       = 1122
+	cmdClassicTownItemInfoClear      = 1123
+	cmdClassicTownEquipItemReq       = 1124
+	cmdClassicTownFastPanelPush      = 1125
+	cmdClassicTownGetFastPanelReq    = 1126
+	cmdClassicTownSetFastPanelReq    = 1180
+	cmdClassicTownRemoveFastPanelReq = 1225
+	cmdClassicTownTryEquipReq        = 1226
+	cmdClassicTownTryEquipPush       = 1227
+	cmdClassicTownGetQuestLogReq     = 1127
+	cmdClassicTownQuestInfoPush      = 1128
+	cmdClassicTownClearQuestInfo     = 1129
+	cmdClassicTownRemoveQuestReq     = 1130
+	cmdClassicTownRoleStatePush      = 1131
+	cmdClassicTownRolePhysiquePush   = 1132
+	cmdClassicTownContainerMove      = 1133
+	cmdClassicTownAddPointReq        = 1134
+	cmdClassicTownActiveItemReq      = 1135
+	cmdClassicTownClearSkillInfo     = 1136
+	cmdClassicTownRemoveSkillReq     = 1137
+	cmdClassicTownChatMessagePush    = 1138
+	cmdClassicTownChatSendReq        = 1139
+	cmdClassicTownDestroyItemReq     = 1181
+	cmdClassicTownSaleItemReq        = 1182
+	cmdClassicTownMoveRoleReq        = 1184
+	cmdClassicTownMoveRolePush       = 1185
+	cmdClassicTownFollowRolePush     = 1186
+	cmdClassicSocialFriendInfo       = 1140
+	cmdClassicSocialClearFriend      = 1141
+	cmdClassicSocialBlackListInfo    = 1142
+	cmdClassicSocialClearBlackList   = 1143
+	cmdClassicSocialEnemyInfo        = 1144
+	cmdClassicSocialClearEnemy       = 1145
+	cmdClassicSocialAddFriendReq     = 1146
+	cmdClassicSocialRemoveFriend     = 1147
+	cmdClassicSocialAddBlackReq      = 1148
+	cmdClassicSocialRemoveBlack      = 1149
+	cmdClassicSocialTradeReq         = 1228
+	cmdClassicSocialGetBlackListReq  = 1229
+	cmdClassicSocialGetFriendListReq = 1230
+	cmdClassicGuildInfoReq           = 1150
+	cmdClassicGuildInfoPush          = 1151
+	cmdClassicGuildMemberPush        = 1152
+	cmdClassicGuildMemberClear       = 1153
+	cmdClassicGuildAuthPush          = 1154
+	cmdClassicGuildNoticePush        = 1155
+	cmdClassicGuildCreateReq         = 1156
+	cmdClassicGuildCreateResult      = 1157
+	cmdClassicGuildLeaveReq          = 1158
+	cmdClassicGuildKickReq           = 1159
+	cmdClassicGuildDismissReq        = 1160
+	cmdClassicGuildNoticeUpdateReq   = 1161
+	cmdClassicTownDungeonInstance    = 1162
+	cmdClassicTeamInviteReq          = 1163
+	cmdClassicTeamInvitePush         = 1164
+	cmdClassicTeamInviteReplyReq     = 1165
+	cmdClassicTeamLeaveReq           = 1166
+	cmdClassicTeamKickReq            = 1167
+	cmdClassicTeamTransferLeaderReq  = 1168
+	cmdClassicTeamSyncChangeMapReq   = 1169
+	cmdClassicMallCategoryListReq    = 1170
+	cmdClassicMallCategoryListPush   = 1171
+	cmdClassicMallSearchCountReq     = 1172
+	cmdClassicMallSearchCountPush    = 1173
+	cmdClassicMallSearchPageReq      = 1174
+	cmdClassicMallSearchPagePush     = 1175
+	cmdClassicMallCurrencyPush       = 1176
+	cmdClassicMallPurchaseReq        = 1177
+	cmdClassicMallPurchaseResult     = 1178
+	cmdClassicMallPaymentDisabled    = 1179
+	cmdClassicTeamResetDungeonReq    = 1183
+	cmdClassicTeamMemberPush         = 1190
+	cmdClassicTeamMemberClearPush    = 1191
+	cmdClassicTeamClearPush          = 1192
+	cmdClassicTeamInfoPush           = 1193
+	cmdClassicTeamResultPush         = 1194
+	cmdClassicPetInfoReq             = 1195
+	cmdClassicPetInfoPush            = 1196
+	cmdClassicPetFeedReq             = 1197
+	cmdClassicPetFeedResultPush      = 1198
+	cmdClassicAuctionOpenPush        = 1199
+	cmdClassicAuctionListReq         = 1200
+	cmdClassicAuctionListPush        = 1201
+	cmdClassicMailOpenPush           = 1202
+	cmdClassicMailListPush           = 1203
+	cmdClassicMailInfoReq            = 1204
+	cmdClassicMailInfoPush           = 1205
+	cmdClassicMailSendReq            = 1206
+	cmdClassicAuctionAddReq          = 1207
+	cmdClassicTownServerTimePush     = 1208
+	cmdClassicDailyRewardInfoReq     = 1209
+	cmdClassicDailyRewardClaimReq    = 1210
+	cmdClassicDailyRewardInfoPush    = 1211
+	cmdClassicMaskCodeChallengePush  = 1212
+	cmdClassicMaskCodeSubmitReq      = 1213
+	cmdClassicMaskCodeRefreshReq     = 1214
+	cmdClassicMaskCodeResultPush     = 1215
+	cmdClassicTownGetBuyBackListReq  = 1216
+	cmdClassicTownBuyBackRefresh     = 1217
+	cmdClassicTownBuyBackInfo        = 1218
+	cmdClassicTownBuyBackReq         = 1219
+	cmdClassicTownGetBuffsListReq    = 1220
+	cmdClassicTownBuffInfoPush       = 1221
+	cmdClassicTownClearBuffInfo      = 1222
+	cmdClassicTownRemoveBuffReq      = 1223
+	cmdClassicTownRemoveABateBuff    = 1224
 
 	cmdClassicBattleStartReq      = 3000
 	cmdClassicBattleStartPush     = 3001
@@ -128,6 +180,12 @@ const (
 	cmdClassicBattleClearBuffInfo = 3009
 	cmdClassicBattleActiveItemReq = 3011
 	cmdClassicBattlePlayOverReq   = 3012
+	cmdClassicBattleRelivePush    = 3013
+	cmdClassicBattleDoReliveReq   = 3014
+	cmdClassicBattleLoadProReq    = 3015
+	cmdClassicBattleRoleReadyReq  = 3016
+	cmdClassicBattleLoadProPush   = 3017
+	cmdClassicBattleCellCountPush = 3018
 )
 
 const cmdClassicTownFinishingContainerReq = 1187
@@ -236,6 +294,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		if result.serverTime != nil {
+			if err := socketWriter.writePush(cmdClassicTownServerTimePush, encodePayload(*result.serverTime)); err != nil {
+				log.Printf("[ai-server] write classic town serverTime failed: %v", err)
+				return
+			}
+		}
 		if result.townBootstrap != nil {
 			socketWriter.writeClassicTownBootstrap(*result.townBootstrap)
 			// world scene:传送/切图成功后,把 scene 状态从旧 mapId 迁到新 mapId。
@@ -275,6 +339,30 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		if result.subGame != nil {
+			if err := socketWriter.writePush(cmdClassicTownSubGamePush, encodePayload(*result.subGame)); err != nil {
+				log.Printf("[ai-server] write classic town subGame push failed: %v", err)
+				return
+			}
+		}
+		if result.collectionComplete != nil {
+			if err := socketWriter.writePush(cmdClassicTownCollectionComplete, encodePayload(*result.collectionComplete)); err != nil {
+				log.Printf("[ai-server] write classic town collection complete push failed: %v", err)
+				return
+			}
+		}
+		if result.openContainer != nil {
+			if err := socketWriter.writePush(cmdClassicTownOpenContainerPush, encodePayload(*result.openContainer)); err != nil {
+				log.Printf("[ai-server] write classic town openContainer push failed: %v", err)
+				return
+			}
+		}
+		if result.careState != nil {
+			if err := socketWriter.writePush(cmdClassicTownCareStatePush, encodePayload(*result.careState)); err != nil {
+				log.Printf("[ai-server] write classic town care state push failed: %v", err)
+				return
+			}
+		}
 		for _, chatMessage := range result.chatMessages {
 			if err := socketWriter.writePush(cmdClassicTownChatMessagePush, encodePayload(chatMessage)); err != nil {
 				log.Printf("[ai-server] write classic town chat message failed: %v", err)
@@ -286,6 +374,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		}
 		if len(result.teamEvents) > 0 {
 			classicTeamHub.broadcast(result.teamEvents)
+		}
+		if result.abilityCount != nil {
+			if err := socketWriter.writePush(cmdClassicTownAbilityCountPush, encodePayload(*result.abilityCount)); err != nil {
+				log.Printf("[ai-server] write classic town abilityCount push failed: %v", err)
+				return
+			}
 		}
 		if result.skillCap != nil {
 			if err := socketWriter.writePush(cmdClassicTownSkillCapPush, encodePayload(*result.skillCap)); err != nil {
@@ -323,9 +417,33 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		for _, townBuff := range result.townBuffs {
+			if err := socketWriter.writePush(cmdClassicTownBuffInfoPush, encodePayload(townBuff)); err != nil {
+				log.Printf("[ai-server] write classic town BuffInfo failed: %v", err)
+				return
+			}
+		}
+		for _, townBuffClear := range result.townBuffClears {
+			if err := socketWriter.writePush(cmdClassicTownClearBuffInfo, encodePayload(townBuffClear)); err != nil {
+				log.Printf("[ai-server] write classic town clearBuffInfo failed: %v", err)
+				return
+			}
+		}
 		if result.buySkillResult != nil {
 			if err := socketWriter.writePush(cmdClassicTownBuySkillResult, encodePayload(*result.buySkillResult)); err != nil {
 				log.Printf("[ai-server] write classic town buySkill result failed: %v", err)
+				return
+			}
+		}
+		if result.buyBackRefresh != nil {
+			if err := socketWriter.writePush(cmdClassicTownBuyBackRefresh, encodePayload(*result.buyBackRefresh)); err != nil {
+				log.Printf("[ai-server] write classic town buyBack refresh failed: %v", err)
+				return
+			}
+		}
+		for _, buyBackInfo := range result.buyBackInfos {
+			if err := socketWriter.writePush(cmdClassicTownBuyBackInfo, encodePayload(buyBackInfo)); err != nil {
+				log.Printf("[ai-server] write classic town buyBack info failed: %v", err)
 				return
 			}
 		}
@@ -344,6 +462,18 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		for _, itemInfo := range result.itemInfos {
 			if err := socketWriter.writePush(cmdClassicTownItemInfoPush, encodePayload(itemInfo)); err != nil {
 				log.Printf("[ai-server] write classic town item info failed: %v", err)
+				return
+			}
+		}
+		if result.otherEquipment != nil {
+			if err := socketWriter.writePush(cmdClassicTownOtherEquipmentPush, encodePayload(*result.otherEquipment)); err != nil {
+				log.Printf("[ai-server] write classic town other equipment failed: %v", err)
+				return
+			}
+		}
+		if result.tryEquip != nil {
+			if err := socketWriter.writePush(cmdClassicTownTryEquipPush, encodePayload(*result.tryEquip)); err != nil {
+				log.Printf("[ai-server] write classic town TryEquip failed: %v", err)
 				return
 			}
 		}
@@ -368,6 +498,18 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		if result.dungeonInstance != nil {
 			if err := socketWriter.writePush(cmdClassicTownDungeonInstance, encodePayload(*result.dungeonInstance)); err != nil {
 				log.Printf("[ai-server] write classic town DungeonInstance failed: %v", err)
+				return
+			}
+		}
+		if result.mapSpecial != nil {
+			if err := socketWriter.writePush(cmdClassicTownMapSpecialPush, encodePayload(*result.mapSpecial)); err != nil {
+				log.Printf("[ai-server] write classic town MapSpecial failed: %v", err)
+				return
+			}
+		}
+		if result.autoBattleInfo != nil {
+			if err := socketWriter.writePush(cmdClassicAutoBattleInfoPush, encodePayload(*result.autoBattleInfo)); err != nil {
+				log.Printf("[ai-server] write classic auto battle c_ab failed: %v", err)
 				return
 			}
 		}
@@ -477,6 +619,66 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		if result.petFeedResult != nil {
+			if err := socketWriter.writePush(cmdClassicPetFeedResultPush, encodePayload(*result.petFeedResult)); err != nil {
+				log.Printf("[ai-server] write classic pet feed result failed: %v", err)
+				return
+			}
+		}
+		if result.petInfo != nil {
+			if err := socketWriter.writePush(cmdClassicPetInfoPush, encodePayload(*result.petInfo)); err != nil {
+				log.Printf("[ai-server] write classic pet info failed: %v", err)
+				return
+			}
+		}
+		if result.auctionOpen != nil {
+			if err := socketWriter.writePush(cmdClassicAuctionOpenPush, encodePayload(*result.auctionOpen)); err != nil {
+				log.Printf("[ai-server] write classic auction open failed: %v", err)
+				return
+			}
+		}
+		if result.auctionList != nil {
+			if err := socketWriter.writePush(cmdClassicAuctionListPush, encodePayload(*result.auctionList)); err != nil {
+				log.Printf("[ai-server] write classic auction list failed: %v", err)
+				return
+			}
+		}
+		if result.mailOpen != nil {
+			if err := socketWriter.writePush(cmdClassicMailOpenPush, encodePayload(*result.mailOpen)); err != nil {
+				log.Printf("[ai-server] write classic mail open failed: %v", err)
+				return
+			}
+		}
+		if result.mailList != nil {
+			if err := socketWriter.writePush(cmdClassicMailListPush, encodePayload(*result.mailList)); err != nil {
+				log.Printf("[ai-server] write classic mail list failed: %v", err)
+				return
+			}
+		}
+		if result.mailInfo != nil {
+			if err := socketWriter.writePush(cmdClassicMailInfoPush, encodePayload(*result.mailInfo)); err != nil {
+				log.Printf("[ai-server] write classic mail info failed: %v", err)
+				return
+			}
+		}
+		if result.dailyRewardInfo != nil {
+			if err := socketWriter.writePush(cmdClassicDailyRewardInfoPush, encodePayload(*result.dailyRewardInfo)); err != nil {
+				log.Printf("[ai-server] write classic daily reward info failed: %v", err)
+				return
+			}
+		}
+		if result.maskCodeChallenge != nil {
+			if err := socketWriter.writePush(cmdClassicMaskCodeChallengePush, encodePayload(*result.maskCodeChallenge)); err != nil {
+				log.Printf("[ai-server] write classic mask code challenge failed: %v", err)
+				return
+			}
+		}
+		if result.maskCodeResult != nil {
+			if err := socketWriter.writePush(cmdClassicMaskCodeResultPush, encodePayload(*result.maskCodeResult)); err != nil {
+				log.Printf("[ai-server] write classic mask code result failed: %v", err)
+				return
+			}
+		}
 		if result.battleStart != nil {
 			if err := socketWriter.writePush(cmdClassicBattleStartPush, encodePayload(*result.battleStart)); err != nil {
 				log.Printf("[ai-server] write classic battle StartBattle failed: %v", err)
@@ -489,9 +691,21 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		if result.battleCellCount != nil {
+			if err := socketWriter.writePush(cmdClassicBattleCellCountPush, encodePayload(*result.battleCellCount)); err != nil {
+				log.Printf("[ai-server] write classic battle battleCellCount failed: %v", err)
+				return
+			}
+		}
 		if result.battleStart != nil && result.battleCommand != nil {
 			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
 				log.Printf("[ai-server] write classic battle startCommand failed: %v", err)
+				return
+			}
+		}
+		if result.battleLoadProgress != nil {
+			if err := socketWriter.writePush(cmdClassicBattleLoadProPush, encodePayload(*result.battleLoadProgress)); err != nil {
+				log.Printf("[ai-server] write classic battle battleLoadPro failed: %v", err)
 				return
 			}
 		}
@@ -516,6 +730,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		if result.battleOver != nil {
 			if err := socketWriter.writePush(cmdClassicBattleOverPush, encodePayload(*result.battleOver)); err != nil {
 				log.Printf("[ai-server] write classic battle OverBattle failed: %v", err)
+				return
+			}
+		}
+		if result.battleRelive != nil {
+			if err := socketWriter.writePush(cmdClassicBattleRelivePush, encodePayload(*result.battleRelive)); err != nil {
+				log.Printf("[ai-server] write classic battle DoRelive failed: %v", err)
 				return
 			}
 		}

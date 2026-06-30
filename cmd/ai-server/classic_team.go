@@ -122,8 +122,10 @@ func buildClassicTeamResetDungeonResult(store *session.Store, socketSession *pac
 		}
 	}
 	setDefeatedVisibleMonsterHandles(socketSession, nil)
+	inactiveDungeon := inactiveDungeonInstancePush(instanceKey, mapID)
 	return packetResult{
-		dungeonInstance: inactiveDungeonInstancePush(instanceKey, mapID),
+		dungeonInstance: inactiveDungeon,
+		mapSpecial:      buildClassicTownMapSpecialPush(inactiveDungeon),
 		teamEvents: []team.Event{
 			classicTeamResultEvent(socketSession.selectedRole.RoleID, true, "resetDungeon", "", ""),
 		},

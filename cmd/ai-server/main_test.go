@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"ai-server/internal/battle"
 	"ai-server/internal/classicactivity"
@@ -81,6 +82,7 @@ func TestHandlePacketRoleSelectPushesTownRoleStats(t *testing.T) {
 		RoleTemplateID: 1,
 	})
 	socketSession := &packetSession{}
+	beforeSelect := time.Now().Add(-time.Second).UnixMilli()
 
 	result := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdRoleSelectRequest,
@@ -135,6 +137,16 @@ func TestHandlePacketRoleSelectPushesTownRoleStats(t *testing.T) {
 	}
 	if result.townBootstrap.RolePhysique == nil || result.townBootstrap.RolePhysique.Handle != create.Role.RoleID {
 		t.Fatalf("expected town bootstrap rolePhysique for selected role, got %+v", result.townBootstrap.RolePhysique)
+	}
+	if result.serverTime == nil {
+		t.Fatal("expected role select to push classic town serverTime")
+	}
+	afterSelect := time.Now().Add(time.Second).UnixMilli()
+	if result.serverTime.ServerTime < beforeSelect || result.serverTime.ServerTime > afterSelect {
+		t.Fatalf("expected serverTime near role select time, got %+v", result.serverTime)
+	}
+	if !strings.Contains(result.serverTime.SourceCapture, "c_serverTime") {
+		t.Fatalf("expected serverTime source capture to cite c_serverTime, got %+v", result.serverTime)
 	}
 	if socketSession.playerBase == nil || socketSession.playerBase.RoleState == nil || socketSession.playerBase.RolePhysique == nil {
 		t.Fatalf("expected socket session to retain role stats, got %+v", socketSession.playerBase)
@@ -276,7 +288,7 @@ func TestHandlePacketClassicTownActiveRolePlayerDoesNotOpenAnswerSpeak(t *testin
 	}
 }
 
-func TestHandlePacketClassicTownActiveCollectionGrantsRewardAndQuest(t *testing.T) {
+func TestHandlePacketClassicTownActiveCollectionStartsSubGameThenCollectionGrantsRewardAndQuest(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	gloves, ok := session.CapturedRoleItemTemplate("普通采集手套")
 	if !ok {
@@ -319,20 +331,181 @@ func TestHandlePacketClassicTownActiveCollectionGrantsRewardAndQuest(t *testing.
 	if !result.handled {
 		t.Fatal("expected collection activeRole to be handled")
 	}
-	if result.answerSpeak == nil || result.answerSpeak.Msg != "你获得了【金银花】。" {
-		t.Fatalf("expected collection success answerSpeak, got %+v", result.answerSpeak)
+	if result.answerSpeak != nil || result.subGame == nil {
+		t.Fatalf("expected collection activeRole to open subGame only, got answerSpeak=%+v subGame=%+v", result.answerSpeak, result.subGame)
 	}
-	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != "背包" || result.itemInfos[0].Name != "金银花" || result.itemInfos[0].Count != 1 || result.itemInfos[0].Display != "97.png" {
-		t.Fatalf("expected 金银花 item push, got %+v", result.itemInfos)
+	if result.subGame.Handle != "2810542613719308" || result.subGame.MapID != "89" || result.subGame.DurationSeconds != 5 || result.subGame.SourcePayload != "pro:5|" {
+		t.Fatalf("expected source c_subGame progress push, got %+v", result.subGame)
 	}
-	if len(result.questInfos) != 1 || result.questInfos[0].Title != "采集金银花" {
-		t.Fatalf("expected collection quest info, got %+v", result.questInfos)
+	if len(result.itemInfos) != 0 || len(result.questInfos) != 0 || len(result.chatMessages) != 0 {
+		t.Fatalf("activeRole must not grant before Collection, got items=%+v quests=%+v chats=%+v", result.itemInfos, result.questInfos, result.chatMessages)
 	}
-	if len(result.questStates) != 1 || result.questStates[0].Handle != "2810542613719308" || result.questStates[0].State != 2 {
-		t.Fatalf("expected collection quest state refresh, got %+v", result.questStates)
+
+	rewardResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownCollectionReq,
+		Seq: 4,
+		Payload: mustJSON(t, classicTownCollectionRequest{
+			Handle: "2810542613719308",
+			MapID:  "89",
+			Score:  0,
+			Code:   "",
+			Time:   123,
+		}),
+	}, socketSession)
+	if !rewardResult.handled {
+		t.Fatal("expected Collection request to be handled")
 	}
-	if len(result.chatMessages) != 2 || !strings.Contains(result.chatMessages[0].Msg, "获得了【金银花】x1") || result.chatMessages[1].Msg != "日志更新" {
-		t.Fatalf("expected collection source system notifications, got %+v", result.chatMessages)
+	if rewardResult.answerSpeak != nil || rewardResult.collectionComplete == nil || rewardResult.collectionComplete.Msg != "你获得了【金银花】。" {
+		t.Fatalf("expected collection complete subgame push, got answerSpeak=%+v complete=%+v", rewardResult.answerSpeak, rewardResult.collectionComplete)
+	}
+	if len(rewardResult.itemInfos) != 1 || rewardResult.itemInfos[0].Type != "背包" || rewardResult.itemInfos[0].Name != "金银花" || rewardResult.itemInfos[0].Count != 1 || rewardResult.itemInfos[0].Display != "97.png" {
+		t.Fatalf("expected 金银花 item push, got %+v", rewardResult.itemInfos)
+	}
+	if len(rewardResult.questInfos) != 1 || rewardResult.questInfos[0].Title != "采集金银花" {
+		t.Fatalf("expected collection quest info, got %+v", rewardResult.questInfos)
+	}
+	if len(rewardResult.questStates) != 1 || rewardResult.questStates[0].Handle != "2810542613719308" || rewardResult.questStates[0].State != 2 {
+		t.Fatalf("expected collection quest state refresh, got %+v", rewardResult.questStates)
+	}
+	if len(rewardResult.chatMessages) != 2 || !strings.Contains(rewardResult.chatMessages[0].Msg, "获得了【金银花】x1") || rewardResult.chatMessages[1].Msg != "日志更新" {
+		t.Fatalf("expected collection source system notifications, got %+v", rewardResult.chatMessages)
+	}
+}
+
+func TestHandlePacketClassicTownCollectionGrantsHuanglianOnMap91(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	gloves, ok := session.CapturedRoleItemTemplate("普通采集手套")
+	if !ok {
+		t.Fatal("expected captured 普通采集手套 template")
+	}
+	gloves.Type = "背包"
+	gloves.Index = -1
+	gloves.Count = 1
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, gloves); !ok {
+		t.Fatal("expected to grant 普通采集手套 for collection test")
+	}
+	if selectedRole, playerBase, ok := store.GetRoleRuntimeData(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID); ok {
+		socketSession.selectedRole = &selectedRole
+		socketSession.playerBase = &playerBase
+	}
+	transferResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownTransferReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownTransferRequest{
+			MapID: "91",
+			X:     1755,
+			Y:     452,
+		}),
+	}, socketSession)
+	if !transferResult.handled || transferResult.townBootstrap == nil {
+		t.Fatalf("expected transfer to map91 bootstrap, got %+v", transferResult)
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveRoleReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRoleInteractionRequest{
+			Handle: "2050542611677774",
+			RoleID: "2050542611677774",
+			Kind:   "collection",
+			MapID:  "91",
+		}),
+	}, socketSession)
+	if !result.handled || result.subGame == nil || result.subGame.Handle != "2050542611677774" {
+		t.Fatalf("expected map91 collection activeRole to open subGame, got %+v", result)
+	}
+
+	rewardResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownCollectionReq,
+		Seq: 4,
+		Payload: mustJSON(t, classicTownCollectionRequest{
+			Handle: "2050542611677774",
+			MapID:  "91",
+			Score:  0,
+			Code:   "",
+			Time:   123,
+		}),
+	}, socketSession)
+	if !rewardResult.handled {
+		t.Fatal("expected map91 Collection request to be handled")
+	}
+	if rewardResult.answerSpeak != nil || rewardResult.collectionComplete == nil || rewardResult.collectionComplete.Msg != "你获得了【黄连】。" {
+		t.Fatalf("expected map91 collection complete push, got answerSpeak=%+v complete=%+v", rewardResult.answerSpeak, rewardResult.collectionComplete)
+	}
+	if len(rewardResult.itemInfos) != 1 || rewardResult.itemInfos[0].Type != "背包" || rewardResult.itemInfos[0].Name != "黄连" || rewardResult.itemInfos[0].Count != 1 || rewardResult.itemInfos[0].Display != "95.png" {
+		t.Fatalf("expected 黄连 item push, got %+v", rewardResult.itemInfos)
+	}
+	if len(rewardResult.questInfos) != 1 || rewardResult.questInfos[0].Title != "采集黄连" {
+		t.Fatalf("expected collection quest info, got %+v", rewardResult.questInfos)
+	}
+}
+
+func TestHandlePacketClassicTownCollectionWarnsWhenBagFull(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	gloves, ok := session.CapturedRoleItemTemplate("普通采集手套")
+	if !ok {
+		t.Fatal("expected captured 普通采集手套 template")
+	}
+	gloves.Type = "背包"
+	gloves.Index = -1
+	gloves.Count = 1
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, gloves); !ok {
+		t.Fatal("expected to grant 普通采集手套 for collection test")
+	}
+	fillBagSlotsForTest(t, store, socketSession, 1)
+	if selectedRole, playerBase, ok := store.GetRoleRuntimeData(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID); ok {
+		socketSession.selectedRole = &selectedRole
+		socketSession.playerBase = &playerBase
+	}
+	transferResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownTransferReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownTransferRequest{
+			MapID: "91",
+			X:     1755,
+			Y:     452,
+		}),
+	}, socketSession)
+	if !transferResult.handled || transferResult.townBootstrap == nil {
+		t.Fatalf("expected transfer to map91 bootstrap, got %+v", transferResult)
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveRoleReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRoleInteractionRequest{
+			Handle: "2050542611677774",
+			RoleID: "2050542611677774",
+			Kind:   "collection",
+			MapID:  "91",
+		}),
+	}, socketSession)
+	if !result.handled || result.subGame == nil {
+		t.Fatalf("expected full-bag collection activeRole to still open subGame, got %+v", result)
+	}
+
+	rewardResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownCollectionReq,
+		Seq: 4,
+		Payload: mustJSON(t, classicTownCollectionRequest{
+			Handle: "2050542611677774",
+			MapID:  "91",
+			Score:  0,
+			Code:   "",
+			Time:   123,
+		}),
+	}, socketSession)
+	if !rewardResult.handled {
+		t.Fatal("expected full-bag Collection request to be handled")
+	}
+	if rewardResult.collectionComplete == nil || !strings.Contains(rewardResult.collectionComplete.Msg, "背包空间不足") {
+		t.Fatalf("expected full-bag collection completion message, got %+v", rewardResult.collectionComplete)
+	}
+	if len(rewardResult.itemInfos) != 0 || len(rewardResult.questInfos) != 0 {
+		t.Fatalf("full-bag collection must not grant item or quest progress, got items=%+v quests=%+v", rewardResult.itemInfos, rewardResult.questInfos)
+	}
+	if len(rewardResult.chatMessages) != 1 || !strings.Contains(rewardResult.chatMessages[0].Msg, "背包空间不足") || !rewardResult.chatMessages[0].Bold {
+		t.Fatalf("expected full-bag warning message, got %+v", rewardResult.chatMessages)
 	}
 }
 
@@ -422,6 +595,63 @@ func TestHandlePacketClassicTownAnswerCanPushFollowUpDialogue(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownWarehouseAnswerOpensContainer(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicTownAnswerReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownAnswerRequest{
+			Handle:       "5050542617322114",
+			MsgHandle:    "1",
+			AnswerHandle: "6",
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected warehouse Answer to be handled")
+	}
+	if result.answerSpeak != nil {
+		t.Fatalf("expected warehouse Answer to open container instead of reply dialogue, got %+v", result.answerSpeak)
+	}
+	if result.openContainer == nil {
+		t.Fatal("expected warehouse Answer to push openContainer")
+	}
+	if result.openContainer.Handle != socketSession.selectedRole.RoleID || result.openContainer.Type != classicWarehouseContainerType {
+		t.Fatalf("expected warehouse openContainer for selected role, got %+v", result.openContainer)
+	}
+	if !strings.Contains(result.openContainer.SourceCapture, "c_openContainer") {
+		t.Fatalf("expected source capture to cite c_openContainer, got %+v", result.openContainer)
+	}
+}
+
+func TestHandlePacketClassicTownWarehouseCareState(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd:     cmdClassicTownCareStateReq,
+		Seq:     2,
+		Payload: mustJSON(t, map[string]any{"source": "warehouse"}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected warehouse care state request to be handled")
+	}
+	if result.responseCmd != 0 {
+		t.Fatalf("expected care state to be push-only, got response cmd %d", result.responseCmd)
+	}
+	if result.careState == nil {
+		t.Fatal("expected warehouse care state push")
+	}
+	if result.careState.LockState != classicWarehouseLockedState {
+		t.Fatalf("expected captured locked state %q, got %+v", classicWarehouseLockedState, result.careState)
+	}
+	if result.careState.Message != classicWarehouseLockedStateMessage {
+		t.Fatalf("expected source locked message, got %+v", result.careState)
+	}
+	if !strings.Contains(result.careState.SourceCapture, "c_careState") {
+		t.Fatalf("expected source capture to cite c_careState, got %+v", result.careState)
+	}
+}
+
 func TestHandlePacketClassicTownGetSkillListPushesSourceShape(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	result := handlePacketWithSession(store, protocol.Packet{
@@ -450,6 +680,28 @@ func TestHandlePacketClassicTownGetSkillListPushesSourceShape(t *testing.T) {
 	}
 	if result.currencyPush == nil || result.currencyPush.Currencies["铜钱"] != 5000 || result.currencyPush.Currencies["银元宝"] != 1 {
 		t.Fatalf("expected skill list to push default currencies, got %+v", result.currencyPush)
+	}
+}
+
+func TestHandlePacketClassicTownGetAbilityCountPushesSourceShape(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetAbilityCountReq,
+		Seq:     2,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected GetAbilityCount to be handled")
+	}
+	if result.responseCmd != 0 || result.answerSpeak != nil {
+		t.Fatalf("expected GetAbilityCount to be push-only, got response cmd %d answerSpeak=%+v", result.responseCmd, result.answerSpeak)
+	}
+	if result.abilityCount == nil || result.abilityCount.Handle != socketSession.selectedRole.RoleID || result.abilityCount.Count != 12 {
+		t.Fatalf("expected source abilityCount handle/count, got %+v", result.abilityCount)
+	}
+	if result.skillCap != nil || len(result.skillInfos) != 0 {
+		t.Fatalf("expected GetAbilityCount not to push skill list directly, got cap=%+v skills=%+v", result.skillCap, result.skillInfos)
 	}
 }
 
@@ -1008,6 +1260,54 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 	exitTransfer := buildClassicTownTransferResult(store, socketSession, "122", world.SpawnPoint{X: 1000, Y: 600})
 	if exitTransfer.dungeonInstance == nil || exitTransfer.dungeonInstance.Active || exitTransfer.dungeonInstance.Key != "" {
 		t.Fatalf("expected non-dungeon transfer to hide dungeon countdown, got %+v", exitTransfer.dungeonInstance)
+	}
+}
+
+func TestClassicTownMapSpecialBuildsCapturedLastTimePayload(t *testing.T) {
+	push := buildClassicTownMapSpecialPush(&classicTownDungeonInstancePush{
+		Active:        true,
+		ExpiresAtUnix: 1781288111,
+	})
+	if push == nil || push.LastTime != 1781288111000 {
+		t.Fatalf("expected lastTime to be expiresAtUnix milliseconds, got %+v", push)
+	}
+	if len(push.Entries) != 1 || push.Entries[0] != "lastTime:1781288111000" {
+		t.Fatalf("expected source-style lastTime entry, got %+v", push)
+	}
+	if !strings.Contains(push.SourceCapture, "c_mapSpecial") || !strings.Contains(push.SourceCapture, "lastTime") {
+		t.Fatalf("expected capture source pointer for c_mapSpecial lastTime, got %+v", push)
+	}
+
+	clear := buildClassicTownMapSpecialPush(&classicTownDungeonInstancePush{Active: false})
+	if clear == nil || clear.LastTime != 0 || len(clear.Entries) != 0 {
+		t.Fatalf("expected inactive dungeon to clear lastTime, got %+v", clear)
+	}
+}
+
+func TestClassicTownGetMapSpecialUsesDungeonExpiry(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 143)
+	if !ok {
+		t.Fatal("expected test role to move to map143")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetMapSpecialReq,
+		Seq: 41,
+		Payload: mustJSON(t, classicTownMapSpecialRequest{
+			MapID: "143",
+		}),
+	}, socketSession)
+	if !result.handled || result.mapSpecial == nil {
+		t.Fatalf("expected GetMapSpecial to push MapSpecial, got %+v", result)
+	}
+	if result.mapSpecial.LastTime <= time.Now().UnixMilli() {
+		t.Fatalf("expected future lastTime from dungeon expiry, got %+v", result.mapSpecial)
+	}
+	if len(result.mapSpecial.Entries) != 1 || !strings.HasPrefix(result.mapSpecial.Entries[0], "lastTime:") {
+		t.Fatalf("expected source-style lastTime entry, got %+v", result.mapSpecial)
 	}
 }
 
@@ -1685,6 +1985,237 @@ func TestHandlePacketClassicTownGetItemListSupportsEquipContainer(t *testing.T) 
 	}
 }
 
+func TestHandlePacketClassicTownWarehouseCapacityAndList(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	capacityResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetCapacityReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerRequest{
+			Type: classicWarehouseContainerType,
+		}),
+	}, socketSession)
+
+	if !capacityResult.handled || capacityResult.containerCap == nil {
+		t.Fatalf("expected warehouse capacity push, got %+v", capacityResult)
+	}
+	if capacityResult.containerCap.Type != classicWarehouseContainerType || capacityResult.containerCap.Capacity != 40 {
+		t.Fatalf("expected warehouse capacity 40, got %+v", capacityResult.containerCap)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerRequest{
+			Type: classicWarehouseContainerType,
+		}),
+	}, socketSession)
+
+	if !listResult.handled || listResult.containerCap == nil {
+		t.Fatalf("expected warehouse item list to be handled, got %+v", listResult)
+	}
+	if listResult.containerCap.Type != classicWarehouseContainerType || listResult.containerCap.Capacity != 40 {
+		t.Fatalf("expected warehouse item list capacity 40, got %+v", listResult.containerCap)
+	}
+	for _, item := range listResult.itemInfos {
+		if item.Type != classicWarehouseContainerType {
+			t.Fatalf("expected only warehouse item infos, got %+v", listResult.itemInfos)
+		}
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveMovesWarehouseItemWithinWarehouseBySlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	warehouseItem := session.RoleItem{
+		Type:      classicWarehouseContainerType,
+		Name:      "warehouse drag test item",
+		ItemType:  "own",
+		Display:   "1.png",
+		Count:     1,
+		Index:     0,
+		ItemLevel: 1,
+	}
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, warehouseItem); !ok {
+		t.Fatal("expected warehouse item grant to succeed")
+	}
+
+	sourceIndex := 0
+	targetIndex := 1
+	count := 1
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  classicWarehouseContainerType,
+			TargetType:  classicWarehouseContainerType,
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+			Count:       &count,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected warehouse ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 || result.itemClears[0].Type != classicWarehouseContainerType || result.itemClears[0].Index != 0 || result.itemClears[1].Type != classicWarehouseContainerType || result.itemClears[1].Index != 1 {
+		t.Fatalf("expected warehouse source/target clears, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != classicWarehouseContainerType || result.itemInfos[0].Name != "warehouse drag test item" || result.itemInfos[0].Index != 1 {
+		t.Fatalf("expected moved warehouse item push at warehouse slot 1, got %+v", result.itemInfos)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: classicWarehouseContainerType}),
+	}, socketSession)
+	itemsByIndex := map[int]classicTownItemInfoPush{}
+	for _, item := range listResult.itemInfos {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[1].Name != "warehouse drag test item" {
+		t.Fatalf("expected moved warehouse item to persist in slot 1, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveMovesBagItemToWarehouseBySlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	sourceIndex := 19
+	targetIndex := 0
+	count := 1
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  classicTownBagContainerType,
+			TargetType:  classicWarehouseContainerType,
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+			Count:       &count,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected bag-to-warehouse ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 || result.itemClears[0].Type != classicTownBagContainerType || result.itemClears[0].Index != 19 || result.itemClears[1].Type != classicWarehouseContainerType || result.itemClears[1].Index != 0 {
+		t.Fatalf("expected bag source and warehouse target clears, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != classicWarehouseContainerType || result.itemInfos[0].Name != "铁斧" || result.itemInfos[0].Index != 0 {
+		t.Fatalf("expected moved bag item in warehouse slot 0, got %+v", result.itemInfos)
+	}
+
+	warehouseList := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: classicWarehouseContainerType}),
+	}, socketSession)
+	if len(warehouseList.itemInfos) != 1 || warehouseList.itemInfos[0].Name != "铁斧" || warehouseList.itemInfos[0].Index != 0 {
+		t.Fatalf("expected moved bag item to persist in warehouse slot 0, got %+v", warehouseList.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveMovesWarehouseItemToBagBySlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	warehouseItem := session.RoleItem{
+		Type:      classicWarehouseContainerType,
+		Name:      "warehouse to bag test item",
+		ItemType:  "own",
+		Display:   "1.png",
+		Count:     1,
+		Index:     0,
+		ItemLevel: 1,
+	}
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, warehouseItem); !ok {
+		t.Fatal("expected warehouse item grant to succeed")
+	}
+
+	sourceIndex := 0
+	targetIndex := 0
+	count := 1
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  classicWarehouseContainerType,
+			TargetType:  classicTownBagContainerType,
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+			Count:       &count,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected warehouse-to-bag ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 || result.itemClears[0].Type != classicWarehouseContainerType || result.itemClears[0].Index != 0 || result.itemClears[1].Type != classicTownBagContainerType || result.itemClears[1].Index != 0 {
+		t.Fatalf("expected warehouse source and bag target clears, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != classicTownBagContainerType || result.itemInfos[0].Name != "warehouse to bag test item" || result.itemInfos[0].Index != 0 {
+		t.Fatalf("expected moved warehouse item in bag slot 0, got %+v", result.itemInfos)
+	}
+
+	bagList := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: classicTownBagContainerType}),
+	}, socketSession)
+	itemsByIndex := map[int]classicTownItemInfoPush{}
+	for _, item := range bagList.itemInfos {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[0].Name != "warehouse to bag test item" {
+		t.Fatalf("expected moved warehouse item to persist in bag slot 0, got %+v", bagList.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveSplitsBagItemToWarehouseByCount(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	stackItem := session.RoleItem{
+		Type:      classicTownBagContainerType,
+		Name:      "warehouse split test item",
+		ItemType:  "own",
+		Display:   "1.png",
+		Count:     5,
+		Index:     1,
+		ItemLevel: 1,
+	}
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, stackItem); !ok {
+		t.Fatal("expected bag stack item grant to succeed")
+	}
+
+	sourceIndex := 1
+	targetIndex := 2
+	count := 2
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  classicTownBagContainerType,
+			TargetType:  classicWarehouseContainerType,
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+			Count:       &count,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected split bag-to-warehouse ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 1 || result.itemClears[0].Type != classicWarehouseContainerType || result.itemClears[0].Index != 2 {
+		t.Fatalf("expected only warehouse target clear for split move, got %+v", result.itemClears)
+	}
+	itemsByTypeIndex := map[string]classicTownItemInfoPush{}
+	for _, item := range result.itemInfos {
+		itemsByTypeIndex[item.Type+":"+strconv.Itoa(item.Index)] = item
+	}
+	if itemsByTypeIndex[classicTownBagContainerType+":1"].Count != 3 {
+		t.Fatalf("expected source bag slot to keep count 3, got %+v", result.itemInfos)
+	}
+	if itemsByTypeIndex[classicWarehouseContainerType+":2"].Count != 2 {
+		t.Fatalf("expected warehouse target slot to receive count 2, got %+v", result.itemInfos)
+	}
+}
+
 func TestHandlePacketClassicTownEquipItemMovesAxeAndPushesAppearance(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	result := handlePacketWithSession(store, protocol.Packet{
@@ -1725,6 +2256,57 @@ func TestHandlePacketClassicTownEquipItemMovesAxeAndPushesAppearance(t *testing.
 	}, socketSession)
 	if len(listResult.itemInfos) != 1 || listResult.itemInfos[0].Name != "铁斧" || listResult.itemInfos[0].Index != 3 {
 		t.Fatalf("expected equipped axe to persist in equipment list, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownTryEquipPreviewsAppearanceWithoutEquipping(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	originalSourceQuery := socketSession.selectedRole.SourceQuery
+	bagList := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 1,
+		Payload: mustJSON(t, classicTownContainerRequest{
+			Type: classicTownBagContainerType,
+		}),
+	}, socketSession)
+	if len(bagList.itemInfos) != 1 {
+		t.Fatalf("expected starter bag item before TryEquip, got %+v", bagList.itemInfos)
+	}
+	starterName := bagList.itemInfos[0].Name
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownTryEquipReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownTryEquipRequest{
+			Name: starterName,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected TryEquip to be handled")
+	}
+	if result.tryEquip == nil || result.tryEquip.ItemName != starterName {
+		t.Fatalf("expected TryEquip preview push for starter axe, got %+v", result.tryEquip)
+	}
+	if !strings.Contains(result.tryEquip.SourceQuery, "w8=5") || result.tryEquip.SourceCapture != "TryEquip(231)->c_tryEquip(50092)" {
+		t.Fatalf("expected TryEquip source query/capture to match c_tryEquip preview, got %+v", result.tryEquip)
+	}
+	if result.createPlayer != nil || len(result.itemClears) != 0 || len(result.itemInfos) != 0 {
+		t.Fatalf("TryEquip must not mutate role or item containers, got create=%+v clears=%+v infos=%+v", result.createPlayer, result.itemClears, result.itemInfos)
+	}
+	if socketSession.selectedRole == nil || socketSession.selectedRole.SourceQuery != originalSourceQuery {
+		t.Fatalf("TryEquip must not update selected role source query, before=%q after=%+v", originalSourceQuery, socketSession.selectedRole)
+	}
+
+	bagListAfter := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerRequest{
+			Type: classicTownBagContainerType,
+		}),
+	}, socketSession)
+	if len(bagListAfter.itemInfos) != 1 || bagListAfter.itemInfos[0].Name != starterName {
+		t.Fatalf("expected TryEquip not to remove the starter bag item, got %+v", bagListAfter.itemInfos)
 	}
 }
 
@@ -1965,6 +2547,159 @@ func TestHandlePacketClassicTownActiveItemRejectsRecoveryItemWhenStateIsFull(t *
 	}
 }
 
+func TestHandlePacketClassicTownActiveItemAppliesAvoidBuffAndRemoveBuff(t *testing.T) {
+	store := session.NewStore()
+	socketSession, role := seedSelectedRoleSessionInStore(t, store, "avoid-buff")
+	item, ok := session.CapturedRoleItemTemplate("\u004c\u907f\u602a\u7b26")
+	if !ok {
+		t.Fatal("expected captured avoid buff item template")
+	}
+	item.Type = classicTownBagContainerType
+	item.Index = -1
+	item.Count = 1
+	granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, role.RoleID, item)
+	if !ok {
+		t.Fatal("expected avoid buff item grant")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveItemReq,
+		Seq: 12,
+		Payload: mustJSON(t, classicTownActiveItemRequest{
+			Type:  granted.Type,
+			Index: granted.Index,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected ActiveItem avoid buff to be handled")
+	}
+	if len(result.townBuffs) != 1 {
+		t.Fatalf("expected one BuffInfo push, got %+v", result.townBuffs)
+	}
+	buff := result.townBuffs[0]
+	if buff.Handle != role.RoleID || buff.Name != "\u907f\u602a" || buff.Display != "574.png" {
+		t.Fatalf("expected avoid buff push for role, got %+v", buff)
+	}
+	if buff.BattleOnly != 0 || buff.EndTime <= time.Now().UnixMilli() {
+		t.Fatalf("expected active timed town buff, got %+v", buff)
+	}
+	if !strings.Contains(buff.Description, "\u70b9\u51fb\u53d6\u6d88\u8be5\u72b6\u6001") || !buff.Partial || !strings.Contains(buff.SourceCapture, "RemoveBuff") {
+		t.Fatalf("expected source-clickable partial avoid buff evidence, got %+v", buff)
+	}
+	if len(result.itemClears) != 1 || result.itemClears[0].Type != granted.Type || result.itemClears[0].Index != granted.Index {
+		t.Fatalf("expected consumed avoid buff item clear, got %+v", result.itemClears)
+	}
+	if len(result.chatMessages) != 1 || !strings.Contains(result.chatMessages[0].Msg, "\u4f7f\u7528\u4e86\u907f\u602a\u7b26") {
+		t.Fatalf("expected source avoid-buff chat message, got %+v", result.chatMessages)
+	}
+	storedBuffs, ok := store.GetRoleTownBuffs(socketSession.playerBase.PlayerID, role.RoleID)
+	if !ok || len(storedBuffs) != 1 || storedBuffs[0].Name != "\u907f\u602a" {
+		t.Fatalf("expected persisted avoid buff, ok=%v buffs=%+v", ok, storedBuffs)
+	}
+
+	notExpiredClear := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownRemoveABateBuff,
+		Seq:     14,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+
+	if !notExpiredClear.handled {
+		t.Fatal("expected RemoveABateBuff to be handled")
+	}
+	if len(notExpiredClear.townBuffClears) != 0 {
+		t.Fatalf("expected RemoveABateBuff not to clear unexpired buff, got %+v", notExpiredClear.townBuffClears)
+	}
+	storedBuffs, ok = store.GetRoleTownBuffs(socketSession.playerBase.PlayerID, role.RoleID)
+	if !ok || len(storedBuffs) != 1 || storedBuffs[0].Name != "\u907f\u602a" {
+		t.Fatalf("expected unexpired avoid buff to remain, ok=%v buffs=%+v", ok, storedBuffs)
+	}
+
+	clear := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownRemoveBuffReq,
+		Seq: 15,
+		Payload: mustJSON(t, classicTownRemoveBuffRequest{
+			Name: "\u907f\u602a",
+		}),
+	}, socketSession)
+
+	if !clear.handled {
+		t.Fatal("expected RemoveBuff to be handled")
+	}
+	if len(clear.townBuffClears) != 1 || clear.townBuffClears[0].Handle != role.RoleID || clear.townBuffClears[0].Name != "\u907f\u602a" {
+		t.Fatalf("expected clearBuffInfo push, got %+v", clear.townBuffClears)
+	}
+	storedBuffs, ok = store.GetRoleTownBuffs(socketSession.playerBase.PlayerID, role.RoleID)
+	if !ok || len(storedBuffs) != 0 {
+		t.Fatalf("expected avoid buff removed from store, ok=%v buffs=%+v", ok, storedBuffs)
+	}
+}
+
+func TestHandlePacketClassicTownBuyBackListAndTakeDeductsCopper(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	beforeCopper := roleCurrenciesOrEmpty(
+		store,
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+	)["铜钱"]
+
+	list := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetBuyBackListReq,
+		Seq:     2,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if !list.handled || list.buyBackRefresh == nil || !list.buyBackRefresh.Partial {
+		t.Fatalf("expected captured partial BuyBack list refresh, got %+v", list)
+	}
+	if len(list.buyBackInfos) != 2 {
+		t.Fatalf("expected two captured BuyBack rows, got %+v", list.buyBackInfos)
+	}
+	first := list.buyBackInfos[0]
+	if first.Index != 0 || first.Item.Name != "藤条" || first.Item.Display != "90.png" || first.Item.Count != 5 || !first.Partial {
+		t.Fatalf("expected first captured BuyBack row for 藤条 x5, got %+v", first)
+	}
+	if len(first.EquivalentInfos) != 1 || first.EquivalentInfos[0].Name != "铜钱" || first.EquivalentInfos[0].Count != 155 {
+		t.Fatalf("expected first BuyBack row to cost 铜钱 x155, got %+v", first.EquivalentInfos)
+	}
+	second := list.buyBackInfos[1]
+	if second.Index != 1 || second.Item.Name != "花瓣" || second.Item.Display != "89.png" || second.Item.Count != 6 {
+		t.Fatalf("expected second captured BuyBack row for 花瓣 x6, got %+v", second)
+	}
+
+	take := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownBuyBackReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownBuyBackRequest{
+			Index: 0,
+		}),
+	}, socketSession)
+	if !take.handled || take.currencyPush == nil || take.buyBackRefresh == nil {
+		t.Fatalf("expected BuyBack to mutate currency and refresh list, got %+v", take)
+	}
+	if take.currencyPush.Currencies["铜钱"] != beforeCopper-155 {
+		t.Fatalf("expected BuyBack to deduct 铜钱 155, before=%d got %+v", beforeCopper, take.currencyPush)
+	}
+	items := itemInfosByName(take.itemInfos)
+	if items["藤条"].Count != 5 || items["藤条"].Display != "90.png" {
+		t.Fatalf("expected BuyBack to grant 藤条 x5, got %+v", take.itemInfos)
+	}
+	if !packetChatMessagesContain(take.chatMessages, "回购了【藤条】x5") {
+		t.Fatalf("expected BuyBack success system message, got %+v", take.chatMessages)
+	}
+	if len(take.buyBackInfos) != 1 || take.buyBackInfos[0].Index != 1 {
+		t.Fatalf("expected BuyBack refresh to remove taken row 0, got %+v", take.buyBackInfos)
+	}
+
+	listAgain := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetBuyBackListReq,
+		Seq:     4,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if len(listAgain.buyBackInfos) != 1 || listAgain.buyBackInfos[0].Index != 1 {
+		t.Fatalf("expected subsequent BuyBack list to keep only row 1, got %+v", listAgain.buyBackInfos)
+	}
+}
+
 func TestHandlePacketClassicTownHealerAnswerReportsNearlyFull(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 
@@ -2053,6 +2788,121 @@ func TestHandlePacketClassicTownContainerMoveMovesBagItemBySlot(t *testing.T) {
 	}, socketSession)
 	if len(listResult.itemInfos) != 1 || listResult.itemInfos[0].Name != "铁斧" || listResult.itemInfos[0].Index != 0 {
 		t.Fatalf("expected moved axe to persist in bag slot 0, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveMovesMallItemToBagBySlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	mallItem := session.RoleItem{
+		Type:      "商城",
+		Name:      "商城测试物品",
+		ItemType:  "own",
+		Display:   "1.png",
+		Count:     2,
+		Index:     0,
+		ItemLevel: 1,
+	}
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, mallItem); !ok {
+		t.Fatal("expected mall item grant to succeed")
+	}
+
+	sourceIndex := 0
+	targetIndex := 0
+	count := 2
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  "商城",
+			TargetType:  "背包",
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+			Count:       &count,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected mall-to-bag ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 {
+		t.Fatalf("expected mall source and bag target clears, got %+v", result.itemClears)
+	}
+	if result.itemClears[0].Type != "商城" || result.itemClears[0].Index != 0 {
+		t.Fatalf("expected mall source slot 0 to be cleared first, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != "背包" || result.itemInfos[0].Name != "商城测试物品" || result.itemInfos[0].Index != 0 || result.itemInfos[0].Count != 2 {
+		t.Fatalf("expected moved mall item push at bag slot 0, got %+v", result.itemInfos)
+	}
+
+	mallList := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "商城"}),
+	}, socketSession)
+	if len(mallList.itemInfos) != 0 {
+		t.Fatalf("expected mall container to be empty after move, got %+v", mallList.itemInfos)
+	}
+	bagList := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     4,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "背包"}),
+	}, socketSession)
+	itemsByIndex := map[int]classicTownItemInfoPush{}
+	for _, item := range bagList.itemInfos {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[0].Name != "商城测试物品" || itemsByIndex[0].Count != 2 {
+		t.Fatalf("expected moved mall item to persist in bag slot 0, got %+v", bagList.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveMovesMallItemWithinMallBySlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	mallItem := session.RoleItem{
+		Type:      "商城",
+		Name:      "商城换格测试物品",
+		ItemType:  "own",
+		Display:   "1.png",
+		Count:     1,
+		Index:     0,
+		ItemLevel: 1,
+	}
+	if _, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, mallItem); !ok {
+		t.Fatal("expected mall item grant to succeed")
+	}
+
+	sourceIndex := 0
+	targetIndex := 1
+	count := 1
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  "商城",
+			TargetType:  "商城",
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+			Count:       &count,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected mall ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 || result.itemClears[0].Type != "商城" || result.itemClears[0].Index != 0 || result.itemClears[1].Type != "商城" || result.itemClears[1].Index != 1 {
+		t.Fatalf("expected mall source/target clears, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != "商城" || result.itemInfos[0].Name != "商城换格测试物品" || result.itemInfos[0].Index != 1 {
+		t.Fatalf("expected moved mall item push at mall slot 1, got %+v", result.itemInfos)
+	}
+
+	mallList := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: "商城"}),
+	}, socketSession)
+	if len(mallList.itemInfos) != 1 || mallList.itemInfos[0].Name != "商城换格测试物品" || mallList.itemInfos[0].Index != 1 {
+		t.Fatalf("expected moved mall item to persist at mall slot 1, got %+v", mallList.itemInfos)
 	}
 }
 
@@ -2385,6 +3235,65 @@ func TestHandlePacketClassicTownContainerMoveStacksSameBagItems(t *testing.T) {
 	items := itemInfosByName(listResult.itemInfos)
 	if items["肉"].Index != 0 || items["肉"].Count != 5 {
 		t.Fatalf("expected stacked 肉 to persist at slot 0 count 5, got %+v", listResult.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownContainerMoveStacksSameWarehouseItems(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	roleID := socketSession.selectedRole.RoleID
+	playerID := socketSession.playerBase.PlayerID
+	template, ok := session.CapturedRoleItemTemplate("\u8089")
+	if !ok {
+		t.Fatal("expected captured meat template")
+	}
+	template.Type = classicWarehouseContainerType
+	template.Index = 0
+	template.Count = 2
+	if _, ok := store.GrantRoleItem(playerID, roleID, template); !ok {
+		t.Fatal("expected first warehouse meat grant to succeed")
+	}
+	template.Index = 1
+	template.Count = 3
+	if _, ok := store.GrantRoleItem(playerID, roleID, template); !ok {
+		t.Fatal("expected second warehouse meat grant to succeed")
+	}
+
+	sourceIndex := 1
+	targetIndex := 0
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType:  classicWarehouseContainerType,
+			TargetType:  classicWarehouseContainerType,
+			SourceIndex: &sourceIndex,
+			TargetIndex: &targetIndex,
+		}),
+	}, socketSession)
+	if !result.handled {
+		t.Fatal("expected warehouse stack ContainerMove to be handled")
+	}
+	if len(result.itemClears) != 2 {
+		t.Fatalf("expected source/target warehouse clears for stack, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Type != classicWarehouseContainerType || result.itemInfos[0].Name != "\u8089" || result.itemInfos[0].Index != 0 || result.itemInfos[0].Count != 5 {
+		t.Fatalf("expected stacked warehouse meat push at slot 0 count 5, got %+v", result.itemInfos)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetItemListReq,
+		Seq:     3,
+		Payload: mustJSON(t, classicTownContainerRequest{Type: classicWarehouseContainerType}),
+	}, socketSession)
+	itemsByIndex := map[int]classicTownItemInfoPush{}
+	for _, item := range listResult.itemInfos {
+		itemsByIndex[item.Index] = item
+	}
+	if itemsByIndex[0].Name != "\u8089" || itemsByIndex[0].Count != 5 {
+		t.Fatalf("expected stacked warehouse meat to persist at slot 0 count 5, got %+v", listResult.itemInfos)
+	}
+	if _, exists := itemsByIndex[1]; exists {
+		t.Fatalf("expected warehouse slot 1 to be cleared after stacking, got %+v", listResult.itemInfos)
 	}
 }
 
@@ -2858,6 +3767,77 @@ func TestHandlePacketClassicTownCapturedWoodcutter222PushesCapturedEquipment(t *
 	}
 }
 
+func TestHandlePacketClassicTownOtherEquipmentUsesCapturedLookDetailFixture(t *testing.T) {
+	store := session.NewStore()
+	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "look-equipment")
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownOtherEquipmentReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownOtherEquipmentRequest{
+			RoleName: "恐龙抗狼1",
+			RoleID:   "player_21424",
+			Handle:   "player_21424",
+		}),
+	}, socketSession)
+
+	if !result.handled || result.otherEquipment == nil {
+		t.Fatalf("expected captured other equipment response, got %+v", result)
+	}
+	equipment := result.otherEquipment
+	if equipment.Handle != "player_21424" || equipment.RoleID != "player_21424" || equipment.RoleName != "恐龙抗狼1" {
+		t.Fatalf("expected captured target identity, got %+v", equipment)
+	}
+	if equipment.Type != "装备" || equipment.Capacity != 20 || !equipment.Partial {
+		t.Fatalf("expected partial captured equipment container, got %+v", equipment)
+	}
+	if !strings.Contains(equipment.SourceCapture, "GetLookDetail(player_21424)") {
+		t.Fatalf("expected source capture pointer to GetLookDetail, got %q", equipment.SourceCapture)
+	}
+	if len(equipment.Items) != 10 {
+		t.Fatalf("expected captured other equipment rows, got %+v", equipment.Items)
+	}
+
+	itemsByName := itemInfosByName(equipment.Items)
+	expectedEquipment := map[string]struct {
+		index   int
+		display string
+	}{
+		"无双头盔":  {index: 0, display: "357.png"},
+		"无双护肩":  {index: 1, display: "358.png"},
+		"无双铁腕":  {index: 2, display: "360.png"},
+		"饮血刀":   {index: 3, display: "48.png"},
+		"寨夫人上衣": {index: 4, display: "474.png"},
+		"无双护腿":  {index: 5, display: "361.png"},
+		"泥戒指":   {index: 6, display: "431.png"},
+		"怪木机":   {index: 9, display: "333.png"},
+		"无双铁腰带": {index: 10, display: "362.png"},
+		"蛤蟆精战靴": {index: 12, display: "503.png"},
+	}
+	for name, expected := range expectedEquipment {
+		item := itemsByName[name]
+		if item.Name == "" || item.Index != expected.index || item.Display != expected.display || item.Type != "装备" || item.ItemType != "equip" {
+			t.Fatalf("expected captured other equipment %s at index %d display %s, got %+v", name, expected.index, expected.display, item)
+		}
+	}
+
+	missingResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownOtherEquipmentReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownOtherEquipmentRequest{
+			RoleName: "未恢复目标",
+			RoleID:   "player_unrestored",
+			Handle:   "player_unrestored",
+		}),
+	}, socketSession)
+	if !missingResult.handled || missingResult.otherEquipment == nil {
+		t.Fatalf("expected explicit unrestored-target response, got %+v", missingResult)
+	}
+	if missingResult.otherEquipment.ErrorCode != "look_equipment_unrestored" || len(missingResult.otherEquipment.Items) != 0 {
+		t.Fatalf("expected unrestored-target error without guessed items, got %+v", missingResult.otherEquipment)
+	}
+}
+
 func TestHandlePacketClassicTownSetFastPanelStoresActiveSkill(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	_, _, found, learned := store.LearnRoleSkill(
@@ -2893,6 +3873,54 @@ func TestHandlePacketClassicTownSetFastPanelStoresActiveSkill(t *testing.T) {
 	}, socketSession)
 	if getResult.fastPanel == nil || !fastPanelContains(getResult.fastPanel.Entries, 4, "skill", "挑衅") {
 		t.Fatalf("expected persisted slot 4 taunt after GetFastPanel, got %+v", getResult.fastPanel)
+	}
+}
+
+func TestHandlePacketClassicTownRemoveFastPanelClearsSlot(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	_, _, found, learned := store.LearnRoleSkill(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		session.RoleSkill{Name: "鎸戣", Level: 1, Type: "鎶€鑳铰烽€氱敤", Icon: "634.png"},
+	)
+	if !found || !learned {
+		t.Fatal("expected active test skill to be learned")
+	}
+
+	setResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownSetFastPanelReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownSetFastPanelRequest{
+			Index: 4,
+			Type:  "skill",
+			Name:  "鎸戣",
+		}),
+	}, socketSession)
+	if !setResult.handled || setResult.fastPanel == nil || !fastPanelContains(setResult.fastPanel.Entries, 4, "skill", "鎸戣") {
+		t.Fatalf("expected slot 4 taunt after SetFastPanel, got %+v", setResult.fastPanel)
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownRemoveFastPanelReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownRemoveFastPanelRequest{
+			Index: 4,
+		}),
+	}, socketSession)
+	if !result.handled || result.fastPanel == nil {
+		t.Fatalf("expected RemoveFastPanel to push fast panel, got %+v", result)
+	}
+	if fastPanelContains(result.fastPanel.Entries, 4, "skill", "鎸戣") {
+		t.Fatalf("expected slot 4 taunt to be removed, got %+v", result.fastPanel.Entries)
+	}
+
+	getResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetFastPanelReq,
+		Seq:     4,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if getResult.fastPanel == nil || fastPanelContains(getResult.fastPanel.Entries, 4, "skill", "鎸戣") {
+		t.Fatalf("expected persisted slot 4 removal after GetFastPanel, got %+v", getResult.fastPanel)
 	}
 }
 
@@ -5165,6 +6193,130 @@ func TestHandlePacketClassicBattleActiveItemCanReviveTeamTarget(t *testing.T) {
 	}
 }
 
+func TestClassicBattleRelivePushUsesCapturedDoRelivePayload(t *testing.T) {
+	over := &battle.OverPush{
+		BattleID: "battle-relive-capture",
+		Winner:   battle.CampEnemy,
+		Rounds:   3,
+		Result: battle.ResultPayload{
+			Winner: battle.CampEnemy,
+			Rounds: 3,
+		},
+	}
+	relive := buildClassicBattleRelivePush(over)
+	if relive == nil {
+		t.Fatal("expected enemy-win battle over to produce DoRelive push")
+	}
+	if relive.BattleID != over.BattleID || relive.Ltim <= time.Now().UnixMilli() {
+		t.Fatalf("expected relive push to keep battleId and future ltim, got %+v", relive)
+	}
+	if !strings.Contains(relive.NeedItem, "千年灵芝") || !strings.Contains(relive.NeedItem, "立即原地复活") {
+		t.Fatalf("expected captured 千年灵芝 needItem markup, got %s", relive.NeedItem)
+	}
+	if !strings.Contains(relive.SourceCapture, "c_doRelive") {
+		t.Fatalf("expected c_doRelive source capture pointer, got %s", relive.SourceCapture)
+	}
+	if escaped := buildClassicBattleRelivePush(&battle.OverPush{
+		BattleID: "battle-escape",
+		Winner:   battle.CampEnemy,
+		Result: battle.ResultPayload{
+			Winner:  battle.CampEnemy,
+			Escaped: true,
+		},
+	}); escaped != nil {
+		t.Fatalf("escape battle over must not open death relive question, got %+v", escaped)
+	}
+}
+
+func TestClassicBattleLoadProgressUsesCapturedPayload(t *testing.T) {
+	progress := buildClassicBattleLoadProgressPush(nil, "battle-load-capture", 142, "")
+	if progress == nil {
+		t.Fatal("expected battle load progress push")
+	}
+	if progress.BattleID != "battle-load-capture" || progress.Name != "battleLoad" || progress.Progress != 100 {
+		t.Fatalf("expected clamped captured battleLoad progress, got %+v", progress)
+	}
+	if !strings.Contains(progress.SourceCapture, "c_battleLoadPro") {
+		t.Fatalf("expected c_battleLoadPro source capture pointer, got %s", progress.SourceCapture)
+	}
+	if negative := buildClassicBattleLoadProgressPush(nil, "", -3, "capture"); negative.Progress != 0 {
+		t.Fatalf("expected negative progress to clamp to 0, got %+v", negative)
+	}
+}
+
+func TestClassicBattleCellCountUsesCapturedPKPayload(t *testing.T) {
+	cellCount := buildClassicBattleCellCountPush("battle-cell-count-capture", 2, true)
+	if cellCount == nil {
+		t.Fatal("expected battle cell count push")
+	}
+	if cellCount.BattleID != "battle-cell-count-capture" || cellCount.Count != 2 || !cellCount.PKWarning {
+		t.Fatalf("expected captured battleCellCount shape, got %+v", cellCount)
+	}
+	if !strings.Contains(cellCount.SourceCapture, "c_battleCellCount") {
+		t.Fatalf("expected c_battleCellCount source capture pointer, got %s", cellCount.SourceCapture)
+	}
+	if negative := buildClassicBattleCellCountPush("", -1, false); negative.Count != 0 || negative.PKWarning {
+		t.Fatalf("expected negative cell count to clamp and pk false to stay false, got %+v", negative)
+	}
+}
+
+func TestHandlePacketClassicBattleLoadProtocol(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	progressResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleLoadProReq,
+		Seq: 4,
+		Payload: mustJSON(t, classicBattleLoadProgressRequest{
+			BattleID: "battle-load-capture",
+			Progress: 87,
+		}),
+	}, socketSession)
+
+	if !progressResult.handled || progressResult.battleLoadProgress == nil {
+		t.Fatalf("expected BattleLoadPro request to return progress push, got %+v", progressResult)
+	}
+	if progressResult.battleLoadProgress.BattleID != "battle-load-capture" || progressResult.battleLoadProgress.Progress != 87 {
+		t.Fatalf("expected BattleLoadPro to echo battleId/progress, got %+v", progressResult.battleLoadProgress)
+	}
+	if !strings.Contains(progressResult.battleLoadProgress.SourceCapture, "BattleLoadPro") {
+		t.Fatalf("expected BattleLoadPro capture pointer, got %s", progressResult.battleLoadProgress.SourceCapture)
+	}
+
+	readyResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleRoleReadyReq,
+		Seq: 5,
+		Payload: mustJSON(t, classicBattleRoleReadyRequest{
+			BattleID: "battle-load-capture",
+		}),
+	}, socketSession)
+	if !readyResult.handled || readyResult.battleLoadProgress == nil {
+		t.Fatalf("expected BattleRoleReady request to return progress push, got %+v", readyResult)
+	}
+	if readyResult.battleLoadProgress.Progress != 100 {
+		t.Fatalf("expected BattleRoleReady to mark progress 100, got %+v", readyResult.battleLoadProgress)
+	}
+	if !strings.Contains(readyResult.battleLoadProgress.SourceCapture, "BattleRoleReady") {
+		t.Fatalf("expected BattleRoleReady capture pointer, got %s", readyResult.battleLoadProgress.SourceCapture)
+	}
+}
+
+func TestHandlePacketClassicBattleDoReliveRejectsMissingItem(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleDoReliveReq,
+		Seq: 4,
+		Payload: mustJSON(t, classicBattleDoReliveRequest{
+			BattleID: "battle-relive-capture",
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected DoRelive request to be handled")
+	}
+	if !packetChatMessagesContain(result.chatMessages, "用于复活的物品不足") {
+		t.Fatalf("expected captured missing relive item error, got %+v", result.chatMessages)
+	}
+}
+
 func TestHandlePacketClassicQuestLogAndRemove(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	const questTitle = "小试牛刀"
@@ -5763,6 +6915,102 @@ func TestHandlePacketClassicSocialAddRemoveFriendAndBlackList(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicSocialGetFriendListReturnsCurrentSnapshot(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+
+	for index, roleName := range []string{"zeta-friend", "alpha-friend"} {
+		result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+			Cmd: cmdClassicSocialAddFriendReq,
+			Seq: uint64(index + 2),
+			Payload: mustJSON(t, classicSocialMutateRequest{
+				RoleName: roleName,
+			}),
+		}, socketSession)
+		if !result.handled || len(result.friendInfos) != 1 {
+			t.Fatalf("expected add friend push for %s, got %+v", roleName, result)
+		}
+	}
+
+	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialGetFriendListReq,
+		Seq: 4,
+	}, socketSession)
+	if !result.handled || len(result.friendInfos) != 2 {
+		t.Fatalf("expected two FriendInfo pushes from current session, got %+v", result)
+	}
+	if result.friendInfos[0].RoleName != "alpha-friend" || result.friendInfos[1].RoleName != "zeta-friend" {
+		t.Fatalf("expected stable friend-list order, got %+v", result.friendInfos)
+	}
+
+	withoutRole := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialGetFriendListReq,
+		Seq: 5,
+	}, &packetSession{})
+	if !withoutRole.handled || len(withoutRole.friendInfos) != 0 {
+		t.Fatalf("expected GetFrienInfos without selected role to return no entries, got %+v", withoutRole)
+	}
+}
+
+func TestHandlePacketClassicSocialGetFriendListSeedsCapturedFriendInfo(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+
+	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialGetFriendListReq,
+		Seq: 2,
+	}, socketSession)
+	if !result.handled || len(result.friendInfos) != 1 {
+		t.Fatalf("expected captured FriendInfo seed, got %+v", result)
+	}
+	friend := result.friendInfos[0]
+	if friend.RoleName != "恐龙抗狼1" || friend.Level != 29 || friend.MapName != "广青镇_1" || !friend.Online || friend.Relation != "friend" {
+		t.Fatalf("expected captured 恐龙抗狼1|45|29|战士 friend mapping, got %+v", friend)
+	}
+
+	replay := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialGetFriendListReq,
+		Seq: 3,
+	}, socketSession)
+	if !replay.handled || len(replay.friendInfos) != 1 || replay.friendInfos[0].RoleName != "恐龙抗狼1" {
+		t.Fatalf("expected captured friend seed to persist in current session snapshot, got %+v", replay)
+	}
+}
+
+func TestHandlePacketClassicSocialGetBlackListReturnsCurrentSnapshot(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+
+	for index, roleName := range []string{"zeta-black", "alpha-black"} {
+		result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+			Cmd: cmdClassicSocialAddBlackReq,
+			Seq: uint64(index + 2),
+			Payload: mustJSON(t, classicSocialMutateRequest{
+				RoleName: roleName,
+			}),
+		}, socketSession)
+		if !result.handled || len(result.blackInfos) != 1 {
+			t.Fatalf("expected add black-list push for %s, got %+v", roleName, result)
+		}
+	}
+
+	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialGetBlackListReq,
+		Seq: 4,
+	}, socketSession)
+	if !result.handled || len(result.blackInfos) != 2 {
+		t.Fatalf("expected two BlackListInfo pushes from current session, got %+v", result)
+	}
+	if result.blackInfos[0].RoleName != "alpha-black" || result.blackInfos[1].RoleName != "zeta-black" {
+		t.Fatalf("expected stable black-list order, got %+v", result.blackInfos)
+	}
+
+	withoutRole := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialGetBlackListReq,
+		Seq: 5,
+	}, &packetSession{})
+	if !withoutRole.handled || len(withoutRole.blackInfos) != 0 {
+		t.Fatalf("expected GetBlackListInfos without selected role to return no entries, got %+v", withoutRole)
+	}
+}
+
 func TestHandlePacketClassicSocialRequiresSelectedRole(t *testing.T) {
 	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
 		Cmd: cmdClassicSocialAddFriendReq,
@@ -5776,6 +7024,34 @@ func TestHandlePacketClassicSocialRequiresSelectedRole(t *testing.T) {
 	}
 	if len(result.friendInfos) != 0 {
 		t.Fatalf("expected no FriendInfo without selected role, got %+v", result.friendInfos)
+	}
+}
+
+func TestHandlePacketClassicSocialTradeRequestReturnsCapturedClosedWarning(t *testing.T) {
+	_, socketSession := seedSelectedRoleSession(t)
+
+	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialTradeReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicSocialTradeRequest{
+			Handle:   "player_21432",
+			RoleName: "桥头的樵夫",
+		}),
+	}, socketSession)
+	if !result.handled || !packetChatMessagesContain(result.chatMessages, classicSocialTradeTemporarilyClosed) {
+		t.Fatalf("expected captured trade-closed warning, got %+v", result)
+	}
+
+	withoutRole := handlePacketWithSession(session.NewStore(), protocol.Packet{
+		Cmd: cmdClassicSocialTradeReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicSocialTradeRequest{
+			Handle:   "player_21432",
+			RoleName: "桥头的樵夫",
+		}),
+	}, &packetSession{})
+	if !withoutRole.handled || len(withoutRole.chatMessages) != 0 {
+		t.Fatalf("expected trade request without selected role to be handled without warning, got %+v", withoutRole)
 	}
 }
 
@@ -5989,6 +7265,200 @@ func TestHandlePacketClassicMallSearchPurchaseAndErrors(t *testing.T) {
 	}, socketSession)
 	if notFound.mallPurchase == nil || notFound.mallPurchase.ErrorCode != "PRODUCT_NOT_FOUND" {
 		t.Fatalf("expected product not found, got %+v", notFound)
+	}
+}
+
+func TestHandlePacketClassicPetInfoAndFeed(t *testing.T) {
+	store := session.NewStore()
+	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "222")
+	water, ok := session.CapturedRoleItemTemplate("宠物用营养水")
+	if !ok {
+		t.Fatal("expected captured nutrition water template")
+	}
+	water.Type = "背包"
+	water.Index = -1
+	water.Count = 2
+	granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, water)
+	if !ok {
+		t.Fatal("expected nutrition water to be granted")
+	}
+
+	infoResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicPetInfoReq,
+		Seq:     2,
+		Payload: mustJSON(t, classicPetInfoRequest{}),
+	}, socketSession)
+	if !infoResult.handled || infoResult.petInfo == nil || !infoResult.petInfo.HasPet {
+		t.Fatalf("expected pet info push, got %+v", infoResult)
+	}
+	if infoResult.petInfo.Name != "炎火兽" || infoResult.petInfo.DisplayURL != "petmap/yhs1.swf" {
+		t.Fatalf("expected captured fire pet info, got %+v", infoResult.petInfo)
+	}
+
+	feedResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicPetFeedReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicPetFeedRequest{
+			Type:  granted.Type,
+			Index: granted.Index,
+			Count: 1,
+		}),
+	}, socketSession)
+	if !feedResult.handled || feedResult.petFeedResult == nil || !feedResult.petFeedResult.Success || feedResult.petInfo == nil {
+		t.Fatalf("expected pet feed result and refreshed info, got %+v", feedResult)
+	}
+	if feedResult.petInfo.Exp != infoResult.petInfo.Exp+5 || feedResult.petInfo.Fullness != 100 {
+		t.Fatalf("expected pet exp/fullness refresh, before=%+v after=%+v", infoResult.petInfo, feedResult.petInfo)
+	}
+	if len(feedResult.itemInfos) != 1 || feedResult.itemInfos[0].Name != "宠物用营养水" || feedResult.itemInfos[0].Count != 1 {
+		t.Fatalf("expected remaining water item push, got infos=%+v clears=%+v", feedResult.itemInfos, feedResult.itemClears)
+	}
+}
+
+func TestHandlePacketClassicAuctionOpenAndListUsesCapturedPages(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+
+	openResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveRoleReq,
+		Seq: 1,
+		Payload: mustJSON(t, classicTownRoleInteractionRequest{
+			Handle: "5010542616817526",
+			Kind:   "npc",
+			MapID:  "3",
+		}),
+	}, socketSession)
+	if !openResult.handled || openResult.auctionOpen == nil {
+		t.Fatalf("expected auction NPC to push open message, got %+v", openResult)
+	}
+	if openResult.auctionOpen.ContainerType != classicAuctionContainerType || openResult.auctionOpen.NPCHandle != "5010542616817526" {
+		t.Fatalf("expected captured auction container open, got %+v", openResult.auctionOpen)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicAuctionListReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicAuctionListRequest{
+			Page:        0,
+			PageCount:   30,
+			AuctionType: "道具",
+			SortType:    0,
+		}),
+	}, socketSession)
+	if !listResult.handled || listResult.auctionList == nil {
+		t.Fatalf("expected auction list push, got %+v", listResult)
+	}
+	if listResult.auctionList.Total != 201 || len(listResult.auctionList.Items) != 30 || !listResult.auctionList.Partial {
+		t.Fatalf("expected captured partial first page total=201 count=30, got %+v", listResult.auctionList)
+	}
+	first := listResult.auctionList.Items[0]
+	if first.Handle != "8040284297490233" || first.Item.Name != "大包还元散" || first.Item.Display != "700.png" {
+		t.Fatalf("expected first captured auction item, got %+v", first)
+	}
+	if len(first.PriceItems) != 1 || first.PriceItems[0].Name != "银元宝" || first.PriceItems[0].Count != 700 {
+		t.Fatalf("expected first captured auction price, got %+v", first.PriceItems)
+	}
+
+	pageTwoResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicAuctionListReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicAuctionListRequest{
+			Page:        2,
+			PageCount:   30,
+			AuctionType: "道具",
+			SortType:    0,
+		}),
+	}, socketSession)
+	if !pageTwoResult.handled || pageTwoResult.auctionList == nil {
+		t.Fatalf("expected auction page 2 push, got %+v", pageTwoResult)
+	}
+	if pageTwoResult.auctionList.Page != 2 || pageTwoResult.auctionList.Total != 201 || len(pageTwoResult.auctionList.Items) != 30 {
+		t.Fatalf("expected captured page 2 total=201 count=30, got %+v", pageTwoResult.auctionList)
+	}
+	pageTwoFirst := pageTwoResult.auctionList.Items[0]
+	if pageTwoFirst.Handle != "2804192736274688" || pageTwoFirst.Item.Name != "筋斗云" || pageTwoFirst.Item.Display != "968.png" {
+		t.Fatalf("expected captured page 2 first auction item, got %+v", pageTwoFirst)
+	}
+	if len(pageTwoFirst.PriceItems) != 1 || pageTwoFirst.PriceItems[0].Name != "银元宝" || pageTwoFirst.PriceItems[0].Count != 800 {
+		t.Fatalf("expected captured page 2 first auction price, got %+v", pageTwoFirst.PriceItems)
+	}
+}
+
+func TestHandlePacketClassicMailOpenAndReadUsesCapturedMessages(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+
+	openResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownAnswerReq,
+		Seq: 1,
+		Payload: mustJSON(t, classicTownAnswerRequest{
+			Handle:       "5050542617322114",
+			MsgHandle:    "1",
+			AnswerHandle: "2",
+		}),
+	}, socketSession)
+	if !openResult.handled || openResult.mailOpen == nil || openResult.mailList == nil {
+		t.Fatalf("expected mail answer to push open/list, got %+v", openResult)
+	}
+	if openResult.mailOpen.ContainerType != classicMailContainerType || openResult.mailOpen.NPCHandle != "5050542617322114" {
+		t.Fatalf("expected captured mail container open, got %+v", openResult.mailOpen)
+	}
+	if len(openResult.mailList.Items) != 3 || !openResult.mailList.Partial {
+		t.Fatalf("expected captured partial mail list, got %+v", openResult.mailList)
+	}
+	if len(openResult.mailList.MailCost) != 3 || !strings.Contains(openResult.mailList.MailCost[1], "铜钱[/]x50") {
+		t.Fatalf("expected captured mail postage costs, got %+v", openResult.mailList.MailCost)
+	}
+	if openResult.mailList.Items[0].Handle != "5544758100159914" || openResult.mailList.Items[0].Subject != "新手任务提示" {
+		t.Fatalf("expected first captured mail subject, got %+v", openResult.mailList.Items[0])
+	}
+
+	infoResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicMailInfoReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicMailInfoRequest{
+			Handle: "5544758100159914",
+		}),
+	}, socketSession)
+	if !infoResult.handled || infoResult.mailInfo == nil || !infoResult.mailInfo.Found {
+		t.Fatalf("expected captured mail info, got %+v", infoResult)
+	}
+	if infoResult.mailInfo.Subject != "新手任务提示" || infoResult.mailInfo.From != "系统" || !strings.Contains(infoResult.mailInfo.Content, "恭喜你升到15级") {
+		t.Fatalf("expected captured mail detail, got %+v", infoResult.mailInfo)
+	}
+}
+
+func TestHandlePacketClassicMailSendAndAuctionAddUseCapturedVipGate(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+
+	mailResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicMailSendReq,
+		Seq: 1,
+		Payload: mustJSON(t, classicMailSendRequest{
+			Subject: "1",
+			To:      "桥头的樵夫",
+			Items: []classicMailAttachmentRequest{
+				{Type: "背包", Index: 38, Count: 1},
+			},
+		}),
+	}, socketSession)
+	if !mailResult.handled || !packetChatMessagesContain(mailResult.chatMessages, "交易需要VIP5") {
+		t.Fatalf("expected SendMail captured VIP gate, got %+v", mailResult)
+	}
+
+	auctionResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicAuctionAddReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicAuctionAddRequest{
+			SaleType:  0,
+			ItemType:  "背包",
+			ItemIndex: 37,
+			ItemCount: 3,
+			PriceItems: []classicAuctionAddPriceItemRequest{
+				{Name: "银元宝", Count: 1},
+			},
+		}),
+	}, socketSession)
+	if !auctionResult.handled || !packetChatMessagesContain(auctionResult.chatMessages, "交易需要VIP5") {
+		t.Fatalf("expected AddAuctionInfo captured VIP gate, got %+v", auctionResult)
 	}
 }
 

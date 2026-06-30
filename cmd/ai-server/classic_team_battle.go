@@ -146,6 +146,12 @@ func writeClassicTeamBattleResult(writer *websocketWriter, result packetResult) 
 			return
 		}
 	}
+	if result.battleRelive != nil {
+		if err := writer.writePush(cmdClassicBattleRelivePush, encodePayload(*result.battleRelive)); err != nil {
+			log.Printf("[ai-server] write classic team battle DoRelive failed: %v", err)
+			return
+		}
+	}
 	if result.rolePhysique != nil {
 		if err := writer.writePush(cmdClassicTownRolePhysiquePush, encodePayload(*result.rolePhysique)); err != nil {
 			log.Printf("[ai-server] write classic team battle rolePhysique failed: %v", err)

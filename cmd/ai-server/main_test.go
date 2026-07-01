@@ -7354,8 +7354,14 @@ func TestHandlePacketClassicAuctionOpenAndListUsesCapturedPages(t *testing.T) {
 	if first.Handle != "8040284297490233" || first.Item.Name != "大包还元散" || first.Item.Display != "700.png" {
 		t.Fatalf("expected first captured auction item, got %+v", first)
 	}
+	if first.Item.ItemLevel != 3 || !strings.Contains(first.Item.Description, "大包还元散") || !strings.Contains(first.Item.Description, "&7@2000") {
+		t.Fatalf("expected first captured auction item source description, got %+v", first.Item)
+	}
 	if len(first.PriceItems) != 1 || first.PriceItems[0].Name != "银元宝" || first.PriceItems[0].Count != 700 {
 		t.Fatalf("expected first captured auction price, got %+v", first.PriceItems)
+	}
+	if first.PriceItems[0].ItemLevel != 4 || !strings.Contains(first.PriceItems[0].Description, "银元宝") || !strings.Contains(first.PriceItems[0].Description, "&25@9999") {
+		t.Fatalf("expected first captured auction price source description, got %+v", first.PriceItems[0])
 	}
 
 	pageTwoResult := handlePacketWithSession(store, protocol.Packet{
@@ -7378,8 +7384,21 @@ func TestHandlePacketClassicAuctionOpenAndListUsesCapturedPages(t *testing.T) {
 	if pageTwoFirst.Handle != "2804192736274688" || pageTwoFirst.Item.Name != "筋斗云" || pageTwoFirst.Item.Display != "968.png" {
 		t.Fatalf("expected captured page 2 first auction item, got %+v", pageTwoFirst)
 	}
+	if pageTwoFirst.Item.ItemLevel != 3 || !strings.Contains(pageTwoFirst.Item.Description, "筋斗云") || !strings.Contains(pageTwoFirst.Item.Description, "&24@法宝") {
+		t.Fatalf("expected captured page 2 first auction item source description, got %+v", pageTwoFirst.Item)
+	}
 	if len(pageTwoFirst.PriceItems) != 1 || pageTwoFirst.PriceItems[0].Name != "银元宝" || pageTwoFirst.PriceItems[0].Count != 800 {
 		t.Fatalf("expected captured page 2 first auction price, got %+v", pageTwoFirst.PriceItems)
+	}
+	for _, row := range classicAuctionSourceRows {
+		itemMeta := classicAuctionSourceItemMeta(row.ItemName, row.Display)
+		if itemMeta.Description == "" || itemMeta.ItemLevel == 0 {
+			t.Fatalf("expected captured auction item metadata for %+v, got %+v", row, itemMeta)
+		}
+		priceMeta := classicAuctionSourceItemMeta(row.PriceName, row.PriceDisplay)
+		if priceMeta.Description == "" || priceMeta.ItemLevel == 0 {
+			t.Fatalf("expected captured auction price metadata for %+v, got %+v", row, priceMeta)
+		}
 	}
 }
 
@@ -7423,6 +7442,64 @@ func TestHandlePacketClassicMailOpenAndReadUsesCapturedMessages(t *testing.T) {
 	}
 	if infoResult.mailInfo.Subject != "新手任务提示" || infoResult.mailInfo.From != "系统" || !strings.Contains(infoResult.mailInfo.Content, "恭喜你升到15级") {
 		t.Fatalf("expected captured mail detail, got %+v", infoResult.mailInfo)
+	}
+}
+
+func TestHandlePacketClassicMailGetAllMovesCapturedAttachmentsToBag(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+
+	infoResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicMailInfoReq,
+		Seq: 1,
+		Payload: mustJSON(t, classicMailInfoRequest{
+			Handle: "5544758100159914",
+		}),
+	}, socketSession)
+	if !infoResult.handled || infoResult.mailInfo == nil || !infoResult.mailInfo.Found {
+		t.Fatalf("expected captured mail info, got %+v", infoResult)
+	}
+
+	listResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTownContainerRequest{
+			Type: classicMailContainerType,
+		}),
+	}, socketSession)
+	if !listResult.handled || listResult.containerCap == nil || listResult.containerCap.Type != classicMailContainerType || listResult.containerCap.Capacity != classicMailCapacity {
+		t.Fatalf("expected mail attachment container list, got %+v", listResult)
+	}
+	if len(listResult.itemInfos) != 2 || listResult.itemInfos[0].Name != "宝匣" || listResult.itemInfos[1].Name != "宠物月饼" {
+		t.Fatalf("expected captured mail attachments, got %+v", listResult.itemInfos)
+	}
+
+	moveResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownContainerMove,
+		Seq: 3,
+		Payload: mustJSON(t, classicTownContainerMoveRequest{
+			SourceType: classicMailContainerType,
+			TargetType: classicTownBagContainerType,
+		}),
+	}, socketSession)
+	if !moveResult.handled {
+		t.Fatal("expected mail ContainerMove to be handled")
+	}
+	if len(moveResult.itemClears) != 2 || moveResult.itemClears[0].Type != classicMailContainerType || moveResult.itemClears[0].Index != 0 || moveResult.itemClears[1].Index != 1 {
+		t.Fatalf("expected mail attachment clears for slots 0/1, got %+v", moveResult.itemClears)
+	}
+	if len(moveResult.itemInfos) != 2 || moveResult.itemInfos[0].Type != classicTownBagContainerType || moveResult.itemInfos[0].Name != "宝匣" || moveResult.itemInfos[1].Name != "宠物月饼" {
+		t.Fatalf("expected captured attachments to be pushed into bag, got %+v", moveResult.itemInfos)
+	}
+
+	listAgain := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownGetItemListReq,
+		Seq: 4,
+		Payload: mustJSON(t, classicTownContainerRequest{
+			Type: classicMailContainerType,
+		}),
+	}, socketSession)
+	if len(listAgain.itemInfos) != 0 {
+		t.Fatalf("expected mail attachment list to be empty after get-all, got %+v", listAgain.itemInfos)
 	}
 }
 

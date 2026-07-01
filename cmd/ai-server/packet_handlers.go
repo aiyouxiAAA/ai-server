@@ -241,6 +241,8 @@ type packetSession struct {
 	blackList               map[string]classicSocialBlackEntry
 	enemies                 map[string]classicSocialEnemyEntry
 	buyBackTaken            map[int]bool
+	currentMailHandle       string
+	mailAttachmentTaken     map[string]map[int]bool
 }
 
 func handlePacket(store *session.Store, packet protocol.Packet) packetResult {
@@ -586,7 +588,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		return buildClassicMailInfoResult(request)
+		return buildClassicMailInfoResult(socketSession, request)
 	case cmdClassicMailSendReq:
 		var request classicMailSendRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -1558,6 +1560,9 @@ func buildClassicTownContainerCapacityResult(store *session.Store, socketSession
 	}
 
 	containerType = strings.TrimSpace(containerType)
+	if containerType == classicMailContainerType {
+		return buildClassicMailContainerCapacityResult(socketSession)
+	}
 	if containerType == classicBattleLootType {
 		return packetResult{
 			containerCap: &classicTownContainerCapacityPush{
@@ -1594,6 +1599,9 @@ func buildClassicTownItemListResult(store *session.Store, socketSession *packetS
 	}
 
 	containerType = strings.TrimSpace(containerType)
+	if containerType == classicMailContainerType {
+		return buildClassicMailItemListResult(socketSession)
+	}
 	if containerType == classicBattleLootType {
 		result := packetResult{
 			containerCap: &classicTownContainerCapacityPush{
@@ -1668,6 +1676,9 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 
 	sourceType := strings.TrimSpace(request.SourceType)
 	targetType := strings.TrimSpace(request.TargetType)
+	if sourceType == classicMailContainerType && targetType == classicTownBagContainerType {
+		return buildClassicMailContainerMoveResult(store, socketSession)
+	}
 	if sourceType == classicBattleLootType && targetType == classicBattleLootType && request.SourceIndex != nil && request.TargetIndex != nil {
 		return buildClassicBattleLootExchangeResult(socketSession, *request.SourceIndex, *request.TargetIndex, request.Count)
 	}

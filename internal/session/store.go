@@ -32,6 +32,9 @@ const (
 	rolePetEquipIndex      = 9
 	roleTreasureEquipIndex = 14
 	roleMountEquipIndex    = 18
+	roleFashionClothIndex  = 4
+	roleFashionPantsIndex  = 5
+	roleFashionShoesIndex  = 12
 
 	DungeonInstanceShuiliandong  = "shuiliandong"
 	DungeonInstanceHuangfengzhai = "huangfengzhai"
@@ -41,14 +44,30 @@ const (
 
 const dungeonInstanceTTL = time.Hour
 const roleTownAvoidBuffDuration = 5 * time.Minute
+const roleTownInitialExperienceBoostDuration = time.Hour
+const roleTownAdvancedExperienceBoostDuration = 3 * time.Hour
 
 const (
-	classicTownAvoidBuffName          = "\u907f\u602a"
-	classicTownAvoidBuffItemName      = "\u907f\u602a\u7b26"
-	classicTownAvoidBuffLocalItemName = "\u004c\u907f\u602a\u7b26"
-	classicTownAvoidBuffDescription   = "\u70b9\u51fb\u53d6\u6d88\u8be5\u72b6\u6001\uff1b5\u5206\u949f\u5185\u4e0d\u4f1a\u9047\u654c\uff1b\u660e\u602a\u65e0\u6548\u3002"
-	classicTownAvoidBuffSourceCapture = "woc-proxy-captures/20260612_211741_424_session_38832/connections/20260612_211756_199_conn_0002/raw/client-to-server-0001.bin#packetIndex=1433 RemoveBuff"
-	classicTownRemoveAbateBuffCapture = "instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260607_013640_125_conn_0011/raw/client-to-server-0001.bin#packetIndex=368 RemoveABateBuff"
+	classicTownAvoidBuffName                        = "\u907f\u602a"
+	classicTownAvoidBuffItemName                    = "\u907f\u602a\u7b26"
+	classicTownAvoidBuffLocalItemName               = "\u004c\u907f\u602a\u7b26"
+	classicTownAvoidBuffDescription                 = "\u70b9\u51fb\u53d6\u6d88\u8be5\u72b6\u6001\uff1b5\u5206\u949f\u5185\u4e0d\u4f1a\u9047\u654c\uff1b\u660e\u602a\u65e0\u6548\u3002"
+	classicTownAvoidBuffSourceCapture               = "woc-proxy-captures/20260612_211741_424_session_38832/connections/20260612_211756_199_conn_0002/raw/client-to-server-0001.bin#packetIndex=1433 RemoveBuff"
+	classicTownRemoveAbateBuffCapture               = "instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260607_013640_125_conn_0011/raw/client-to-server-0001.bin#packetIndex=368 RemoveABateBuff"
+	classicTownInitialExperienceCardName            = "\u004c\u521d\u9636\u7ecf\u9a8c\u5361"
+	classicTownInitialExperienceBoostName           = "\u53cc\u500d\u7ecf\u9a8c"
+	classicTownInitialExperienceBoostDisplay        = "567.png"
+	classicTownInitialExperienceBoostDescription    = "\u5728\u6218\u6597\u4e2d\u83b7\u5f97\u53cc\u500d\u7684\u7ecf\u9a8c"
+	classicTownInitialExperienceBoostSourceCapture  = "D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260531_023839_239_session_45660/connections/20260531_023846_804_conn_0002/raw/server-to-client-0001.bin#330/#333/#334 after ActiveItemByIndex(114) bag slot 1"
+	classicTownAdvancedExperienceCardName           = "\u004c\u8fdb\u9636\u7ecf\u9a8c\u5361"
+	classicTownAdvancedExperienceBoostSourceCapture = "D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260612_211741_424_session_38832/connections/20260612_211756_199_conn_0002/raw/server-to-client-0001.bin#2844/#2847/#2848 after ActiveItemByIndex(114) bag slot 11"
+	classicTownLevel1GiftBoxName                    = "\u0031\u7ea7\u793c\u76d2"
+	classicTownLevel5GiftBoxName                    = "\u0035\u7ea7\u793c\u76d2"
+	classicTownLevel5GiftBoxError                   = "\u89d2\u8272\u7b49\u7ea7\u5fc5\u987b\u5230\u8fbeLv5"
+	classicTownLevel10GiftBoxName                   = "\u0031\u0030\u7ea7\u793c\u76d2"
+	classicTownLevel10GiftBoxFullCode               = "level10_gift_box_bag_full"
+	classicTownGiftBoxBagFullError                  = "\u80cc\u5305\u7a7a\u95f4\u4e0d\u8db3"
+	classicTownBagCapacityPatchName                 = "\u004c\u80cc\u5305\u8865\u4e01"
 )
 
 var classicPetLevelToExp = []int{
@@ -402,21 +421,23 @@ type RoleFinishContainerResult struct {
 }
 
 type RoleUseItemResult struct {
-	Role             RoleSummary
-	PlayerBase       PlayerBaseData
-	Item             RoleItem
-	LearnedSkill     *RoleSkill
-	TownBuff         *RoleTownBuff
-	UpdatedItem      *RoleItem
-	UpdatedItems     []RoleItem
-	ClearedItems     []RoleItemClear
-	Currencies       RoleCurrencies
-	Found            bool
-	Used             bool
-	Equipped         bool
-	RoleStateChanged bool
-	ErrorCode        string
-	ErrorMessage     string
+	Role              RoleSummary
+	PlayerBase        PlayerBaseData
+	Item              RoleItem
+	LearnedSkill      *RoleSkill
+	TownBuff          *RoleTownBuff
+	UpdatedItem       *RoleItem
+	UpdatedItems      []RoleItem
+	ClearedItems      []RoleItemClear
+	Currencies        RoleCurrencies
+	ContainerType     string
+	ContainerCapacity int
+	Found             bool
+	Used              bool
+	Equipped          bool
+	RoleStateChanged  bool
+	ErrorCode         string
+	ErrorMessage      string
 }
 
 type RoleTownBuffRemoveResult struct {
@@ -2486,6 +2507,36 @@ func (store *Store) UseRoleItem(playerID string, roleID string, sourceType strin
 			}
 		}
 
+		if sourceItem.Name == classicTownLevel1GiftBoxName && roles[index].Level >= 1 {
+			return store.useLevel1GiftBoxLocked(playerID, roles, index, sourceItem)
+		}
+		if sourceItem.Name == classicTownLevel5GiftBoxName && roles[index].Level < 5 {
+			role := withRoleRuntimeDefaults(roles[index])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "item_level_too_low",
+				ErrorMessage: classicTownLevel5GiftBoxError,
+			}
+		}
+		if sourceItem.Name == classicTownLevel5GiftBoxName && roles[index].Level >= 5 {
+			return store.useLevel5GiftBoxLocked(playerID, roles, index, sourceItem)
+		}
+		if sourceItem.Name == classicTownLevel10GiftBoxName && roles[index].Level >= 10 {
+			return store.useLevel10GiftBoxLocked(playerID, roles, index, sourceItem)
+		}
+		if sourceItem.Name == classicTownBagCapacityPatchName {
+			return store.useBagCapacityPatchLocked(playerID, roles, index, sourceItem)
+		}
+		if sourceItem.Name == classicTownInitialExperienceCardName {
+			return store.useInitialExperienceCardLocked(playerID, roles, index, sourceItem)
+		}
+		if sourceItem.Name == classicTownAdvancedExperienceCardName {
+			return store.useAdvancedExperienceCardLocked(playerID, roles, index, sourceItem)
+		}
+
 		switch sourceItem.Name {
 		case "银元宝":
 			return store.useCurrencyExchangeItemLocked(playerID, roles, index, sourceItem, 1, "铜钱", 1000)
@@ -2524,9 +2575,423 @@ func (store *Store) UseRoleItem(playerID string, roleID string, sourceType strin
 	}
 }
 
+func (store *Store) useBagCapacityPatchLocked(playerID string, roles []RoleSummary, roleIndex int, sourceItem RoleItem) RoleUseItemResult {
+	baseCapacity, supported := roleContainerCapacity(sourceItem.Type)
+	if !supported {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "invalid_container",
+			ErrorMessage: "invalid target container",
+		}
+	}
+
+	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	updatedResults := []RoleItem{}
+	if updatedSource != nil {
+		updatedResults = append(updatedResults, *updatedSource)
+	}
+
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used bag capacity patch failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	return RoleUseItemResult{
+		Role:              role,
+		PlayerBase:        playerBaseDataFromRole(playerID, role),
+		Item:              sourceItem,
+		UpdatedItems:      normalizeRoleItems(updatedResults),
+		ClearedItems:      clearedItems,
+		ContainerType:     sourceItem.Type,
+		ContainerCapacity: capacity,
+		Found:             true,
+		Used:              true,
+	}
+}
+
+func (store *Store) useLevel1GiftBoxLocked(playerID string, roles []RoleSummary, roleIndex int, sourceItem RoleItem) RoleUseItemResult {
+	rewardItems, ok := classicTownLevel1GiftBoxRewards()
+	if !ok {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "target_item_missing",
+			ErrorMessage: "gift box reward item missing",
+		}
+	}
+
+	baseCapacity, supported := roleContainerCapacity(sourceItem.Type)
+	if !supported {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "invalid_container",
+			ErrorMessage: "invalid target container",
+		}
+	}
+
+	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	updatedResults := []RoleItem{}
+	if updatedSource != nil {
+		updatedResults = append(updatedResults, *updatedSource)
+	}
+	for _, reward := range rewardItems {
+		reward.Type = sourceItem.Type
+		reward.Index = -1
+		var granted RoleItem
+		updatedItems, granted, ok = grantRoleItemToItems(updatedItems, capacity, reward)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "bag_full",
+				ErrorMessage: "\u80cc\u5305\u5df2\u6ee1\u3002",
+			}
+		}
+		updatedResults = append(updatedResults, granted)
+	}
+
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used level 1 gift box failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	return RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		UpdatedItems: normalizeRoleItems(updatedResults),
+		ClearedItems: clearedItems,
+		Found:        true,
+		Used:         true,
+	}
+}
+
+func classicTownLevel1GiftBoxRewards() ([]RoleItem, bool) {
+	rewardSpecs := []struct {
+		name  string
+		count int
+	}{
+		{name: "\u0035\u7ea7\u793c\u76d2", count: 1},
+		{name: "\u004c\u907f\u602a\u7b26", count: 3},
+		{name: "\u004c\u767e\u5e74\u4eba\u53c2\u679c", count: 1},
+		{name: "\u004c\u767e\u5e74\u87e0\u6843", count: 1},
+	}
+	rewards := make([]RoleItem, 0, len(rewardSpecs))
+	for _, spec := range rewardSpecs {
+		item, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			return nil, false
+		}
+		item.Type = "\u80cc\u5305"
+		item.Index = -1
+		item.Count = spec.count
+		rewards = append(rewards, item)
+	}
+	return rewards, true
+}
+
+func (store *Store) useLevel5GiftBoxLocked(playerID string, roles []RoleSummary, roleIndex int, sourceItem RoleItem) RoleUseItemResult {
+	rewardItems, ok := classicTownLevel5GiftBoxRewards()
+	if !ok {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "target_item_missing",
+			ErrorMessage: "gift box reward item missing",
+		}
+	}
+
+	baseCapacity, supported := roleContainerCapacity(sourceItem.Type)
+	if !supported {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "invalid_container",
+			ErrorMessage: "invalid target container",
+		}
+	}
+
+	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	updatedResults := []RoleItem{}
+	if updatedSource != nil {
+		updatedResults = append(updatedResults, *updatedSource)
+	}
+	for _, reward := range rewardItems {
+		reward.Type = sourceItem.Type
+		reward.Index = -1
+		var granted RoleItem
+		updatedItems, granted, ok = grantRoleItemToItems(updatedItems, capacity, reward)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				Found:        true,
+				ErrorCode:    "bag_full",
+				ErrorMessage: "背包已满。",
+			}
+		}
+		updatedResults = append(updatedResults, granted)
+	}
+
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used level 5 gift box failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	return RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		UpdatedItems: normalizeRoleItems(updatedResults),
+		ClearedItems: clearedItems,
+		Found:        true,
+		Used:         true,
+	}
+}
+
+func classicTownLevel5GiftBoxRewards() ([]RoleItem, bool) {
+	rewardSpecs := []struct {
+		name  string
+		count int
+	}{
+		{name: "\u004c\u521d\u9636\u7ecf\u9a8c\u5361", count: 1},
+		{name: "\u004c\u82b1\u5377", count: 2},
+		{name: "\u004c\u56de\u57ce\u5492", count: 3},
+		{name: "\u0031\u0030\u7ea7\u793c\u76d2", count: 1},
+	}
+	rewards := make([]RoleItem, 0, len(rewardSpecs))
+	for _, spec := range rewardSpecs {
+		item, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			return nil, false
+		}
+		item.Type = "\u80cc\u5305"
+		item.Index = -1
+		item.Count = spec.count
+		rewards = append(rewards, item)
+	}
+	return rewards, true
+}
+
+func (store *Store) useLevel10GiftBoxLocked(playerID string, roles []RoleSummary, roleIndex int, sourceItem RoleItem) RoleUseItemResult {
+	rewardItems, ok := classicTownLevel10GiftBoxRewards()
+	if !ok {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "target_item_missing",
+			ErrorMessage: "gift box reward item missing",
+		}
+	}
+
+	baseCapacity, supported := roleContainerCapacity(sourceItem.Type)
+	if !supported {
+		role := withRoleRuntimeDefaults(roles[roleIndex])
+		return RoleUseItemResult{
+			Role:         role,
+			PlayerBase:   playerBaseDataFromRole(playerID, role),
+			Item:         sourceItem,
+			Found:        true,
+			ErrorCode:    "invalid_container",
+			ErrorMessage: "invalid target container",
+		}
+	}
+
+	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	updatedResults := []RoleItem{}
+	if updatedSource != nil {
+		updatedResults = append(updatedResults, *updatedSource)
+	}
+	for _, reward := range rewardItems {
+		reward.Type = sourceItem.Type
+		reward.Index = -1
+		var granted RoleItem
+		updatedItems, granted, ok = grantRoleItemToItems(updatedItems, capacity, reward)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[roleIndex])
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         sourceItem,
+				UpdatedItems: []RoleItem{normalizeRoleItem(sourceItem)},
+				Found:        true,
+				ErrorCode:    classicTownLevel10GiftBoxFullCode,
+				ErrorMessage: classicTownGiftBoxBagFullError,
+			}
+		}
+		updatedResults = append(updatedResults, granted)
+	}
+
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used level 10 gift box failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	return RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		UpdatedItems: normalizeRoleItems(updatedResults),
+		ClearedItems: clearedItems,
+		Found:        true,
+		Used:         true,
+	}
+}
+
+func classicTownLevel10GiftBoxRewards() ([]RoleItem, bool) {
+	rewardSpecs := []struct {
+		name  string
+		count int
+	}{
+		{name: "\u004c\u521d\u9636\u7ecf\u9a8c\u5361", count: 1},
+		{name: "\u004c\u82b1\u5377", count: 3},
+		{name: "\u004c\u80cc\u5305\u8865\u4e01", count: 1},
+		{name: "\u0031\u0035\u7ea7\u793c\u76d2", count: 1},
+	}
+	rewards := make([]RoleItem, 0, len(rewardSpecs))
+	for _, spec := range rewardSpecs {
+		item, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			return nil, false
+		}
+		item.Type = "\u80cc\u5305"
+		item.Index = -1
+		item.Count = spec.count
+		if item.Name == "\u004c\u80cc\u5305\u8865\u4e01" {
+			item.Display = "560.png"
+			item.Description = "f_i_L\u80cc\u5305\u8865\u4e01^00ccff&24@\u7279\u6b8a&25@99&19@\u4f7f\u7528\u540e\u589e\u52a06\u683c\u80cc\u5305\u5bb9\u79ef,\u6269\u5927\u4e0a\u9650\u4e3a90\u683c&20@\u7f1d\u5236\u548c\u6269\u5c55\u80cc\u5305\u7684\u4e13\u7528\u8865\u4e01.&27@sitem_ezhj&103@0&104@0&105@&107@&108@0"
+			item.ItemType = "own"
+			item.ItemLevel = 3
+		}
+		rewards = append(rewards, item)
+	}
+	return rewards, true
+}
+
 func isAvoidMonsterBuffItem(item RoleItem) bool {
 	name := strings.TrimSpace(item.Name)
 	return name == classicTownAvoidBuffItemName || name == classicTownAvoidBuffLocalItemName
+}
+
+func (store *Store) useInitialExperienceCardLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+) RoleUseItemResult {
+	return store.useExperienceBoostCardLocked(
+		playerID,
+		roles,
+		roleIndex,
+		sourceItem,
+		roleTownInitialExperienceBoostDuration,
+		classicTownInitialExperienceBoostSourceCapture,
+	)
+}
+
+func (store *Store) useAdvancedExperienceCardLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+) RoleUseItemResult {
+	return store.useExperienceBoostCardLocked(
+		playerID,
+		roles,
+		roleIndex,
+		sourceItem,
+		roleTownAdvancedExperienceBoostDuration,
+		classicTownAdvancedExperienceBoostSourceCapture,
+	)
+}
+
+func (store *Store) useExperienceBoostCardLocked(
+	playerID string,
+	roles []RoleSummary,
+	roleIndex int,
+	sourceItem RoleItem,
+	duration time.Duration,
+	sourceCapture string,
+) RoleUseItemResult {
+	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
+	nowMs := time.Now().UnixMilli()
+	buff := RoleTownBuff{
+		Handle:        roles[roleIndex].RoleID,
+		Name:          classicTownInitialExperienceBoostName,
+		Display:       classicTownInitialExperienceBoostDisplay,
+		Description:   classicTownInitialExperienceBoostDescription,
+		BattleOnly:    0,
+		EndTime:       nowMs + int64(duration/time.Millisecond),
+		SourceCapture: sourceCapture,
+		Partial:       true,
+	}
+	activeBuffs, _ := filterActiveRoleTownBuffs(roles[roleIndex].TownBuffs, nowMs)
+	nextBuffs := make([]RoleTownBuff, 0, len(activeBuffs)+1)
+	for _, existing := range activeBuffs {
+		if existing.Name != buff.Name {
+			nextBuffs = append(nextBuffs, existing)
+		}
+	}
+	nextBuffs = append(nextBuffs, buff)
+
+	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
+	roles[roleIndex].TownBuffs = normalizeRoleTownBuffs(nextBuffs)
+	store.rolesByPID[playerID] = roles
+	if err := store.persistPlayerStateLocked(playerID); err != nil {
+		log.Printf("[session.Store] persist used experience boost card failed: %v", err)
+	}
+
+	role := withRoleRuntimeDefaults(roles[roleIndex])
+	result := RoleUseItemResult{
+		Role:         role,
+		PlayerBase:   playerBaseDataFromRole(playerID, role),
+		Item:         sourceItem,
+		TownBuff:     &buff,
+		ClearedItems: clearedItems,
+		Found:        true,
+		Used:         true,
+	}
+	if updatedSource != nil {
+		result.UpdatedItems = []RoleItem{*updatedSource}
+	}
+	return result
 }
 
 func (store *Store) useAvoidMonsterBuffItemLocked(
@@ -2624,6 +3089,7 @@ func (store *Store) useSkillItemLocked(
 		skill.Level = existing.Level + 1
 		break
 	}
+	skill = roleSkillWithCapturedActiveItemPresentation(skill)
 
 	if targetSkillIndex < 0 && len(roles[roleIndex].Skills) >= defaultSkillCap {
 		role := withRoleRuntimeDefaults(roles[roleIndex])
@@ -2668,12 +3134,24 @@ func (store *Store) useSkillItemLocked(
 	return result
 }
 
+func roleSkillWithCapturedActiveItemPresentation(skill RoleSkill) RoleSkill {
+	if skill.Name == "\u6b66\u5668\u5a34\u719f" && skill.Level == 1 {
+		skill.Type = "null"
+		skill.Icon = "226.png"
+		skill.Description = "f_s_\u6b66\u5668\u5a34\u719f^ffffff&9@\u88ab\u52a8&8@\u6e38\u4fa0 &10@\u901a\u7528&12@8"
+	}
+	return skill
+}
+
 func roleSkillFromItem(item RoleItem) (RoleSkill, bool) {
+	name := strings.TrimSpace(item.Name)
 	itemType := strings.TrimSpace(item.ItemType)
+	if name == "\u6b66\u5668\u5a34\u719f" && strings.Contains(item.Description, "&24@\u88ab\u52a8\u6280\u80fd") {
+		itemType = "\u88ab\u52a8\u6280\u80fd"
+	}
 	if itemType != "被动技能" && !strings.HasPrefix(itemType, "技能") {
 		return RoleSkill{}, false
 	}
-	name := strings.TrimSpace(item.Name)
 	if name == "" {
 		return RoleSkill{}, false
 	}
@@ -3191,9 +3669,10 @@ func (store *Store) PreviewTryEquip(playerID string, roleID string, itemName str
 			}
 		}
 
+		replacementIndices := roleTryEquipReplacementIndices(sourceItem, targetIndex)
 		previewItems := make([]RoleItem, 0, len(role.Items)+1)
 		for _, item := range role.Items {
-			if item.Type == "装备" && item.Index == targetIndex {
+			if item.Type == "装备" && roleItemIndexMatches(item.Index, replacementIndices) {
 				continue
 			}
 			previewItems = append(previewItems, item)
@@ -3988,6 +4467,9 @@ func roleEquipTargetIndex(item RoleItem) (int, bool) {
 	if item.ItemType != "equip" {
 		return 0, false
 	}
+	if _, ok := roleItemAppearanceSourceParams(item); ok {
+		return roleFashionClothIndex, true
+	}
 	switch item.Name {
 	case "铁斧":
 		return 3, true
@@ -4031,7 +4513,29 @@ func roleEquipTargetIndex(item RoleItem) (int, bool) {
 	return 0, false
 }
 
+func roleTryEquipReplacementIndices(item RoleItem, targetIndex int) []int {
+	if _, ok := roleItemAppearanceSourceParams(item); ok {
+		return []int{roleFashionClothIndex, roleFashionPantsIndex, roleFashionShoesIndex}
+	}
+	return []int{targetIndex}
+}
+
+func roleItemIndexMatches(index int, candidates []int) bool {
+	for _, candidate := range candidates {
+		if index == candidate {
+			return true
+		}
+	}
+	return false
+}
+
 func applyRoleItemAppearanceToSourceQuery(sourceQuery string, item RoleItem) string {
+	if params, ok := roleItemAppearanceSourceParams(item); ok {
+		for _, param := range params {
+			sourceQuery = setSourceQueryParam(sourceQuery, param.key, param.value)
+		}
+		return sourceQuery
+	}
 	if key, value, ok := roleItemAppearanceSourceParam(item); ok {
 		return setSourceQueryParam(sourceQuery, key, value)
 	}
@@ -4108,6 +4612,30 @@ func roleEquipmentAppearanceSourceKeys() []string {
 		keys = append(keys, fmt.Sprintf("w%d", index))
 	}
 	return keys
+}
+
+type roleItemAppearanceSourceParamPair struct {
+	key   string
+	value string
+}
+
+func roleItemAppearanceSourceParams(item RoleItem) ([]roleItemAppearanceSourceParamPair, bool) {
+	switch item.Name {
+	case "超时空要塞":
+		return []roleItemAppearanceSourceParamPair{
+			{key: "c", value: "88"},
+			{key: "p", value: "91"},
+			{key: "se", value: "79"},
+		}, true
+	case "盛夏缤纷":
+		return []roleItemAppearanceSourceParamPair{
+			{key: "c", value: "52"},
+			{key: "p", value: "55"},
+			{key: "se", value: "41"},
+			{key: "hr", value: "19"},
+		}, true
+	}
+	return nil, false
 }
 
 func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {

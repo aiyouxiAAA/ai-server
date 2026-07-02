@@ -66,7 +66,7 @@ type RolePush struct {
 	Movement        *RoleMovement          `json:"movement,omitempty"`
 	PK              int                    `json:"pk,omitempty"`
 	State           int                    `json:"state,omitempty"`
-	GuildName       string                 `json:"guildName,omitempty"`
+	GuildName       string                 `json:"guildName"`
 	GuildPic        string                 `json:"guildPic,omitempty"`
 }
 
@@ -1297,6 +1297,16 @@ func findSourceNPC(handle string) *sourceNPCEntry {
 	}
 
 	return nil
+}
+
+func FindSourceNPCDisplayNames(handle string) (string, string, bool) {
+	npc := findSourceNPC(handle)
+	if npc == nil {
+		return "", "", false
+	}
+	sourceDisplayName := npc.DisplayName
+	displayName := stripSourceMarkup(sourceDisplayName)
+	return displayName, sourceDisplayName, true
 }
 
 func cloneAnswerOptions(answers []AnswerOption) []AnswerOption {

@@ -22,6 +22,26 @@ func TestTeamInviteAcceptCreatesTeam(t *testing.T) {
 	}
 }
 
+func TestTeamInviteRejectUsesCapturedSourceMessage(t *testing.T) {
+	manager := NewManager()
+	manager.UpsertOnline(testMember("role-a", "甲"))
+	manager.UpsertOnline(testMember("role-b", "乙"))
+
+	inviteEvents := manager.Invite("role-a", "role-b", "")
+	if len(inviteEvents) != 2 || inviteEvents[0].Invite == nil {
+		t.Fatalf("expected invite and result events, got %+v", inviteEvents)
+	}
+
+	events := manager.ReplyInvite("role-b", inviteEvents[0].Invite.InviteID, false)
+	if len(events) != 2 || events[1].Result == nil {
+		t.Fatalf("expected reply and inviter rejection result, got %+v", events)
+	}
+	result := events[1].Result
+	if result.Success || result.Action != "inviteRejected" || result.ErrorCode != "TARGET_REJECTED" || result.ErrorMessage != "对方拒绝加入你的队伍" {
+		t.Fatalf("expected captured TeamDeny rejection message, got %+v", result)
+	}
+}
+
 func TestTeamRejectsFifthMember(t *testing.T) {
 	manager := NewManager()
 	for _, member := range []Member{

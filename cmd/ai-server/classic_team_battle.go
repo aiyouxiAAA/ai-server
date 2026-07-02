@@ -133,6 +133,21 @@ func writeClassicTeamBattleResult(writer *websocketWriter, result packetResult) 
 			log.Printf("[ai-server] write classic team battle battleAction failed: %v", err)
 			return
 		}
+		for _, clearCell := range result.battleClearCells {
+			if clearCell.BattleID != battleAction.BattleID || clearCell.Handle != battleAction.ActorHandle {
+				continue
+			}
+			if err := writer.writePush(cmdClassicBattleClearCellInfo, encodePayload(clearCell)); err != nil {
+				log.Printf("[ai-server] write classic team battle clearBattleCellInfo failed: %v", err)
+				return
+			}
+		}
+		if result.battleStopCommand != nil {
+			if err := writer.writePush(cmdClassicBattleStopCommand, encodePayload(*result.battleStopCommand)); err != nil {
+				log.Printf("[ai-server] write classic team battle stopCommand failed: %v", err)
+				return
+			}
+		}
 	}
 	for _, clearBuff := range result.battleClearBuffs {
 		if err := writer.writePush(cmdClassicBattleClearBuffInfo, encodePayload(clearBuff)); err != nil {

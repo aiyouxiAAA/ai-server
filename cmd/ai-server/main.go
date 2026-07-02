@@ -59,6 +59,7 @@ const (
 	cmdClassicTownCareStatePush      = 1244
 	cmdClassicTownOtherEquipmentReq  = 1245
 	cmdClassicTownOtherEquipmentPush = 1246
+	cmdClassicTownGameTipPush        = 1248
 	cmdClassicTownGetCapacityReq     = 1119
 	cmdClassicTownGetItemListReq     = 1120
 	cmdClassicTownCapacityPush       = 1121
@@ -168,6 +169,7 @@ const (
 	cmdClassicTownClearBuffInfo      = 1222
 	cmdClassicTownRemoveBuffReq      = 1223
 	cmdClassicTownRemoveABateBuff    = 1224
+	cmdClassicTownErrorPush          = 1249
 
 	cmdClassicBattleStartReq      = 3000
 	cmdClassicBattleStartPush     = 3001
@@ -186,6 +188,8 @@ const (
 	cmdClassicBattleRoleReadyReq  = 3016
 	cmdClassicBattleLoadProPush   = 3017
 	cmdClassicBattleCellCountPush = 3018
+	cmdClassicBattleStopCommand   = 3019
+	cmdClassicBattleClearCellInfo = 3020
 )
 
 const cmdClassicTownFinishingContainerReq = 1187
@@ -309,6 +313,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				registeredSceneMapID = announceWorldSceneTransfer(socketWriter, socketSession, registeredSceneRoleID, result.sceneTransferFromMapID, result.sceneTransferSpawn)
 			}
 		}
+		for _, gameTip := range result.gameTips {
+			if err := socketWriter.writePush(cmdClassicTownGameTipPush, encodePayload(gameTip)); err != nil {
+				log.Printf("[ai-server] write classic town gameTip push failed: %v", err)
+				return
+			}
+		}
 		if result.teamSyncTransfer != nil {
 			classicTeamHub.syncTransfer(store, *result.teamSyncTransfer)
 		}
@@ -366,6 +376,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		for _, chatMessage := range result.chatMessages {
 			if err := socketWriter.writePush(cmdClassicTownChatMessagePush, encodePayload(chatMessage)); err != nil {
 				log.Printf("[ai-server] write classic town chat message failed: %v", err)
+				return
+			}
+		}
+		for _, errorMessage := range result.errorMessages {
+			if err := socketWriter.writePush(cmdClassicTownErrorPush, encodePayload(errorMessage)); err != nil {
+				log.Printf("[ai-server] write classic town error message failed: %v", err)
 				return
 			}
 		}
@@ -719,6 +735,21 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 			if err := socketWriter.writePush(cmdClassicBattleActionPush, encodePayload(battleAction)); err != nil {
 				log.Printf("[ai-server] write classic battle battleAction failed: %v", err)
 				return
+			}
+			for _, clearCell := range result.battleClearCells {
+				if clearCell.BattleID != battleAction.BattleID || clearCell.Handle != battleAction.ActorHandle {
+					continue
+				}
+				if err := socketWriter.writePush(cmdClassicBattleClearCellInfo, encodePayload(clearCell)); err != nil {
+					log.Printf("[ai-server] write classic battle clearBattleCellInfo failed: %v", err)
+					return
+				}
+			}
+			if result.battleStopCommand != nil {
+				if err := socketWriter.writePush(cmdClassicBattleStopCommand, encodePayload(*result.battleStopCommand)); err != nil {
+					log.Printf("[ai-server] write classic battle stopCommand failed: %v", err)
+					return
+				}
 			}
 		}
 		for _, clearBuff := range result.battleClearBuffs {

@@ -36,7 +36,8 @@ func buildClassicWarehouseOpenResult(socketSession *packetSession, request class
 	if strings.TrimSpace(request.AnswerHandle) != "6" {
 		return packetResult{}, false
 	}
-	if _, ok := classicWarehouseNPCHandles[strings.TrimSpace(request.Handle)]; !ok {
+	sourceHandle := strings.TrimSpace(request.Handle)
+	if _, ok := classicWarehouseNPCHandles[sourceHandle]; !ok {
 		return packetResult{}, false
 	}
 	if socketSession == nil || socketSession.selectedRole == nil {
@@ -44,7 +45,7 @@ func buildClassicWarehouseOpenResult(socketSession *packetSession, request class
 	}
 	return packetResult{
 		openContainer: &classicTownOpenContainerPush{
-			Handle:        socketSession.selectedRole.RoleID,
+			Handle:        sourceHandle,
 			Type:          classicWarehouseContainerType,
 			SourceCapture: classicWarehouseSourceCapture,
 		},

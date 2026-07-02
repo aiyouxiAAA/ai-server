@@ -21,6 +21,7 @@ type packetResult struct {
 	responsePayload    []byte
 	serverTime         *classicTownServerTimePush
 	townBootstrap      *world.TownBootstrapSnapshot
+	gameTips           []classicTownGameTipPush
 	answerSpeak        *world.AnswerSpeakPush
 	subGame            *classicTownSubGamePush
 	collectionComplete *classicTownCollectionCompletePush
@@ -30,6 +31,7 @@ type packetResult struct {
 	roleState          *session.RoleState
 	rolePhysique       *session.RolePhysique
 	chatMessages       []classicTownChatMessagePush
+	errorMessages      []classicTownErrorPush
 	chatBroadcasts     []classicTownChatBroadcast
 	abilityCount       *classicTownAbilityCountPush
 	skillCap           *classicTownSkillCapPush
@@ -91,8 +93,10 @@ type packetResult struct {
 	battleCellCount    *classicBattleCellCountPush
 	battleCommand      *battle.StartCommandPush
 	battleActions      []battle.ActionPush
+	battleStopCommand  *classicBattleStopCommandPush
 	battleBuffs        []battle.BuffInfoPush
 	battleClearBuffs   []battle.ClearBuffInfoPush
+	battleClearCells   []classicBattleClearCellInfoPush
 	battleOver         *battle.OverPush
 	battleLoadProgress *classicBattleLoadProgressPush
 	battleRelive       *classicBattleRelivePush
@@ -105,6 +109,29 @@ type packetResult struct {
 	sceneTransferSpawn     world.SpawnPoint
 	handled                bool
 }
+
+type classicTownErrorPush struct {
+	Msg           string `json:"msg"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+	Partial       bool   `json:"partial,omitempty"`
+}
+
+type classicTownGameTipPush struct {
+	TipID         string   `json:"tipId"`
+	Kind          string   `json:"kind,omitempty"`
+	TargetName    string   `json:"targetName,omitempty"`
+	HTMLText      string   `json:"htmlText,omitempty"`
+	Fields        []string `json:"fields,omitempty"`
+	SourceCapture string   `json:"sourceCapture,omitempty"`
+}
+
+const (
+	classicTownGameTipNpcSourceCapture = "tmp/capture-timeline-feature-gap-audit.json#command=50110+c_gameTip+npc"
+	classicTownGameTipNpcTipID         = "zzshow"
+	classicTownGameTipNpcKind          = "npc"
+	classicTownGameTipNpcTargetName    = "一心长态"
+	classicTownGameTipNpcHTMLText      = "<font color='#ffff00' size='14'><b>去找一心常态【研习职业】。</b></font><br>转职后可以学习更多炫酷技能。"
+)
 
 type classicTeamSyncTransfer struct {
 	ActorRoleID string
@@ -165,10 +192,42 @@ const classicTownServerTimeSourceCapture = "D:/yzhgame/WOCClient/instances/insta
 const classicTownMapSpecialLastTimeSourceCapture = "tmp/capture-timeline-feature-gap-audit.json#command=50084+c_mapSpecial+lastTime"
 
 const (
+	classicTownAddPointNoPointSourceCapture            = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#1007+c_Error after AddPoint(170)"
+	classicTownActiveItemLevel1GiftBoxSourceCapture    = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#96-#108 after ActiveItemByIndex(114) bag slot 1"
+	classicTownActiveItemLevel5GiftBoxSourceCapture    = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#112+c_Error after ActiveItemByIndex(114)"
+	classicTownActiveItemLevel10GiftBoxSourceCapture   = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#3298/#3302/#3306+c_Error after ActiveItemByIndex(114) bag slot 7; success #3310-#3322"
+	classicTownActiveItemBagCapacityPatchSourceCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#3326/#3327/#3331 after ActiveItemByIndex(114) bag slot 7"
+	classicTownActiveItemLevel5GiftBoxError            = "\u89d2\u8272\u7b49\u7ea7\u5fc5\u987b\u5230\u8fbeLv5"
+	classicTownActiveItemLevel1GiftBoxName             = "\u0031\u7ea7\u793c\u76d2"
+	classicTownActiveItemLevel5GiftBoxName             = "\u0035\u7ea7\u793c\u76d2"
+	classicTownActiveItemLevel10GiftBoxFullError       = "\u80cc\u5305\u7a7a\u95f4\u4e0d\u8db3"
+	classicTownActiveItemLevel10GiftBoxName            = "\u0031\u0030\u7ea7\u793c\u76d2"
+	classicTownActiveItemBagCapacityPatchName          = "\u004c\u80cc\u5305\u8865\u4e01"
+	classicTownSilverIngotExchangeItemName             = "\u94f6\u5143\u5b9d"
+	classicTownCopperExchangeItemName                  = "\u94dc\u94b1"
+	classicTownInitialExperienceCardName               = "\u004c\u521d\u9636\u7ecf\u9a8c\u5361"
+	classicTownAdvancedExperienceCardName              = "\u004c\u8fdb\u9636\u7ecf\u9a8c\u5361"
+	classicTownInitialExperienceBoostName              = "\u53cc\u500d\u7ecf\u9a8c"
+	classicTownInitialExperienceBoostMessage           = "\u83b7\u5f97\u53cc\u500d\u7ecf\u9a8c\u65f6\u95f41\u5c0f\u65f6"
+	classicTownAdvancedExperienceBoostMessage          = "\u83b7\u5f97\u53cc\u500d\u7ecf\u9a8c\u65f6\u95f43\u5c0f\u65f6"
+	classicTownAddPointNoPointError                    = "你已经没有剩余点数了"
+)
+
+const (
+	classicTownInactiveTransportHandle        = "4170542615108676"
+	classicTownInactiveTransportMsgHandle     = "1"
+	classicTownInactiveTransportAnswerHandle  = "3"
+	classicTownInactiveTransportSourceCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#1835+c_Error after Speak(101)"
+	classicTownInactiveTransportError         = "传送点未激活！"
+)
+
+const (
 	classicBattleCellCountSourceCapture     = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#297+c_battleCellCount"
+	classicBattleStopCommandSourceCapture   = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#307+c_stopListenBattleCommand"
 	classicBattleLoadProgressSourceCapture  = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#300+c_battleLoadPro"
 	classicBattleLoadProgressRequestCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/client-to-server-0001.bin#159+BattleLoadPro"
 	classicBattleRoleReadyRequestCapture    = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/client-to-server-0001.bin#160+BattleRoleReady"
+	classicBattleClearCellInfoSourceCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260619_152122_327_session_19024/connections/20260619_152158_516_conn_0002/raw/server-to-client-0001.bin#12481-12486+escapeSuccess+c_clearBattleCellInfo"
 	classicBattleReliveSourceCapture        = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/server-to-client-0001.bin#11601+c_doRelive"
 	classicBattleReliveRequestCapture       = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/client-to-server-0001.bin#6170+DoRelive"
 	classicBattleReliveMissingItemCapture   = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/server-to-client-0001.bin#11616+c_Error"
@@ -181,6 +240,17 @@ type classicBattleCellCountPush struct {
 	BattleID      string `json:"battleId,omitempty"`
 	Count         int    `json:"count"`
 	PKWarning     bool   `json:"pkWarning,omitempty"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+}
+
+type classicBattleStopCommandPush struct {
+	BattleID      string `json:"battleId,omitempty"`
+	SourceCapture string `json:"sourceCapture,omitempty"`
+}
+
+type classicBattleClearCellInfoPush struct {
+	BattleID      string `json:"battleId,omitempty"`
+	Handle        string `json:"handle"`
 	SourceCapture string `json:"sourceCapture,omitempty"`
 }
 
@@ -241,6 +311,7 @@ type packetSession struct {
 	blackList               map[string]classicSocialBlackEntry
 	enemies                 map[string]classicSocialEnemyEntry
 	buyBackTaken            map[int]bool
+	buyBackSoldEntries      []classicTownSourceBuyBackEntry
 	currentMailHandle       string
 	mailAttachmentTaken     map[string]map[int]bool
 }
@@ -303,6 +374,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			bootstrap := world.BuildTownBootstrap(response.Role, response.PlayerBase)
 			filterDefeatedVisibleMonsters(&bootstrap, socketSession)
 			applyAcceptedQuestStatesToBootstrap(&bootstrap, store, socketSession)
+			result.gameTips = buildClassicTownRoleSelectGameTips(response.Role.MapID, bootstrap)
 			result.townBootstrap = &bootstrap
 		}
 		return result
@@ -380,6 +452,15 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		}
 		if destination, ok := resolveClassicTownTransportAnswer(socketSession, "", request.Handle, request.AnswerHandle); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
+		}
+		if isClassicTownInactiveTransportAnswer(request) {
+			return packetResult{
+				errorMessages: []classicTownErrorPush{{
+					Msg:           classicTownInactiveTransportError,
+					SourceCapture: classicTownInactiveTransportSourceCapture,
+				}},
+				handled: true,
+			}
 		}
 		if result, ok := buildClassicTownHealerResult(store, socketSession, request); ok {
 			return result
@@ -804,6 +885,43 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 	}
 }
 
+func buildClassicTownRoleSelectGameTips(mapID int, bootstrap world.TownBootstrapSnapshot) []classicTownGameTipPush {
+	if mapID != 1 {
+		return nil
+	}
+	if !townBootstrapHasSourceRoleDisplayName(bootstrap, classicTownGameTipNpcTargetName) {
+		return nil
+	}
+	return []classicTownGameTipPush{{
+		TipID:      classicTownGameTipNpcTipID,
+		Kind:       classicTownGameTipNpcKind,
+		TargetName: classicTownGameTipNpcTargetName,
+		HTMLText:   classicTownGameTipNpcHTMLText,
+		Fields: []string{
+			classicTownGameTipNpcTipID,
+			classicTownGameTipNpcKind,
+			classicTownGameTipNpcTargetName,
+			classicTownGameTipNpcHTMLText,
+		},
+		SourceCapture: classicTownGameTipNpcSourceCapture,
+	}}
+}
+
+func townBootstrapHasSourceRoleDisplayName(bootstrap world.TownBootstrapSnapshot, displayName string) bool {
+	for _, rolePush := range bootstrap.CreateRoles {
+		if rolePush.DisplayName == displayName {
+			return true
+		}
+	}
+	return false
+}
+
+func isClassicTownInactiveTransportAnswer(request classicTownAnswerRequest) bool {
+	return strings.TrimSpace(request.Handle) == classicTownInactiveTransportHandle &&
+		strings.TrimSpace(request.MsgHandle) == classicTownInactiveTransportMsgHandle &&
+		strings.TrimSpace(request.AnswerHandle) == classicTownInactiveTransportAnswerHandle
+}
+
 func isClassicTownSkillTeacherRequest(request classicTownAnswerRequest) bool {
 	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle || request.Handle == baiyuanSkillTeacherHandle)
 }
@@ -942,8 +1060,10 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	}
 	packet := packetResult{
 		battleActions:     result.Actions,
+		battleStopCommand: buildClassicBattleStopCommandPush(result.Actions),
 		battleBuffs:       result.BuffInfos,
 		battleClearBuffs:  result.ClearBuffInfos,
+		battleClearCells:  buildClassicBattleClearCellInfoPushes(result.Actions),
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
 		battleRelive:      buildClassicBattleRelivePush(result.Over),
@@ -960,10 +1080,44 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
-			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
+			Result: packetResult{
+				battleActions:     packet.battleActions,
+				battleStopCommand: packet.battleStopCommand,
+				battleBuffs:       packet.battleBuffs,
+				battleClearBuffs:  packet.battleClearBuffs,
+				battleClearCells:  packet.battleClearCells,
+				battleCommand:     packet.battleCommand,
+				battleOver:        packet.battleOver,
+				battleRelive:      packet.battleRelive,
+			},
 		}
 	}
 	return packet
+}
+
+func buildClassicBattleStopCommandPush(actions []battle.ActionPush) *classicBattleStopCommandPush {
+	if len(actions) == 0 {
+		return nil
+	}
+	return &classicBattleStopCommandPush{
+		BattleID:      actions[0].BattleID,
+		SourceCapture: classicBattleStopCommandSourceCapture,
+	}
+}
+
+func buildClassicBattleClearCellInfoPushes(actions []battle.ActionPush) []classicBattleClearCellInfoPush {
+	pushes := make([]classicBattleClearCellInfoPush, 0, len(actions))
+	for _, action := range actions {
+		if strings.TrimSpace(action.SourceActionLabel) != "escapeSuccess" || strings.TrimSpace(action.ActorHandle) == "" {
+			continue
+		}
+		pushes = append(pushes, classicBattleClearCellInfoPush{
+			BattleID:      action.BattleID,
+			Handle:        strings.TrimSpace(action.ActorHandle),
+			SourceCapture: classicBattleClearCellInfoSourceCapture,
+		})
+	}
+	return pushes
 }
 
 func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, request battle.ActionRequest, warning string) packetResult {
@@ -1109,6 +1263,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		battleActions:     result.Actions,
 		battleBuffs:       result.BuffInfos,
 		battleClearBuffs:  result.ClearBuffInfos,
+		battleClearCells:  buildClassicBattleClearCellInfoPushes(result.Actions),
 		battleCommand:     result.StartCommand,
 		battleOver:        result.Over,
 		battleRelive:      buildClassicBattleRelivePush(result.Over),
@@ -1136,7 +1291,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
-			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
+			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleClearCells: packet.battleClearCells, battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
 		}
 	}
 	return packet
@@ -1258,7 +1413,11 @@ func buildClassicBattleDoReliveResult(store *session.Store, socketSession *packe
 	}
 	if _, ok := findClassicBattleRequiredBagItem(store, socketSession, classicBattleReliveItemName); !ok {
 		log.Printf("[ai-server] classic battle DoRelive rejected missing item roleId=%s battleId=%s item=%s sourceCapture=%s", socketSession.selectedRole.RoleID, request.BattleID, classicBattleReliveItemName, classicBattleReliveMissingItemCapture)
-		result.chatMessages = []classicTownChatMessagePush{classicTownSystemWarningMessage(classicBattleReliveMissingItemError)}
+		result.errorMessages = []classicTownErrorPush{{
+			Msg:           classicBattleReliveMissingItemError,
+			SourceCapture: classicBattleReliveMissingItemCapture,
+			Partial:       true,
+		}}
 		return result
 	}
 
@@ -2116,6 +2275,30 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 	}
 	if !useResult.Used {
 		log.Printf("[ai-server] classic town ActiveItem rejected roleId=%s type=%s index=%d error=%s", socketSession.selectedRole.RoleID, request.Type, request.Index, useResult.ErrorCode)
+		if useResult.ErrorCode == "item_level_too_low" {
+			return packetResult{
+				errorMessages: []classicTownErrorPush{{
+					Msg:           classicTownActiveItemLevel5GiftBoxError,
+					SourceCapture: classicTownActiveItemLevel5GiftBoxSourceCapture,
+				}},
+				handled: true,
+			}
+		}
+		if useResult.ErrorCode == "level10_gift_box_bag_full" {
+			result := packetResult{
+				errorMessages: []classicTownErrorPush{{
+					Msg:           classicTownActiveItemLevel10GiftBoxFullError,
+					SourceCapture: classicTownActiveItemLevel10GiftBoxSourceCapture,
+				}},
+				itemInfos: make([]classicTownItemInfoPush, 0, len(useResult.UpdatedItems)),
+				handled:   true,
+			}
+			for _, item := range useResult.UpdatedItems {
+				item.Handle = useResult.Role.RoleID
+				result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+			}
+			return result
+		}
 		return packetResult{
 			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(useResult.ErrorMessage)},
 			handled:      true,
@@ -2140,6 +2323,31 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		item.Handle = useResult.Role.RoleID
 		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
 	}
+	if useResult.Item.Name == classicTownActiveItemLevel1GiftBoxName {
+		result.chatMessages = append(result.chatMessages, classicTownLevel1GiftBoxRewardMessages()...)
+	}
+	if useResult.Item.Name == classicTownActiveItemLevel5GiftBoxName {
+		result.chatMessages = append(result.chatMessages, classicTownLevel5GiftBoxRewardMessages()...)
+	}
+	if useResult.Item.Name == classicTownActiveItemLevel10GiftBoxName {
+		result.chatMessages = append(result.chatMessages, classicTownLevel10GiftBoxRewardMessages()...)
+	}
+	if useResult.Item.Name == classicTownActiveItemBagCapacityPatchName && useResult.ContainerCapacity > 0 {
+		result.chatMessages = append(result.chatMessages, classicTownBagCapacityPatchMessage(useResult.ContainerCapacity))
+	}
+	if useResult.ContainerType != "" && useResult.ContainerCapacity > 0 {
+		result.containerCap = &classicTownContainerCapacityPush{
+			Handle:   useResult.Role.RoleID,
+			Type:     useResult.ContainerType,
+			Capacity: useResult.ContainerCapacity,
+		}
+	}
+	if useResult.Item.Name == classicTownSilverIngotExchangeItemName {
+		result.chatMessages = append(result.chatMessages, classicTownSilverIngotExchangeRewardMessage())
+	}
+	if useResult.Item.Name == classicTownCopperExchangeItemName {
+		result.chatMessages = append(result.chatMessages, classicTownCopperExchangeRewardMessage())
+	}
 	if len(useResult.Currencies) > 0 {
 		result.currencyPush = buildClassicTownCurrencyPush(useResult.Role.RoleID, useResult.Currencies)
 	}
@@ -2149,14 +2357,16 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 			classicTownSkillInfoPushFromRoleSkill(useResult.Role.RoleID, *useResult.LearnedSkill),
 		}
 		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(
-			"习得【"+useResult.LearnedSkill.Name+"】Lv."+strconv.Itoa(useResult.LearnedSkill.Level),
+			classicTownLearnedSkillMessage(*useResult.LearnedSkill),
 		))
 	}
 	if useResult.TownBuff != nil {
 		result.townBuffs = []classicTownBuffInfoPush{
 			classicTownBuffInfoPushFromRoleTownBuff(*useResult.TownBuff),
 		}
-		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage("\u4f7f\u7528\u4e86\u907f\u602a\u7b26"))
+		if message := classicTownActiveItemTownBuffMessage(*useResult.TownBuff, useResult.Item.Name); message != "" {
+			result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(message))
+		}
 	}
 	if useResult.Equipped {
 		result.createPlayer = buildClassicTownCreatePlayerPush(useResult.Role, useResult.PlayerBase)
@@ -2166,6 +2376,70 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		result.roleState = useResult.PlayerBase.RoleState
 	}
 	return result
+}
+
+func classicTownLearnedSkillMessage(skill session.RoleSkill) string {
+	if skill.Name == "\u6b66\u5668\u5a34\u719f" && skill.Level == 1 {
+		return "\u4e60\u5f97Lv1[\u6b66\u5668\u5a34\u719f]"
+	}
+	return "\u4e60\u5f97\u3010" + skill.Name + "\u3011Lv." + strconv.Itoa(skill.Level)
+}
+
+func classicTownActiveItemTownBuffMessage(buff session.RoleTownBuff, sourceItemName string) string {
+	switch buff.Name {
+	case "\u907f\u602a":
+		return "\u4f7f\u7528\u4e86\u907f\u602a\u7b26"
+	case classicTownInitialExperienceBoostName:
+		switch sourceItemName {
+		case classicTownInitialExperienceCardName:
+			return classicTownInitialExperienceBoostMessage
+		case classicTownAdvancedExperienceCardName:
+			return classicTownAdvancedExperienceBoostMessage
+		default:
+			return ""
+		}
+	default:
+		return ""
+	}
+}
+
+func classicTownLevel1GiftBoxRewardMessages() []classicTownChatMessagePush {
+	return []classicTownChatMessagePush{
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u0035\u7ea7\u793c\u76d2]x1"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u907f\u602a\u7b26]x3"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u767e\u5e74\u4eba\u53c2\u679c]x1"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u767e\u5e74\u87e0\u6843]x1"),
+	}
+}
+
+func classicTownLevel5GiftBoxRewardMessages() []classicTownChatMessagePush {
+	return []classicTownChatMessagePush{
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u521d\u9636\u7ecf\u9a8c\u5361]x1"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u82b1\u5377]x2"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u56de\u57ce\u5492]x3"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u0031\u0030\u7ea7\u793c\u76d2]x1"),
+	}
+}
+
+func classicTownLevel10GiftBoxRewardMessages() []classicTownChatMessagePush {
+	return []classicTownChatMessagePush{
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u521d\u9636\u7ecf\u9a8c\u5361]x1"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u82b1\u5377]x3"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u004c\u80cc\u5305\u8865\u4e01]x1"),
+		classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u0031\u0035\u7ea7\u793c\u76d2]x1"),
+	}
+}
+
+func classicTownBagCapacityPatchMessage(capacity int) classicTownChatMessagePush {
+	return classicTownSystemChatMessage("\u4f60\u7684\u80cc\u5305\u6269\u5927\u81f3" + strconv.Itoa(capacity) + "\u683c")
+}
+
+func classicTownSilverIngotExchangeRewardMessage() classicTownChatMessagePush {
+	return classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u94dc\u94b1]x1000")
+}
+
+func classicTownCopperExchangeRewardMessage() classicTownChatMessagePush {
+	return classicTownSystemChatMessage("\u83b7\u5f97\u7269\u54c1:[\u94f6\u5143\u5b9d]x1")
 }
 
 func buildClassicTownDestroyItemResult(store *session.Store, socketSession *packetSession, request classicTownDestroyItemRequest) packetResult {
@@ -2257,7 +2531,18 @@ func buildClassicTownSaleItemResult(store *session.Store, socketSession *packetS
 		item.Handle = saleResult.Role.RoleID
 		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
 	}
+	soldBuyBackEntry := classicTownAppendSoldBuyBackEntry(socketSession, saleResult.Item, saleCount, saleResult.Amount)
+	result.buyBackRefresh = &classicTownBuyBackRefreshPush{
+		SourceCapture: classicTownBuyBackRefreshSourceCapture,
+		Partial:       true,
+	}
+	result.buyBackInfos = classicTownBuyBackInfoPushes(
+		saleResult.Role.RoleID,
+		socketSession.buyBackTaken,
+		socketSession.buyBackSoldEntries,
+	)
 	log.Printf("[ai-server] classic town SaleItem roleId=%s shopId=%s type=%s index=%d count=%d item=%s amount=%d", saleResult.Role.RoleID, request.ShopID, request.Type, request.Index, request.Count, saleResult.Item.Name, saleResult.Amount)
+	log.Printf("[ai-server] classic town SaleItem appended buyBack roleId=%s buyBackIndex=%d item=%s count=%d price=%d", saleResult.Role.RoleID, soldBuyBackEntry.Index, soldBuyBackEntry.Name, soldBuyBackEntry.Count, soldBuyBackEntry.Price)
 	return result
 }
 
@@ -2440,6 +2725,15 @@ func buildClassicTownAddPointResult(
 	result := store.AddRolePoint(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Stat)
 	if !result.Found || !result.Applied {
 		log.Printf("[ai-server] classic town AddPoint rejected roleId=%s stat=%s error=%s", socketSession.selectedRole.RoleID, request.Stat, result.ErrorCode)
+		if result.ErrorCode == "no_point" {
+			return packetResult{
+				errorMessages: []classicTownErrorPush{{
+					Msg:           classicTownAddPointNoPointError,
+					SourceCapture: classicTownAddPointNoPointSourceCapture,
+				}},
+				handled: true,
+			}
+		}
 		return packetResult{handled: true}
 	}
 
@@ -2701,6 +2995,7 @@ func buildClassicTownBuyBackListResult(socketSession *packetSession) packetResul
 		buyBackInfos: classicTownBuyBackInfoPushes(
 			socketSession.selectedRole.RoleID,
 			socketSession.buyBackTaken,
+			socketSession.buyBackSoldEntries,
 		),
 		handled: true,
 	}
@@ -2716,7 +3011,7 @@ func buildClassicTownBuyBackResult(
 		return packetResult{handled: true}
 	}
 
-	entry, ok := findClassicTownSourceBuyBackEntry(request.Index)
+	entry, ok := findClassicTownSourceBuyBackEntry(request.Index, socketSession.buyBackSoldEntries)
 	if !ok || (socketSession.buyBackTaken != nil && socketSession.buyBackTaken[request.Index]) {
 		log.Printf("[ai-server] classic town BuyBack ignored missing source entry roleId=%s index=%d", socketSession.selectedRole.RoleID, request.Index)
 		return packetResult{
@@ -2727,6 +3022,7 @@ func buildClassicTownBuyBackResult(
 			buyBackInfos: classicTownBuyBackInfoPushes(
 				socketSession.selectedRole.RoleID,
 				socketSession.buyBackTaken,
+				socketSession.buyBackSoldEntries,
 			),
 			handled: true,
 		}
@@ -2786,6 +3082,7 @@ func buildClassicTownBuyBackResult(
 	result.buyBackInfos = classicTownBuyBackInfoPushes(
 		purchase.Role.RoleID,
 		socketSession.buyBackTaken,
+		socketSession.buyBackSoldEntries,
 	)
 	return result
 }

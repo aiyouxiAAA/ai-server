@@ -47,7 +47,10 @@ type classicSocialTradeRequest struct {
 	RoleName string `json:"roleName"`
 }
 
-const classicSocialTradeTemporarilyClosed = "交易临时关闭"
+const (
+	classicSocialTradeTemporarilyClosed = "交易临时关闭"
+	classicSocialTradeClosedCapture     = "20260606_200103_131_session_00324/20260606_200109_321_conn_0002#TradeRequest(108)+c_Error(49999)"
+)
 
 func buildClassicSocialAddFriendResult(socketSession *packetSession, request classicSocialMutateRequest) packetResult {
 	if !hasSelectedSocialRole(socketSession) {
@@ -166,8 +169,12 @@ func buildClassicSocialTradeRequestResult(socketSession *packetSession, request 
 		return packetResult{handled: true}
 	}
 	return packetResult{
-		chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(classicSocialTradeTemporarilyClosed)},
-		handled:      true,
+		errorMessages: []classicTownErrorPush{{
+			Msg:           classicSocialTradeTemporarilyClosed,
+			SourceCapture: classicSocialTradeClosedCapture,
+			Partial:       true,
+		}},
+		handled: true,
 	}
 }
 

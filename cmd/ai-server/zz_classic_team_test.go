@@ -83,6 +83,37 @@ func TestHandlePacketClassicTeamInviteAcceptAndTeamChat(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTeamInviteDenyUsesCapturedMessage(t *testing.T) {
+	classicTeamManager.Reset()
+
+	store := session.NewStore()
+	leaderSession, memberSession := seedClassicTeamPair(t, store)
+
+	inviteResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTeamInviteReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicTeamInviteRequest{
+			TargetName: memberSession.selectedRole.DisplayName,
+		}),
+	}, leaderSession)
+	inviteEvent := firstClassicTeamInviteEvent(inviteResult)
+	if inviteEvent == nil || inviteEvent.Invite == nil {
+		t.Fatalf("expected invite event, got %+v", inviteResult.teamEvents)
+	}
+
+	denyResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTeamInviteReplyReq,
+		Seq: 3,
+		Payload: mustJSON(t, classicTeamInviteReplyRequest{
+			InviteID: inviteEvent.Invite.InviteID,
+			Accept:   false,
+		}),
+	}, memberSession)
+	if !denyResult.handled || !classicTeamResultContains(denyResult, false, "inviteRejected", "对方拒绝加入你的队伍") {
+		t.Fatalf("expected captured TeamDeny rejection result, got %+v", denyResult.teamEvents)
+	}
+}
+
 func TestHandlePacketClassicTeamRejectsFifthMember(t *testing.T) {
 	classicTeamManager.Reset()
 

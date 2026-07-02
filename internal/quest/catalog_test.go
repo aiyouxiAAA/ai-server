@@ -108,6 +108,23 @@ func TestCatalogParsesWuliangRoutes(t *testing.T) {
 	}
 }
 
+func TestCatalogParsesCapturedDafoWoodMonsterRoute(t *testing.T) {
+	info, ok := FindByID("capture-024")
+	if !ok {
+		t.Fatal("expected captured Dafo quest capture-024")
+	}
+	if info.Title != "讨厌的枯木怪" || info.QuestStateHandle != "4090542614314425" {
+		t.Fatalf("expected Dafo quest title and state handle, got %+v", info)
+	}
+	if len(info.Routes) != 1 {
+		t.Fatalf("expected captured Dafo accept route, got %+v", info.Routes)
+	}
+	route := info.Routes[0]
+	if route.Handle != "4090542614314425" || route.MsgHandle != "2q23d_1" || route.AnswerHandle != "2q23a_1_1" {
+		t.Fatalf("expected captured Dafo accept route, got %+v", route)
+	}
+}
+
 func TestCatalogIncludesVisibleWuliangQuestChain(t *testing.T) {
 	expected := map[string]string{
 		"capture-185": "乌梁军策",

@@ -6,13 +6,14 @@ import (
 )
 
 const (
-	PAYMENT_DISABLED      = "PAYMENT_DISABLED"
-	PRODUCT_NOT_FOUND     = "PRODUCT_NOT_FOUND"
-	INSUFFICIENT_CURRENCY = "INSUFFICIENT_CURRENCY"
-	INVALID_QUANTITY      = "INVALID_QUANTITY"
-	DUPLICATE_REQUEST     = "DUPLICATE_REQUEST"
-	DevCurrencyName       = "银元宝"
-	PageSize              = 9
+	PAYMENT_DISABLED       = "PAYMENT_DISABLED"
+	PRODUCT_NOT_FOUND      = "PRODUCT_NOT_FOUND"
+	INSUFFICIENT_CURRENCY  = "INSUFFICIENT_CURRENCY"
+	INVALID_QUANTITY       = "INVALID_QUANTITY"
+	DUPLICATE_REQUEST      = "DUPLICATE_REQUEST"
+	DevCurrencyName        = "银元宝"
+	SourceYubiCurrencyName = "玉币"
+	PageSize               = 9
 )
 
 type Category struct {
@@ -21,13 +22,21 @@ type Category struct {
 }
 
 type Product struct {
-	ProductID   string `json:"productId"`
-	CategoryID  string `json:"categoryId"`
+	ProductID   string        `json:"productId"`
+	CategoryID  string        `json:"categoryId"`
+	Name        string        `json:"name"`
+	Icon        string        `json:"icon"`
+	Price       int           `json:"price"`
+	Currency    string        `json:"currency"`
+	Description string        `json:"description"`
+	Items       []ProductItem `json:"items,omitempty"`
+}
+
+type ProductItem struct {
 	Name        string `json:"name"`
-	Icon        string `json:"icon"`
-	Price       int    `json:"price"`
-	Currency    string `json:"currency"`
+	Display     string `json:"display"`
 	Description string `json:"description"`
+	Count       int    `json:"count,omitempty"`
 }
 
 type SearchRequest struct {
@@ -98,6 +107,8 @@ func NewService() *Service {
 			{ProductID: "dev-pack-05", CategoryID: "hot", Name: "侠客补给", Icon: "29.png", Price: 1, Currency: DevCurrencyName, Description: "开发期侠客道具。"},
 			{ProductID: "dev-pack-06", CategoryID: "hot", Name: "奇珍补给", Icon: "30.png", Price: 1, Currency: DevCurrencyName, Description: "开发期奇珍道具。"},
 			{ProductID: "dev-pack-07", CategoryID: "hot", Name: "秘宝补给", Icon: "31.png", Price: 1, Currency: DevCurrencyName, Description: "开发期秘宝道具。"},
+			{ProductID: "8019", CategoryID: "hot", Name: "超时空要塞", Icon: "1205.png", Price: 150, Currency: SourceYubiCurrencyName, Description: "f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@1779629952719&105@&107@&108@0", Items: []ProductItem{{Name: "超时空要塞", Display: "1205.png", Description: "f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@1779629952719&105@&107@&108@0", Count: 1}}},
+			{ProductID: "7033", CategoryID: "hot", Name: "盛夏缤纷", Icon: "729.png", Price: 100, Currency: SourceYubiCurrencyName, Description: "f_i_盛夏缤纷^5BC46D&24@幻·时装&25@1&19@男性：黑背心时尚牛仔裤。\r女性：彩虹肩带短裙。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0", Items: []ProductItem{{Name: "盛夏缤纷", Display: "729.png", Description: "f_i_盛夏缤纷^5BC46D&24@幻·时装&25@1&19@男性：黑背心时尚牛仔裤。\r女性：彩虹肩带短裙。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0", Count: 1}}},
 		},
 	}
 }

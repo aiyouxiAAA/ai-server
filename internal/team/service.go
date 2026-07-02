@@ -239,7 +239,7 @@ func (manager *Manager) ReplyInvite(toRoleID string, inviteID string, accept boo
 	if !accept {
 		return []Event{
 			manager.resultLocked(toRoleID, true, "replyInvite", "", ""),
-			manager.resultLocked(pending.FromRoleID, false, "inviteRejected", "TARGET_REJECTED", "对方拒绝了组队邀请。"),
+			manager.resultLocked(pending.FromRoleID, false, "inviteRejected", "TARGET_REJECTED", "对方拒绝加入你的队伍"),
 		}
 	}
 	if _, ok := manager.teamByRoleID[toRoleID]; ok {

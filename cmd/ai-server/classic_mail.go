@@ -201,8 +201,12 @@ func buildClassicMailInfoResult(socketSession *packetSession, request classicMai
 
 func buildClassicMailSendResult(_ classicMailSendRequest) packetResult {
 	return packetResult{
-		chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(classicMailSendVipError)},
-		handled:      true,
+		errorMessages: []classicTownErrorPush{{
+			Msg:           classicMailSendVipError,
+			SourceCapture: classicMailSendVipCapture,
+			Partial:       true,
+		}},
+		handled: true,
 	}
 }
 

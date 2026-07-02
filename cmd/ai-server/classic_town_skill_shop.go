@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"ai-server/internal/session"
+	"ai-server/internal/world"
 )
 
 const (
@@ -255,12 +256,14 @@ type classicTownBuyBackInfoPush struct {
 }
 
 type classicTownSkillShopPush struct {
-	Handle   string                      `json:"handle"`
-	ShopID   string                      `json:"shopId"`
-	Title    string                      `json:"title"`
-	Vocation string                      `json:"vocation"`
-	SkillCap int                         `json:"skillCap"`
-	Skills   []classicTownSkillShopEntry `json:"skills"`
+	Handle         string                      `json:"handle"`
+	ShopID         string                      `json:"shopId"`
+	Title          string                      `json:"title"`
+	RoleName       string                      `json:"roleName,omitempty"`
+	SourceRoleName string                      `json:"sourceRoleName,omitempty"`
+	Vocation       string                      `json:"vocation"`
+	SkillCap       int                         `json:"skillCap"`
+	Skills         []classicTownSkillShopEntry `json:"skills"`
 }
 
 type classicTownSkillShopEntry struct {
@@ -289,6 +292,7 @@ func buildClassicTownSkillShopResult(store *session.Store, socketSession *packet
 	}
 	shop = cloneSourceSkillShop(shop)
 	shop.Handle = sourceHandle
+	applySourceShopRoleName(&shop, sourceHandle)
 	if socketSession != nil && socketSession.selectedRole != nil && socketSession.playerBase != nil {
 		skills, _, found := store.GetRoleSkills(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
 		if found {
@@ -300,6 +304,15 @@ func buildClassicTownSkillShopResult(store *session.Store, socketSession *packet
 		skillShop: &shop,
 		handled:   true,
 	}, true
+}
+
+func applySourceShopRoleName(shop *classicTownSkillShopPush, sourceHandle string) {
+	roleName, sourceRoleName, ok := world.FindSourceNPCDisplayNames(sourceHandle)
+	if !ok {
+		return
+	}
+	shop.RoleName = roleName
+	shop.SourceRoleName = sourceRoleName
 }
 
 func buildClassicTownFastPanelResult(store *session.Store, socketSession *packetSession) packetResult {
@@ -477,9 +490,14 @@ var classicTownSourceBuyBackEntries = []classicTownSourceBuyBackEntry{
 	},
 }
 
-func classicTownBuyBackInfoPushes(handle string, taken map[int]bool) []classicTownBuyBackInfoPush {
-	result := make([]classicTownBuyBackInfoPush, 0, len(classicTownSourceBuyBackEntries))
-	for _, entry := range classicTownSourceBuyBackEntries {
+func classicTownBuyBackInfoPushes(
+	handle string,
+	taken map[int]bool,
+	soldEntries []classicTownSourceBuyBackEntry,
+) []classicTownBuyBackInfoPush {
+	entries := classicTownBuyBackEntriesForSession(soldEntries)
+	result := make([]classicTownBuyBackInfoPush, 0, len(entries))
+	for _, entry := range entries {
 		if taken != nil && taken[entry.Index] {
 			continue
 		}
@@ -526,8 +544,11 @@ func classicTownBuyBackInfoPushFromSourceEntry(handle string, entry classicTownS
 	}
 }
 
-func findClassicTownSourceBuyBackEntry(index int) (classicTownSourceBuyBackEntry, bool) {
-	for _, entry := range classicTownSourceBuyBackEntries {
+func findClassicTownSourceBuyBackEntry(
+	index int,
+	soldEntries []classicTownSourceBuyBackEntry,
+) (classicTownSourceBuyBackEntry, bool) {
+	for _, entry := range classicTownBuyBackEntriesForSession(soldEntries) {
 		if entry.Index == index {
 			return entry, true
 		}
@@ -546,6 +567,55 @@ func classicTownSourceBuyBackEntryToRoleItem(entry classicTownSourceBuyBackEntry
 		Index:       -1,
 		ItemLevel:   entry.ItemLevel,
 	}
+}
+
+func classicTownBuyBackEntriesForSession(soldEntries []classicTownSourceBuyBackEntry) []classicTownSourceBuyBackEntry {
+	if len(soldEntries) == 0 {
+		return classicTownSourceBuyBackEntries
+	}
+	result := make([]classicTownSourceBuyBackEntry, 0, len(classicTownSourceBuyBackEntries)+len(soldEntries))
+	result = append(result, classicTownSourceBuyBackEntries...)
+	result = append(result, soldEntries...)
+	return result
+}
+
+func classicTownAppendSoldBuyBackEntry(
+	socketSession *packetSession,
+	item session.RoleItem,
+	count int,
+	price int,
+) classicTownSourceBuyBackEntry {
+	if count <= 0 {
+		count = 1
+	}
+	entry := classicTownSourceBuyBackEntry{
+		Index:         classicTownNextBuyBackIndex(socketSession.buyBackSoldEntries),
+		Name:          item.Name,
+		ItemType:      item.ItemType,
+		Display:       item.Display,
+		Description:   item.Description,
+		Count:         count,
+		ItemLevel:     item.ItemLevel,
+		Price:         price,
+		SourceCapture: classicTownBuyBackRefreshSourceCapture,
+	}
+	socketSession.buyBackSoldEntries = append(socketSession.buyBackSoldEntries, entry)
+	return entry
+}
+
+func classicTownNextBuyBackIndex(soldEntries []classicTownSourceBuyBackEntry) int {
+	next := 0
+	for _, entry := range classicTownSourceBuyBackEntries {
+		if entry.Index >= next {
+			next = entry.Index + 1
+		}
+	}
+	for _, entry := range soldEntries {
+		if entry.Index >= next {
+			next = entry.Index + 1
+		}
+	}
+	return next
 }
 
 func classicTownSourceBuyBackRequirements(entry classicTownSourceBuyBackEntry) []session.RoleItemRequirement {

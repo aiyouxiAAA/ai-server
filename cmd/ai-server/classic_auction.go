@@ -156,8 +156,12 @@ func buildClassicAuctionListResult(request classicAuctionListRequest) packetResu
 func buildClassicAuctionAddResult(_ classicAuctionAddRequest) packetResult {
 	log.Printf("[ai-server] classic auction add rejected sourceCapture=%s error=%s", classicAuctionAddVipCapture, classicAuctionVipError)
 	return packetResult{
-		chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(classicAuctionVipError)},
-		handled:      true,
+		errorMessages: []classicTownErrorPush{{
+			Msg:           classicAuctionVipError,
+			SourceCapture: classicAuctionAddVipCapture,
+			Partial:       true,
+		}},
+		handled: true,
 	}
 }
 

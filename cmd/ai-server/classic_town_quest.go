@@ -13,8 +13,13 @@ import (
 
 const sourceMainQuestTitle = "初入云隐"
 const sourceMainQuestNpcHandle = "1000542608713897"
-const classicQuestAcceptedLimit = 20
+const classicQuestAcceptedLimit = 5
 const classicQuestAcceptedNpcState = 2
+
+const (
+	classicQuestFullSourceCapture = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_210959_953_conn_0002/raw/server-to-client-0001.bin#3510+c_Error after Speak(101) 4090542614314425|2q23d_1|2q23a_1_1"
+	classicQuestFullError         = "任务最多只能接5个"
+)
 
 type classicQuestInfoPush struct {
 	QuestID     string                 `json:"questId,omitempty"`
@@ -165,9 +170,10 @@ func buildClassicQuestAnswerResult(store *session.Store, socketSession *packetSe
 	}
 	if len(accepted) >= classicQuestAcceptedLimit {
 		return packetResult{
-			chatMessages: []classicTownChatMessagePush{
-				classicTownSystemWarningMessage("任务列表已满，请先放弃部分任务。"),
-			},
+			errorMessages: []classicTownErrorPush{{
+				Msg:           classicQuestFullError,
+				SourceCapture: classicQuestFullSourceCapture,
+			}},
 			handled: true,
 		}, true
 	}

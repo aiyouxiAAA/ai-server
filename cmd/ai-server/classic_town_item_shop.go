@@ -41,6 +41,7 @@ func buildClassicTownItemShopResult(request classicTownAnswerRequest) (packetRes
 		SkillCap: len(entries),
 		Skills:   entries,
 	}
+	applySourceShopRoleName(&shop, route.handle)
 	return packetResult{
 		skillShop: &shop,
 		handled:   true,

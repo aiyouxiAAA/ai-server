@@ -1,6 +1,7 @@
 package world
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -870,6 +871,18 @@ func TestBuildTownBootstrapUsesCapturedMapTwoTransportData(t *testing.T) {
 		t.Fatalf("expected captured map2 fox answers, got %+v", foxSpeak.Answers)
 	}
 
+	chouSpeak := BuildAnswerSpeak("4090542614314425")
+	if chouSpeak.MsgHandle != "1" || !hasAnswerOption(chouSpeak.Answers, "2q23gs", "<m/>讨厌的枯木怪") {
+		t.Fatalf("expected captured Chou Liupin quest entry dialogue, got %+v", chouSpeak)
+	}
+	chouReply := BuildAnswerReply("4090542614314425", "1", "2q23gs")
+	if chouReply == nil {
+		t.Fatal("expected captured Chou Liupin quest follow-up dialogue")
+	}
+	if chouReply.MsgHandle != "2q23d_1" || !hasAnswerOption(chouReply.Answers, "2q23a_1_1", "<m/>好的，我这就去。") {
+		t.Fatalf("expected Chou Liupin 2q23d_1 dialogue, got %+v", chouReply)
+	}
+
 	wuyanSpeak := BuildAnswerSpeak("4110542614676637")
 	if wuyanSpeak.MsgHandle != "1" || len(wuyanSpeak.Answers) != 6 || wuyanSpeak.Answers[0].Handle != "2q21gs" {
 		t.Fatalf("expected captured wuyan entry dialogue, got %+v", wuyanSpeak)
@@ -1308,6 +1321,42 @@ func TestBuildTownBootstrapIncludesBaiyuanNPCHeadTitles(t *testing.T) {
 		if found.GuildName != testCase.guildName || found.GuildPic != testCase.guildPic {
 			t.Fatalf("expected %s head title %q/%q got %q/%q", testCase.handle, testCase.guildName, testCase.guildPic, found.GuildName, found.GuildPic)
 		}
+	}
+}
+
+func TestBuildTownBootstrapEncodesEmptyCreatePlayerGuildName(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-no-guild",
+		DisplayName:  "test",
+		Level:        40,
+		MapID:        168,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        role.MapID,
+		VisualRoleID: role.VisualRoleID,
+	}
+	snapshot := BuildTownBootstrap(role, playerBase)
+	payload, err := json.Marshal(snapshot)
+	if err != nil {
+		t.Fatalf("marshal town bootstrap: %v", err)
+	}
+	var decoded struct {
+		CreatePlayer map[string]interface{} `json:"createPlayer"`
+	}
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatalf("unmarshal town bootstrap: %v", err)
+	}
+	guildName, ok := decoded.CreatePlayer["guildName"]
+	if !ok {
+		t.Fatalf("expected empty createPlayer guildName to be encoded, payload=%s", string(payload))
+	}
+	if guildName != "" {
+		t.Fatalf("expected empty createPlayer guildName, got %#v", guildName)
 	}
 }
 

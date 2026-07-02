@@ -2120,6 +2120,26 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 	return []RoleItem{
 		{
 			Type:        "背包",
+			Name:        "超时空要塞",
+			ItemType:    "equip",
+			Display:     "1205.png",
+			Description: "f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@1779629952719&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   3,
+		},
+		{
+			Type:        "背包",
+			Name:        "盛夏缤纷",
+			ItemType:    "equip",
+			Display:     "729.png",
+			Description: "f_i_盛夏缤纷^5BC46D&24@幻·时装&25@1&19@男性：黑背心时尚牛仔裤。\r女性：彩虹肩带短裙。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   2,
+		},
+		{
+			Type:        "背包",
 			Name:        "盗贼的首级",
 			ItemType:    "null",
 			Display:     "120.png",

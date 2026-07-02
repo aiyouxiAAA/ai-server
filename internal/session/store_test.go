@@ -760,6 +760,32 @@ func TestStoreRoleInventoryDefaultsAndCapacity(t *testing.T) {
 	}
 }
 
+func TestStorePurchaseCapturedMallFashionProductRequiresYubi(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "商城女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	product, ok := store.Mall.FindProduct("8019")
+	if !ok {
+		t.Fatal("expected captured mall fashion product")
+	}
+	result := store.PurchaseMallProduct(login.PlayerID, createResponse.Role.RoleID, product, 1, "captured-fashion")
+	if result.Success || result.ErrorCode != "INSUFFICIENT_CURRENCY" || result.CurrencyName != "玉币" || result.CurrencyBalance != 0 {
+		t.Fatalf("expected captured mall fashion purchase to fail on missing 玉币 balance, got %+v", result)
+	}
+
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "商城")
+	if !ok || len(items) != 0 {
+		t.Fatalf("expected failed captured fashion purchase not to write 商城 items, ok=%v items=%+v", ok, items)
+	}
+}
+
 func TestStoreRoleInventoryRemovesOldCapturedBagSeeds(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -949,6 +975,106 @@ func TestStoreRemoveExpiredTownBuffsClearsAvoidBuff(t *testing.T) {
 	}
 }
 
+func TestStoreUseRoleItemAppliesCapturedInitialExperienceBuff(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "initial-exp-card",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	item, ok := CapturedRoleItemTemplate("\u004c\u521d\u9636\u7ecf\u9a8c\u5361")
+	if !ok {
+		t.Fatal("expected captured initial experience card template")
+	}
+	item.Type = "\u80cc\u5305"
+	item.Index = -1
+	item.Count = 5
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, item)
+	if !ok {
+		t.Fatal("expected initial experience card grant")
+	}
+
+	before := time.Now().UnixMilli()
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	after := time.Now().UnixMilli()
+	if !result.Found || !result.Used || result.TownBuff == nil {
+		t.Fatalf("expected initial experience card to apply a town buff, got %+v", result)
+	}
+	buff := result.TownBuff
+	if buff.Name != "\u53cc\u500d\u7ecf\u9a8c" || buff.Display != "567.png" || buff.Description != "\u5728\u6218\u6597\u4e2d\u83b7\u5f97\u53cc\u500d\u7684\u7ecf\u9a8c" {
+		t.Fatalf("expected captured double-exp buff fields, got %+v", buff)
+	}
+	if buff.BattleOnly != 0 || !buff.Partial || !strings.Contains(buff.SourceCapture, "ActiveItemByIndex(114)") {
+		t.Fatalf("expected captured partial double-exp buff evidence, got %+v", buff)
+	}
+	minEnd := before + int64(time.Hour/time.Millisecond) - 1000
+	maxEnd := after + int64(time.Hour/time.Millisecond) + 1000
+	if buff.EndTime < minEnd || buff.EndTime > maxEnd {
+		t.Fatalf("expected captured one-hour double-exp buff, got end=%d min=%d max=%d", buff.EndTime, minEnd, maxEnd)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Name != "\u004c\u521d\u9636\u7ecf\u9a8c\u5361" || result.UpdatedItems[0].Count != 4 {
+		t.Fatalf("expected initial experience card count refresh to 4, got %+v", result.UpdatedItems)
+	}
+	buffs, ok := store.GetRoleTownBuffs(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(buffs) != 1 || buffs[0].Name != "\u53cc\u500d\u7ecf\u9a8c" {
+		t.Fatalf("expected persisted double-exp town buff, ok=%v buffs=%+v", ok, buffs)
+	}
+}
+
+func TestStoreUseRoleItemAppliesCapturedAdvancedExperienceBuff(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "advanced-exp-card",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	item, ok := CapturedRoleItemTemplate("\u004c\u8fdb\u9636\u7ecf\u9a8c\u5361")
+	if !ok {
+		t.Fatal("expected captured advanced experience card template")
+	}
+	item.Type = "\u80cc\u5305"
+	item.Index = -1
+	item.Count = 4
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, item)
+	if !ok {
+		t.Fatal("expected advanced experience card grant")
+	}
+
+	before := time.Now().UnixMilli()
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	after := time.Now().UnixMilli()
+	if !result.Found || !result.Used || result.TownBuff == nil {
+		t.Fatalf("expected advanced experience card to apply a town buff, got %+v", result)
+	}
+	buff := result.TownBuff
+	if buff.Name != "\u53cc\u500d\u7ecf\u9a8c" || buff.Display != "567.png" || buff.Description != "\u5728\u6218\u6597\u4e2d\u83b7\u5f97\u53cc\u500d\u7684\u7ecf\u9a8c" {
+		t.Fatalf("expected captured double-exp buff fields, got %+v", buff)
+	}
+	if buff.BattleOnly != 0 || !buff.Partial || !strings.Contains(buff.SourceCapture, "#2844/#2847/#2848") {
+		t.Fatalf("expected captured partial advanced double-exp buff evidence, got %+v", buff)
+	}
+	minEnd := before + int64((3*time.Hour)/time.Millisecond) - 1000
+	maxEnd := after + int64((3*time.Hour)/time.Millisecond) + 1000
+	if buff.EndTime < minEnd || buff.EndTime > maxEnd {
+		t.Fatalf("expected captured three-hour double-exp buff, got end=%d min=%d max=%d", buff.EndTime, minEnd, maxEnd)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Name != "\u004c\u8fdb\u9636\u7ecf\u9a8c\u5361" || result.UpdatedItems[0].Count != 3 {
+		t.Fatalf("expected advanced experience card count refresh to 3, got %+v", result.UpdatedItems)
+	}
+	buffs, ok := store.GetRoleTownBuffs(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(buffs) != 1 || buffs[0].Name != "\u53cc\u500d\u7ecf\u9a8c" {
+		t.Fatalf("expected persisted double-exp town buff, ok=%v buffs=%+v", ok, buffs)
+	}
+}
+
 func TestStoreRoleInventoryCapacityFollowsCapturedExpandedIndexes(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -1093,6 +1219,406 @@ func TestStoreUseRoleItemClearsSelectedStaleCurrencyStack(t *testing.T) {
 			t.Fatalf("expected stale copper to be removed from bag, got %+v", items)
 		}
 	}
+}
+
+func TestStoreUseRoleItemRejectsLevel5GiftBoxBelowCapturedLevelGate(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "gift-box-level-gate",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	giftBox, ok := CapturedRoleItemTemplate("\u0035\u7ea7\u793c\u76d2")
+	if !ok {
+		t.Fatal("expected captured level 5 gift box template")
+	}
+	giftBox.Type = "\u80cc\u5305"
+	giftBox.Index = -1
+	giftBox.Count = 1
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, giftBox)
+	if !ok {
+		t.Fatal("expected gift box grant")
+	}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	if !result.Found || result.Used || result.ErrorCode != "item_level_too_low" || result.ErrorMessage != "\u89d2\u8272\u7b49\u7ea7\u5fc5\u987b\u5230\u8fbeLv5" {
+		t.Fatalf("expected captured level gate rejection, got %+v", result)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	for _, item := range items {
+		if item.Name == "\u0035\u7ea7\u793c\u76d2" && item.Index == granted.Index && item.Count == 1 {
+			return
+		}
+	}
+	t.Fatalf("expected rejected gift box not to be consumed, got %+v", items)
+}
+
+func TestStoreUseRoleItemLearnsCapturedWeaponFamiliarityPresentation(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "weapon-familiarity-learn",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	skillBook, ok := CapturedRoleItemTemplate("\u6b66\u5668\u5a34\u719f")
+	if !ok {
+		t.Fatal("expected captured weapon familiarity skill book template")
+	}
+	skillBook.Type = "\u80cc\u5305"
+	skillBook.Index = -1
+	skillBook.Count = 1
+	granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, skillBook)
+	if !ok {
+		t.Fatal("expected skill book grant")
+	}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index)
+	if !result.Found || !result.Used || result.LearnedSkill == nil {
+		t.Fatalf("expected captured skill book to learn a skill, got %+v", result)
+	}
+	if result.LearnedSkill.Name != "\u6b66\u5668\u5a34\u719f" || result.LearnedSkill.Level != 1 || result.LearnedSkill.Type != "null" || result.LearnedSkill.Icon != "226.png" {
+		t.Fatalf("expected captured learned skill presentation, got %+v", result.LearnedSkill)
+	}
+	if result.LearnedSkill.Description != "f_s_\u6b66\u5668\u5a34\u719f^ffffff&9@\u88ab\u52a8&8@\u6e38\u4fa0 &10@\u901a\u7528&12@8" {
+		t.Fatalf("expected captured learned skill description, got %q", result.LearnedSkill.Description)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Index != granted.Index {
+		t.Fatalf("expected captured skill book to be consumed, got %+v", result.ClearedItems)
+	}
+}
+
+func TestStoreUseRoleItemConsumesCapturedBagCapacityPatch(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "bag-capacity-patch",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	patch, ok := CapturedRoleItemTemplate("\u004c\u80cc\u5305\u8865\u4e01")
+	if !ok {
+		t.Fatal("expected captured bag capacity patch template")
+	}
+	patch.Type = "\u80cc\u5305"
+	patch.Index = 7
+	patch.Count = 1
+	if _, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, patch); !ok {
+		t.Fatal("expected bag capacity patch grant")
+	}
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305", 7)
+	if !result.Found || !result.Used || result.ErrorCode != "" {
+		t.Fatalf("expected captured bag capacity patch use, got %+v", result)
+	}
+	if result.ContainerType != "\u80cc\u5305" || result.ContainerCapacity != 30 {
+		t.Fatalf("expected captured bag capacity result 30, got type=%s capacity=%d", result.ContainerType, result.ContainerCapacity)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != "\u80cc\u5305" || result.ClearedItems[0].Index != 7 {
+		t.Fatalf("expected captured patch slot 7 clear, got %+v", result.ClearedItems)
+	}
+	items, capacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305")
+	if !ok || capacity != 30 {
+		t.Fatalf("expected persisted bag capacity 30 after patch, ok=%v capacity=%d", ok, capacity)
+	}
+	for _, item := range items {
+		if item.Name == "\u004c\u80cc\u5305\u8865\u4e01" {
+			t.Fatalf("expected bag capacity patch to be consumed, got %+v", items)
+		}
+	}
+}
+
+func TestStoreUseRoleItemOpensCapturedLevel1GiftBox(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "level1-gift-open",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	store.rolesByPID[login.PlayerID][0].Items = testLevel1GiftBoxBagItems(t)
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305", 1)
+	if !result.Found || !result.Used || result.ErrorCode != "" {
+		t.Fatalf("expected captured level 1 gift box to open, got %+v", result)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != "\u80cc\u5305" || result.ClearedItems[0].Index != 1 {
+		t.Fatalf("expected source gift box slot 1 clear, got %+v", result.ClearedItems)
+	}
+	updated := testRoleItemsByName(result.UpdatedItems)
+	if updated["\u0035\u7ea7\u793c\u76d2"].Count != 1 || updated["\u0035\u7ea7\u793c\u76d2"].Index != 1 {
+		t.Fatalf("expected level 5 gift box reward at freed slot 1, got %+v", result.UpdatedItems)
+	}
+	if updated["\u004c\u907f\u602a\u7b26"].Count != 3 || updated["\u004c\u907f\u602a\u7b26"].Index != 3 {
+		t.Fatalf("expected avoid buff item reward at slot 3, got %+v", result.UpdatedItems)
+	}
+	if updated["\u004c\u767e\u5e74\u4eba\u53c2\u679c"].Count != 1 || updated["\u004c\u767e\u5e74\u4eba\u53c2\u679c"].Index != 4 {
+		t.Fatalf("expected ginseng reward at slot 4, got %+v", result.UpdatedItems)
+	}
+	if updated["\u004c\u767e\u5e74\u87e0\u6843"].Count != 1 || updated["\u004c\u767e\u5e74\u87e0\u6843"].Index != 5 {
+		t.Fatalf("expected peach reward at slot 5, got %+v", result.UpdatedItems)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	if _, ok := testRoleItemByName(items, "\u0031\u7ea7\u793c\u76d2"); ok {
+		t.Fatalf("expected level 1 gift box to be consumed, got %+v", items)
+	}
+}
+
+func TestStoreUseRoleItemOpensCapturedLevel5GiftBox(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "level5-gift-open",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	store.rolesByPID[login.PlayerID][0].Level = 5
+	store.rolesByPID[login.PlayerID][0].Items = testLevel5GiftBoxBagItems(t)
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305", 1)
+	if !result.Found || !result.Used || result.ErrorCode != "" {
+		t.Fatalf("expected captured level 5 gift box to open, got %+v", result)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != "\u80cc\u5305" || result.ClearedItems[0].Index != 1 {
+		t.Fatalf("expected source gift box slot 1 clear, got %+v", result.ClearedItems)
+	}
+	updated := testRoleItemsByName(result.UpdatedItems)
+	if updated["\u004c\u521d\u9636\u7ecf\u9a8c\u5361"].Count != 1 || updated["\u004c\u521d\u9636\u7ecf\u9a8c\u5361"].Index != 1 {
+		t.Fatalf("expected exp card reward at freed slot 1, got %+v", result.UpdatedItems)
+	}
+	if updated["\u004c\u82b1\u5377"].Count != 7 || updated["\u004c\u82b1\u5377"].Index != 8 {
+		t.Fatalf("expected flower roll stack to count 7 at slot 8, got %+v", result.UpdatedItems)
+	}
+	if updated["\u004c\u56de\u57ce\u5492"].Count != 3 || updated["\u004c\u56de\u57ce\u5492"].Index != 6 {
+		t.Fatalf("expected home scroll reward at slot 6, got %+v", result.UpdatedItems)
+	}
+	if updated["\u0031\u0030\u7ea7\u793c\u76d2"].Count != 1 || updated["\u0031\u0030\u7ea7\u793c\u76d2"].Index != 7 {
+		t.Fatalf("expected level 10 gift box reward at slot 7, got %+v", result.UpdatedItems)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	if _, ok := testRoleItemByName(items, "\u0035\u7ea7\u793c\u76d2"); ok {
+		t.Fatalf("expected level 5 gift box to be consumed, got %+v", items)
+	}
+}
+
+func TestStoreUseRoleItemRejectsLevel10GiftBoxWhenCapturedBagFull(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "level10-gift-full",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	store.rolesByPID[login.PlayerID][0].Level = 12
+	store.rolesByPID[login.PlayerID][0].Items = testLevel10GiftBoxBagItems(t, nil)
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305", 7)
+	if !result.Found || result.Used || result.ErrorCode != "level10_gift_box_bag_full" || result.ErrorMessage != "\u80cc\u5305\u7a7a\u95f4\u4e0d\u8db3" {
+		t.Fatalf("expected captured level 10 gift box full-bag rejection, got %+v", result)
+	}
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Name != "\u0031\u0030\u7ea7\u793c\u76d2" || result.UpdatedItems[0].Index != 7 {
+		t.Fatalf("expected rejected gift box refresh at slot 7, got %+v", result.UpdatedItems)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	item, ok := testRoleItemAt(items, "\u80cc\u5305", 7)
+	if !ok || item.Name != "\u0031\u0030\u7ea7\u793c\u76d2" || item.Count != 1 {
+		t.Fatalf("expected rejected gift box not to be consumed, got %+v", items)
+	}
+}
+
+func TestStoreUseRoleItemOpensCapturedLevel10GiftBox(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "level10-gift-open",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	store.rolesByPID[login.PlayerID][0].Level = 12
+	store.rolesByPID[login.PlayerID][0].Items = testLevel10GiftBoxBagItems(t, map[int]bool{15: true})
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305", 7)
+	if !result.Found || !result.Used || result.ErrorCode != "" {
+		t.Fatalf("expected captured level 10 gift box to open, got %+v", result)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != "\u80cc\u5305" || result.ClearedItems[0].Index != 7 {
+		t.Fatalf("expected source gift box slot 7 clear, got %+v", result.ClearedItems)
+	}
+	updated := testRoleItemsByName(result.UpdatedItems)
+	if updated["\u004c\u521d\u9636\u7ecf\u9a8c\u5361"].Count != 4 || updated["\u004c\u521d\u9636\u7ecf\u9a8c\u5361"].Index != 1 {
+		t.Fatalf("expected exp card stack to count 4 at slot 1, got %+v", result.UpdatedItems)
+	}
+	if updated["\u004c\u82b1\u5377"].Count != 12 || updated["\u004c\u82b1\u5377"].Index != 8 {
+		t.Fatalf("expected flower roll stack to count 12 at slot 8, got %+v", result.UpdatedItems)
+	}
+	if updated["\u004c\u80cc\u5305\u8865\u4e01"].Count != 1 || updated["\u004c\u80cc\u5305\u8865\u4e01"].Index != 7 || updated["\u004c\u80cc\u5305\u8865\u4e01"].Display != "560.png" {
+		t.Fatalf("expected bag patch reward at freed slot 7, got %+v", result.UpdatedItems)
+	}
+	if updated["\u0031\u0035\u7ea7\u793c\u76d2"].Count != 1 || updated["\u0031\u0035\u7ea7\u793c\u76d2"].Index != 15 || updated["\u0031\u0035\u7ea7\u793c\u76d2"].Display != "742.png" {
+		t.Fatalf("expected level 15 gift box reward at slot 15, got %+v", result.UpdatedItems)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "\u80cc\u5305")
+	if !ok {
+		t.Fatal("expected bag items")
+	}
+	if item, ok := testRoleItemAt(items, "\u80cc\u5305", 7); !ok || item.Name != "\u004c\u80cc\u5305\u8865\u4e01" {
+		t.Fatalf("expected slot 7 to contain bag patch after open, got %+v", items)
+	}
+	if _, ok := testRoleItemByName(items, "\u0031\u0030\u7ea7\u793c\u76d2"); ok {
+		t.Fatalf("expected level 10 gift box to be consumed, got %+v", items)
+	}
+}
+
+func testLevel10GiftBoxBagItems(t *testing.T, freeSlots map[int]bool) []RoleItem {
+	t.Helper()
+
+	items := make([]RoleItem, 0, 30)
+	for index := 0; index < 30; index += 1 {
+		if freeSlots != nil && freeSlots[index] {
+			continue
+		}
+		switch index {
+		case 1:
+			items = append(items, testCapturedBagItem(t, "\u004c\u521d\u9636\u7ecf\u9a8c\u5361", index, 3))
+		case 7:
+			items = append(items, testCapturedBagItem(t, "\u0031\u0030\u7ea7\u793c\u76d2", index, 1))
+		case 8:
+			items = append(items, testCapturedBagItem(t, "\u004c\u82b1\u5377", index, 9))
+		default:
+			items = append(items, RoleItem{
+				Type:        "\u80cc\u5305",
+				Name:        fmt.Sprintf("filler-%02d", index),
+				ItemType:    "null",
+				Display:     fmt.Sprintf("filler-%02d.png", index),
+				Description: fmt.Sprintf("f_i_filler-%02d&24@material&25@1&20@test filler&103@0&104@0&105@&107@&108@0", index),
+				Count:       1,
+				Index:       index,
+				ItemLevel:   1,
+			})
+		}
+	}
+	return normalizeRoleItems(items)
+}
+
+func testLevel1GiftBoxBagItems(t *testing.T) []RoleItem {
+	t.Helper()
+
+	items := make([]RoleItem, 0, 3)
+	for index := 0; index <= 5; index += 1 {
+		switch index {
+		case 1:
+			items = append(items, testCapturedBagItem(t, "\u0031\u7ea7\u793c\u76d2", index, 1))
+		case 3, 4, 5:
+			continue
+		default:
+			items = append(items, RoleItem{
+				Type:        "\u80cc\u5305",
+				Name:        fmt.Sprintf("level1-filler-%02d", index),
+				ItemType:    "null",
+				Display:     fmt.Sprintf("level1-filler-%02d.png", index),
+				Description: fmt.Sprintf("f_i_level1-filler-%02d&24@material&25@1&20@test filler&103@0&104@0&105@&107@&108@0", index),
+				Count:       1,
+				Index:       index,
+				ItemLevel:   1,
+			})
+		}
+	}
+	return normalizeRoleItems(items)
+}
+
+func testLevel5GiftBoxBagItems(t *testing.T) []RoleItem {
+	t.Helper()
+
+	items := make([]RoleItem, 0, 7)
+	for index := 0; index <= 8; index += 1 {
+		switch index {
+		case 1:
+			items = append(items, testCapturedBagItem(t, "\u0035\u7ea7\u793c\u76d2", index, 1))
+		case 6, 7:
+			continue
+		case 8:
+			items = append(items, testCapturedBagItem(t, "\u004c\u82b1\u5377", index, 5))
+		default:
+			items = append(items, RoleItem{
+				Type:        "\u80cc\u5305",
+				Name:        fmt.Sprintf("level5-filler-%02d", index),
+				ItemType:    "null",
+				Display:     fmt.Sprintf("level5-filler-%02d.png", index),
+				Description: fmt.Sprintf("f_i_level5-filler-%02d&24@material&25@1&20@test filler&103@0&104@0&105@&107@&108@0", index),
+				Count:       1,
+				Index:       index,
+				ItemLevel:   1,
+			})
+		}
+	}
+	return normalizeRoleItems(items)
+}
+
+func testCapturedBagItem(t *testing.T, name string, index int, count int) RoleItem {
+	t.Helper()
+
+	item, ok := CapturedRoleItemTemplate(name)
+	if !ok {
+		t.Fatalf("expected captured item template %s", name)
+	}
+	item.Type = "\u80cc\u5305"
+	item.Index = index
+	item.Count = count
+	return item
+}
+
+func testRoleItemsByName(items []RoleItem) map[string]RoleItem {
+	result := make(map[string]RoleItem, len(items))
+	for _, item := range items {
+		result[item.Name] = item
+	}
+	return result
+}
+
+func testRoleItemByName(items []RoleItem, name string) (RoleItem, bool) {
+	for _, item := range items {
+		if item.Name == name {
+			return item, true
+		}
+	}
+	return RoleItem{}, false
+}
+
+func testRoleItemAt(items []RoleItem, itemType string, index int) (RoleItem, bool) {
+	for _, item := range items {
+		if item.Type == itemType && item.Index == index {
+			return item, true
+		}
+	}
+	return RoleItem{}, false
 }
 
 func TestStoreUseRoleItemRestoresTownHPFromClassicDescription(t *testing.T) {
@@ -1506,6 +2032,59 @@ func TestStoreTryEquipSupportsCapturedTreasureAndMountSlots(t *testing.T) {
 		if !result.Found || !result.Equipped || result.EquippedItem.Index != spec.expectedIndex {
 			t.Fatalf("expected %s to equip to source slot %d, got %+v", spec.name, spec.expectedIndex, result)
 		}
+	}
+}
+
+func TestStoreTryEquipSupportsCapturedFashionSetPreview(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "超时空试穿",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?e=8&sex=1&hr=46&co=6&m=3&n=11&c=1&p=1&se=1&",
+	})
+
+	equipResult := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 19, 1)
+	if !equipResult.Found || !equipResult.Equipped || !strings.Contains(equipResult.Role.SourceQuery, "w8=5") {
+		t.Fatalf("expected starter axe equip before fashion TryEquip, got %+v", equipResult)
+	}
+
+	preview := store.PreviewTryEquip(login.PlayerID, createResponse.Role.RoleID, "超时空要塞")
+	if !preview.Found || !preview.Previewed || preview.Item.Name != "超时空要塞" {
+		t.Fatalf("expected captured fashion TryEquip preview, got %+v", preview)
+	}
+	for _, part := range []string{"w8=5", "c=88", "p=91", "se=79", "e=8", "sex=1", "hr=46", "co=6", "m=3", "n=11"} {
+		if !strings.Contains(preview.SourceQuery, part) {
+			t.Fatalf("expected captured fashion preview source query to include %s, got %q", part, preview.SourceQuery)
+		}
+	}
+	for _, stalePart := range []string{"c=1", "p=1", "se=1"} {
+		if strings.Contains(preview.SourceQuery, stalePart) {
+			t.Fatalf("expected captured fashion preview to replace stale %s, got %q", stalePart, preview.SourceQuery)
+		}
+	}
+
+	summerPreview := store.PreviewTryEquip(login.PlayerID, createResponse.Role.RoleID, "盛夏缤纷")
+	if !summerPreview.Found || !summerPreview.Previewed || summerPreview.Item.Name != "盛夏缤纷" {
+		t.Fatalf("expected captured summer fashion TryEquip preview, got %+v", summerPreview)
+	}
+	for _, part := range []string{"w8=5", "c=52", "p=55", "se=41", "hr=19", "e=8", "sex=1", "co=6", "m=3", "n=11"} {
+		if !strings.Contains(summerPreview.SourceQuery, part) {
+			t.Fatalf("expected captured summer fashion preview source query to include %s, got %q", part, summerPreview.SourceQuery)
+		}
+	}
+	for _, stalePart := range []string{"c=1", "p=1", "se=1", "hr=46"} {
+		if strings.Contains(summerPreview.SourceQuery, stalePart) {
+			t.Fatalf("expected captured summer fashion preview to replace stale %s, got %q", stalePart, summerPreview.SourceQuery)
+		}
+	}
+
+	role, _, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || role.SourceQuery != equipResult.Role.SourceQuery {
+		t.Fatalf("TryEquip must not mutate role source query, ok=%v role=%+v before=%q", ok, role, equipResult.Role.SourceQuery)
 	}
 }
 

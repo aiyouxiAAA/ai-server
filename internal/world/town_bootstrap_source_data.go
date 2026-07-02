@@ -345,7 +345,7 @@ var map2SourceNPCs = []sourceNPCEntry{
 			Message:   `本店供应各种日常货物，请随意挑选。唉~最近想起我那七弟来了，我们兄弟为了做生意终日奔波各处...`,
 			Answers: []AnswerOption{
 				{Handle: "4q72os", Msg: "<m/>丑七品的梦"},
-				{Handle: "2q23gs", Msg: "<m/>丑家兄弟"},
+				{Handle: "2q23gs", Msg: "<m/>讨厌的枯木怪"},
 				{Handle: "4q73gs", Msg: "<m/>广青镇相聚"},
 				{Handle: "1", Msg: "道具商店"},
 				{Handle: "0", Msg: "<c/>取消"},
@@ -2443,6 +2443,20 @@ var map1SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialog
 }
 
 var map2SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialogueEntry{
+	{
+		Handle:       "4090542614314425",
+		MsgHandle:    "1",
+		AnswerHandle: "2q23gs",
+	}: {
+		MsgHandle: "2q23d_1",
+		Message: `丑爷我昨夜做了一个噩梦，梦见那些长得比丑爷我还要丑的枯木怪竟然冲进了村里，袭击了很多村民，那些枯木怪竟然如此胆大，丑爷这次一定要为民除害。((去【卧佛谷_6】清理3只枯木怪，))以免他们进村祸害他人，古人不是说过要未雨什么的吗......
+
+[g]=经验1200 [i=f_i_铜钱^ffffff&24@材料 消耗品&25@1000&19@1000枚时双击可兑换为银元宝.&20@游戏中的货币,用于流通买卖.&27@sitem_tq&101@163.png&103@0&104@0&105@&107@&108@0]铜钱[/]x300`,
+		Answers: []AnswerOption{
+			{Handle: "2q23a_1_1", Msg: "<m/>好的，我这就去。"},
+			{Handle: "2q23a_1_2", Msg: "<c/>关闭"},
+		},
+	},
 	{
 		Handle:       "4110542614676637",
 		MsgHandle:    "1",

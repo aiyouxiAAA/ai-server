@@ -263,6 +263,9 @@ type classicTownSkillShopPush struct {
 	SourceRoleName string                      `json:"sourceRoleName,omitempty"`
 	Vocation       string                      `json:"vocation"`
 	SkillCap       int                         `json:"skillCap"`
+	SaleCapacity   int                         `json:"saleCapacity,omitempty"`
+	BuyCapacity    int                         `json:"buyCapacity,omitempty"`
+	MadeCapacity   int                         `json:"madeCapacity,omitempty"`
 	Skills         []classicTownSkillShopEntry `json:"skills"`
 }
 
@@ -280,9 +283,12 @@ type classicTownSkillShopEntry struct {
 }
 
 type classicTownSkillShopRequirement struct {
-	Name  string `json:"name"`
-	Icon  string `json:"icon"`
-	Count int    `json:"count"`
+	Name        string `json:"name"`
+	Icon        string `json:"icon"`
+	Count       int    `json:"count"`
+	ItemType    string `json:"itemType,omitempty"`
+	Description string `json:"description,omitempty"`
+	ItemLevel   int    `json:"itemLevel,omitempty"`
 }
 
 func buildClassicTownSkillShopResult(store *session.Store, socketSession *packetSession, sourceHandle string, answerHandle string) (packetResult, bool) {
@@ -292,6 +298,7 @@ func buildClassicTownSkillShopResult(store *session.Store, socketSession *packet
 	}
 	shop = cloneSourceSkillShop(shop)
 	shop.Handle = sourceHandle
+	shop.SaleCapacity = len(shop.Skills)
 	applySourceShopRoleName(&shop, sourceHandle)
 	if socketSession != nil && socketSession.selectedRole != nil && socketSession.playerBase != nil {
 		skills, _, found := store.GetRoleSkills(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
@@ -712,13 +719,31 @@ func parseSourceSkillShopRequirementRows(rows string) map[string][]classicTownSk
 			continue
 		}
 		key := sourceSkillShopKey(columns[0], skillID)
-		result[key] = append(result[key], classicTownSkillShopRequirement{
-			Name:  columns[2],
-			Icon:  columns[3],
-			Count: count,
-		})
+		result[key] = append(result[key], sourceShopRequirement(columns[2], columns[3], count))
 	}
 	return result
+}
+
+func sourceShopRequirement(name string, icon string, count int) classicTownSkillShopRequirement {
+	requirement := classicTownSkillShopRequirement{
+		Name:  name,
+		Icon:  icon,
+		Count: count,
+	}
+	item, ok := session.CapturedRoleItemTemplate(name)
+	if !ok {
+		item, ok = session.CapturedRoleItemTemplateByID(icon)
+	}
+	if !ok {
+		return requirement
+	}
+	if strings.TrimSpace(requirement.Icon) == "" {
+		requirement.Icon = item.Display
+	}
+	requirement.ItemType = item.ItemType
+	requirement.Description = item.Description
+	requirement.ItemLevel = item.ItemLevel
+	return requirement
 }
 
 func cloneSourceSkillShop(shop classicTownSkillShopPush) classicTownSkillShopPush {

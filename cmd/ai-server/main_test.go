@@ -5158,6 +5158,9 @@ func TestHandlePacketClassicTownSkillCategoryPushesSkillShop(t *testing.T) {
 			if len(result.skillShop.Skills) != tt.skillCap {
 				t.Fatalf("expected captured %s skill list count %d, got %d", tt.vocation, tt.skillCap, len(result.skillShop.Skills))
 			}
+			if result.skillShop.SaleCapacity != tt.skillCap || result.skillShop.BuyCapacity != 0 || result.skillShop.MadeCapacity != 0 {
+				t.Fatalf("expected structured source shop capacities sale=%d buy=0 made=0, got %+v", tt.skillCap, result.skillShop)
+			}
 			for _, skill := range result.skillShop.Skills {
 				if len(skill.Requirements) == 0 {
 					t.Fatalf("expected captured %s skill %s to have source requirements", tt.vocation, skill.Name)
@@ -5168,6 +5171,10 @@ func TestHandlePacketClassicTownSkillCategoryPushesSkillShop(t *testing.T) {
 			}
 			if len(result.skillShop.Skills[0].Requirements) != 1 || result.skillShop.Skills[0].Requirements[0].Icon != "163.png" || result.skillShop.Skills[0].Requirements[0].Count != 500 {
 				t.Fatalf("expected captured %s first skill copper requirement, got %+v", tt.vocation, result.skillShop.Skills[0].Requirements)
+			}
+			firstRequirement := result.skillShop.Skills[0].Requirements[0]
+			if firstRequirement.Description == "" || firstRequirement.ItemType == "" || firstRequirement.ItemLevel == 0 {
+				t.Fatalf("expected captured %s first requirement to carry source item tooltip fields, got %+v", tt.vocation, firstRequirement)
 			}
 			lastSkill := result.skillShop.Skills[len(result.skillShop.Skills)-1]
 			if lastSkill.Name != tt.lastName || lastSkill.Icon != tt.lastIcon {
@@ -5220,6 +5227,9 @@ func TestHandlePacketClassicTownGuangqingSkillTeacherPushesCapturedSkillShop(t *
 	if len(result.skillShop.Skills) != 22 || result.skillShop.Skills[0].Name != "武器专精" {
 		t.Fatalf("expected captured Guangqing warrior skill rows, got %+v", result.skillShop.Skills)
 	}
+	if result.skillShop.SaleCapacity != 22 || result.skillShop.BuyCapacity != 0 || result.skillShop.MadeCapacity != 0 {
+		t.Fatalf("expected structured Guangqing shop capacities sale=22 buy=0 made=0, got %+v", result.skillShop)
+	}
 }
 
 func TestHandlePacketClassicTownBaiyuanSkillTeacherPushesCapturedSkillShop(t *testing.T) {
@@ -5255,6 +5265,9 @@ func TestHandlePacketClassicTownBaiyuanSkillTeacherPushesCapturedSkillShop(t *te
 	}
 	if len(result.skillShop.Skills) != 22 || result.skillShop.Skills[0].Name != "武器专精" {
 		t.Fatalf("expected captured warrior skill rows, got %+v", result.skillShop.Skills)
+	}
+	if result.skillShop.SaleCapacity != 22 || result.skillShop.BuyCapacity != 0 || result.skillShop.MadeCapacity != 0 {
+		t.Fatalf("expected structured Baiyuan shop capacities sale=22 buy=0 made=0, got %+v", result.skillShop)
 	}
 }
 
@@ -5552,6 +5565,9 @@ func TestHandlePacketClassicTownGuangqingCapturedItemShopPushesSaleRows(t *testi
 			}
 			if len(result.skillShop.Skills) != tt.count {
 				t.Fatalf("expected captured item count %d, got %d", tt.count, len(result.skillShop.Skills))
+			}
+			if result.skillShop.SaleCapacity != tt.count || result.skillShop.BuyCapacity != 0 || result.skillShop.MadeCapacity != 0 {
+				t.Fatalf("expected structured item shop capacities sale=%d buy=0 made=0, got %+v", tt.count, result.skillShop)
 			}
 			first := result.skillShop.Skills[0]
 			if first.Name != tt.firstName || first.Icon != tt.firstIcon {

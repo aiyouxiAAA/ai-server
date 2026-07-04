@@ -34,12 +34,13 @@ func buildClassicTownItemShopResult(request classicTownAnswerRequest) (packetRes
 	}
 	entries := sourceItemShopEntries(route.vocation, route.rows)
 	shop := classicTownSkillShopPush{
-		Handle:   route.handle,
-		ShopID:   sourceItemShopRouteID(route),
-		Title:    route.title,
-		Vocation: route.vocation,
-		SkillCap: len(entries),
-		Skills:   entries,
+		Handle:       route.handle,
+		ShopID:       sourceItemShopRouteID(route),
+		Title:        route.title,
+		Vocation:     route.vocation,
+		SkillCap:     len(entries),
+		SaleCapacity: len(entries),
+		Skills:       entries,
 	}
 	applySourceShopRoleName(&shop, route.handle)
 	return packetResult{
@@ -172,11 +173,7 @@ func parseSourceItemShopRow(line string) (sourceItemShopRow, bool) {
 		if err != nil {
 			continue
 		}
-		row.requirements = append(row.requirements, classicTownSkillShopRequirement{
-			Name:  columns[index],
-			Icon:  columns[index+1],
-			Count: reqCount,
-		})
+		row.requirements = append(row.requirements, sourceShopRequirement(columns[index], columns[index+1], reqCount))
 	}
 	return row, true
 }

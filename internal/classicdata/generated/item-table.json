@@ -41,8 +41,8 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "0",
+                     "description":  "f_i_蓝布裤^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@1\u00263@4\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -55,8 +55,8 @@
                      "category":  "武器·单刀系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "0",
+                     "description":  "f_i_铁斧\u002623@凿孔上限 9 格\u002623@凿孔上限 9 格\u002624@武器·单刀系\u002625@1\u002621@1\u00261@26\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -97,9 +97,9 @@
                      "category":  "武器·单剑系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "50",
+                     "description":  "f_i_飞佐钢剑\u002623@凿孔上限 9 格\u002624@武器·单剑系\u002625@1\u002621@10\u002622@战士\u00261@34\u002616@1\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@50",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -111,9 +111,9 @@
                      "category":  "武器·棍系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "50",
+                     "description":  "f_i_兽骨棍\u002623@凿孔上限 9 格\u002624@武器·棍系\u002625@1\u002621@10\u002622@战士\u00261@36\u00269@12\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@50",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -125,8 +125,8 @@
                      "category":  "武器·单刀系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "50",
+                     "description":  "f_i_猪牙钢刀\u002623@凿孔上限 9 格\u002624@武器·单刀系\u002625@1\u002621@10\u002622@战士\u00261@38\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@50\u002618@1",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -139,9 +139,9 @@
                      "category":  "武器·弓系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "50",
+                     "description":  "f_i_兽骨弓\u002623@凿孔上限 9 格\u002624@武器·弓系\u002625@1\u002621@10\u002622@游侠\u00261@34\u00269@10\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@50",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -153,9 +153,9 @@
                      "category":  "武器·匕首系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "50",
+                     "description":  "f_i_飞艳匕首\u002623@凿孔上限 9 格\u002624@武器·匕首系\u002625@1\u002621@10\u002622@游侠\u00261@33\u002611@15\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@50",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -167,9 +167,9 @@
                      "category":  "武器·拳套系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "50",
+                     "description":  "f_i_铁拳套\u002623@凿孔上限 9 格\u002624@武器·拳套系\u002625@1\u002621@10\u002622@游侠\u00261@36\u00263@1\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+1] 每升一级 物理攻击+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@50",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -181,9 +181,9 @@
                      "category":  "武器·法杖系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "50",
+                     "description":  "f_i_圣羽法杖\u002623@凿孔上限 9 格\u002624@武器·法杖系\u002625@1\u002621@10\u002622@术士\u00261@20\u00262@37\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+1] 每升一级 魔法攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@50",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -209,9 +209,9 @@
                      "category":  "武器·单剑系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "130",
+                     "description":  "f_i_蛮力钢剑\u002623@凿孔上限 9 格\u002624@武器·单剑系\u002625@1\u002621@20\u002622@战士\u00261@52\u002616@2\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@130",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -223,9 +223,9 @@
                      "category":  "武器·棍系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "130",
+                     "description":  "f_i_逆天棍\u002623@凿孔上限 9 格\u002624@武器·棍系\u002625@1\u002621@20\u002622@战士\u00261@52\u00269@15\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@130",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -237,8 +237,8 @@
                      "category":  "武器·单刀系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "130",
+                     "description":  "f_i_刎刀\u002623@凿孔上限 9 格\u002624@武器·单刀系\u002625@1\u002621@20\u002622@战士\u00261@55\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@130\u002618@1",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -251,9 +251,9 @@
                      "category":  "武器·弓系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "130",
+                     "description":  "f_i_威武弓\u002623@凿孔上限 9 格\u002624@武器·弓系\u002625@1\u002621@20\u002622@游侠\u00261@50\u00269@15\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@130",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -265,9 +265,9 @@
                      "category":  "武器·匕首系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "130",
+                     "description":  "f_i_牙刺\u002623@凿孔上限 9 格\u002624@武器·匕首系\u002625@1\u002621@20\u002622@游侠\u00261@46\u002611@25\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n击中敌人时有1%的机率造成外伤3回合(每回合减少对手的气力为物理攻击的5%~10%)\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@130",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -279,9 +279,9 @@
                      "category":  "武器·拳套系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "130",
+                     "description":  "f_i_天极拳套\u002623@凿孔上限 9 格\u002624@武器·拳套系\u002625@1\u002621@20\u002622@游侠\u00261@52\u00263@2\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+1] 每升一级 物理防御+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@130",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -293,9 +293,9 @@
                      "category":  "武器·法杖系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "130",
+                     "description":  "f_i_八极法杖\u002623@凿孔上限 9 格\u002624@武器·法杖系\u002625@1\u002621@20\u002622@术士\u00261@30\u00262@60\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+1] 每升一级 魔法攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@130",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -307,9 +307,9 @@
                      "category":  "武器·棍系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "300",
+                     "description":  "f_i_八卦棍\u002623@凿孔上限 9 格\u002624@武器·棍系\u002625@1\u002621@30\u002622@战士\u00261@75\u00269@20\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n封印抗性+5%\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@300",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -321,8 +321,8 @@
                      "category":  "武器·单刀系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "300",
+                     "description":  "f_i_饮血刀^ffffff\u002623@凿孔上限 9 格\u002624@武器·单刀系\u002625@1\u002621@30\u002622@战士\u00261@78\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n击中敌人时\u00260;有1%的机率将攻击伤害的20%转化为气力.\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@300",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -335,9 +335,9 @@
                      "category":  "武器·单剑系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "300",
+                     "description":  "f_i_真虹剑\u002623@凿孔上限 9 格\u002624@武器·单剑系\u002625@1\u002621@30\u002622@战士\u00261@72\u002616@3\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@300",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -349,9 +349,9 @@
                      "category":  "武器·弓系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "300",
+                     "description":  "f_i_疾影弓\u002623@凿孔上限 9 格\u002624@武器·弓系\u002625@1\u002621@30\u002622@游侠\u00261@72\u00269@20\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n击中敌人时\u00260;有1%的机率造成卸甲3回合(削弱敌人10%~15%的物理防御).\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@300",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -363,9 +363,9 @@
                      "category":  "武器·匕首系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "500",
+                     "description":  "f_i_绯雨匕首\u002623@凿孔上限 9 格\u002624@武器·匕首系\u002625@1\u002621@30\u002622@游侠\u00261@70\u002611@30\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n击中敌人时候有1%机率使敌人进入内伤状态3回合(降低敌人10%~15%的物理攻击和魔法攻击)\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@500",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -377,9 +377,9 @@
                      "category":  "武器·拳套系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "500",
+                     "description":  "f_i_青义拳套\u002623@凿孔上限 9 格\u002624@武器·拳套系\u002625@1\u002621@30\u002622@游侠\u00261@75\u00263@5\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+1] 每升一级 物理防御+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@500",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -391,9 +391,9 @@
                      "category":  "武器·法杖系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_wood",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "500",
+                     "description":  "f_i_雷霆法杖\u002623@凿孔上限 9 格\u002624@武器·法杖系\u002625@1\u002621@30\u002622@术士\u00261@35\u00262@73\u002627@sitem_wood\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+1] 每升一级 魔法攻击+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n击中敌人时\u00260;有1%的机率造成麻痹2回合(每回合减少对手的气力为魔法攻击的10%~15%)\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@500",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1049,9 +1049,9 @@
                      "category":  "坐骑",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+16",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_狰狞神骑^f9e000\u002623@限制装备至【坐骑】格。\u002624@坐骑\u002625@1\u002621@90\u002613@50\u002614@50\u002615@50\u002616@50\u002617@50\u002627@sitem_pet\u002619@精炼潜质:\n[精炼+16] 每升一级 物理攻击+160\n[精炼+16] 每升一级 魔法攻击+160\n[精炼+16] 每升一级 移动+10\n[精炼+18] 每升一级 魔法防御+300\n[精炼+18] 每升一级 物理防御+300\n[精炼+20] 每升一级 命中+20%\n[精炼+20] 每升一级 回避+20%\n[精炼+20] 每升一级 气力上限+1500\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1567,8 +1567,8 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "0",
+                     "description":  "f_i_布鞋^ffffff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@1\u00263@2\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002618@2",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1581,8 +1581,8 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "0",
+                     "description":  "f_i_蓝布衣^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@1\u00263@\u003c$pdef\u003e\u003c$jpdef\u003e\u002627@sitem_ezhj\u002621@1\u00263@6\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002618@1",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1595,9 +1595,9 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_布护腰^ffffff\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@1\u00263@3\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1609,9 +1609,9 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_布帽^ffffff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@1\u00263@3\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1623,9 +1623,9 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_布护腕\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@1\u00263@2\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1637,8 +1637,8 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "25",
+                     "description":  "f_i_飞佐面甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@10\u002622@战士\u00263@12\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@25",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1651,8 +1651,8 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "20",
+                     "description":  "f_i_飞佐护肩^ffffff\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@10\u002622@战士\u00263@9\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1665,8 +1665,8 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "30",
+                     "description":  "f_i_飞佐护甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@10\u002622@战士\u00263@16\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@30\u002618@2",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1679,8 +1679,8 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "20",
+                     "description":  "f_i_飞佐护腕^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@10\u002622@战士\u00263@9\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20\u002618@2",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1693,8 +1693,8 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "20",
+                     "description":  "f_i_飞佐护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@10\u002622@战士\u00263@13\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1707,8 +1707,8 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "20",
+                     "description":  "f_i_飞佐护腰\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@10\u002622@战士\u00263@8\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1721,8 +1721,8 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "20",
+                     "description":  "f_i_飞佐战靴^ffffff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@10\u002622@战士\u00263@10\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1735,9 +1735,9 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "25",
+                     "description":  "f_i_圣羽面甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@10\u002622@术士\u00263@8\u00264@8\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@25",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1749,9 +1749,9 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_圣羽护肩^ffffff\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@10\u002622@术士\u00263@8\u00264@2\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1763,9 +1763,9 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "30",
+                     "description":  "f_i_圣羽战衣^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@10\u002622@术士\u00263@14\u00264@4\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@30",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1777,9 +1777,9 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_圣羽护腕^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@10\u002622@术士\u00263@9\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1791,9 +1791,9 @@
                      "category":  "宠物",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "1",
-                     "description":  "多居在茂密的树林里，活泼好动",
-                     "evidence_sources":  "packet:reward_markup+packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_幻熊兽^5BC46D\u002624@宠物\u002625@1\u002619@\u003cfont color=\u0027#00ff00\u0027\u003e可以提高主人的命中和回避\u003c/font\u003e\u002620@多居在茂密的树林里，活泼好动.\u002627@sitem_pet\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002619@喜好食物:\n宠物用营养水\n宠物成长药剂\n奇效宠物药剂\n\u003cfont color=\u0027#66ccff\u0027\u003e宠物等级:1\n命中+15\n回避+15\n\u003c/font\u003e\u003cfont color=\u0027#00cc00\u0027\u003e成长属性:\n[等级1] 命中+15 每升一级 +1\n[等级1] 回避+15 每升一级 +1\u003c/font\u003e",
+                     "evidence_sources":  "packet:reward_markup+packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1805,9 +1805,9 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_圣羽护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@10\u002622@术士\u00263@10\u00264@3\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1819,9 +1819,9 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_圣羽护腰^ffffff\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@10\u002622@术士\u00263@7\u00264@1\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1833,9 +1833,9 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_圣羽战靴^ffffff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@10\u002622@术士\u00263@9\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1847,9 +1847,9 @@
                      "category":  "宠物",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "1",
-                     "description":  "体内流淌着高温的酸性体液",
-                     "evidence_sources":  "packet:reward_markup+packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_炎火兽^5BC46D\u002624@宠物\u002625@1\u002619@\u003cfont color=\u0027#00ff00\u0027\u003e可以提高主人的物理攻击力\u003c/font\u003e\u002620@体内流淌着高温的酸性体液\u00260;喷射出来遇到火花就会烧起熊熊大火.生性好斗勇猛.\u002627@sitem_pet\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002619@喜好食物:\n宠物用营养水\n宠物成长药剂\n奇效宠物药剂\n\u003cfont color=\u0027#66ccff\u0027\u003e宠物等级:1\n物理攻击+10\n\u003c/font\u003e\u003cfont color=\u0027#00cc00\u0027\u003e成长属性:\n[等级1] 物理攻击+10 每升一级 +1\u003c/font\u003e",
+                     "evidence_sources":  "packet:reward_markup+packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1861,9 +1861,9 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "25",
+                     "description":  "f_i_飞艳面甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@10\u002622@游侠\u00263@10\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@25",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1875,9 +1875,9 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_飞艳护肩^ffffff\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@10\u002622@游侠\u00263@9\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1889,9 +1889,9 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "30",
+                     "description":  "f_i_飞艳战衣^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@10\u002622@游侠\u00263@15\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@30",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1903,9 +1903,9 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_飞艳护腕^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@10\u002622@游侠\u00263@9\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1917,9 +1917,9 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_飞艳护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@10\u002622@游侠\u00263@12\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1931,9 +1931,9 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_飞艳护腰^ffffff\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@10\u002622@游侠\u00263@8\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1945,9 +1945,9 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "20",
+                     "description":  "f_i_飞艳战靴^ffffff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@10\u002622@游侠\u00263@10\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@20",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1959,9 +1959,9 @@
                      "category":  "宠物",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "1",
-                     "description":  "体内蕴涵着冷冻的力量",
-                     "evidence_sources":  "packet:reward_markup+packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_极冰兽^5BC46D\u002624@宠物\u002625@1\u002619@\u003cfont color=\u0027#00ff00\u0027\u003e可以提高主人的魔法防御力\u003c/font\u003e\u002620@体内蕴涵着冷冻的力量\u00260;蟹型外表被厚厚的冰层包围\u00260;喷射出的寒气能迅速冷冻住任何物体\u00260;幼体性格温顺.\u002627@sitem_pet\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002619@喜好食物:\n宠物用营养水\n宠物成长药剂\n奇效宠物药剂\n\u003cfont color=\u0027#66ccff\u0027\u003e宠物等级:1\n魔法防御+15\n\u003c/font\u003e\u003cfont color=\u0027#00cc00\u0027\u003e成长属性:\n[等级1] 魔法防御+15 每升一级 +1\u003c/font\u003e",
+                     "evidence_sources":  "packet:reward_markup+packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -1973,8 +1973,8 @@
                      "category":  "宠物",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "1",
-                     "description":  "用富有生命的木头机关人来形容它最适合不过，起初只是一个小小的苗，随着浇灌和培养会变的越来越强",
+                     "price":  "0",
+                     "description":  "f_i_怪木机^5BC46D\u002624@宠物\u002625@1\u002619@\u003cfont color=\u0027#00ff00\u0027\u003e可以提高主人的爆击能力\u003c/font\u003e\u002620@用富有生命的木头机关人来形容它最适合不过，起初只是一个小小的苗，随着浇灌和培养会变的越来越强.\u002627@sitem_pet\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002619@喜好食物:\n宠物用营养水\n宠物成长药剂\n奇效宠物药剂\n\u003cfont color=\u0027#66ccff\u0027\u003e宠物等级:1\n爆击+20\n\u003c/font\u003e\u003cfont color=\u0027#00cc00\u0027\u003e成长属性:\n[等级1] 爆击+20 每升一级 +2\u003c/font\u003e",
                      "evidence_sources":  "packet:reward_markup+packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -1987,8 +1987,8 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "100",
+                     "description":  "f_i_蛮力面甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@20\u002622@战士\u00263@17\u00265@30\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2001,8 +2001,8 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "100",
+                     "description":  "f_i_蛮力肩甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@20\u002622@战士\u00263@14\u00265@40\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2015,8 +2015,8 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "150",
+                     "description":  "f_i_蛮力护甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@20\u002622@战士\u00263@26\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@150",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2029,8 +2029,8 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "100",
+                     "description":  "f_i_蛮力护腕^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@20\u002622@战士\u00263@13\u00265@20\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2043,8 +2043,8 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "150",
+                     "description":  "f_i_蛮力护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@20\u002622@战士\u00263@20\u00265@10\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@150",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2057,8 +2057,8 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "100",
+                     "description":  "f_i_蛮力护腰^ffffff\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@20\u002622@战士\u00263@10\u00265@50\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100\u002618@1",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2071,8 +2071,8 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "100",
+                     "description":  "f_i_蛮力战靴^ffffff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@20\u002622@战士\u00263@12\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2085,9 +2085,9 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_威武面甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@20\u002622@游侠\u00263@15\u002611@3\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2099,9 +2099,9 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_威武护肩^ffffff\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@20\u002622@游侠\u00263@12\u002611@3\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2113,9 +2113,9 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "150",
+                     "description":  "f_i_威武皮甲^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@20\u002622@游侠\u00263@25\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@150",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2127,9 +2127,9 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_威武护腕^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@20\u002622@游侠\u00263@12\u002611@5\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2141,9 +2141,9 @@
                      "category":  "宠物",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "1",
-                     "description":  "坚固的石甲将它包围",
-                     "evidence_sources":  "packet:reward_markup+packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_圣石兽^5BC46D\u002624@宠物\u002625@1\u002619@\u003cfont color=\u0027#00ff00\u0027\u003e可以提高主人的物理防御力\u003c/font\u003e\u002620@坚固的石甲将它包围\u00260;习性穴居.成年后外型庞大\u00260;食量也大.\u002627@sitem_pet\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002619@喜好食物:\n宠物用营养水\n宠物成长药剂\n奇效宠物药剂\n\u003cfont color=\u0027#66ccff\u0027\u003e宠物等级:1\n物理防御+15\n\u003c/font\u003e\u003cfont color=\u0027#00cc00\u0027\u003e成长属性:\n[等级1] 物理防御+15 每升一级 +1\u003c/font\u003e",
+                     "evidence_sources":  "packet:reward_markup+packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2155,9 +2155,9 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "150",
+                     "description":  "f_i_威武护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@20\u002622@游侠\u00263@20\u002611@2\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@150",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2169,9 +2169,9 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_威武腰带^ffffff\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@20\u002622@游侠\u00263@10\u002611@5\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2183,9 +2183,9 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_威武皮靴^ffffff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@20\u002622@游侠\u00263@12\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2197,9 +2197,9 @@
                      "category":  "宠物",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "1",
-                     "description":  "身体周围不时的散发出神秘气息，具有很强的灵气，幼体较弱需要细心呵护。",
-                     "evidence_sources":  "packet:reward_markup+packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_霹雳兽^5BC46D\u002624@宠物\u002625@1\u002619@\u003cfont color=\u0027#00ff00\u0027\u003e可以提高主人的魔法攻击力\u003c/font\u003e\u002620@身体周围不时的散发出神秘气息，具有很强的灵气，幼体较弱需要细心呵护。\u002627@sitem_pet\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0\u002619@喜好食物:\n宠物用营养水\n宠物成长药剂\n奇效宠物药剂\n\u003cfont color=\u0027#66ccff\u0027\u003e宠物等级:1\n魔法攻击+10\n\u003c/font\u003e\u003cfont color=\u0027#00cc00\u0027\u003e成长属性:\n[等级1] 魔法攻击+10 每升一级 +1\u003c/font\u003e",
+                     "evidence_sources":  "packet:reward_markup+packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2211,9 +2211,9 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_八极法冠^ffffff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@20\u002622@术士\u00263@10\u00264@18\u00266@50\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2225,9 +2225,9 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_八极护肩^ffffff\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@20\u002622@术士\u00263@10\u00264@8\u00266@30\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2239,9 +2239,9 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "150",
+                     "description":  "f_i_八极法衣^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@20\u002622@术士\u00263@23\u00264@10\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@150",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2253,9 +2253,9 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_八极护腕^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@20\u002622@术士\u00263@12\u00264@2\u00266@20\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2267,9 +2267,9 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "150",
+                     "description":  "f_i_八极护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@20\u002622@术士\u00263@15\u00264@6\u00266@30\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@150",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2281,9 +2281,9 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_八极护腰^ffffff\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@20\u002622@术士\u00263@9\u00264@5\u00266@20\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2295,9 +2295,9 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "100",
+                     "description":  "f_i_八极法靴^ffffff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@20\u002622@术士\u00263@12\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2309,8 +2309,8 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "120",
+                     "description":  "f_i_无双头盔^5BC46D\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@30\u002622@战士\u00263@22\u00265@30\u00269@15\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 命中+5\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2323,8 +2323,8 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "120",
+                     "description":  "f_i_无双护肩^5BC46D\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@30\u002622@战士\u00263@19\u00265@50\u002613@5\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 命中+5\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2337,9 +2337,9 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "180",
+                     "description":  "f_i_无双铠甲^5BC46D\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@30\u002622@战士\u00263@34\u00265@60\u00269@5\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 耐力+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@180",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2351,8 +2351,8 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "120",
+                     "description":  "f_i_无双铁腕^5BC46D\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@30\u002622@战士\u00263@17\u00269@5\u002613@4\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 爆击+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2365,8 +2365,8 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "120",
+                     "description":  "f_i_无双护腿^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@30\u002622@战士\u00263@26\u00265@50\u002613@3\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 命中+5\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2379,8 +2379,8 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "120",
+                     "description":  "f_i_无双铁腰带^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@30\u002622@战士\u00263@15\u002613@3\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 爆击+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
                      "evidence_sources":  "packet:role_item+packet:sale",
                      "notes":  ""
                  },
@@ -2393,9 +2393,9 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_无双铁靴^5BC46D\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@30\u002622@战士\u00263@18\u00269@5\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 耐力+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2407,9 +2407,9 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_神风面甲^5BC46D\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@30\u002622@游侠\u00263@20\u002615@5\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 回避+6\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2421,9 +2421,9 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_神风护肩^5BC46D\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@30\u002622@游侠\u00263@15\u002615@6\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 爆击+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2435,9 +2435,9 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_神风护甲^5BC46D\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@30\u002622@游侠\u00263@33\u00264@5\u002610@8\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 爆击+12\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2449,9 +2449,9 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_神风护腕^5BC46D\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@30\u002622@游侠\u00263@17\u00269@10\u002611@15\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 回避+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2463,9 +2463,9 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_神风护腿^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@30\u002622@游侠\u00263@24\u00264@2\u002613@2\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 回避+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2477,9 +2477,9 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_神风护腰^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@30\u002622@游侠\u00263@15\u002610@3\u002617@5\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 耐力+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2491,9 +2491,9 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_神风战靴^5BC46D\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@30\u002622@游侠\u00263@17\u002612@5\u002615@2\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 幸运+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2505,9 +2505,9 @@
                      "category":  "护具·头部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_雷霆冠^5BC46D\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@30\u002622@术士\u00263@13\u00264@25\u00269@20\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 智力+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2519,9 +2519,9 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_雷霆护肩^5BC46D\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@30\u002622@术士\u00263@15\u00264@3\u00266@30\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 气力上限+25\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2533,9 +2533,9 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "180",
+                     "description":  "f_i_雷霆法衣^5BC46D\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@30\u002622@术士\u00263@30\u00264@12\u00269@10\u002614@5\u003c$jintt\u003e\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 敏捷+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@180",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2547,9 +2547,9 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_雷霆护腕^5BC46D\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@30\u002622@术士\u00263@16\u00264@3\u00269@15\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 爆击+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2561,9 +2561,9 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_雷霆护腿^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@30\u002622@术士\u00263@22\u00264@6\u002614@2\u003c$jintt\u003e\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 命中+20\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2575,9 +2575,9 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_雷霆护腰^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@30\u002622@术士\u00263@15\u00264@5\u00269@20\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 耐力+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2589,9 +2589,9 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "120",
+                     "description":  "f_i_雷霆法靴^5BC46D\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@30\u002622@术士\u00263@17\u002610@5\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 回避+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -2617,8 +2617,8 @@
                      "category":  "饰品",
                      "max_stack":  "1",
                      "asset_family":  "",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "200",
+                     "description":  "f_i_泥戒指^5BC46D\u002623@凿孔上限 9 格\u002624@饰品\u002625@1\u002621@25\u002614@2\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n麻痹抗性:+10%\u003c/font\u003e\n[精炼+1] 每升一级 麻痹抗性+2%\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@200",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2645,8 +2645,8 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "230",
+                     "description":  "f_i_寨夫人护腕^5BC46D\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@24\u00263@14\u00264@4\u00269@10\u002611@10\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 气力上限+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@230",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2659,8 +2659,8 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "250",
+                     "description":  "f_i_寨夫人上衣^5BC46D\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@26\u00263@31\u00264@20\u002615@5\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 回避+5\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n混乱抗性:+30%\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@250",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2673,8 +2673,8 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "170",
+                     "description":  "f_i_翠带护腰^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@18\u00263@10\u00264@2\u00266@20\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 敏捷+2\n[精炼+6] 每升一级 回避+2%\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@170",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2687,8 +2687,8 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "220",
+                     "description":  "f_i_呼啸战靴^5BC46D\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@26\u00263@15\u002612@10\u002615@6\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@220\u002618@1",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2701,8 +2701,8 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "230",
+                     "description":  "f_i_蛤蟆精战靴^00ccff\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@22\u00263@12\u00264@10\u00269@20\u002610@10\u002612@17\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+3\n[精炼+1] 每升一级 魔法防御+3\n[精炼+1] 每升一级 回避+3\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@230",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2715,8 +2715,8 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "120",
+                     "description":  "f_i_刀客布衣^5BC46D\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@16\u00263@20\u00264@6\u002615@4\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 耐力+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2729,8 +2729,8 @@
                      "category":  "护具·足部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "120",
+                     "description":  "f_i_盗贼的鞋^5BC46D\u002623@凿孔上限 9 格\u002624@护具·足部\u002625@1\u002621@17\u00263@10\u002610@13\u002612@15\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 移动+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@120\u002618@1",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2743,8 +2743,8 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "100",
+                     "description":  "f_i_盗贼护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@15\u00263@16\u00264@5\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 命中+3\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100\u002618@1",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2757,8 +2757,8 @@
                      "category":  "护具·躯干",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "100",
+                     "description":  "f_i_盗贼布衣^5BC46D\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@17\u00263@25\u00264@10\u002613@1\u003c$jstr\u003e\u002615@2\u003c$jagi\u003e\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 命中+4\n[精炼+6] 每升一级 耐力+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@100",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2771,8 +2771,8 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "95",
+                     "description":  "f_i_盗贼护臂^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@15\u00263@12\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 爆击+50\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@95",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2785,8 +2785,8 @@
                      "category":  "护具·腰部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "95",
+                     "description":  "f_i_盗贼腰带^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@15\u00263@10\u002615@2\u002617@3\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 爆击+5\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@95\u002618@1",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2799,8 +2799,8 @@
                      "category":  "护具",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "160",
+                     "description":  "f_i_黄风腰带^5BC46D\u002624@护具\u002625@1\u002621@25\u00263@12\u00264@5\u00265@2%\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 回避+3\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@160",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2813,8 +2813,8 @@
                      "category":  "武器·匕首系",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "142",
+                     "description":  "f_i_剔骨刀^5BC46D\u002623@凿孔上限 9 格\u002624@武器·匕首系\u002625@1\u002621@15\u002622@游侠\u00261@38\u002615@2\u003c$jagi\u003e\u002617@3\u003c$jlck\u003e\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+6] 每升一级 回避+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n击中敌人时\u00260;有2%的机率使敌人进入外伤状态3回合(每回合损失气力15~30点)\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@142\u002618@1",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2953,8 +2953,8 @@
                      "category":  "护具·腿",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "260",
+                     "description":  "f_i_岩化护腿^ffffff\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@24\u00263@25\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n外伤抗性:+10%\u003c/font\u003e\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@260",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2967,8 +2967,8 @@
                      "category":  "护具·护腕",
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "95",
+                     "description":  "f_i_花妖护腕^ffffff\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@12\u00263@11\u00264@3\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@95",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -2981,8 +2981,8 @@
                      "category":  "护具·肩部",
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
-                     "price":  "",
-                     "description":  "精炼潜质: [精炼+1",
+                     "price":  "210",
+                     "description":  "f_i_蓝晶护肩^5BC46D\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@18\u00263@8\u00264@12\u002614@4\u003c$jintt\u003e\u002615@2\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 敏捷+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@210",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -4395,8 +4395,8 @@
                      "category":  "法宝",
                      "max_stack":  "1",
                      "asset_family":  "sitem_water",
-                     "price":  "",
-                     "description":  "注:【内置10000气力 双击装备后生效】",
+                     "price":  "0",
+                     "description":  "f_i_L百年蟠桃^00ccff\u002623@限制装备至【宝1、宝2、宝3、宝4】格。\u003cbr/\u003e剩余气力【10000】点\u002624@法宝\u002625@1\u002619@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。\u002620@\u003cfont color=\u0027#ffff00\u0027\u003e注:【内置10000气力 双击装备后生效】\u003c/font\u003e\u002627@sitem_water\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
                      "evidence_sources":  "packet:role_item",
                      "notes":  ""
                  },
@@ -4409,8 +4409,8 @@
                      "category":  "法宝",
                      "max_stack":  "1",
                      "asset_family":  "sitem_water",
-                     "price":  "",
-                     "description":  "注:【内置10000精力 双击装备后生效】",
+                     "price":  "0",
+                     "description":  "f_i_L百年人参果^00ccff\u002623@限制装备至【宝1、宝2、宝3、宝4】格。\u003cbr/\u003e剩余精力【10000】点\u002624@法宝\u002625@1\u002619@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。\u002620@\u003cfont color=\u0027#00ccff\u0027\u003e注:【内置10000精力 双击装备后生效】\u003c/font\u003e\u002627@sitem_water\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
                      "evidence_sources":  "packet:role_item",
                      "notes":  ""
                  },
@@ -4423,8 +4423,8 @@
                      "category":  "法宝",
                      "max_stack":  "1",
                      "asset_family":  "sitem_water",
-                     "price":  "",
-                     "description":  "注:【内置50000气力 双击装备后生效】",
+                     "price":  "0",
+                     "description":  "f_i_L千年蟠桃^C156C7\u002623@限制装备至【宝1、宝2、宝3、宝4】格。\u003cbr/\u003e剩余气力【50000】点\u002624@法宝\u002625@1\u002619@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。\u002620@\u003cfont color=\u0027#ffff00\u0027\u003e注:【内置50000气力 双击装备后生效】\u003c/font\u003e\u002627@sitem_water\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
                      "evidence_sources":  "packet:role_item",
                      "notes":  ""
                  },
@@ -4437,8 +4437,8 @@
                      "category":  "法宝",
                      "max_stack":  "1",
                      "asset_family":  "sitem_water",
-                     "price":  "",
-                     "description":  "注:【内置50000精力 双击装备后生效】",
+                     "price":  "0",
+                     "description":  "f_i_L千年人参果^C156C7\u002623@限制装备至【宝1、宝2、宝3、宝4】格。\u003cbr/\u003e剩余精力【50000】点\u002624@法宝\u002625@1\u002619@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。\u002620@\u003cfont color=\u0027#00ccff\u0027\u003e注:【内置50000精力 双击装备后生效】\u003c/font\u003e\u002627@sitem_water\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
                      "evidence_sources":  "packet:role_item",
                      "notes":  ""
                  },
@@ -4633,8 +4633,8 @@
                      "category":  "坐骑",
                      "max_stack":  "1",
                      "asset_family":  "sitem_pet",
-                     "price":  "",
-                     "description":  "如果不下线，他会一直陪着你哦~15分钟后再次登录便会消失",
+                     "price":  "0",
+                     "description":  "f_i_L小白马^00ccff\u002623@限制装备至【坐骑】格。\u002624@坐骑\u002625@1\u002612@10\u002619@如果不下线，他会一直陪着你哦~15分钟后再次登录便会消失\u002620@\u003cfont color=\u0027#ffff00\u0027\u003e注:【有时限，禁止交易】\u003c/font\u003e\u002627@sitem_pet\u0026103@0\u0026104@1779461401590\u0026105@\u0026107@\u0026108@0",
                      "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  ""
                  },
@@ -4703,9 +4703,9 @@
                      "category":  "法宝",
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
-                     "price":  "1",
-                     "description":  "传说是孙悟空所骑乘之云，有日行千里的神奇效果。",
-                     "evidence_sources":  "packet:sale",
+                     "price":  "0",
+                     "description":  "f_i_筋斗云^00ccff\u002623@限制装备至【宝1、宝2、宝3、宝4】格。\u002624@法宝\u002625@1\u002612@10\u002615@10\u002619@装备后产生坐骑效果。\u002620@传说是孙悟空所骑乘之云，有日行千里的神奇效果。\u002627@sitem_ezhj\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@0",
+                     "evidence_sources":  "packet:sale+packet:role_item",
                      "notes":  ""
                  },
                  {
@@ -4900,8 +4900,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
                      "price":  "430",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_蚩颅王护肩^00ccff\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@31\u00263@18(+3)\u00264@10(+3)\u002614@5\u002615@4\u002617@5\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+3\n[精炼+1] 每升一级 魔法防御+3\n[精炼+6] 每升一级 气力上限+100\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n遭受爆击时\u00260;有6%的机率使敌人进入眩晕状态1回合\u003c/font\u003e\n[精炼+1] 每升一级 眩晕反射机率+1%\u0026103@1\u0026104@0\u0026105@\u0026107@\u0026108@430",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -4956,8 +4956,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
                      "price":  "150",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_蛤蟆布衣^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@18\u00263@26\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n毒抗性:+5%\u003c/font\u003e\n[精炼+1] 每升一级 毒抗性+2%\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@150",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -4970,8 +4970,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
                      "price":  "160",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_蛤蟆法袍^ffffff\u002623@凿孔上限 9 格\u002624@护具·躯干\u002625@1\u002621@23\u00263@22\u00264@15\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 命中+10\n[精炼+6] 每升一级 幸运+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@160\u002618@1",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -4984,8 +4984,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
                      "price":  "250",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_蛤蟆精护肩^5BC46D\u002623@凿孔上限 9 格\u002624@护具·肩部\u002625@1\u002621@22\u00263@12\u00264@2\u002617@5\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+3\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 回避+5\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@250",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -4998,8 +4998,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_piput",
                      "price":  "240",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_蛤蟆精护腰^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@22\u00263@13\u002611@20\u002614@2\u002627@sitem_piput\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+6] 每升一级 回避+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@240",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5012,8 +5012,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
                      "price":  "160",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_黄风护腕^5BC46D\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@25\u00263@15\u002611@16\u002613@2\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 命中+5\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@160",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5026,8 +5026,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
                      "price":  "160",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_黄风围巾^00ccff\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@28\u00263@19\u00264@12\u00265@100\u002613@7\u003c$jstr\u003e\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+3\n[精炼+1] 每升一级 魔法防御+3\n[精炼+1] 每升一级 命中+10\n[精炼+6] 每升一级 幸运+3\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n麻痹抗性:+5%\n眩晕抗性:+5%\n冰冻抗性:+8%\u003c/font\u003e\n[精炼+1] 每升一级 麻痹抗性+1%\n[精炼+1] 每升一级 眩晕抗性+1%\n[精炼+1] 每升一级 冰冻抗性+1%\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@160",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5040,8 +5040,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
                      "price":  "300",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_机木护腿^5BC46D\u002623@凿孔上限 9 格\u002624@护具·腿\u002625@1\u002621@35\u00263@27\u00264@10\u002614@3\u003c$jintt\u003e\u002615@6\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 幸运+3\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@300",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5054,8 +5054,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
                      "price":  "250",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_机木护腕^5BC46D\u002623@凿孔上限 9 格\u002624@护具·护腕\u002625@1\u002621@35\u00263@19\u00264@10\u002614@8\u002617@6\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 耐力+2\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@250",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5068,8 +5068,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
                      "price":  "250",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_机木护腰^ffffff\u002623@凿孔上限 9 格\u002624@护具·腰部\u002625@1\u002621@35\u00263@18\u00264@20\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+6] 每升一级 命中+25\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@250\u002618@1",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5082,8 +5082,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_jhj",
                      "price":  "134",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_狼牙棒^ffffff\u002623@凿孔上限 9 格\u002624@武器·单刀系\u002625@1\u002621@18\u002622@战士\u00261@50\u002627@sitem_jhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+6] 每升一级 幸运+1\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@134",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5138,8 +5138,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_bs",
                      "price":  "200",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_铜戒指^5BC46D\u002623@凿孔上限 9 格\u002624@饰品\u002625@1\u002621@25\u002616@2\u002627@sitem_bs\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n\u003cfont color=\u0027#00cc00\u0027\u003e特殊效果:\n外伤抗性:+10%\u003c/font\u003e\n[精炼+1] 每升一级 外伤抗性+2%\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@200",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5180,8 +5180,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_jwep",
                      "price":  "380",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_岩魔剑^5BC46D\u002623@凿孔上限 9 格\u002624@武器·单剑系\u002625@1\u002621@27\u002622@战士\u00261@65\u002616@7\u002617@5\u002627@sitem_jwep\u002619@精炼潜质:\n[精炼+1] 每升一级 物理攻击+2\n[精炼+1] 每升一级 命中+4\n[精炼+6] 每升一级 爆击+25\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@380",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  },
                  {
@@ -5194,8 +5194,8 @@
                      "max_stack":  "1",
                      "asset_family":  "sitem_ezhj",
                      "price":  "210",
-                     "description":  "精炼潜质: [精炼+1",
-                     "evidence_sources":  "packet:reward_markup",
+                     "description":  "f_i_战斗围巾^5BC46D\u002623@凿孔上限 9 格\u002624@护具·头部\u002625@1\u002621@25\u00263@17\u00264@13\u00266@20\u002615@3\u002627@sitem_ezhj\u002619@精炼潜质:\n[精炼+1] 每升一级 物理防御+2\n[精炼+1] 每升一级 魔法防御+2\n[精炼+1] 每升一级 精力上限+10\u0026103@0\u0026104@0\u0026105@\u0026107@\u0026108@210",
+                     "evidence_sources":  "packet:reward_markup+packet:role_item",
                      "notes":  "added from deduped battle reward markup to cover drop/candidate icon metadata"
                  }
              ]

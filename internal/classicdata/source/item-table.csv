@@ -1,32 +1,73 @@
 "status","confidence","icon","name","item_type","category","max_stack","asset_family","price","description","evidence_sources","notes"
 "packet_confirmed","high","0.png","馒头","own","消耗品","99","","1","又白又香的馒头","packet:role_item+packet:sale",""
 "packet_confirmed","high","2.png","奥义秘诀","own","宝物","99","sitem_book","1","传说该秘诀泄漏自擎天山天宫术院，书内介绍了各职业无比强大的秘奥义技能招式。","packet:sale",""
-"packet_confirmed","high","3.png","蓝布裤","equip","护具·腿","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","29.png","铁斧","equip","武器·单刀系","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
+"packet_confirmed","high","3.png","蓝布裤","equip","护具·腿","1","sitem_ezhj","0","f_i_蓝布裤^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@1&3@4&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@0","packet:role_item+packet:sale",""
+"packet_confirmed","high","29.png","铁斧","equip","武器·单刀系","1","sitem_jhj","0","f_i_铁斧&23@凿孔上限 9 格&23@凿孔上限 9 格&24@武器·单刀系&25@1&21@1&1@26&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@0","packet:role_item+packet:sale",""
 "inferred","inferred_low","30.png","未知单剑类武器候选","","武器","","","","","inferred:icon_sequence_visual","29-53 为低级武器连续区间；图标视觉为剑，当前抓包未出现名称。"
 "inferred","inferred_low","31.png","未知拳套/爪类武器候选","","武器","","","","","inferred:icon_sequence_visual","29-53 为低级武器连续区间；图标视觉为拳套/爪，当前抓包未出现名称。"
-"packet_confirmed","high","32.png","飞佐钢剑","equip","武器·单剑系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","33.png","兽骨棍","equip","武器·棍系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","34.png","猪牙钢刀","equip","武器·单刀系","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","35.png","兽骨弓","equip","武器·弓系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","36.png","飞艳匕首","equip","武器·匕首系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","37.png","铁拳套","equip","武器·拳套系","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","38.png","圣羽法杖","equip","武器·法杖系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
+"packet_confirmed","high","32.png","飞佐钢剑","equip","武器·单剑系","1","sitem_jwep","50","f_i_飞佐钢剑&23@凿孔上限 9 格&24@武器·单剑系&25@1&21@10&22@战士&1@34&16@1&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@50","packet:sale+packet:role_item",""
+"packet_confirmed","high","33.png","兽骨棍","equip","武器·棍系","1","sitem_wood","50","f_i_兽骨棍&23@凿孔上限 9 格&24@武器·棍系&25@1&21@10&22@战士&1@36&9@12&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@50","packet:sale+packet:role_item",""
+"packet_confirmed","high","34.png","猪牙钢刀","equip","武器·单刀系","1","sitem_jhj","50","f_i_猪牙钢刀&23@凿孔上限 9 格&24@武器·单刀系&25@1&21@10&22@战士&1@38&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@50&18@1","packet:role_item+packet:sale",""
+"packet_confirmed","high","35.png","兽骨弓","equip","武器·弓系","1","sitem_wood","50","f_i_兽骨弓&23@凿孔上限 9 格&24@武器·弓系&25@1&21@10&22@游侠&1@34&9@10&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@50","packet:sale+packet:role_item",""
+"packet_confirmed","high","36.png","飞艳匕首","equip","武器·匕首系","1","sitem_jwep","50","f_i_飞艳匕首&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@10&22@游侠&1@33&11@15&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@50","packet:sale+packet:role_item",""
+"packet_confirmed","high","37.png","铁拳套","equip","武器·拳套系","1","sitem_jhj","50","f_i_铁拳套&23@凿孔上限 9 格&24@武器·拳套系&25@1&21@10&22@游侠&1@36&3@1&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 物理攻击+1&103@0&104@0&105@&107@&108@50","packet:sale+packet:role_item",""
+"packet_confirmed","high","38.png","圣羽法杖","equip","武器·法杖系","1","sitem_wood","50","f_i_圣羽法杖&23@凿孔上限 9 格&24@武器·法杖系&25@1&21@10&22@术士&1@20&2@37&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 魔法攻击+2&103@0&104@0&105@&107@&108@50","packet:sale+packet:role_item",""
 "packet_confirmed","high","39.png","银元宝","own","材料 消耗品","9999","sitem_jhj","","游戏中的货币","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","40.png","蛮力钢剑","equip","武器·单剑系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","41.png","逆天棍","equip","武器·棍系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","42.png","刎刀","equip","武器·单刀系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","43.png","威武弓","equip","武器·弓系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","44.png","牙刺","equip","武器·匕首系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","45.png","天极拳套","equip","武器·拳套系","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","46.png","八极法杖","equip","武器·法杖系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","47.png","八卦棍","equip","武器·棍系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","48.png","饮血刀","equip","武器·单刀系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","49.png","真虹剑","equip","武器·单剑系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","50.png","疾影弓","equip","武器·弓系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","51.png","绯雨匕首","equip","武器·匕首系","1","sitem_jwep","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","52.png","青义拳套","equip","武器·拳套系","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","53.png","雷霆法杖","equip","武器·法杖系","1","sitem_wood","1","精炼潜质: [精炼+1","packet:sale",""
+"packet_confirmed","high","40.png","蛮力钢剑","equip","武器·单剑系","1","sitem_jwep","130","f_i_蛮力钢剑&23@凿孔上限 9 格&24@武器·单剑系&25@1&21@20&22@战士&1@52&16@2&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@130","packet:sale+packet:role_item",""
+"packet_confirmed","high","41.png","逆天棍","equip","武器·棍系","1","sitem_wood","130","f_i_逆天棍&23@凿孔上限 9 格&24@武器·棍系&25@1&21@20&22@战士&1@52&9@15&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@130","packet:sale+packet:role_item",""
+"packet_confirmed","high","42.png","刎刀","equip","武器·单刀系","1","sitem_jwep","130","f_i_刎刀&23@凿孔上限 9 格&24@武器·单刀系&25@1&21@20&22@战士&1@55&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@130&18@1","packet:role_item+packet:sale",""
+"packet_confirmed","high","43.png","威武弓","equip","武器·弓系","1","sitem_wood","130","f_i_威武弓&23@凿孔上限 9 格&24@武器·弓系&25@1&21@20&22@游侠&1@50&9@15&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@130","packet:sale+packet:role_item",""
+"packet_confirmed","high","44.png","牙刺","equip","武器·匕首系","1","sitem_jwep","130","f_i_牙刺&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@20&22@游侠&1@46&11@25&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+<font color='#00cc00'>特殊效果:
+击中敌人时有1%的机率造成外伤3回合(每回合减少对手的气力为物理攻击的5%~10%)</font>&103@0&104@0&105@&107@&108@130","packet:sale+packet:role_item",""
+"packet_confirmed","high","45.png","天极拳套","equip","武器·拳套系","1","sitem_piput","130","f_i_天极拳套&23@凿孔上限 9 格&24@武器·拳套系&25@1&21@20&22@游侠&1@52&3@2&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 物理防御+1&103@0&104@0&105@&107@&108@130","packet:sale+packet:role_item",""
+"packet_confirmed","high","46.png","八极法杖","equip","武器·法杖系","1","sitem_wood","130","f_i_八极法杖&23@凿孔上限 9 格&24@武器·法杖系&25@1&21@20&22@术士&1@30&2@60&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 魔法攻击+2&103@0&104@0&105@&107@&108@130","packet:sale+packet:role_item",""
+"packet_confirmed","high","47.png","八卦棍","equip","武器·棍系","1","sitem_wood","300","f_i_八卦棍&23@凿孔上限 9 格&24@武器·棍系&25@1&21@30&22@战士&1@75&9@20&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+<font color='#00cc00'>特殊效果:
+封印抗性+5%</font>&103@0&104@0&105@&107@&108@300","packet:sale+packet:role_item",""
+"packet_confirmed","high","48.png","饮血刀","equip","武器·单刀系","1","sitem_jwep","300","f_i_饮血刀^ffffff&23@凿孔上限 9 格&24@武器·单刀系&25@1&21@30&22@战士&1@78&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+<font color='#00cc00'>特殊效果:
+击中敌人时&0;有1%的机率将攻击伤害的20%转化为气力.</font>&103@0&104@0&105@&107@&108@300","packet:role_item+packet:sale",""
+"packet_confirmed","high","49.png","真虹剑","equip","武器·单剑系","1","sitem_jwep","300","f_i_真虹剑&23@凿孔上限 9 格&24@武器·单剑系&25@1&21@30&22@战士&1@72&16@3&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2&103@0&104@0&105@&107@&108@300","packet:sale+packet:role_item",""
+"packet_confirmed","high","50.png","疾影弓","equip","武器·弓系","1","sitem_wood","300","f_i_疾影弓&23@凿孔上限 9 格&24@武器·弓系&25@1&21@30&22@游侠&1@72&9@20&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+<font color='#00cc00'>特殊效果:
+击中敌人时&0;有1%的机率造成卸甲3回合(削弱敌人10%~15%的物理防御).</font>&103@0&104@0&105@&107@&108@300","packet:sale+packet:role_item",""
+"packet_confirmed","high","51.png","绯雨匕首","equip","武器·匕首系","1","sitem_jwep","500","f_i_绯雨匕首&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@30&22@游侠&1@70&11@30&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+<font color='#00cc00'>特殊效果:
+击中敌人时候有1%机率使敌人进入内伤状态3回合(降低敌人10%~15%的物理攻击和魔法攻击)</font>&103@0&104@0&105@&107@&108@500","packet:sale+packet:role_item",""
+"packet_confirmed","high","52.png","青义拳套","equip","武器·拳套系","1","sitem_piput","500","f_i_青义拳套&23@凿孔上限 9 格&24@武器·拳套系&25@1&21@30&22@游侠&1@75&3@5&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 物理防御+1&103@0&104@0&105@&107@&108@500","packet:sale+packet:role_item",""
+"packet_confirmed","high","53.png","雷霆法杖","equip","武器·法杖系","1","sitem_wood","500","f_i_雷霆法杖&23@凿孔上限 9 格&24@武器·法杖系&25@1&21@30&22@术士&1@35&2@73&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 魔法攻击+2
+<font color='#00cc00'>特殊效果:
+击中敌人时&0;有1%的机率造成麻痹2回合(每回合减少对手的气力为魔法攻击的10%~15%)</font>&103@0&104@0&105@&107@&108@500","packet:sale+packet:role_item",""
 "packet_confirmed","high","68.png","兽牙","null","材料","99","","","野兽锋利的牙齿","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","69.png","大猪牙","null","材料","99","","","野猪的大牙","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","70.png","肉","own","材料 消耗品","99","","","动物的肉","packet:reward_markup+packet:role_item",""
@@ -73,7 +114,15 @@
 "packet_confirmed","high","115.png","巨岩魔的头","null","材料","99","sitem_zgbs","","巨岩魔的头颅","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","120.png","盗贼的首级","null","材料","99","","","击杀盗贼的证明","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","121.png","红方巾","null","材料","99","sitem_ezhj","","红色绸缎制方巾","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","130.png","狰狞神骑","equip","坐骑","1","sitem_pet","1","精炼潜质: [精炼+16","packet:sale",""
+"packet_confirmed","high","130.png","狰狞神骑","equip","坐骑","1","sitem_pet","0","f_i_狰狞神骑^f9e000&23@限制装备至【坐骑】格。&24@坐骑&25@1&21@90&13@50&14@50&15@50&16@50&17@50&27@sitem_pet&19@精炼潜质:
+[精炼+16] 每升一级 物理攻击+160
+[精炼+16] 每升一级 魔法攻击+160
+[精炼+16] 每升一级 移动+10
+[精炼+18] 每升一级 魔法防御+300
+[精炼+18] 每升一级 物理防御+300
+[精炼+20] 每升一级 命中+20%
+[精炼+20] 每升一级 回避+20%
+[精炼+20] 每升一级 气力上限+1500&103@0&104@0&105@&107@&108@0","packet:sale+packet:role_item",""
 "packet_confirmed","high","132.png","黏液","null","材料","99","sitem_yaoji","","怪物体内的黏液","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","133.png","竹","null","材料","99","sitem_wood","","看上去没有什么异样","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","134.png","刺","null","材料","99","sitem_piput","","一些植物自带的锋利尖锐的刺状物","packet:reward_markup+packet:role_item",""
@@ -110,96 +159,292 @@
 "packet_confirmed","high","246.png","穿甲箭","null","材料 消耗品","9999","sitem_jwep","50","坚硬而锋利的箭头","packet:sale",""
 "packet_confirmed","high","247.png","毒箭","null","材料 消耗品","9999","sitem_jwep","10","被涂上剧毒的箭矢","packet:sale",""
 "packet_confirmed","high","248.png","魂之石","null","材料 消耗品","99","sitem_jhj","","闪耀着金光的神秘之石","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","274.png","布鞋","equip","护具·足部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","291.png","蓝布衣","equip","护具·躯干","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","292.png","布护腰","equip","护具·腰部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","293.png","布帽","equip","护具·头部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","294.png","布护腕","equip","护具·护腕","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","309.png","飞佐面甲","equip","护具·头部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","310.png","飞佐护肩","equip","护具·肩部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","311.png","飞佐护甲","equip","护具·躯干","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","312.png","飞佐护腕","equip","护具·护腕","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","313.png","飞佐护腿","equip","护具·腿","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","314.png","飞佐护腰","equip","护具·腰部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","315.png","飞佐战靴","equip","护具·足部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","316.png","圣羽面甲","equip","护具·头部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","317.png","圣羽护肩","equip","护具·肩部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","318.png","圣羽战衣","equip","护具·躯干","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","319.png","圣羽护腕","equip","护具·护腕","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","320.png","幻熊兽","equip","宠物","1","sitem_pet","1","多居在茂密的树林里，活泼好动","packet:reward_markup+packet:sale",""
-"packet_confirmed","high","321.png","圣羽护腿","equip","护具·腿","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","322.png","圣羽护腰","equip","护具·腰部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","323.png","圣羽战靴","equip","护具·足部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","324.png","炎火兽","equip","宠物","1","sitem_pet","1","体内流淌着高温的酸性体液","packet:reward_markup+packet:sale",""
-"packet_confirmed","high","325.png","飞艳面甲","equip","护具·头部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","326.png","飞艳护肩","equip","护具·肩部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","327.png","飞艳战衣","equip","护具·躯干","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","328.png","飞艳护腕","equip","护具·护腕","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","329.png","飞艳护腿","equip","护具·腿","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","330.png","飞艳护腰","equip","护具·腰部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","331.png","飞艳战靴","equip","护具·足部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","332.png","极冰兽","equip","宠物","1","sitem_pet","1","体内蕴涵着冷冻的力量","packet:reward_markup+packet:sale",""
-"packet_confirmed","high","333.png","怪木机","equip","宠物","1","sitem_pet","1","用富有生命的木头机关人来形容它最适合不过，起初只是一个小小的苗，随着浇灌和培养会变的越来越强","packet:reward_markup+packet:role_item+packet:sale",""
-"packet_confirmed","high","334.png","蛮力面甲","equip","护具·头部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","335.png","蛮力肩甲","equip","护具·肩部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","336.png","蛮力护甲","equip","护具·躯干","1","sitem_piput","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","337.png","蛮力护腕","equip","护具·护腕","1","sitem_piput","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","338.png","蛮力护腿","equip","护具·腿","1","sitem_piput","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","339.png","蛮力护腰","equip","护具·腰部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","340.png","蛮力战靴","equip","护具·足部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","341.png","威武面甲","equip","护具·头部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","342.png","威武护肩","equip","护具·肩部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","343.png","威武皮甲","equip","护具·躯干","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","344.png","威武护腕","equip","护具·护腕","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","345.png","圣石兽","equip","宠物","1","sitem_pet","1","坚固的石甲将它包围","packet:reward_markup+packet:sale",""
-"packet_confirmed","high","346.png","威武护腿","equip","护具·腿","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","347.png","威武腰带","equip","护具·腰部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","348.png","威武皮靴","equip","护具·足部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","349.png","霹雳兽","equip","宠物","1","sitem_pet","1","身体周围不时的散发出神秘气息，具有很强的灵气，幼体较弱需要细心呵护。","packet:reward_markup+packet:sale",""
-"packet_confirmed","high","350.png","八极法冠","equip","护具·头部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","351.png","八极护肩","equip","护具·肩部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","352.png","八极法衣","equip","护具·躯干","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","353.png","八极护腕","equip","护具·护腕","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","354.png","八极护腿","equip","护具·腿","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","355.png","八极护腰","equip","护具·腰部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","356.png","八极法靴","equip","护具·足部","1","sitem_piput","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","357.png","无双头盔","equip","护具·头部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","358.png","无双护肩","equip","护具·肩部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","359.png","无双铠甲","equip","护具·躯干","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","360.png","无双铁腕","equip","护具·护腕","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","361.png","无双护腿","equip","护具·腿","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","362.png","无双铁腰带","equip","护具·腰部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:role_item+packet:sale",""
-"packet_confirmed","high","363.png","无双铁靴","equip","护具·足部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","364.png","神风面甲","equip","护具·头部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","365.png","神风护肩","equip","护具·肩部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","366.png","神风护甲","equip","护具·躯干","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","367.png","神风护腕","equip","护具·护腕","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","368.png","神风护腿","equip","护具·腿","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","369.png","神风护腰","equip","护具·腰部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","370.png","神风战靴","equip","护具·足部","1","sitem_jhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","371.png","雷霆冠","equip","护具·头部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","372.png","雷霆护肩","equip","护具·肩部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","373.png","雷霆法衣","equip","护具·躯干","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","374.png","雷霆护腕","equip","护具·护腕","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","375.png","雷霆护腿","equip","护具·腿","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","376.png","雷霆护腰","equip","护具·腰部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
-"packet_confirmed","high","377.png","雷霆法靴","equip","护具·足部","1","sitem_ezhj","1","精炼潜质: [精炼+1","packet:sale",""
+"packet_confirmed","high","274.png","布鞋","equip","护具·足部","1","sitem_ezhj","0","f_i_布鞋^ffffff&23@凿孔上限 9 格&24@护具·足部&25@1&21@1&3@2&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@0&18@2","packet:role_item+packet:sale",""
+"packet_confirmed","high","291.png","蓝布衣","equip","护具·躯干","1","sitem_ezhj","0","f_i_蓝布衣^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@1&3@<$pdef><$jpdef>&27@sitem_ezhj&21@1&3@6&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+&103@0&104@0&105@&107@&108@0&18@1","packet:role_item+packet:sale",""
+"packet_confirmed","high","292.png","布护腰","equip","护具·腰部","1","sitem_ezhj","0","f_i_布护腰^ffffff&23@凿孔上限 9 格&24@护具·腰部&25@1&21@1&3@3&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@0","packet:sale+packet:role_item",""
+"packet_confirmed","high","293.png","布帽","equip","护具·头部","1","sitem_ezhj","0","f_i_布帽^ffffff&23@凿孔上限 9 格&24@护具·头部&25@1&21@1&3@3&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@0","packet:sale+packet:role_item",""
+"packet_confirmed","high","294.png","布护腕","equip","护具·护腕","1","sitem_ezhj","0","f_i_布护腕&23@凿孔上限 9 格&24@护具·护腕&25@1&21@1&3@2&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@0","packet:sale+packet:role_item",""
+"packet_confirmed","high","309.png","飞佐面甲","equip","护具·头部","1","sitem_ezhj","25","f_i_飞佐面甲^ffffff&23@凿孔上限 9 格&24@护具·头部&25@1&21@10&22@战士&3@12&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@25","packet:role_item+packet:sale",""
+"packet_confirmed","high","310.png","飞佐护肩","equip","护具·肩部","1","sitem_ezhj","20","f_i_飞佐护肩^ffffff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@10&22@战士&3@9&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:role_item+packet:sale",""
+"packet_confirmed","high","311.png","飞佐护甲","equip","护具·躯干","1","sitem_ezhj","30","f_i_飞佐护甲^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@10&22@战士&3@16&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@30&18@2","packet:role_item+packet:sale",""
+"packet_confirmed","high","312.png","飞佐护腕","equip","护具·护腕","1","sitem_ezhj","20","f_i_飞佐护腕^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@10&22@战士&3@9&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20&18@2","packet:role_item+packet:sale",""
+"packet_confirmed","high","313.png","飞佐护腿","equip","护具·腿","1","sitem_ezhj","20","f_i_飞佐护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@10&22@战士&3@13&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:role_item+packet:sale",""
+"packet_confirmed","high","314.png","飞佐护腰","equip","护具·腰部","1","sitem_ezhj","20","f_i_飞佐护腰&23@凿孔上限 9 格&24@护具·腰部&25@1&21@10&22@战士&3@8&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:role_item+packet:sale",""
+"packet_confirmed","high","315.png","飞佐战靴","equip","护具·足部","1","sitem_ezhj","20","f_i_飞佐战靴^ffffff&23@凿孔上限 9 格&24@护具·足部&25@1&21@10&22@战士&3@10&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:role_item+packet:sale",""
+"packet_confirmed","high","316.png","圣羽面甲","equip","护具·头部","1","sitem_ezhj","25","f_i_圣羽面甲^ffffff&23@凿孔上限 9 格&24@护具·头部&25@1&21@10&22@术士&3@8&4@8&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@25","packet:sale+packet:role_item",""
+"packet_confirmed","high","317.png","圣羽护肩","equip","护具·肩部","1","sitem_ezhj","20","f_i_圣羽护肩^ffffff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@10&22@术士&3@8&4@2&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","318.png","圣羽战衣","equip","护具·躯干","1","sitem_ezhj","30","f_i_圣羽战衣^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@10&22@术士&3@14&4@4&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@30","packet:sale+packet:role_item",""
+"packet_confirmed","high","319.png","圣羽护腕","equip","护具·护腕","1","sitem_ezhj","20","f_i_圣羽护腕^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@10&22@术士&3@9&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","320.png","幻熊兽","equip","宠物","1","sitem_pet","0","f_i_幻熊兽^5BC46D&24@宠物&25@1&19@<font color='#00ff00'>可以提高主人的命中和回避</font>&20@多居在茂密的树林里，活泼好动.&27@sitem_pet&103@0&104@0&105@&107@&108@0&19@喜好食物:
+宠物用营养水
+宠物成长药剂
+奇效宠物药剂
+<font color='#66ccff'>宠物等级:1
+命中+15
+回避+15
+</font><font color='#00cc00'>成长属性:
+[等级1] 命中+15 每升一级 +1
+[等级1] 回避+15 每升一级 +1</font>","packet:reward_markup+packet:sale+packet:role_item",""
+"packet_confirmed","high","321.png","圣羽护腿","equip","护具·腿","1","sitem_ezhj","20","f_i_圣羽护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@10&22@术士&3@10&4@3&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","322.png","圣羽护腰","equip","护具·腰部","1","sitem_ezhj","20","f_i_圣羽护腰^ffffff&23@凿孔上限 9 格&24@护具·腰部&25@1&21@10&22@术士&3@7&4@1&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","323.png","圣羽战靴","equip","护具·足部","1","sitem_ezhj","20","f_i_圣羽战靴^ffffff&23@凿孔上限 9 格&24@护具·足部&25@1&21@10&22@术士&3@9&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","324.png","炎火兽","equip","宠物","1","sitem_pet","0","f_i_炎火兽^5BC46D&24@宠物&25@1&19@<font color='#00ff00'>可以提高主人的物理攻击力</font>&20@体内流淌着高温的酸性体液&0;喷射出来遇到火花就会烧起熊熊大火.生性好斗勇猛.&27@sitem_pet&103@0&104@0&105@&107@&108@0&19@喜好食物:
+宠物用营养水
+宠物成长药剂
+奇效宠物药剂
+<font color='#66ccff'>宠物等级:1
+物理攻击+10
+</font><font color='#00cc00'>成长属性:
+[等级1] 物理攻击+10 每升一级 +1</font>","packet:reward_markup+packet:sale+packet:role_item",""
+"packet_confirmed","high","325.png","飞艳面甲","equip","护具·头部","1","sitem_ezhj","25","f_i_飞艳面甲^ffffff&23@凿孔上限 9 格&24@护具·头部&25@1&21@10&22@游侠&3@10&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@25","packet:sale+packet:role_item",""
+"packet_confirmed","high","326.png","飞艳护肩","equip","护具·肩部","1","sitem_ezhj","20","f_i_飞艳护肩^ffffff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@10&22@游侠&3@9&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","327.png","飞艳战衣","equip","护具·躯干","1","sitem_ezhj","30","f_i_飞艳战衣^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@10&22@游侠&3@15&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@30","packet:sale+packet:role_item",""
+"packet_confirmed","high","328.png","飞艳护腕","equip","护具·护腕","1","sitem_ezhj","20","f_i_飞艳护腕^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@10&22@游侠&3@9&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","329.png","飞艳护腿","equip","护具·腿","1","sitem_ezhj","20","f_i_飞艳护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@10&22@游侠&3@12&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","330.png","飞艳护腰","equip","护具·腰部","1","sitem_ezhj","20","f_i_飞艳护腰^ffffff&23@凿孔上限 9 格&24@护具·腰部&25@1&21@10&22@游侠&3@8&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","331.png","飞艳战靴","equip","护具·足部","1","sitem_ezhj","20","f_i_飞艳战靴^ffffff&23@凿孔上限 9 格&24@护具·足部&25@1&21@10&22@游侠&3@10&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@20","packet:sale+packet:role_item",""
+"packet_confirmed","high","332.png","极冰兽","equip","宠物","1","sitem_pet","0","f_i_极冰兽^5BC46D&24@宠物&25@1&19@<font color='#00ff00'>可以提高主人的魔法防御力</font>&20@体内蕴涵着冷冻的力量&0;蟹型外表被厚厚的冰层包围&0;喷射出的寒气能迅速冷冻住任何物体&0;幼体性格温顺.&27@sitem_pet&103@0&104@0&105@&107@&108@0&19@喜好食物:
+宠物用营养水
+宠物成长药剂
+奇效宠物药剂
+<font color='#66ccff'>宠物等级:1
+魔法防御+15
+</font><font color='#00cc00'>成长属性:
+[等级1] 魔法防御+15 每升一级 +1</font>","packet:reward_markup+packet:sale+packet:role_item",""
+"packet_confirmed","high","333.png","怪木机","equip","宠物","1","sitem_pet","0","f_i_怪木机^5BC46D&24@宠物&25@1&19@<font color='#00ff00'>可以提高主人的爆击能力</font>&20@用富有生命的木头机关人来形容它最适合不过，起初只是一个小小的苗，随着浇灌和培养会变的越来越强.&27@sitem_pet&103@0&104@0&105@&107@&108@0&19@喜好食物:
+宠物用营养水
+宠物成长药剂
+奇效宠物药剂
+<font color='#66ccff'>宠物等级:1
+爆击+20
+</font><font color='#00cc00'>成长属性:
+[等级1] 爆击+20 每升一级 +2</font>","packet:reward_markup+packet:role_item+packet:sale",""
+"packet_confirmed","high","334.png","蛮力面甲","equip","护具·头部","1","sitem_piput","100","f_i_蛮力面甲^ffffff&23@凿孔上限 9 格&24@护具·头部&25@1&21@20&22@战士&3@17&5@30&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:role_item+packet:sale",""
+"packet_confirmed","high","335.png","蛮力肩甲","equip","护具·肩部","1","sitem_piput","100","f_i_蛮力肩甲^ffffff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@20&22@战士&3@14&5@40&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:role_item+packet:sale",""
+"packet_confirmed","high","336.png","蛮力护甲","equip","护具·躯干","1","sitem_piput","150","f_i_蛮力护甲^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@20&22@战士&3@26&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@150","packet:role_item+packet:sale",""
+"packet_confirmed","high","337.png","蛮力护腕","equip","护具·护腕","1","sitem_piput","100","f_i_蛮力护腕^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@20&22@战士&3@13&5@20&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:role_item+packet:sale",""
+"packet_confirmed","high","338.png","蛮力护腿","equip","护具·腿","1","sitem_piput","150","f_i_蛮力护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@20&22@战士&3@20&5@10&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@150","packet:role_item+packet:sale",""
+"packet_confirmed","high","339.png","蛮力护腰","equip","护具·腰部","1","sitem_piput","100","f_i_蛮力护腰^ffffff&23@凿孔上限 9 格&24@护具·腰部&25@1&21@20&22@战士&3@10&5@50&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100&18@1","packet:role_item+packet:sale",""
+"packet_confirmed","high","340.png","蛮力战靴","equip","护具·足部","1","sitem_piput","100","f_i_蛮力战靴^ffffff&23@凿孔上限 9 格&24@护具·足部&25@1&21@20&22@战士&3@12&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:role_item+packet:sale",""
+"packet_confirmed","high","341.png","威武面甲","equip","护具·头部","1","sitem_piput","100","f_i_威武面甲^ffffff&23@凿孔上限 9 格&24@护具·头部&25@1&21@20&22@游侠&3@15&11@3&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","342.png","威武护肩","equip","护具·肩部","1","sitem_piput","100","f_i_威武护肩^ffffff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@20&22@游侠&3@12&11@3&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","343.png","威武皮甲","equip","护具·躯干","1","sitem_piput","150","f_i_威武皮甲^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@20&22@游侠&3@25&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@150","packet:sale+packet:role_item",""
+"packet_confirmed","high","344.png","威武护腕","equip","护具·护腕","1","sitem_piput","100","f_i_威武护腕^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@20&22@游侠&3@12&11@5&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","345.png","圣石兽","equip","宠物","1","sitem_pet","0","f_i_圣石兽^5BC46D&24@宠物&25@1&19@<font color='#00ff00'>可以提高主人的物理防御力</font>&20@坚固的石甲将它包围&0;习性穴居.成年后外型庞大&0;食量也大.&27@sitem_pet&103@0&104@0&105@&107@&108@0&19@喜好食物:
+宠物用营养水
+宠物成长药剂
+奇效宠物药剂
+<font color='#66ccff'>宠物等级:1
+物理防御+15
+</font><font color='#00cc00'>成长属性:
+[等级1] 物理防御+15 每升一级 +1</font>","packet:reward_markup+packet:sale+packet:role_item",""
+"packet_confirmed","high","346.png","威武护腿","equip","护具·腿","1","sitem_piput","150","f_i_威武护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@20&22@游侠&3@20&11@2&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@150","packet:sale+packet:role_item",""
+"packet_confirmed","high","347.png","威武腰带","equip","护具·腰部","1","sitem_piput","100","f_i_威武腰带^ffffff&23@凿孔上限 9 格&24@护具·腰部&25@1&21@20&22@游侠&3@10&11@5&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","348.png","威武皮靴","equip","护具·足部","1","sitem_piput","100","f_i_威武皮靴^ffffff&23@凿孔上限 9 格&24@护具·足部&25@1&21@20&22@游侠&3@12&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","349.png","霹雳兽","equip","宠物","1","sitem_pet","0","f_i_霹雳兽^5BC46D&24@宠物&25@1&19@<font color='#00ff00'>可以提高主人的魔法攻击力</font>&20@身体周围不时的散发出神秘气息，具有很强的灵气，幼体较弱需要细心呵护。&27@sitem_pet&103@0&104@0&105@&107@&108@0&19@喜好食物:
+宠物用营养水
+宠物成长药剂
+奇效宠物药剂
+<font color='#66ccff'>宠物等级:1
+魔法攻击+10
+</font><font color='#00cc00'>成长属性:
+[等级1] 魔法攻击+10 每升一级 +1</font>","packet:reward_markup+packet:sale+packet:role_item",""
+"packet_confirmed","high","350.png","八极法冠","equip","护具·头部","1","sitem_piput","100","f_i_八极法冠^ffffff&23@凿孔上限 9 格&24@护具·头部&25@1&21@20&22@术士&3@10&4@18&6@50&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","351.png","八极护肩","equip","护具·肩部","1","sitem_piput","100","f_i_八极护肩^ffffff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@20&22@术士&3@10&4@8&6@30&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","352.png","八极法衣","equip","护具·躯干","1","sitem_piput","150","f_i_八极法衣^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@20&22@术士&3@23&4@10&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@150","packet:sale+packet:role_item",""
+"packet_confirmed","high","353.png","八极护腕","equip","护具·护腕","1","sitem_piput","100","f_i_八极护腕^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@20&22@术士&3@12&4@2&6@20&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","354.png","八极护腿","equip","护具·腿","1","sitem_piput","150","f_i_八极护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@20&22@术士&3@15&4@6&6@30&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@150","packet:sale+packet:role_item",""
+"packet_confirmed","high","355.png","八极护腰","equip","护具·腰部","1","sitem_piput","100","f_i_八极护腰^ffffff&23@凿孔上限 9 格&24@护具·腰部&25@1&21@20&22@术士&3@9&4@5&6@20&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","356.png","八极法靴","equip","护具·足部","1","sitem_piput","100","f_i_八极法靴^ffffff&23@凿孔上限 9 格&24@护具·足部&25@1&21@20&22@术士&3@12&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@100","packet:sale+packet:role_item",""
+"packet_confirmed","high","357.png","无双头盔","equip","护具·头部","1","sitem_jhj","120","f_i_无双头盔^5BC46D&23@凿孔上限 9 格&24@护具·头部&25@1&21@30&22@战士&3@22&5@30&9@15&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 命中+5&103@0&104@0&105@&107@&108@120","packet:role_item+packet:sale",""
+"packet_confirmed","high","358.png","无双护肩","equip","护具·肩部","1","sitem_jhj","120","f_i_无双护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@30&22@战士&3@19&5@50&13@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 命中+5&103@0&104@0&105@&107@&108@120","packet:role_item+packet:sale",""
+"packet_confirmed","high","359.png","无双铠甲","equip","护具·躯干","1","sitem_jhj","180","f_i_无双铠甲^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@30&22@战士&3@34&5@60&9@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 耐力+1&103@0&104@0&105@&107@&108@180","packet:sale+packet:role_item",""
+"packet_confirmed","high","360.png","无双铁腕","equip","护具·护腕","1","sitem_jhj","120","f_i_无双铁腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@30&22@战士&3@17&9@5&13@4&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 爆击+10&103@0&104@0&105@&107@&108@120","packet:role_item+packet:sale",""
+"packet_confirmed","high","361.png","无双护腿","equip","护具·腿","1","sitem_ezhj","120","f_i_无双护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@30&22@战士&3@26&5@50&13@3&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 命中+5&103@0&104@0&105@&107@&108@120","packet:role_item+packet:sale",""
+"packet_confirmed","high","362.png","无双铁腰带","equip","护具·腰部","1","sitem_jhj","120","f_i_无双铁腰带^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@30&22@战士&3@15&13@3&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 爆击+10&103@0&104@0&105@&107@&108@120","packet:role_item+packet:sale",""
+"packet_confirmed","high","363.png","无双铁靴","equip","护具·足部","1","sitem_jhj","120","f_i_无双铁靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@30&22@战士&3@18&9@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 耐力+1&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","364.png","神风面甲","equip","护具·头部","1","sitem_jhj","120","f_i_神风面甲^5BC46D&23@凿孔上限 9 格&24@护具·头部&25@1&21@30&22@游侠&3@20&15@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 回避+6&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","365.png","神风护肩","equip","护具·肩部","1","sitem_jhj","120","f_i_神风护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@30&22@游侠&3@15&15@6&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 爆击+10&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","366.png","神风护甲","equip","护具·躯干","1","sitem_jhj","120","f_i_神风护甲^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@30&22@游侠&3@33&4@5&10@8&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 爆击+12&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","367.png","神风护腕","equip","护具·护腕","1","sitem_jhj","120","f_i_神风护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@30&22@游侠&3@17&9@10&11@15&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 回避+10&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","368.png","神风护腿","equip","护具·腿","1","sitem_ezhj","120","f_i_神风护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@30&22@游侠&3@24&4@2&13@2&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 回避+10&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","369.png","神风护腰","equip","护具·腰部","1","sitem_jhj","120","f_i_神风护腰^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@30&22@游侠&3@15&10@3&17@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 耐力+1&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","370.png","神风战靴","equip","护具·足部","1","sitem_jhj","120","f_i_神风战靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@30&22@游侠&3@17&12@5&15@2&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 幸运+2&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","371.png","雷霆冠","equip","护具·头部","1","sitem_ezhj","120","f_i_雷霆冠^5BC46D&23@凿孔上限 9 格&24@护具·头部&25@1&21@30&22@术士&3@13&4@25&9@20&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 智力+1&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","372.png","雷霆护肩","equip","护具·肩部","1","sitem_ezhj","120","f_i_雷霆护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@30&22@术士&3@15&4@3&6@30&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 气力上限+25&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","373.png","雷霆法衣","equip","护具·躯干","1","sitem_ezhj","180","f_i_雷霆法衣^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@30&22@术士&3@30&4@12&9@10&14@5<$jintt>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@180","packet:sale+packet:role_item",""
+"packet_confirmed","high","374.png","雷霆护腕","equip","护具·护腕","1","sitem_ezhj","120","f_i_雷霆护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@30&22@术士&3@16&4@3&9@15&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 爆击+10&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","375.png","雷霆护腿","equip","护具·腿","1","sitem_ezhj","120","f_i_雷霆护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@30&22@术士&3@22&4@6&14@2<$jintt>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 命中+20&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","376.png","雷霆护腰","equip","护具·腰部","1","sitem_ezhj","120","f_i_雷霆护腰^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@30&22@术士&3@15&4@5&9@20&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 耐力+1&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
+"packet_confirmed","high","377.png","雷霆法靴","equip","护具·足部","1","sitem_ezhj","120","f_i_雷霆法靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@30&22@术士&3@17&10@5&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 回避+10&103@0&104@0&105@&107@&108@120","packet:sale+packet:role_item",""
 "packet_confirmed","high","425.png","狮虎窟通行证","null","消耗品","99","sitem_book","","进入狮虎窟修炼的通行证","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","431.png","泥戒指","equip","饰品","1","","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","431.png","泥戒指","equip","饰品","1","","200","f_i_泥戒指^5BC46D&23@凿孔上限 9 格&24@饰品&25@1&21@25&14@2&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+麻痹抗性:+10%</font>
+[精炼+1] 每升一级 麻痹抗性+2%&103@0&104@0&105@&107@&108@200","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","435.png","精炼宝石","oneI","宝物","999","sitem_zgbs","1","神奇的天然宝石，是精炼装备的宝物，用于提升武器","packet:sale",""
-"packet_confirmed","high","467.png","寨夫人护腕","equip","护具·护腕","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","474.png","寨夫人上衣","equip","护具·躯干","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","482.png","翠带护腰","equip","护具·腰部","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","502.png","呼啸战靴","equip","护具·足部","1","sitem_piput","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","503.png","蛤蟆精战靴","equip","护具·足部","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","540.png","刀客布衣","equip","护具·躯干","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","542.png","盗贼的鞋","equip","护具·足部","1","sitem_piput","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","543.png","盗贼护腿","equip","护具·腿","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","544.png","盗贼布衣","equip","护具·躯干","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","545.png","盗贼护臂","equip","护具·护腕","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","546.png","盗贼腰带","equip","护具·腰部","1","sitem_ezhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","547.png","黄风腰带","equip","护具","1","sitem_jhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","552.png","剔骨刀","equip","武器·匕首系","1","sitem_jwep","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","467.png","寨夫人护腕","equip","护具·护腕","1","sitem_ezhj","230","f_i_寨夫人护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@24&3@14&4@4&9@10&11@10&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+1] 每升一级 气力上限+10&103@0&104@0&105@&107@&108@230","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","474.png","寨夫人上衣","equip","护具·躯干","1","sitem_ezhj","250","f_i_寨夫人上衣^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@26&3@31&4@20&15@5&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+1] 每升一级 回避+5
+<font color='#00cc00'>特殊效果:
+混乱抗性:+30%&103@0&104@0&105@&107@&108@250","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","482.png","翠带护腰","equip","护具·腰部","1","sitem_ezhj","170","f_i_翠带护腰^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@18&3@10&4@2&6@20&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 敏捷+2
+[精炼+6] 每升一级 回避+2%&103@0&104@0&105@&107@&108@170","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","502.png","呼啸战靴","equip","护具·足部","1","sitem_piput","220","f_i_呼啸战靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@26&3@15&12@10&15@6&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2&103@0&104@0&105@&107@&108@220&18@1","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","503.png","蛤蟆精战靴","equip","护具·足部","1","sitem_ezhj","230","f_i_蛤蟆精战靴^00ccff&23@凿孔上限 9 格&24@护具·足部&25@1&21@22&3@12&4@10&9@20&10@10&12@17&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+3
+[精炼+1] 每升一级 魔法防御+3
+[精炼+1] 每升一级 回避+3&103@0&104@0&105@&107@&108@230","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","540.png","刀客布衣","equip","护具·躯干","1","sitem_ezhj","120","f_i_刀客布衣^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@16&3@20&4@6&15@4&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 耐力+1&103@0&104@0&105@&107@&108@120","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","542.png","盗贼的鞋","equip","护具·足部","1","sitem_piput","120","f_i_盗贼的鞋^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@17&3@10&10@13&12@15&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 移动+2&103@0&104@0&105@&107@&108@120&18@1","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","543.png","盗贼护腿","equip","护具·腿","1","sitem_ezhj","100","f_i_盗贼护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@15&3@16&4@5&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+1] 每升一级 命中+3&103@0&104@0&105@&107@&108@100&18@1","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","544.png","盗贼布衣","equip","护具·躯干","1","sitem_ezhj","100","f_i_盗贼布衣^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@17&3@25&4@10&13@1<$jstr>&15@2<$jagi>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+1] 每升一级 命中+4
+[精炼+6] 每升一级 耐力+2&103@0&104@0&105@&107@&108@100","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","545.png","盗贼护臂","equip","护具·护腕","1","sitem_ezhj","95","f_i_盗贼护臂^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@15&3@12&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 爆击+50&103@0&104@0&105@&107@&108@95","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","546.png","盗贼腰带","equip","护具·腰部","1","sitem_ezhj","95","f_i_盗贼腰带^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@15&3@10&15@2&17@3&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 爆击+5&103@0&104@0&105@&107@&108@95&18@1","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","547.png","黄风腰带","equip","护具","1","sitem_jhj","160","f_i_黄风腰带^5BC46D&24@护具&25@1&21@25&3@12&4@5&5@2%&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+1] 每升一级 回避+3&103@0&104@0&105@&107@&108@160","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","552.png","剔骨刀","equip","武器·匕首系","1","sitem_jwep","142","f_i_剔骨刀^5BC46D&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@15&22@游侠&1@38&15@2<$jagi>&17@3<$jlck>&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 回避+2
+<font color='#00cc00'>特殊效果:
+击中敌人时&0;有2%的机率使敌人进入外伤状态3回合(每回合损失气力15~30点)</font>&103@0&104@0&105@&107@&108@142&18@1","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","560.png","L背包补丁","own","特殊","99","sitem_ezhj","","缝制和扩展背包的专用补丁","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","561.png","L仓库增大器","own","特殊","99","sitem_wood","","用于扩展仓库的一套工具","packet:role_item",""
 "packet_confirmed","high","574.png","避怪符","own","特殊","99","sitem_book","","非常古老的驱魔咒符。","packet:reward_markup+packet:role_item",""
@@ -209,9 +454,17 @@
 "packet_confirmed","high","577.png","L进阶经验卡","own","特殊","99","sitem_book","","可以获得经验加成的神奇商城道具。","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","588.png","千年灵芝","","特殊","999","","","灵芝自古以来就被认为是吉祥","packet:reward_markup",""
 "packet_confirmed","high","596.png","宝匣","own","宝物","99","sitem_wood","","看起来比较小巧的褐色木质匣子，不知道里面放着什么样的物品。","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","598.png","岩化护腿","equip","护具·腿","1","sitem_jhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","601.png","花妖护腕","equip","护具·护腕","1","sitem_piput","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","603.png","蓝晶护肩","equip","护具·肩部","1","sitem_jhj","","精炼潜质: [精炼+1","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","598.png","岩化护腿","equip","护具·腿","1","sitem_jhj","260","f_i_岩化护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@24&3@25&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+外伤抗性:+10%</font>&103@0&104@0&105@&107@&108@260","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","601.png","花妖护腕","equip","护具·护腕","1","sitem_piput","95","f_i_花妖护腕^ffffff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@12&3@11&4@3&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2&103@0&104@0&105@&107@&108@95","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","603.png","蓝晶护肩","equip","护具·肩部","1","sitem_jhj","210","f_i_蓝晶护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@18&3@8&4@12&14@4<$jintt>&15@2&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 敏捷+2&103@0&104@0&105@&107@&108@210","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","616.png","初级精炼宝石","oneI","宝物","999","sitem_zgbs","","神奇的天然宝石，是精炼装备的宝物，用于提升武器","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","631.png","武器专精","own","被动技能","99","sitem_book","1","用于提升物理攻击力 双击学习该技能 多次学习可提升技能等级 ----------------------- 技能等级 角色等级 Lv1 Lv10 Lv2 Lv15 Lv3 Lv20 Lv4 Lv25 Lv5 Lv30","packet:role_item+packet:sale",""
 "packet_confirmed","high","632.png","强体质","own","被动技能","99","sitem_book","1","用于提升气力上限 双击学习该技能 多次学习可提升技能等级 ----------------------- 技能等级 角色等级 Lv1 Lv10 Lv2 Lv15 Lv3 Lv20 Lv4 Lv25 Lv5 Lv30","packet:role_item+packet:sale",""
@@ -312,10 +565,10 @@
 "packet_confirmed","high","853.png","刻刀","oneI","特殊","99","sitem_jhj","","质地坚硬","packet:role_item",""
 "packet_confirmed","high","856.png","普通采集手套","null","消耗品","999","","1","平常的采集手套，带上进行采集得话可以很好的保护双手。","packet:reward_markup+packet:role_item+packet:sale",""
 "packet_confirmed","high","915.png","朽木","null","材料","99","sitem_wood","","一块烂木头，看起来没有什么用处。","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","916.png","L百年蟠桃","equip","法宝","1","sitem_water","","注:【内置10000气力 双击装备后生效】","packet:role_item",""
-"packet_confirmed","high","917.png","L百年人参果","equip","法宝","1","sitem_water","","注:【内置10000精力 双击装备后生效】","packet:role_item",""
-"packet_confirmed","high","920.png","L千年蟠桃","equip","法宝","1","sitem_water","","注:【内置50000气力 双击装备后生效】","packet:role_item",""
-"packet_confirmed","high","921.png","L千年人参果","equip","法宝","1","sitem_water","","注:【内置50000精力 双击装备后生效】","packet:role_item",""
+"packet_confirmed","high","916.png","L百年蟠桃","equip","法宝","1","sitem_water","0","f_i_L百年蟠桃^00ccff&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余气力【10000】点&24@法宝&25@1&19@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。&20@<font color='#ffff00'>注:【内置10000气力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0","packet:role_item",""
+"packet_confirmed","high","917.png","L百年人参果","equip","法宝","1","sitem_water","0","f_i_L百年人参果^00ccff&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余精力【10000】点&24@法宝&25@1&19@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。&20@<font color='#00ccff'>注:【内置10000精力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0","packet:role_item",""
+"packet_confirmed","high","920.png","L千年蟠桃","equip","法宝","1","sitem_water","0","f_i_L千年蟠桃^C156C7&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余气力【50000】点&24@法宝&25@1&19@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。&20@<font color='#ffff00'>注:【内置50000气力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0","packet:role_item",""
+"packet_confirmed","high","921.png","L千年人参果","equip","法宝","1","sitem_water","0","f_i_L千年人参果^C156C7&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余精力【50000】点&24@法宝&25@1&19@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。&20@<font color='#00ccff'>注:【内置50000精力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0","packet:role_item",""
 "packet_confirmed","high","932.png","奇效宠物药剂","null","消耗品","500","sitem_piput","","一般在商城内可以购得。","packet:role_item",""
 "packet_confirmed","high","934.png","小鬼的角","null","材料","99","","","小鬼头上的硬角。","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","935.png","雪莲花","null","材料","99","sitem_book","","生长于高山雪原的珍贵药材。","packet:reward_markup+packet:role_item",""
@@ -329,12 +582,12 @@
 "packet_confirmed","high","946.png","紫红瓣","","材料","99","","","紫红色的花瓣，极容易掉色。","packet:reward_markup",""
 "packet_confirmed","high","947.png","鳄鱼皮","null","材料","99","sitem_piput","","鳄鱼的皮，看起来具有很强的韧性。","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","955.png","桂花蜜","null","材料","99","sitem_water","","被誉为蜜中之王，拌奶可以润肤。","packet:reward_markup+packet:role_item",""
-"packet_confirmed","high","957.png","L小白马","equip","坐骑","1","sitem_pet","","如果不下线，他会一直陪着你哦~15分钟后再次登录便会消失","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","957.png","L小白马","equip","坐骑","1","sitem_pet","0","f_i_L小白马^00ccff&23@限制装备至【坐骑】格。&24@坐骑&25@1&12@10&19@如果不下线，他会一直陪着你哦~15分钟后再次登录便会消失&20@<font color='#ffff00'>注:【有时限，禁止交易】</font>&27@sitem_pet&103@0&104@1779461401590&105@&107@&108@0","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","959.png","吉祥袋","own","宝物","999","","1","代表吉祥的神奇袋子的，传说是上人们用于存放物件所制。","packet:sale",""
 "packet_confirmed","high","963.png","L一级经验丹","own","消耗品","999","sitem_yaoji","","双击使用，提升角色1000经验值。","packet:role_item",""
 "packet_confirmed","high","966.png","如意袋","own","宝物","999","","1","代表如意的神奇袋子的，传说是上人们用于存放物件所制。","packet:sale",""
 "packet_confirmed","high","967.png","乾坤袋","own","宝物","999","","1","拥有乾坤的神奇袋子的，传说是上人们用于存放物件所制。","packet:sale",""
-"packet_confirmed","high","968.png","筋斗云","equip","法宝","1","sitem_ezhj","1","传说是孙悟空所骑乘之云，有日行千里的神奇效果。","packet:sale",""
+"packet_confirmed","high","968.png","筋斗云","equip","法宝","1","sitem_ezhj","0","f_i_筋斗云^00ccff&23@限制装备至【宝1、宝2、宝3、宝4】格。&24@法宝&25@1&12@10&15@10&19@装备后产生坐骑效果。&20@传说是孙悟空所骑乘之云，有日行千里的神奇效果。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale+packet:role_item",""
 "packet_confirmed","high","1007.png","宠物月饼","own","特殊","99","","","超强力宠物专用食物。","packet:role_item",""
 "packet_confirmed","high","1013.png","30级礼盒","own","宝物","1","","","等级达到30级时，双击打开礼盒获取礼品。","packet:role_item",""
 "packet_confirmed","high","1014.png","40级礼盒","own","宝物","1","","","等级达到40级时，双击打开礼盒获取礼品。","packet:role_item",""
@@ -348,25 +601,78 @@
 "packet_confirmed","high","154.png","暗力之源","null","材料","99","sitem_rock","36","黑暗的魂魄，被其控制会变的邪恶.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","118.png","蚩颅王的角","null","材料","99","","230","蚩颅王的角，用于制造武器.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","119.png","蚩颅王的头","null","材料","99","sitem_jhj","200","击败蚩颅王所获得的头.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","484.png","蚩颅王护肩","equip","护具·肩部","1","sitem_jhj","430","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","484.png","蚩颅王护肩","equip","护具·肩部","1","sitem_jhj","430","f_i_蚩颅王护肩^00ccff&23@凿孔上限 9 格&24@护具·肩部&25@1&21@31&3@18(+3)&4@10(+3)&14@5&15@4&17@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+3
+[精炼+1] 每升一级 魔法防御+3
+[精炼+6] 每升一级 气力上限+100
+<font color='#00cc00'>特殊效果:
+遭受爆击时&0;有6%的机率使敌人进入眩晕状态1回合</font>
+[精炼+1] 每升一级 眩晕反射机率+1%&103@1&104@0&105@&107@&108@430","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","146.png","赤红之刺","null","材料","99","","96","巨型蜂王尾部的红色剧毒蛰刺.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","116.png","赤焰之眼","null","材料","99","sitem_zgbs","280","富含大量怪物的眼睛","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","659.png","点券","own","特殊","9999","sitem_book","0","游戏中的换购券，用于流通买卖。","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","473.png","蛤蟆布衣","equip","护具·躯干","1","sitem_ezhj","150","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","472.png","蛤蟆法袍","equip","护具·躯干","1","sitem_ezhj","160","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","486.png","蛤蟆精护肩","equip","护具·肩部","1","sitem_piput","250","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","477.png","蛤蟆精护腰","equip","护具·腰部","1","sitem_piput","240","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","549.png","黄风护腕","equip","护具·护腕","1","sitem_jhj","160","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","548.png","黄风围巾","equip","护具·头部","1","sitem_ezhj","160","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","754.png","机木护腿","equip","护具·腿","1","sitem_jhj","300","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","755.png","机木护腕","equip","护具·护腕","1","sitem_jhj","250","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","757.png","机木护腰","equip","护具·腰部","1","sitem_jhj","250","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","553.png","狼牙棒","equip","武器·单刀系","1","sitem_jhj","134","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","473.png","蛤蟆布衣","equip","护具·躯干","1","sitem_ezhj","150","f_i_蛤蟆布衣^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@18&3@26&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+5%</font>
+[精炼+1] 每升一级 毒抗性+2%&103@0&104@0&105@&107@&108@150","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","472.png","蛤蟆法袍","equip","护具·躯干","1","sitem_ezhj","160","f_i_蛤蟆法袍^ffffff&23@凿孔上限 9 格&24@护具·躯干&25@1&21@23&3@22&4@15&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+1] 每升一级 命中+10
+[精炼+6] 每升一级 幸运+1&103@0&104@0&105@&107@&108@160&18@1","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","486.png","蛤蟆精护肩","equip","护具·肩部","1","sitem_piput","250","f_i_蛤蟆精护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@22&3@12&4@2&17@5&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+3
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 回避+5&103@0&104@0&105@&107@&108@250","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","477.png","蛤蟆精护腰","equip","护具·腰部","1","sitem_piput","240","f_i_蛤蟆精护腰^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@22&3@13&11@20&14@2&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 回避+10&103@0&104@0&105@&107@&108@240","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","549.png","黄风护腕","equip","护具·护腕","1","sitem_jhj","160","f_i_黄风护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@25&3@15&11@16&13@2&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 命中+5&103@0&104@0&105@&107@&108@160","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","548.png","黄风围巾","equip","护具·头部","1","sitem_ezhj","160","f_i_黄风围巾^00ccff&23@凿孔上限 9 格&24@护具·头部&25@1&21@28&3@19&4@12&5@100&13@7<$jstr>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+3
+[精炼+1] 每升一级 魔法防御+3
+[精炼+1] 每升一级 命中+10
+[精炼+6] 每升一级 幸运+3
+<font color='#00cc00'>特殊效果:
+麻痹抗性:+5%
+眩晕抗性:+5%
+冰冻抗性:+8%</font>
+[精炼+1] 每升一级 麻痹抗性+1%
+[精炼+1] 每升一级 眩晕抗性+1%
+[精炼+1] 每升一级 冰冻抗性+1%&103@0&104@0&105@&107@&108@160","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","754.png","机木护腿","equip","护具·腿","1","sitem_jhj","300","f_i_机木护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@35&3@27&4@10&14@3<$jintt>&15@6&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 幸运+3&103@0&104@0&105@&107@&108@300","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","755.png","机木护腕","equip","护具·护腕","1","sitem_jhj","250","f_i_机木护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@35&3@19&4@10&14@8&17@6&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 耐力+2&103@0&104@0&105@&107@&108@250","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","757.png","机木护腰","equip","护具·腰部","1","sitem_jhj","250","f_i_机木护腰^ffffff&23@凿孔上限 9 格&24@护具·腰部&25@1&21@35&3@18&4@20&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 命中+25&103@0&104@0&105@&107@&108@250&18@1","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","553.png","狼牙棒","equip","武器·单刀系","1","sitem_jhj","134","f_i_狼牙棒^ffffff&23@凿孔上限 9 格&24@武器·单刀系&25@1&21@18&22@战士&1@50&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 幸运+1&103@0&104@0&105@&107@&108@134","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","153.png","力之玄文","null","材料","99","sitem_book","25","催动机木军团行动，饱含力量的咒符.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","151.png","神奇朽木","null","材料","99","sitem_wood","36","外表看似腐败，但富含着神力的千年木材.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","152.png","术之玄文","null","材料","99","sitem_book","25","催动机木军团行动，饱含法力的咒符.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","587.png","铜戒指","equip","饰品","1","sitem_bs","200","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","587.png","铜戒指","equip","饰品","1","sitem_bs","200","f_i_铜戒指^5BC46D&23@凿孔上限 9 格&24@饰品&25@1&21@25&16@2&27@sitem_bs&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+外伤抗性:+10%</font>
+[精炼+1] 每升一级 外伤抗性+2%&103@0&104@0&105@&107@&108@200","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","149.png","玄机件","null","材料","99","sitem_wood","19","木质的齿轮状物件.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
 "packet_confirmed","high","150.png","玄机精件","null","材料","99","sitem_wood","25","精密复杂的玄机零件.","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","606.png","岩魔剑","equip","武器·单剑系","1","sitem_jwep","380","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
-"packet_confirmed","high","455.png","战斗围巾","equip","护具·头部","1","sitem_ezhj","210","精炼潜质: [精炼+1","packet:reward_markup","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","606.png","岩魔剑","equip","武器·单剑系","1","sitem_jwep","380","f_i_岩魔剑^5BC46D&23@凿孔上限 9 格&24@武器·单剑系&25@1&21@27&22@战士&1@65&16@7&17@5&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 命中+4
+[精炼+6] 每升一级 爆击+25&103@0&104@0&105@&107@&108@380","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"
+"packet_confirmed","high","455.png","战斗围巾","equip","护具·头部","1","sitem_ezhj","210","f_i_战斗围巾^5BC46D&23@凿孔上限 9 格&24@护具·头部&25@1&21@25&3@17&4@13&6@20&15@3&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+1] 每升一级 精力上限+10&103@0&104@0&105@&107@&108@210","packet:reward_markup+packet:role_item","added from deduped battle reward markup to cover drop/candidate icon metadata"

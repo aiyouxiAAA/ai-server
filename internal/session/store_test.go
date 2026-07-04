@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -434,6 +435,38 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 		fastPanelByIndex[8].Name != "馒头" ||
 		fastPanelByIndex[9].Name != "小瓶甘露" {
 		t.Fatalf("expected 333 captured fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
+	}
+	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected 333 captured bag items")
+	}
+	piercingArrow, ok := findRoleItemByName(bagItems, "穿甲箭")
+	if !ok || piercingArrow.Count != 1900 || piercingArrow.Display != "246.png" {
+		t.Fatalf("expected 333 captured bag to include 穿甲箭 for 贯甲连矢, ok=%v item=%+v bag=%+v", ok, piercingArrow, bagItems)
+	}
+}
+
+func TestCapturedWoodcutter333RuntimeDefaultsBackfillPiercingArrows(t *testing.T) {
+	role := withRoleRuntimeDefaults(RoleSummary{
+		RoleID:      "acct-333-role-legacy",
+		DisplayName: "333",
+		Items: []RoleItem{{
+			Type:        "背包",
+			Name:        "飞镖",
+			ItemType:    "null",
+			Display:     "241.png",
+			Description: "f_i_飞镖^ffffff&24@材料 消耗品&25@9999&20@铁制三刃飞镖&0;具有杀伤力&0;一般配合技能使用.&27@sitem_jwep&103@0&104@0&105@&107@&108@0",
+			Count:       7892,
+			Index:       22,
+			ItemLevel:   1,
+		}},
+	})
+	if _, ok := findRoleItemByName(role.Items, "飞镖"); !ok {
+		t.Fatalf("expected existing 333 bag items to be preserved, got %+v", role.Items)
+	}
+	piercingArrow, ok := findRoleItemByName(role.Items, "穿甲箭")
+	if !ok || piercingArrow.Type != "背包" || piercingArrow.Count != 1900 || piercingArrow.Display != "246.png" {
+		t.Fatalf("expected legacy 333 bag to backfill 穿甲箭 for 贯甲连矢, ok=%v item=%+v items=%+v", ok, piercingArrow, role.Items)
 	}
 }
 
@@ -2753,6 +2786,492 @@ func TestStorePersistsCapturedBattleSourceQuery(t *testing.T) {
 	}
 }
 
+func TestPersistentStoreConsumeRoleItemUpdatesSingleRoleWithoutDeletingSiblings(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	firstRole := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "扣箭游侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	secondRole := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "同账号备用角色",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	arrow, ok := CapturedRoleItemTemplate("穿甲箭")
+	if !ok {
+		t.Fatal("expected captured piercing arrow template")
+	}
+	arrow.Type = "背包"
+	arrow.Index = 0
+	arrow.Count = 3
+	if _, ok := store.GrantRoleItem(login.PlayerID, firstRole.Role.RoleID, arrow); !ok {
+		t.Fatal("expected piercing arrow grant")
+	}
+
+	result := store.ConsumeRoleItem(login.PlayerID, firstRole.Role.RoleID, "背包", 0, 1)
+	if !result.Found || !result.Used || result.UpdatedItem == nil || result.UpdatedItem.Count != 2 {
+		t.Fatalf("expected piercing arrow consume to leave count 2, got %+v", result)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	items, _, ok := reopened.GetRoleItems(login.PlayerID, firstRole.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected first role items after reopen")
+	}
+	remaining, ok := findRoleItem(items, "背包", 0)
+	if !ok || remaining.Name != "穿甲箭" || remaining.Count != 2 {
+		t.Fatalf("expected persisted piercing arrow count 2, ok=%v item=%+v items=%+v", ok, remaining, items)
+	}
+	sibling, _, ok := reopened.GetRoleRuntimeData(login.PlayerID, secondRole.Role.RoleID)
+	if !ok || sibling.DisplayName != "同账号备用角色" {
+		t.Fatalf("expected sibling role to survive single-role item consume persist, ok=%v role=%+v", ok, sibling)
+	}
+}
+
+func TestPersistentStoreConfiguresSQLiteForFrequentItemWrites(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	defer store.Close()
+
+	journalMode := ""
+	if err := store.db.QueryRow(`PRAGMA journal_mode`).Scan(&journalMode); err != nil {
+		t.Fatalf("query journal_mode: %v", err)
+	}
+	if !strings.EqualFold(journalMode, "wal") {
+		t.Fatalf("expected sqlite WAL journal mode for frequent item writes, got %q", journalMode)
+	}
+	synchronous := -1
+	if err := store.db.QueryRow(`PRAGMA synchronous`).Scan(&synchronous); err != nil {
+		t.Fatalf("query synchronous: %v", err)
+	}
+	if synchronous != 1 {
+		t.Fatalf("expected sqlite synchronous=NORMAL(1), got %d", synchronous)
+	}
+}
+
+func TestPersistentStoreConsumeRoleItemMutationOnlyPersistsItems(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	create := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "扣箭游侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	arrow, ok := CapturedRoleItemTemplate("穿甲箭")
+	if !ok {
+		t.Fatal("expected captured piercing arrow template")
+	}
+	arrow.Type = "背包"
+	arrow.Index = 0
+	arrow.Count = 3
+	if _, ok := store.GrantRoleItem(login.PlayerID, create.Role.RoleID, arrow); !ok {
+		t.Fatal("expected piercing arrow grant")
+	}
+
+	result := store.ConsumeRoleItemMutationOnly(login.PlayerID, create.Role.RoleID, "背包", 0, 1)
+	if !result.Found || !result.Used || result.UpdatedItem == nil || result.UpdatedItem.Count != 2 {
+		t.Fatalf("expected mutation-only piercing arrow consume to leave count 2, got %+v", result)
+	}
+	if result.PlayerBase.RoleState != nil || result.PlayerBase.RolePhysique != nil {
+		t.Fatalf("expected mutation-only consume to avoid rebuilding player base, got %+v", result.PlayerBase)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	items, _, ok := reopened.GetRoleItems(login.PlayerID, create.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag after reopen")
+	}
+	remaining, ok := findRoleItem(items, "背包", 0)
+	if !ok || remaining.Name != "穿甲箭" || remaining.Count != 2 {
+		t.Fatalf("expected persisted mutation-only piercing arrow count 2, ok=%v item=%+v items=%+v", ok, remaining, items)
+	}
+}
+
+func TestPersistentStoreUseRoleRecoveryItemMutationOnlyPersistsSingleRole(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	firstRole := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "主城吃药女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	secondRole := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "同账号旁观角色",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	medicine := RoleItem{
+		Type:        "背包",
+		Name:        "测试包子",
+		ItemType:    "消耗品",
+		Display:     "212.png",
+		Description: "f_i_测试包子&24@消耗品&25@99&7@60&20@恢复气力",
+		Count:       2,
+		Index:       0,
+		ItemLevel:   1,
+	}
+	if _, ok := store.GrantRoleItem(login.PlayerID, firstRole.Role.RoleID, medicine); !ok {
+		t.Fatal("expected recovery item grant")
+	}
+	store.UpdateRoleState(login.PlayerID, firstRole.Role.RoleID, RoleState{
+		Handle: firstRole.Role.RoleID,
+		HP:     50,
+		MP:     20,
+		Exp:    0,
+		Lv:     1,
+		Speed:  130,
+	})
+
+	result := store.UseRoleRecoveryItemMutationOnly(login.PlayerID, firstRole.Role.RoleID, "背包", 0, 60, 0)
+	if !result.Found || !result.Used || !result.RoleStateChanged {
+		t.Fatalf("expected mutation-only recovery item use success, got %+v", result)
+	}
+	if result.PlayerBase.RoleState == nil || result.PlayerBase.RoleState.HP != 110 || result.PlayerBase.RoleState.MP != 20 {
+		t.Fatalf("expected HP to recover to 110 and MP to stay 20, got %+v", result.PlayerBase.RoleState)
+	}
+	if result.UpdatedItem == nil || result.UpdatedItem.Count != 1 {
+		t.Fatalf("expected recovery item stack count 1, got %+v", result)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	_, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, firstRole.Role.RoleID)
+	if !ok || playerBase.RoleState == nil || playerBase.RoleState.HP != 110 {
+		t.Fatalf("expected recovered HP after reopen, ok=%v playerBase=%+v", ok, playerBase)
+	}
+	items, _, ok := reopened.GetRoleItems(login.PlayerID, firstRole.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected first role items after reopen")
+	}
+	remaining, ok := findRoleItem(items, "背包", 0)
+	if !ok || remaining.Name != "测试包子" || remaining.Count != 1 {
+		t.Fatalf("expected persisted recovery item count 1, ok=%v item=%+v items=%+v", ok, remaining, items)
+	}
+	sibling, _, ok := reopened.GetRoleRuntimeData(login.PlayerID, secondRole.Role.RoleID)
+	if !ok || sibling.DisplayName != "同账号旁观角色" {
+		t.Fatalf("expected sibling role to survive recovery item persist, ok=%v role=%+v", ok, sibling)
+	}
+}
+
+func TestPersistentStoreHighFrequencyRoleMutationsDoNotRewriteSiblingRows(t *testing.T) {
+	type mutationSpec struct {
+		name   string
+		setup  func(t *testing.T, store *Store, playerID string, roleID string)
+		mutate func(t *testing.T, store *Store, playerID string, roleID string)
+	}
+	specs := []mutationSpec{
+		{
+			name: "grant item",
+			mutate: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				item := RoleItem{
+					Type:        "背包",
+					Name:        "高频奖励物",
+					Display:     "1.png",
+					Description: "f_i_高频奖励物&24@材料",
+					Count:       1,
+					Index:       -1,
+					ItemLevel:   1,
+				}
+				if _, ok := store.GrantRoleItem(playerID, roleID, item); !ok {
+					t.Fatal("expected grant item success")
+				}
+			},
+		},
+		{
+			name: "purchase item",
+			mutate: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				item := RoleItem{
+					Type:        "背包",
+					Name:        "高频购买物",
+					Display:     "1.png",
+					Description: "f_i_高频购买物&24@材料",
+					Count:       1,
+					Index:       -1,
+					ItemLevel:   1,
+				}
+				result := store.PurchaseRoleItem(playerID, roleID, item, nil)
+				if !result.Found || !result.Purchased {
+					t.Fatalf("expected purchase item success, got %+v", result)
+				}
+			},
+		},
+		{
+			name: "grant experience",
+			mutate: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				result := store.GrantRoleExperience(playerID, roleID, 80)
+				if !result.Found || !result.Granted {
+					t.Fatalf("expected grant experience success, got %+v", result)
+				}
+			},
+		},
+		{
+			name: "move item",
+			mutate: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				result := store.MoveRoleItem(playerID, roleID, "背包", 19, "背包", 0, 0)
+				if !result.Found || !result.Moved {
+					t.Fatalf("expected move item success, got %+v", result)
+				}
+			},
+		},
+		{
+			name: "finish container",
+			setup: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				meat, ok := CapturedRoleItemTemplate("肉")
+				if !ok {
+					t.Fatal("expected captured 肉 template")
+				}
+				meat.Type = "背包"
+				meat.Index = 7
+				meat.Count = 2
+				if _, ok := store.GrantRoleItem(playerID, roleID, meat); !ok {
+					t.Fatal("expected first 肉 grant")
+				}
+				meat.Index = 22
+				meat.Count = 3
+				if _, ok := store.GrantRoleItem(playerID, roleID, meat); !ok {
+					t.Fatal("expected second 肉 grant")
+				}
+			},
+			mutate: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				result := store.FinishRoleContainer(playerID, roleID, "背包")
+				if !result.Found || !result.Changed {
+					t.Fatalf("expected finish container success, got %+v", result)
+				}
+			},
+		},
+		{
+			name: "sell item",
+			setup: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				item := RoleItem{
+					Type:        "背包",
+					Name:        "可卖高频物",
+					Display:     "1.png",
+					Description: "f_i_可卖高频物&24@材料&108@3",
+					Count:       2,
+					Index:       0,
+					ItemLevel:   1,
+				}
+				if _, ok := store.GrantRoleItem(playerID, roleID, item); !ok {
+					t.Fatal("expected sale item grant")
+				}
+			},
+			mutate: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				result := store.SellRoleItem(playerID, roleID, "背包", 0, 1)
+				if !result.Found || !result.Sold {
+					t.Fatalf("expected sell item success, got %+v", result)
+				}
+			},
+		},
+	}
+
+	for _, spec := range specs {
+		t.Run(spec.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "ai-server.db")
+			store, err := NewPersistentStore(path)
+			if err != nil {
+				t.Fatalf("new persistent store: %v", err)
+			}
+			login := mustLogin(t, store, "mockuser", "magicpwd")
+			firstRole := store.CreateRole(RoleCreateRequest{
+				PlayerID:       login.PlayerID,
+				SessionToken:   login.SessionToken,
+				DisplayName:    "高频主角色",
+				Gender:         "female",
+				RoleTemplateID: 1,
+			})
+			secondRole := store.CreateRole(RoleCreateRequest{
+				PlayerID:       login.PlayerID,
+				SessionToken:   login.SessionToken,
+				DisplayName:    "同账号哨兵角色",
+				Gender:         "female",
+				RoleTemplateID: 1,
+			})
+			if spec.setup != nil {
+				spec.setup(t, store, login.PlayerID, firstRole.Role.RoleID)
+			}
+			const sentinelName = "数据库哨兵角色"
+			if _, err := store.db.Exec(`UPDATE roles SET display_name = ? WHERE player_id = ? AND role_id = ?`, sentinelName, login.PlayerID, secondRole.Role.RoleID); err != nil {
+				t.Fatalf("mark sibling role row: %v", err)
+			}
+
+			spec.mutate(t, store, login.PlayerID, firstRole.Role.RoleID)
+			if err := store.Close(); err != nil {
+				t.Fatalf("close store: %v", err)
+			}
+
+			reopened, err := NewPersistentStore(path)
+			if err != nil {
+				t.Fatalf("reopen persistent store: %v", err)
+			}
+			defer reopened.Close()
+			sibling, _, ok := reopened.GetRoleRuntimeData(login.PlayerID, secondRole.Role.RoleID)
+			if !ok || sibling.DisplayName != sentinelName {
+				t.Fatalf("expected sibling db row to stay untouched, ok=%v role=%+v", ok, sibling)
+			}
+		})
+	}
+}
+
+func TestPersistentStoreConsumeRoleItemMutationOnlySerializesSameRoleConcurrentWrites(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	create := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "并发扣箭游侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	arrow, ok := CapturedRoleItemTemplate("穿甲箭")
+	if !ok {
+		t.Fatal("expected captured piercing arrow template")
+	}
+	arrow.Type = "背包"
+	arrow.Index = 0
+	arrow.Count = 20
+	if _, ok := store.GrantRoleItem(login.PlayerID, create.Role.RoleID, arrow); !ok {
+		t.Fatal("expected piercing arrow grant")
+	}
+
+	const consumeCount = 12
+	start := make(chan struct{})
+	errors := make(chan error, consumeCount)
+	var wg sync.WaitGroup
+	for index := 0; index < consumeCount; index += 1 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			result := store.ConsumeRoleItemMutationOnly(login.PlayerID, create.Role.RoleID, "背包", 0, 1)
+			if !result.Found || !result.Used {
+				errors <- fmt.Errorf("expected concurrent mutation-only consume success, got %+v", result)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errors)
+	for err := range errors {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, create.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag before reopen")
+	}
+	remaining, ok := findRoleItem(items, "背包", 0)
+	if !ok || remaining.Name != "穿甲箭" || remaining.Count != 8 {
+		t.Fatalf("expected in-memory piercing arrow count 8 after concurrent consume, ok=%v item=%+v items=%+v", ok, remaining, items)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	items, _, ok = reopened.GetRoleItems(login.PlayerID, create.Role.RoleID, "背包")
+	if !ok {
+		t.Fatal("expected bag after reopen")
+	}
+	remaining, ok = findRoleItem(items, "背包", 0)
+	if !ok || remaining.Name != "穿甲箭" || remaining.Count != 8 {
+		t.Fatalf("expected persisted piercing arrow count 8 after concurrent consume, ok=%v item=%+v items=%+v", ok, remaining, items)
+	}
+}
+
+func TestStoreGetRoleBagItemByNameDoesNotBackfillConsumedMaterial(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	create := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "扣空材料游侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	arrow, ok := CapturedRoleItemTemplate("穿甲箭")
+	if !ok {
+		t.Fatal("expected captured piercing arrow template")
+	}
+	arrow.Type = "背包"
+	arrow.Index = 0
+	arrow.Count = 1
+	if _, ok := store.GrantRoleItem(login.PlayerID, create.Role.RoleID, arrow); !ok {
+		t.Fatal("expected piercing arrow grant")
+	}
+
+	result := store.ConsumeRoleItemMutationOnly(login.PlayerID, create.Role.RoleID, "背包", 0, 1)
+	if !result.Found || !result.Used || len(result.ClearedItems) != 1 {
+		t.Fatalf("expected mutation-only consume to clear final piercing arrow, got %+v", result)
+	}
+	if item, ok := store.GetRoleBagItemByName(login.PlayerID, create.Role.RoleID, "穿甲箭"); ok {
+		t.Fatalf("expected consumed material lookup to stay missing, got %+v", item)
+	}
+}
+
 func TestStoreAddRolePointMatchesCapturedRolePhysiqueDeltas(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -3151,12 +3670,13 @@ func TestStoreClassicDataEquipmentTemplatesFillRobberDropFallbacks(t *testing.T)
 		display string
 		slot    int
 		token   string
+		stat    string
 	}{
-		{name: "盗贼的鞋", display: "542.png", slot: 12, token: "护具·足部"},
-		{name: "盗贼护腿", display: "543.png", slot: 5, token: "护具·腿"},
-		{name: "盗贼布衣", display: "544.png", slot: 4, token: "护具·躯干"},
-		{name: "盗贼护臂", display: "545.png", slot: 2, token: "护具·护腕"},
-		{name: "盗贼腰带", display: "546.png", slot: 10, token: "护具·腰部"},
+		{name: "盗贼的鞋", display: "542.png", slot: 12, token: "护具·足部", stat: "移动+2"},
+		{name: "盗贼护腿", display: "543.png", slot: 5, token: "护具·腿", stat: "命中+3"},
+		{name: "盗贼布衣", display: "544.png", slot: 4, token: "护具·躯干", stat: "耐力+2"},
+		{name: "盗贼护臂", display: "545.png", slot: 2, token: "护具·护腕", stat: "爆击+50"},
+		{name: "盗贼腰带", display: "546.png", slot: 10, token: "护具·腰部", stat: "爆击+5"},
 	}
 
 	for _, tc := range cases {
@@ -3170,6 +3690,9 @@ func TestStoreClassicDataEquipmentTemplatesFillRobberDropFallbacks(t *testing.T)
 		if !strings.Contains(template.Description, tc.token) {
 			t.Fatalf("expected %s description to include %q, got %q", tc.name, tc.token, template.Description)
 		}
+		if !strings.Contains(template.Description, tc.stat) {
+			t.Fatalf("expected %s source stat description to include %q, got %q", tc.name, tc.stat, template.Description)
+		}
 
 		item := normalizeRoleItem(RoleItem{
 			Type:  "背包",
@@ -3179,6 +3702,23 @@ func TestStoreClassicDataEquipmentTemplatesFillRobberDropFallbacks(t *testing.T)
 		})
 		if item.Display != tc.display || item.ItemType != "equip" || item.Description == "" || item.ItemLevel != 2 {
 			t.Fatalf("expected %s missing fields to be filled from classicdata template, got %+v", tc.name, item)
+		}
+
+		staleItem := normalizeRoleItem(RoleItem{
+			Type:        "背包",
+			Name:        tc.name,
+			ItemType:    "equip",
+			Display:     tc.display,
+			Description: "精炼潜质: [精炼+1",
+			Count:       1,
+			Index:       6,
+			ItemLevel:   2,
+		})
+		if staleItem.Index != 6 || staleItem.Type != "背包" {
+			t.Fatalf("expected %s stale item refresh to preserve container/index, got %+v", tc.name, staleItem)
+		}
+		if !strings.Contains(staleItem.Description, tc.token) || !strings.Contains(staleItem.Description, tc.stat) || !strings.Contains(staleItem.Description, "&108@") {
+			t.Fatalf("expected %s stale description to refresh from classicdata template, got %q", tc.name, staleItem.Description)
 		}
 	}
 }

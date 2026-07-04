@@ -2409,6 +2409,131 @@ func TestProcessActionAllowsCapturedDaggerSkills(t *testing.T) {
 	}
 }
 
+func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
+	cases := []struct {
+		name           string
+		level          int
+		description    string
+		commandID      string
+		label          string
+		expectedDamage int
+		expectedMP     int
+		storedPower    int
+		magicAttack    int
+	}{
+		{
+			name:           "强射",
+			level:          5,
+			description:    "f_s_强射^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@18&4@提升45%的物理伤害",
+			commandID:      CommandQiangShe,
+			label:          "w1/powerShoot",
+			expectedDamage: 105,
+			expectedMP:     82,
+		},
+		{
+			name:           "贯甲连矢",
+			level:          5,
+			description:    "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升25%的物理伤害&0;进攻时增加30%（无视防御）的物理攻击力.",
+			commandID:      CommandGuanJiaLianShi,
+			label:          "w1/breakArmorShoot2",
+			expectedDamage: 115,
+			expectedMP:     72,
+		},
+		{
+			name:           "暗影箭",
+			level:          1,
+			description:    "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
+			commandID:      CommandAnYingJian,
+			label:          "w1/darkShoot",
+			expectedDamage: 32,
+			expectedMP:     80,
+		},
+		{
+			name:           "毒矢",
+			level:          1,
+			description:    "f_s_毒矢^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@15&4@<font color='#00cc00'>特殊发动条件:需要【毒箭x1】<br>叠加施放将削弱其造成中毒的功效</font><br>对敌人造成90%的物理伤害&0;击中敌人时有70%的机率使敌人中毒(4回合内降低对方20%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的5%~10%)",
+			commandID:      CommandDuShi,
+			label:          "w1/drugShoot",
+			expectedDamage: 50,
+			expectedMP:     85,
+		},
+		{
+			name:           "奥义.轰雷矢",
+			level:          1,
+			description:    "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
+			commandID:      CommandAoYiHongLeiShi,
+			label:          "w1/bombThunderShoot",
+			expectedDamage: 69,
+			expectedMP:     74,
+			storedPower:    2,
+			magicAttack:    36,
+		},
+	}
+
+	for _, testCase := range cases {
+		runtime := &Runtime{
+			BattleID:         "battle-command-bow-" + testCase.name,
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_21432",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StoredPower:      map[string]int{"player_21432": testCase.storedPower},
+			RoleSkills: []session.RoleSkill{
+				{
+					Name:        testCase.name,
+					Level:       testCase.level,
+					Type:        "oneE",
+					Description: testCase.description,
+				},
+			},
+			Cells: []CellInfoPush{
+				{
+					BattleID:    "battle-command-bow-" + testCase.name,
+					Handle:      "player_21432",
+					Camp:        CampTeam,
+					HP:          300,
+					MaxHP:       300,
+					MP:          100,
+					MaxMP:       100,
+					Attack:      100,
+					MagicAttack: testCase.magicAttack,
+				},
+				{
+					BattleID:   "battle-command-bow-" + testCase.name,
+					Handle:     "enemy_1",
+					Camp:       CampEnemy,
+					HP:         220,
+					MaxHP:      220,
+					Defense:    40,
+					MgcDefense: 10,
+				},
+			},
+		}
+
+		result := runtime.ProcessAction(ActionRequest{
+			BattleID:     runtime.BattleID,
+			ActorHandle:  "player_21432",
+			CommandID:    testCase.commandID,
+			TargetHandle: "enemy_1",
+			Round:        1,
+			Sequence:     1,
+		})
+
+		if result.ErrorCode != "" || len(result.Actions) == 0 {
+			t.Fatalf("expected learned %s action, got %+v", testCase.name, result)
+		}
+		action := result.Actions[0]
+		if action.ActionName != testCase.name || action.SourceActionLabel != testCase.label {
+			t.Fatalf("expected captured %s action label %s, got %+v", testCase.name, testCase.label, action)
+		}
+		if action.Damage != testCase.expectedDamage || action.TargetHP != 220-testCase.expectedDamage || action.RefreshInfos[0].MP != testCase.expectedMP {
+			t.Fatalf("expected captured %s damage/mp, got %+v", testCase.name, action)
+		}
+	}
+}
+
 func TestProcessActionAllowsCapturedRangerSelfStatusSkill(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-command-ranger-self-status",
@@ -2657,6 +2782,30 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 3.4,
 		},
 		{
+			name:       "暗影箭",
+			level:      1,
+			desc:       "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
+			label:      "w1/darkShoot",
+			mpCost:     20,
+			multiplier: 0.72,
+		},
+		{
+			name:       "毒矢",
+			level:      1,
+			desc:       "f_s_毒矢^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@15&4@<font color='#00cc00'>特殊发动条件:需要【毒箭x1】<br>叠加施放将削弱其造成中毒的功效</font><br>对敌人造成90%的物理伤害&0;击中敌人时有70%的机率使敌人中毒(4回合内降低对方20%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的5%~10%)",
+			label:      "w1/drugShoot",
+			mpCost:     15,
+			multiplier: 0.9,
+		},
+		{
+			name:       "奥义.轰雷矢",
+			level:      1,
+			desc:       "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
+			label:      "w1/bombThunderShoot",
+			mpCost:     26,
+			multiplier: 2.2,
+		},
+		{
 			name:       "奥义.暗杀者",
 			level:      1,
 			desc:       "f_s_奥义.暗杀者^00ccff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升180%的物理伤害",
@@ -2692,6 +2841,15 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 		}
 		if testCase.name == "强力飞镖" && profile.DefenseType != "direct" {
 			t.Fatalf("expected 强力飞镖 to ignore defense from captured description, got %+v", profile)
+		}
+		if testCase.name == "暗影箭" && (profile.StatusName != "混乱" || profile.StatusChance != 17 || profile.StatusRounds != 2) {
+			t.Fatalf("expected 暗影箭 captured confusion status, got %+v", profile)
+		}
+		if testCase.name == "毒矢" && (profile.StatusName != "中毒" || profile.StatusChance != 70 || profile.StatusRounds != 4 || profile.StatusDefensePercent != 20 || profile.StatusTickMin != 5 || profile.StatusTickMax != 10) {
+			t.Fatalf("expected 毒矢 captured poison status, got %+v", profile)
+		}
+		if testCase.name == "奥义.轰雷矢" && (profile.DefenseType != "magic" || !profile.UseMagicAttack || profile.StatusName != "麻痹" || profile.StatusChance != 20 || profile.StatusTickMin != 30 || !profile.SkipTurn) {
+			t.Fatalf("expected 奥义.轰雷矢 captured magic/palsy profile, got %+v", profile)
 		}
 	}
 }
@@ -2975,6 +3133,24 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@25&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升10%的物理伤害&0;进攻时增加15%（无视防御）的物理攻击力.",
 		},
 		{
+			Name:        "暗影箭",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
+		},
+		{
+			Name:        "毒矢",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_毒矢^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@15&4@<font color='#00cc00'>特殊发动条件:需要【毒箭x1】<br>叠加施放将削弱其造成中毒的功效</font><br>对敌人造成90%的物理伤害&0;击中敌人时有70%的机率使敌人中毒(4回合内降低对方20%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的5%~10%)",
+		},
+		{
+			Name:        "奥义.轰雷矢",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
+		},
+		{
 			Name:        "奥义.雷魂斩",
 			Level:       1,
 			Type:        "oneE",
@@ -3053,8 +3229,17 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	if command := byID[CommandGuanJiaLianShi]; command.Label != "贯甲连矢" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/breakArmorShoot2" || command.MPCost != 25 || command.DamageMultiplier != 1.1 {
 		t.Fatalf("expected captured 贯甲连矢 Lv2 command, got %+v", command)
 	}
+	if command := byID[CommandAnYingJian]; command.Label != "暗影箭" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/darkShoot" || command.MPCost != 20 || command.DamageMultiplier != 0.72 {
+		t.Fatalf("expected captured 暗影箭 Lv1 command, got %+v", command)
+	}
+	if command := byID[CommandDuShi]; command.Label != "毒矢" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/drugShoot" || command.MPCost != 15 || command.DamageMultiplier != 0.9 {
+		t.Fatalf("expected captured 毒矢 Lv1 command, got %+v", command)
+	}
 	if command := byID[CommandLeiHunZhan]; command.Label != "奥义.雷魂斩" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w8/thunderSoulAtk" || command.MPCost != 24 || command.DamageMultiplier != 3.4 {
 		t.Fatalf("expected captured 奥义.雷魂斩 single-target command, got %+v", command)
+	}
+	if command := byID[CommandAoYiHongLeiShi]; command.Label != "奥义.轰雷矢" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/bombThunderShoot" || command.MPCost != 26 || command.DamageMultiplier != 2.2 {
+		t.Fatalf("expected captured 奥义.轰雷矢 single-target command, got %+v", command)
 	}
 	if command := byID[CommandAoYiAnShaZhe]; command.Label != "奥义.暗杀者" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/assassinate" || command.MPCost != 26 || command.DamageMultiplier != 2.8 {
 		t.Fatalf("expected captured 奥义.暗杀者 single-target command, got %+v", command)

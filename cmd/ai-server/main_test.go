@@ -6323,8 +6323,8 @@ func TestHandlePacketClassicBattleQiangLiFeiBiaoRejectsMissingDart(t *testing.T)
 	if result.battleCommand.ActorHandle != socketSession.selectedRole.RoleID || result.battleCommand.Sequence != startResult.battleCommand.Sequence {
 		t.Fatalf("expected missing 飞镖 retry command to keep current actor/sequence, got %+v", result.battleCommand)
 	}
-	if !packetChatMessagesContain(result.chatMessages, "飞镖不足") {
-		t.Fatalf("expected missing 飞镖 warning chat, got %+v", result.chatMessages)
+	if len(result.chatMessages) != 0 || len(result.errorMessages) != 1 || result.errorMessages[0].Msg != "物品不足" || !strings.Contains(result.errorMessages[0].SourceCapture, "c_Error 物品不足 after ActiveSkill(122)") {
+		t.Fatalf("expected missing 飞镖 source error push only, chats=%+v errors=%+v", result.chatMessages, result.errorMessages)
 	}
 	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
 		t.Fatalf("expected missing 飞镖 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)
@@ -6337,6 +6337,15 @@ func TestClassicBattleActionRequiredItemNameIncludesCapturedRangerBowArrows(t *t
 	}
 	if got := classicBattleActionRequiredItemName(battle.CommandQiangShe); got != "" {
 		t.Fatalf("expected 强射 to have no item requirement, got %q", got)
+	}
+	if got := classicBattleActionRequiredItemName(battle.CommandAnYingJian); got != "暗之箭" {
+		t.Fatalf("expected 暗影箭 to require 暗之箭, got %q", got)
+	}
+	if got := classicBattleActionRequiredItemName(battle.CommandDuShi); got != "毒箭" {
+		t.Fatalf("expected 毒矢 to require 毒箭, got %q", got)
+	}
+	if got := classicBattleActionRequiredItemName(battle.CommandAoYiHongLeiShi); got != "" {
+		t.Fatalf("expected 奥义.轰雷矢 to have no item requirement, got %q", got)
 	}
 }
 
@@ -6469,8 +6478,8 @@ func TestHandlePacketClassicBattleTouDuRejectsMissingPoison(t *testing.T) {
 	if result.battleCommand.ActorHandle != socketSession.selectedRole.RoleID || result.battleCommand.Sequence != startResult.battleCommand.Sequence {
 		t.Fatalf("expected missing 毒药 retry command to keep current actor/sequence, got %+v", result.battleCommand)
 	}
-	if !packetChatMessagesContain(result.chatMessages, "毒药不足") {
-		t.Fatalf("expected missing 毒药 warning chat, got %+v", result.chatMessages)
+	if len(result.chatMessages) != 0 || len(result.errorMessages) != 1 || result.errorMessages[0].Msg != "物品不足" || !strings.Contains(result.errorMessages[0].SourceCapture, "c_Error 物品不足 after ActiveSkill(122)") {
+		t.Fatalf("expected missing 毒药 source error push only, chats=%+v errors=%+v", result.chatMessages, result.errorMessages)
 	}
 	if socketSession.battleRuntime.Cells[1].HP != enemyHP || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
 		t.Fatalf("expected missing 毒药 to avoid battle mutation, hp=%d/%d consumed=%v", socketSession.battleRuntime.Cells[1].HP, enemyHP, socketSession.battleRuntime.ConsumedSequence)

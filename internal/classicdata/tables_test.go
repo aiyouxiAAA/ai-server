@@ -1,6 +1,9 @@
 package classicdata
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestGeneratedClassicTablesLoad(t *testing.T) {
 	tables, err := LoadAllTables()
@@ -58,6 +61,27 @@ func TestGeneratedClassicTablesContainKnownRows(t *testing.T) {
 
 	dropTable := MustLoadTable(TableDrop)
 	assertHasRow(t, dropTable, "map_id", "49")
+}
+
+func TestGeneratedClassicItemEquipmentRowsKeepSourceDescriptions(t *testing.T) {
+	itemTable := MustLoadTable(TableItem)
+	equipmentRows := 0
+	sourceDescriptionRows := 0
+	for _, row := range itemTable.Rows {
+		if row["item_type"] != "equip" {
+			continue
+		}
+		equipmentRows++
+		if row["description"] == "精炼潜质: [精炼+1" {
+			t.Fatalf("equipment row %s still has truncated source description", row["name"])
+		}
+		if strings.HasPrefix(row["description"], "f_i_") {
+			sourceDescriptionRows++
+		}
+	}
+	if equipmentRows == 0 || sourceDescriptionRows != equipmentRows {
+		t.Fatalf("equipment source description coverage = %d/%d, want all equipment rows", sourceDescriptionRows, equipmentRows)
+	}
 }
 
 func TestClassicDataLookupsReturnDetachedRows(t *testing.T) {

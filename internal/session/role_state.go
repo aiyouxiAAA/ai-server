@@ -516,20 +516,40 @@ func fillMissingRoleItemTemplateFields(item RoleItem) RoleItem {
 	usesTemplateDisplay := item.Display == "" || item.Display == template.Display
 	usesTemplateDescription := item.Description == "" ||
 		item.Description == genericCollectionRewardDescription(item.Name) ||
-		item.Description == template.Description
+		item.Description == template.Description ||
+		isStaleEquipmentTemplateDescription(item, template)
 	if item.Display == "" {
 		item.Display = template.Display
 	}
 	if item.ItemType == "" || (item.ItemType == "own" && template.ItemType != "" && template.ItemType != item.ItemType && usesTemplateDisplay && usesTemplateDescription) {
 		item.ItemType = template.ItemType
 	}
-	if item.Description == "" || item.Description == genericCollectionRewardDescription(item.Name) {
+	if item.Description == "" || item.Description == genericCollectionRewardDescription(item.Name) || isStaleEquipmentTemplateDescription(item, template) {
 		item.Description = template.Description
 	}
 	if item.ItemLevel <= 0 || (template.ItemLevel > item.ItemLevel && usesTemplateDisplay && usesTemplateDescription && item.ItemType == template.ItemType) {
 		item.ItemLevel = template.ItemLevel
 	}
 	return item
+}
+
+func isStaleEquipmentTemplateDescription(item RoleItem, template RoleItem) bool {
+	if template.ItemType != "equip" || !strings.HasPrefix(template.Description, "f_i_") {
+		return false
+	}
+	if item.ItemType != "" && item.ItemType != "equip" {
+		return false
+	}
+	description := strings.TrimSpace(item.Description)
+	if description == "" || description == template.Description {
+		return false
+	}
+	if !strings.HasPrefix(description, "f_i_") {
+		return true
+	}
+	return !strings.Contains(description, "&21@") ||
+		!strings.Contains(description, "&24@") ||
+		!strings.Contains(description, "&108@")
 }
 
 func genericCollectionRewardDescription(name string) string {
@@ -1096,6 +1116,26 @@ func capturedWoodcutter333EquipmentItems() []RoleItem {
 		{name: "寒影护腰", index: 10},
 		{name: "寒影靴", index: 12},
 	})
+}
+
+func syncCapturedWoodcutter333BattleConsumables(items []RoleItem) []RoleItem {
+	normalized := normalizeRoleItems(items)
+	if totalRoleItemCountByName(normalized, "背包", "穿甲箭") > 0 {
+		return normalized
+	}
+	piercingArrow, ok := CapturedRoleItemTemplate("穿甲箭")
+	if !ok {
+		return normalized
+	}
+	piercingArrow.Type = "背包"
+	piercingArrow.Count = 1900
+	piercingArrow.Index = -1
+	capacity := effectiveRoleContainerCapacity(normalized, "背包", defaultBagCap)
+	updated, _, granted := grantRoleItemToItems(normalized, capacity, piercingArrow)
+	if !granted {
+		return normalized
+	}
+	return normalizeRoleItems(updated)
 }
 
 func capturedWarrior444EquipmentItems() []RoleItem {
@@ -1719,7 +1759,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.Items = syncCapturedWoodcutterEquipmentItems(role.Items)
 	} else if len(role.Items) == 0 {
 		if isWoodcutter333 {
-			role.Items = capturedWoodcutter333EquipmentItems()
+			role.Items = syncCapturedWoodcutter333BattleConsumables(capturedWoodcutter333EquipmentItems())
 		} else if isWarrior444 {
 			role.Items = capturedWarrior444EquipmentItems()
 		} else {
@@ -1727,6 +1767,9 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		}
 	} else {
 		role.Items = ensureStarterAxeItem(removeCapturedDefaultBagSeeds(normalizeRoleItems(role.Items)))
+	}
+	if isWoodcutter333 {
+		role.Items = syncCapturedWoodcutter333BattleConsumables(role.Items)
 	}
 	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
 	if isWoodcutter222 {
@@ -1853,6 +1896,18 @@ func classicDataRoleItemTemplate(name string) (RoleItem, bool) {
 	if itemType == "equip" {
 		templateType = "装备"
 		itemLevel = 2
+	}
+	if strings.HasPrefix(descriptionText, "f_i_") {
+		return RoleItem{
+			Type:        templateType,
+			Name:        name,
+			ItemType:    itemType,
+			Display:     icon,
+			Description: descriptionText,
+			Count:       1,
+			Index:       classicDataRoleItemEquipmentSlot(category),
+			ItemLevel:   itemLevel,
+		}, true
 	}
 	description := fmt.Sprintf("f_i_%s^5BC46D&24@%s&25@%s", name, category, maxStack)
 	if descriptionText != "" {

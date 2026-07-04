@@ -231,6 +231,7 @@ const (
 	classicBattleReliveSourceCapture        = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/server-to-client-0001.bin#11601+c_doRelive"
 	classicBattleReliveRequestCapture       = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/client-to-server-0001.bin#6170+DoRelive"
 	classicBattleReliveMissingItemCapture   = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260616_215757_020_session_42684/connections/20260616_215819_960_conn_0002/raw/server-to-client-0001.bin#11616+c_Error"
+	classicBattleActionMissingItemCapture   = "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260627_140657_634_session_28940/connections/20260627_140749_156_conn_0002/raw/server-to-client-0001.bin#678+c_Error 物品不足 after ActiveSkill(122); source:XL_Net1.0 c_Error, battle RPGGUI hidden"
 	classicBattleReliveItemName             = "千年灵芝"
 	classicBattleReliveMissingItemError     = "用于复活的物品不足"
 	classicBattleReliveNeedItemMarkup       = "[i=f_i_千年灵芝^f9e000&24@特殊&25@999&19@如果放在背包里,在副本内死亡后可立即原地复活。&20@灵芝自古以来就被认为是吉祥,富贵,美好,长寿的象征,有 仙草 瑞草之称.民间传说灵芝有起死回生,长生不老之功效.&101@588.png&103@0&104@0&105@&107@&108@0]千年灵芝[/]x1"
@@ -1006,6 +1007,11 @@ func buildClassicBattleCellCountPush(battleID string, count int, pkWarning bool)
 }
 
 func buildClassicBattleActionResult(store *session.Store, socketSession *packetSession, request battle.ActionRequest) packetResult {
+	startedAt := time.Now()
+	var requiredItemLookupElapsed time.Duration
+	var processActionElapsed time.Duration
+	var consumeRequiredItemElapsed time.Duration
+	var finalizeElapsed time.Duration
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		log.Printf("[ai-server] classic battle battleAction ignored without selected role battleId=%s", request.BattleID)
 		return packetResult{handled: true}
@@ -1023,32 +1029,37 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	requiredItemName := classicBattleActionRequiredItemName(request.CommandID)
 	requiredItem := session.RoleItem{}
 	if requiredItemName != "" {
+		stepStartedAt := time.Now()
 		item, ok := findClassicBattleRequiredBagItem(store, socketSession, requiredItemName)
+		requiredItemLookupElapsed = time.Since(stepStartedAt)
 		if !ok {
 			log.Printf("[ai-server] classic battle battleAction rejected missing required item battleId=%s actor=%s command=%s item=%s", request.BattleID, request.ActorHandle, request.CommandID, requiredItemName)
-			return buildClassicBattleActionRejectedRetryResult(socketSession, request, requiredItemName+"不足。")
+			return buildClassicBattleActionRejectedRetryResult(socketSession, request, "物品不足")
 		}
 		requiredItem = item
 	}
+	stepStartedAt := time.Now()
 	result := socketSession.battleRuntime.ProcessAction(request)
+	processActionElapsed = time.Since(stepStartedAt)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle battleAction rejected battleId=%s actor=%s target=%s error=%s", request.BattleID, request.ActorHandle, request.TargetHandle, result.ErrorCode)
 		return buildClassicBattleActionRejectedRetryResult(socketSession, request, "")
 	}
 	var consumedRequiredItem session.RoleUseItemResult
 	if requiredItemName != "" {
-		consumedRequiredItem = store.ConsumeRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, requiredItem.Type, requiredItem.Index, 1)
+		stepStartedAt = time.Now()
+		consumedRequiredItem = store.ConsumeRoleItemMutationOnly(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, requiredItem.Type, requiredItem.Index, 1)
+		consumeRequiredItemElapsed = time.Since(stepStartedAt)
 		if !consumedRequiredItem.Found || !consumedRequiredItem.Used {
 			log.Printf("[ai-server] classic battle battleAction required item consume failed roleId=%s command=%s item=%s type=%s index=%d error=%s", socketSession.selectedRole.RoleID, request.CommandID, requiredItemName, requiredItem.Type, requiredItem.Index, consumedRequiredItem.ErrorCode)
 			return packetResult{handled: true}
 		}
-		socketSession.selectedRole = &consumedRequiredItem.Role
-		socketSession.playerBase = &consumedRequiredItem.PlayerBase
 	}
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
 	var chatMessages []classicTownChatMessagePush
+	stepStartedAt = time.Now()
 	if result.Over != nil {
 		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
@@ -1058,6 +1069,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	} else if sharedBattle {
 		updatePlayerBaseRoleStateFromBattle(socketSession)
 	}
+	finalizeElapsed = time.Since(stepStartedAt)
 	packet := packetResult{
 		battleActions:     result.Actions,
 		battleStopCommand: buildClassicBattleStopCommandPush(result.Actions),
@@ -1076,6 +1088,11 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		handled:           true,
 	}
 	appendConsumedRequiredBattleItemPushes(&packet, consumedRequiredItem)
+	totalElapsed := time.Since(startedAt)
+	if totalElapsed > 100*time.Millisecond {
+		log.Printf("[ai-server] slow classic battle action total=%s lookup=%s process=%s consume=%s finalize=%s battleId=%s actor=%s command=%s requiredItem=%s actions=%d",
+			totalElapsed, requiredItemLookupElapsed, processActionElapsed, consumeRequiredItemElapsed, finalizeElapsed, request.BattleID, request.ActorHandle, request.CommandID, requiredItemName, len(result.Actions))
+	}
 	if sharedBattle {
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
@@ -1144,7 +1161,11 @@ func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, r
 		Power:       classicBattleRetryPower(runtime, actorHandle),
 	}
 	if strings.TrimSpace(warning) != "" {
-		result.chatMessages = []classicTownChatMessagePush{classicTownSystemWarningMessage(warning)}
+		result.errorMessages = []classicTownErrorPush{{
+			Msg:           warning,
+			SourceCapture: classicBattleActionMissingItemCapture,
+			Partial:       true,
+		}}
 	}
 	return result
 }
@@ -1171,6 +1192,10 @@ func classicBattleActionRequiredItemName(commandID string) string {
 		return "毒药"
 	case battle.CommandGuanJiaLianShi, "贯甲连矢":
 		return "穿甲箭"
+	case battle.CommandAnYingJian, "暗影箭":
+		return "暗之箭"
+	case battle.CommandDuShi, "毒矢":
+		return "毒箭"
 	default:
 		return ""
 	}
@@ -1180,16 +1205,7 @@ func findClassicBattleRequiredBagItem(store *session.Store, socketSession *packe
 	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		return session.RoleItem{}, false
 	}
-	items, _, ok := store.GetRoleItems(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, classicTownBagContainerType)
-	if !ok {
-		return session.RoleItem{}, false
-	}
-	for _, item := range items {
-		if strings.TrimSpace(item.Name) == name && item.Count > 0 {
-			return item, true
-		}
-	}
-	return session.RoleItem{}, false
+	return store.GetRoleBagItemByName(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, name)
 }
 
 func appendConsumedRequiredBattleItemPushes(packet *packetResult, useResult session.RoleUseItemResult) {
@@ -1231,20 +1247,19 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 	if sharedBattle {
 		beforeTeamMember = classicTeamMemberFromSession(socketSession)
 	}
-	result := socketSession.battleRuntime.ProcessItemAction(request, classicBattleItemActionFromRoleItem(item))
+	itemAction := classicBattleItemActionFromRoleItem(item)
+	result := socketSession.battleRuntime.ProcessItemAction(request, itemAction)
 	if result.ErrorCode != "" {
 		log.Printf("[ai-server] classic battle ActiveItem rejected battleId=%s actor=%s type=%s index=%d error=%s", request.BattleID, request.ActorHandle, request.Type, request.Index, result.ErrorCode)
 		return packetResult{handled: true}
 	}
 
-	useResult := store.ConsumeRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index, 1)
+	useResult := store.ConsumeRoleItemMutationOnly(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index, 1)
 	if !useResult.Found || !useResult.Used {
 		log.Printf("[ai-server] classic battle ActiveItem consume failed roleId=%s type=%s index=%d error=%s", socketSession.selectedRole.RoleID, request.Type, request.Index, useResult.ErrorCode)
 		return packetResult{handled: true}
 	}
 
-	socketSession.selectedRole = &useResult.Role
-	socketSession.playerBase = &useResult.PlayerBase
 	var roleState *session.RoleState
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
@@ -2268,7 +2283,7 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		return packetResult{handled: true}
 	}
 
-	useResult := store.UseRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index)
+	useResult := classicTownUseRoleItem(store, socketSession, request)
 	if !useResult.Found {
 		log.Printf("[ai-server] classic town ActiveItem ignored missing role roleId=%s type=%s index=%d", socketSession.selectedRole.RoleID, request.Type, request.Index)
 		return packetResult{handled: true}
@@ -2376,6 +2391,21 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		result.roleState = useResult.PlayerBase.RoleState
 	}
 	return result
+}
+
+func classicTownUseRoleItem(store *session.Store, socketSession *packetSession, request classicTownActiveItemRequest) session.RoleUseItemResult {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return session.RoleUseItemResult{}
+	}
+	item, ok := store.GetRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index)
+	if ok {
+		healHP := parseClassicItemDescriptionInt(item.Description, "7")
+		healMP := parseClassicItemDescriptionInt(item.Description, "8")
+		if healHP > 0 || healMP > 0 {
+			return store.UseRoleRecoveryItemMutationOnly(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index, healHP, healMP)
+		}
+	}
+	return store.UseRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index)
 }
 
 func classicTownLearnedSkillMessage(skill session.RoleSkill) string {

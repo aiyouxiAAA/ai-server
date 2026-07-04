@@ -532,17 +532,18 @@ type RoleAddPointResult struct {
 }
 
 type Store struct {
-	mu               sync.Mutex
-	rolesByPID       map[string][]RoleSummary
-	nextRoleSeqByPID map[string]int
-	accountsByName   map[string]AccountRecord
-	acceptedQuests   map[string]map[string]bool
-	removedQuests    map[string]map[string]bool
-	db               *sql.DB
-	now              func() time.Time
-	Guilds           *guild.Service
-	Mall             *mall.Service
-	mallRequests     map[string]mall.PurchaseResult
+	mu                   sync.Mutex
+	rolesByPID           map[string][]RoleSummary
+	nextRoleSeqByPID     map[string]int
+	accountsByName       map[string]AccountRecord
+	acceptedQuests       map[string]map[string]bool
+	removedQuests        map[string]map[string]bool
+	rolePersistenceLocks map[string]*sync.Mutex
+	db                   *sql.DB
+	now                  func() time.Time
+	Guilds               *guild.Service
+	Mall                 *mall.Service
+	mallRequests         map[string]mall.PurchaseResult
 }
 
 type DevRoleSummary struct {
@@ -572,13 +573,29 @@ func NewStore() *Store {
 				SessionToken: "mock-session-token-001",
 			},
 		},
-		now:            time.Now,
-		Guilds:         guild.NewMemoryService(),
-		Mall:           mall.NewService(),
-		mallRequests:   make(map[string]mall.PurchaseResult),
-		acceptedQuests: make(map[string]map[string]bool),
-		removedQuests:  make(map[string]map[string]bool),
+		now:                  time.Now,
+		Guilds:               guild.NewMemoryService(),
+		Mall:                 mall.NewService(),
+		mallRequests:         make(map[string]mall.PurchaseResult),
+		acceptedQuests:       make(map[string]map[string]bool),
+		removedQuests:        make(map[string]map[string]bool),
+		rolePersistenceLocks: make(map[string]*sync.Mutex),
 	}
+}
+
+func (store *Store) rolePersistenceLock(playerID string, roleID string) *sync.Mutex {
+	key := playerID + "\x00" + roleID
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if store.rolePersistenceLocks == nil {
+		store.rolePersistenceLocks = make(map[string]*sync.Mutex)
+	}
+	lock := store.rolePersistenceLocks[key]
+	if lock == nil {
+		lock = &sync.Mutex{}
+		store.rolePersistenceLocks[key] = lock
+	}
+	return lock
 }
 
 func (store *Store) DevRoleSummaries() []DevRoleSummary {
@@ -620,6 +637,10 @@ func NewPersistentStore(persistencePath string) (*Store, error) {
 		return nil, fmt.Errorf("open sqlite database: %w", err)
 	}
 	db.SetMaxOpenConns(1)
+	if err := configureSQLitePersistence(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	store.db = db
 	guildService, err := guild.NewService(db)
 	if err != nil {
@@ -1379,6 +1400,31 @@ func (store *Store) GetRoleItems(playerID string, roleID string, containerType s
 	return []RoleItem{}, 0, false
 }
 
+func (store *Store) GetRoleBagItemByName(playerID string, roleID string, name string) (RoleItem, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return RoleItem{}, false
+	}
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		for _, item := range roles[index].Items {
+			if item.Type == "背包" && strings.TrimSpace(item.Name) == name && item.Count > 0 {
+				return normalizeRoleItem(item), true
+			}
+		}
+		return RoleItem{}, false
+	}
+
+	return RoleItem{}, false
+}
+
 func (store *Store) GetRoleRuntimeData(playerID string, roleID string) (RoleSummary, PlayerBaseData, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -1648,10 +1694,7 @@ func (store *Store) GetRoleItem(playerID string, roleID string, containerType st
 	return RoleItem{}, false
 }
 
-func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem) (RoleItem, bool) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
+func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem) (granted RoleItem, ok bool) {
 	item = normalizeRoleItem(item)
 	if item.Type == "" {
 		item.Type = "背包"
@@ -1667,6 +1710,22 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 	if !supported {
 		return RoleItem{}, false
 	}
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	var roleSnapshot RoleSummary
+	shouldPersist := false
+	defer func() {
+		store.mu.Unlock()
+		if shouldPersist {
+			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+				log.Printf("[session.Store] persist granted item failed: %v", err)
+			}
+		}
+	}()
 
 	roles := store.rolesByPID[playerID]
 	for index := range roles {
@@ -1685,18 +1744,14 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
-			log.Printf("[session.Store] persist granted item failed: %v", err)
-		}
+		roleSnapshot = roles[index]
+		shouldPersist = true
 		return grantedItem, true
 	}
 	return RoleItem{}, false
 }
 
-func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleItem, requirements []RoleItemRequirement) RoleItemPurchaseResult {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
+func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleItem, requirements []RoleItemRequirement) (result RoleItemPurchaseResult) {
 	item = normalizeRoleItem(item)
 	if item.Type == "" {
 		item.Type = "背包"
@@ -1720,6 +1775,22 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 			ErrorMessage: "目标容器无效。",
 		}
 	}
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	var roleSnapshot RoleSummary
+	shouldPersist := false
+	defer func() {
+		store.mu.Unlock()
+		if shouldPersist {
+			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+				log.Printf("[session.Store] persist purchased item failed: %v", err)
+			}
+		}
+	}()
 
 	roles := store.rolesByPID[playerID]
 	for index := range roles {
@@ -1806,9 +1877,8 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 		currentRole.Currencies = cloneRoleCurrencies(currentCurrencies)
 		roles[index] = currentRole
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
-			log.Printf("[session.Store] persist purchased item failed: %v", err)
-		}
+		roleSnapshot = roles[index]
+		shouldPersist = true
 
 		role := withRoleRuntimeDefaults(roles[index])
 		return RoleItemPurchaseResult{
@@ -1829,13 +1899,26 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 	}
 }
 
-func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta int) RoleExpGrantResult {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
+func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta int) (result RoleExpGrantResult) {
 	if expDelta <= 0 {
 		return RoleExpGrantResult{}
 	}
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	var roleSnapshot RoleSummary
+	shouldPersist := false
+	defer func() {
+		store.mu.Unlock()
+		if shouldPersist {
+			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+				log.Printf("[session.Store] persist granted experience failed: %v", err)
+			}
+		}
+	}()
 
 	roles := store.rolesByPID[playerID]
 	for index := range roles {
@@ -1849,9 +1932,8 @@ func (store *Store) GrantRoleExperience(playerID string, roleID string, expDelta
 		roles[index].Level = ClassicRoleLevelForExp(roles[index].Exp, roles[index].Level)
 		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
-			log.Printf("[session.Store] persist granted experience failed: %v", err)
-		}
+		roleSnapshot = roles[index]
+		shouldPersist = true
 
 		role := withRoleRuntimeDefaults(roles[index])
 		playerBase := playerBaseDataFromRole(playerID, role)
@@ -2130,7 +2212,7 @@ func (store *Store) ConsumeRoleItem(playerID string, roleID string, sourceType s
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
+		if err := store.persistRoleStateLocked(playerID, roleID); err != nil {
 			log.Printf("[session.Store] persist consumed item failed: %v", err)
 		}
 
@@ -2139,6 +2221,238 @@ func (store *Store) ConsumeRoleItem(playerID string, roleID string, sourceType s
 		result.PlayerBase = playerBaseDataFromRole(playerID, role)
 		return result
 	}
+
+	return RoleUseItemResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) ConsumeRoleItemMutationOnly(playerID string, roleID string, sourceType string, sourceIndex int, count int) RoleUseItemResult {
+	sourceType = strings.TrimSpace(sourceType)
+	if count <= 0 {
+		count = 1
+	}
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		sourceItem, ok := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if !ok {
+			roles[index] = withRoleRuntimeDefaults(roles[index])
+			sourceItem, ok = findRoleItem(roles[index].Items, sourceType, sourceIndex)
+			if !ok {
+				store.mu.Unlock()
+				return RoleUseItemResult{
+					Role:         RoleSummary{RoleID: roleID},
+					PlayerBase:   PlayerBaseData{PlayerID: playerID, RoleID: roleID},
+					Found:        true,
+					ErrorCode:    "item_missing",
+					ErrorMessage: "物品不存在。",
+				}
+			}
+		}
+		if sourceItem.Count < count {
+			store.mu.Unlock()
+			return RoleUseItemResult{
+				Role:         RoleSummary{RoleID: roleID},
+				PlayerBase:   PlayerBaseData{PlayerID: playerID, RoleID: roleID},
+				Item:         normalizeRoleItem(sourceItem),
+				Found:        true,
+				ErrorCode:    "item_not_enough",
+				ErrorMessage: "物品数量不足。",
+			}
+		}
+
+		updatedItems := make([]RoleItem, 0, len(roles[index].Items))
+		for _, item := range roles[index].Items {
+			if item.Type == sourceType && item.Index == sourceIndex {
+				continue
+			}
+			updatedItems = append(updatedItems, item)
+		}
+
+		result := RoleUseItemResult{
+			Role:       RoleSummary{RoleID: roleID},
+			PlayerBase: PlayerBaseData{PlayerID: playerID, RoleID: roleID},
+			Item:       normalizeRoleItem(sourceItem),
+			Found:      true,
+			Used:       true,
+		}
+		if sourceItem.Count > count {
+			updatedItem := sourceItem
+			updatedItem.Count -= count
+			updatedItems = append(updatedItems, normalizeRoleItem(updatedItem))
+			normalizedUpdated := normalizeRoleItem(updatedItem)
+			result.UpdatedItem = &normalizedUpdated
+		} else {
+			result.ClearedItems = []RoleItemClear{{
+				Type:  sourceType,
+				Index: sourceIndex,
+			}}
+		}
+
+		roles[index].Items = normalizeRoleItems(updatedItems)
+		if sourceType == "装备" {
+			roles[index] = syncRoleProgressionRuntimeData(roles[index])
+			result.Role = withRoleRuntimeDefaults(roles[index])
+			result.PlayerBase = playerBaseDataFromRole(playerID, result.Role)
+			store.rolesByPID[playerID] = roles
+			if err := store.persistRoleStateLocked(playerID, roleID); err != nil {
+				log.Printf("[session.Store] persist mutation-only consumed equipment failed: %v", err)
+			}
+			store.mu.Unlock()
+			return result
+		}
+
+		store.rolesByPID[playerID] = roles
+		itemsJSON, err := encodeRoleItems(roles[index].Items)
+		roleSnapshot := roles[index]
+		store.mu.Unlock()
+		if err != nil {
+			log.Printf("[session.Store] encode mutation-only consumed item failed: %v", err)
+			return result
+		}
+		if err := store.persistRoleItemsSnapshot(playerID, roleID, itemsJSON, roleSnapshot); err != nil {
+			log.Printf("[session.Store] persist mutation-only consumed item failed: %v", err)
+		}
+		return result
+	}
+	store.mu.Unlock()
+
+	return RoleUseItemResult{
+		Found:        false,
+		ErrorCode:    "role_missing",
+		ErrorMessage: "角色不存在。",
+	}
+}
+
+func (store *Store) UseRoleRecoveryItemMutationOnly(playerID string, roleID string, sourceType string, sourceIndex int, healHP int, healMP int) RoleUseItemResult {
+	sourceType = strings.TrimSpace(sourceType)
+	if healHP <= 0 && healMP <= 0 {
+		return RoleUseItemResult{
+			Role:         RoleSummary{RoleID: roleID},
+			PlayerBase:   PlayerBaseData{PlayerID: playerID, RoleID: roleID},
+			Found:        true,
+			ErrorCode:    "item_not_usable",
+			ErrorMessage: "该物品不能使用。",
+		}
+	}
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		sourceItem, ok := findRoleItem(roles[index].Items, sourceType, sourceIndex)
+		if !ok {
+			role := withRoleRuntimeDefaults(roles[index])
+			store.mu.Unlock()
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Found:        true,
+				ErrorCode:    "item_missing",
+				ErrorMessage: "物品不存在。",
+			}
+		}
+		if sourceItem.Count <= 0 {
+			role := withRoleRuntimeDefaults(roles[index])
+			store.mu.Unlock()
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         normalizeRoleItem(sourceItem),
+				Found:        true,
+				ErrorCode:    "item_not_enough",
+				ErrorMessage: "物品数量不足。",
+			}
+		}
+
+		roleState := defaultRoleState(roles[index].RoleID, roles[index].Level, roles[index].Exp)
+		if roles[index].RoleState != nil {
+			roleState = *roles[index].RoleState
+			if roleState.Handle == "" {
+				roleState.Handle = roles[index].RoleID
+			}
+		}
+		roleState.Exp = roles[index].Exp
+		roleState.Lv = roles[index].Level
+		roleState.Speed = ClassicRoleSpeed(roles[index].Level)
+
+		rolePhysique := defaultRolePhysique(roles[index])
+		if roles[index].RolePhysique != nil {
+			rolePhysique = *roles[index].RolePhysique
+			if rolePhysique.Handle == "" {
+				rolePhysique.Handle = roles[index].RoleID
+			}
+		}
+		canRecoverHP := healHP > 0 && roleState.HP < rolePhysique.MaxHP
+		canRecoverMP := healMP > 0 && roleState.MP < rolePhysique.MaxMP
+		if !canRecoverHP && !canRecoverMP {
+			role := withRoleRuntimeDefaults(roles[index])
+			store.mu.Unlock()
+			return RoleUseItemResult{
+				Role:         role,
+				PlayerBase:   playerBaseDataFromRole(playerID, role),
+				Item:         normalizeRoleItem(sourceItem),
+				Found:        true,
+				ErrorCode:    "role_state_full",
+				ErrorMessage: "当前状态不需要使用该物品。",
+			}
+		}
+		if healHP > 0 {
+			roleState.HP = clampRoleRuntimeValue(roleState.HP+healHP, 0, rolePhysique.MaxHP)
+		}
+		if healMP > 0 {
+			roleState.MP = clampRoleRuntimeValue(roleState.MP+healMP, 0, rolePhysique.MaxMP)
+		}
+
+		updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[index].Items, sourceItem.Type, sourceItem.Index, 1)
+		roles[index].Items = normalizeRoleItems(updatedItems)
+		roles[index].RoleState = &roleState
+		roles[index].RolePhysique = &rolePhysique
+		store.rolesByPID[playerID] = roles
+
+		role := withRoleRuntimeDefaults(roles[index])
+		result := RoleUseItemResult{
+			Role:             role,
+			PlayerBase:       playerBaseDataFromRole(playerID, role),
+			Item:             normalizeRoleItem(sourceItem),
+			ClearedItems:     clearedItems,
+			Found:            true,
+			Used:             true,
+			RoleStateChanged: true,
+		}
+		if updatedSource != nil {
+			updatedItem := *updatedSource
+			result.UpdatedItem = &updatedItem
+			result.UpdatedItems = []RoleItem{updatedItem}
+		}
+		roleSnapshot := roles[index]
+		store.mu.Unlock()
+		if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+			log.Printf("[session.Store] persist mutation-only recovery item failed: %v", err)
+		}
+		return result
+	}
+	store.mu.Unlock()
 
 	return RoleUseItemResult{
 		Found:        false,
@@ -2271,14 +2585,27 @@ func (store *Store) FeedRolePet(playerID string, roleID string, sourceType strin
 	}
 }
 
-func (store *Store) SellRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, count int) RoleItemSaleResult {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
+func (store *Store) SellRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, count int) (result RoleItemSaleResult) {
 	sourceType = strings.TrimSpace(sourceType)
 	if count <= 0 {
 		count = 1
 	}
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	var roleSnapshot RoleSummary
+	shouldPersist := false
+	defer func() {
+		store.mu.Unlock()
+		if shouldPersist {
+			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+				log.Printf("[session.Store] persist sold item failed: %v", err)
+			}
+		}
+	}()
 
 	roles := store.rolesByPID[playerID]
 	for index := range roles {
@@ -2332,9 +2659,8 @@ func (store *Store) SellRoleItem(playerID string, roleID string, sourceType stri
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
-			log.Printf("[session.Store] persist sold item failed: %v", err)
-		}
+		roleSnapshot = roles[index]
+		shouldPersist = true
 
 		role := withRoleRuntimeDefaults(roles[index])
 		return RoleItemSaleResult{
@@ -3226,7 +3552,7 @@ func (store *Store) useRecoveryItemLocked(
 	roles[roleIndex].RoleState = &roleState
 	roles[roleIndex].RolePhysique = &rolePhysique
 	store.rolesByPID[playerID] = roles
-	if err := store.persistPlayerStateLocked(playerID); err != nil {
+	if err := store.persistRoleStateLocked(playerID, roles[roleIndex].RoleID); err != nil {
 		log.Printf("[session.Store] persist used recovery item failed: %v", err)
 	}
 
@@ -3700,12 +4026,26 @@ func (store *Store) PreviewTryEquip(playerID string, roleID string, itemName str
 	}
 }
 
-func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, targetType string, targetIndex int, count int) RoleMoveItemResult {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
+func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType string, sourceIndex int, targetType string, targetIndex int, count int) (result RoleMoveItemResult) {
 	sourceType = strings.TrimSpace(sourceType)
 	targetType = strings.TrimSpace(targetType)
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	var roleSnapshot RoleSummary
+	shouldPersist := false
+	defer func() {
+		store.mu.Unlock()
+		if shouldPersist {
+			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+				log.Printf("[session.Store] persist moved item failed: %v", err)
+			}
+		}
+	}()
+
 	roles := store.rolesByPID[playerID]
 	for index := range roles {
 		if roles[index].RoleID != roleID {
@@ -3807,9 +4147,8 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
-			log.Printf("[session.Store] persist moved item failed: %v", err)
-		}
+		roleSnapshot = roles[index]
+		shouldPersist = true
 
 		role := withRoleRuntimeDefaults(roles[index])
 		cleared := make([]RoleItemClear, 0, 2)
@@ -3839,10 +4178,7 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 	}
 }
 
-func (store *Store) FinishRoleContainer(playerID string, roleID string, containerType string) RoleFinishContainerResult {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
+func (store *Store) FinishRoleContainer(playerID string, roleID string, containerType string) (result RoleFinishContainerResult) {
 	containerType = strings.TrimSpace(containerType)
 	_, supported := roleContainerCapacity(containerType)
 	if !supported || containerType != "背包" {
@@ -3852,6 +4188,22 @@ func (store *Store) FinishRoleContainer(playerID string, roleID string, containe
 			ErrorMessage: "容器类型不支持整理。",
 		}
 	}
+
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
+	store.mu.Lock()
+	var roleSnapshot RoleSummary
+	shouldPersist := false
+	defer func() {
+		store.mu.Unlock()
+		if shouldPersist {
+			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+				log.Printf("[session.Store] persist finished container failed: %v", err)
+			}
+		}
+	}()
 
 	roles := store.rolesByPID[playerID]
 	for index := range roles {
@@ -3939,9 +4291,8 @@ func (store *Store) FinishRoleContainer(playerID string, roleID string, containe
 		}
 		roles[index].Items = normalizeRoleItems(normalizedItems)
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
-			log.Printf("[session.Store] persist finished container failed: %v", err)
-		}
+		roleSnapshot = roles[index]
+		shouldPersist = true
 
 		role := withRoleRuntimeDefaults(roles[index])
 		for _, itemIndex := range updatedSlotIndexes {

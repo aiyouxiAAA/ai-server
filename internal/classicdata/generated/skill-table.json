@@ -2,7 +2,7 @@
     "schemaVersion":  1,
     "name":  "skill",
     "source":  "internal/classicdata/source/skill-table.csv",
-    "rowCount":  20,
+    "rowCount":  23,
     "rows":  [
                  {
                      "command_id":  "skill-normal-attack",
@@ -283,6 +283,48 @@
                      "hp_drain_chance_percent":  "0",
                      "hp_drain_multiplier":  "0",
                      "direct_attack_bonus_multiplier":  "0.15"
+                 },
+                 {
+                     "command_id":  "skill-an-ying-jian",
+                     "kind":  "skill",
+                     "label":  "暗影箭",
+                     "source_type":  "oneE",
+                     "action_name":  "暗影箭",
+                     "source_action_label":  "w1/darkShoot",
+                     "target":  "enemy",
+                     "damage_multiplier":  "0.72",
+                     "mp_cost":  "20",
+                     "hp_drain_chance_percent":  "0",
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
+                 },
+                 {
+                     "command_id":  "skill-du-shi",
+                     "kind":  "skill",
+                     "label":  "毒矢",
+                     "source_type":  "oneE",
+                     "action_name":  "毒矢",
+                     "source_action_label":  "w1/drugShoot",
+                     "target":  "enemy",
+                     "damage_multiplier":  "0.9",
+                     "mp_cost":  "15",
+                     "hp_drain_chance_percent":  "0",
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
+                 },
+                 {
+                     "command_id":  "skill-ao-yi-hong-lei-shi",
+                     "kind":  "skill",
+                     "label":  "奥义.轰雷矢",
+                     "source_type":  "oneE",
+                     "action_name":  "奥义.轰雷矢",
+                     "source_action_label":  "w1/bombThunderShoot",
+                     "target":  "enemy",
+                     "damage_multiplier":  "2.2",
+                     "mp_cost":  "26",
+                     "hp_drain_chance_percent":  "0",
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  }
              ]
 }

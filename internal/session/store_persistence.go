@@ -1,9 +1,50 @@
 package session
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 )
+
+type rolePersistenceExecer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+type rolePersistencePayload struct {
+	runtimeRole          RoleSummary
+	appearanceJSON       string
+	skillsJSON           string
+	fastPanelJSON        string
+	currenciesJSON       string
+	itemsJSON            string
+	townBuffsJSON        string
+	roleStateJSON        string
+	rolePhysiqueJSON     string
+	dungeonInstancesJSON string
+}
+
+func configureSQLitePersistence(db *sql.DB) error {
+	if db == nil {
+		return nil
+	}
+	if _, err := db.Exec(`PRAGMA busy_timeout = 5000`); err != nil {
+		return fmt.Errorf("configure sqlite busy_timeout: %w", err)
+	}
+	journalMode := ""
+	if err := db.QueryRow(`PRAGMA journal_mode = WAL`).Scan(&journalMode); err != nil {
+		return fmt.Errorf("configure sqlite journal_mode: %w", err)
+	}
+	if !strings.EqualFold(journalMode, "wal") {
+		return fmt.Errorf("configure sqlite journal_mode: expected wal, got %s", journalMode)
+	}
+	if _, err := db.Exec(`PRAGMA synchronous = NORMAL`); err != nil {
+		return fmt.Errorf("configure sqlite synchronous: %w", err)
+	}
+	if _, err := db.Exec(`PRAGMA wal_autocheckpoint = 1000`); err != nil {
+		return fmt.Errorf("configure sqlite wal_autocheckpoint: %w", err)
+	}
+	return nil
+}
 
 func (store *Store) Close() error {
 	if store.db == nil {
@@ -483,72 +524,11 @@ func (store *Store) persistPlayerStateLocked(playerID string) error {
 	}
 
 	for _, role := range store.rolesByPID[playerID] {
-		runtimeRole := withRoleRuntimeDefaults(role)
-		appearanceJSON, encodeErr := encodeRoleAppearance(runtimeRole.Appearance)
+		payload, encodeErr := buildRolePersistencePayload(role)
 		if encodeErr != nil {
-			return fmt.Errorf("encode role appearance for %s: %w", role.RoleID, encodeErr)
+			return encodeErr
 		}
-		skillsJSON, encodeErr := encodeRoleSkills(runtimeRole.Skills)
-		if encodeErr != nil {
-			return fmt.Errorf("encode role skills for %s: %w", role.RoleID, encodeErr)
-		}
-		fastPanelJSON, encodeErr := encodeRoleFastPanel(runtimeRole.FastPanel)
-		if encodeErr != nil {
-			return fmt.Errorf("encode role fast panel for %s: %w", role.RoleID, encodeErr)
-		}
-		currenciesJSON, encodeErr := encodeRoleCurrencies(runtimeRole.Currencies)
-		if encodeErr != nil {
-			return fmt.Errorf("encode role currencies for %s: %w", role.RoleID, encodeErr)
-		}
-		itemsJSON, encodeErr := encodeRoleItems(runtimeRole.Items)
-		if encodeErr != nil {
-			return fmt.Errorf("encode role items for %s: %w", role.RoleID, encodeErr)
-		}
-		townBuffsJSON, encodeErr := encodeRoleTownBuffs(runtimeRole.TownBuffs)
-		if encodeErr != nil {
-			return fmt.Errorf("encode role town buffs for %s: %w", role.RoleID, encodeErr)
-		}
-		roleStateJSON, encodeErr := encodeRoleState(runtimeRole.RoleState)
-		if encodeErr != nil {
-			return fmt.Errorf("encode role state for %s: %w", role.RoleID, encodeErr)
-		}
-		rolePhysiqueJSON, encodeErr := encodeRolePhysique(runtimeRole.RolePhysique)
-		if encodeErr != nil {
-			return fmt.Errorf("encode role physique for %s: %w", role.RoleID, encodeErr)
-		}
-		dungeonInstancesJSON, encodeErr := encodeDungeonInstances(runtimeRole.DungeonInstances)
-		if encodeErr != nil {
-			return fmt.Errorf("encode dungeon instances for %s: %w", role.RoleID, encodeErr)
-		}
-		if _, err = tx.Exec(
-			`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			runtimeRole.RoleID,
-			playerID,
-			runtimeRole.DisplayName,
-			runtimeRole.Level,
-			runtimeRole.Exp,
-			runtimeRole.Voc,
-			runtimeRole.AGI,
-			runtimeRole.STR,
-			runtimeRole.INT,
-			runtimeRole.CON,
-			runtimeRole.LCK,
-			runtimeRole.MapID,
-			runtimeRole.VisualRoleID,
-			runtimeRole.PresetID,
-			runtimeRole.SourceQuery,
-			runtimeRole.BattleSourceQuery,
-			appearanceJSON,
-			skillsJSON,
-			fastPanelJSON,
-			currenciesJSON,
-			itemsJSON,
-			townBuffsJSON,
-			roleStateJSON,
-			rolePhysiqueJSON,
-			dungeonInstancesJSON,
-		); err != nil {
+		if err = upsertRolePersistencePayload(tx, playerID, payload); err != nil {
 			return fmt.Errorf("insert role %s: %w", role.RoleID, err)
 		}
 	}
@@ -558,6 +538,194 @@ func (store *Store) persistPlayerStateLocked(playerID string) error {
 	}
 
 	return nil
+}
+
+func (store *Store) persistRoleStateLocked(playerID string, roleID string) error {
+	if store.db == nil {
+		return nil
+	}
+
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID != roleID {
+			continue
+		}
+		return store.persistRoleStateSnapshot(playerID, roleID, role)
+	}
+	return fmt.Errorf("role %s missing for player %s", roleID, playerID)
+}
+
+func (store *Store) persistRoleStateSnapshot(playerID string, roleID string, role RoleSummary) error {
+	if store.db == nil {
+		return nil
+	}
+	if role.RoleID != roleID {
+		return fmt.Errorf("role snapshot mismatch for player %s: got %s want %s", playerID, role.RoleID, roleID)
+	}
+	payload, err := buildRolePersistencePayload(role)
+	if err != nil {
+		return err
+	}
+	if err := upsertRolePersistencePayload(store.db, playerID, payload); err != nil {
+		return fmt.Errorf("upsert role %s: %w", role.RoleID, err)
+	}
+	return nil
+}
+
+func (store *Store) persistRoleItemsLocked(playerID string, roleID string) error {
+	if store.db == nil {
+		return nil
+	}
+
+	for _, role := range store.rolesByPID[playerID] {
+		if role.RoleID != roleID {
+			continue
+		}
+		itemsJSON, err := encodeRoleItems(role.Items)
+		if err != nil {
+			return fmt.Errorf("encode role items for %s: %w", role.RoleID, err)
+		}
+		result, err := store.db.Exec(`UPDATE roles SET items_json = ? WHERE role_id = ? AND player_id = ?`, itemsJSON, roleID, playerID)
+		if err != nil {
+			return fmt.Errorf("update role items for %s: %w", roleID, err)
+		}
+		if affected, affectedErr := result.RowsAffected(); affectedErr == nil && affected == 0 {
+			return store.persistRoleStateLocked(playerID, roleID)
+		}
+		return nil
+	}
+	return fmt.Errorf("role %s missing for player %s", roleID, playerID)
+}
+
+func (store *Store) persistRoleItemsSnapshot(playerID string, roleID string, itemsJSON string, fallbackRole RoleSummary) error {
+	if store.db == nil {
+		return nil
+	}
+
+	result, err := store.db.Exec(`UPDATE roles SET items_json = ? WHERE role_id = ? AND player_id = ?`, itemsJSON, roleID, playerID)
+	if err != nil {
+		return fmt.Errorf("update role items for %s: %w", roleID, err)
+	}
+	if affected, affectedErr := result.RowsAffected(); affectedErr == nil && affected == 0 {
+		payload, payloadErr := buildRolePersistencePayload(fallbackRole)
+		if payloadErr != nil {
+			return payloadErr
+		}
+		if upsertErr := upsertRolePersistencePayload(store.db, playerID, payload); upsertErr != nil {
+			return fmt.Errorf("upsert role %s after missing item row: %w", roleID, upsertErr)
+		}
+	}
+	return nil
+}
+
+func buildRolePersistencePayload(role RoleSummary) (rolePersistencePayload, error) {
+	runtimeRole := withRoleRuntimeDefaults(role)
+	appearanceJSON, err := encodeRoleAppearance(runtimeRole.Appearance)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role appearance for %s: %w", role.RoleID, err)
+	}
+	skillsJSON, err := encodeRoleSkills(runtimeRole.Skills)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role skills for %s: %w", role.RoleID, err)
+	}
+	fastPanelJSON, err := encodeRoleFastPanel(runtimeRole.FastPanel)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role fast panel for %s: %w", role.RoleID, err)
+	}
+	currenciesJSON, err := encodeRoleCurrencies(runtimeRole.Currencies)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role currencies for %s: %w", role.RoleID, err)
+	}
+	itemsJSON, err := encodeRoleItems(runtimeRole.Items)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role items for %s: %w", role.RoleID, err)
+	}
+	townBuffsJSON, err := encodeRoleTownBuffs(runtimeRole.TownBuffs)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role town buffs for %s: %w", role.RoleID, err)
+	}
+	roleStateJSON, err := encodeRoleState(runtimeRole.RoleState)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role state for %s: %w", role.RoleID, err)
+	}
+	rolePhysiqueJSON, err := encodeRolePhysique(runtimeRole.RolePhysique)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode role physique for %s: %w", role.RoleID, err)
+	}
+	dungeonInstancesJSON, err := encodeDungeonInstances(runtimeRole.DungeonInstances)
+	if err != nil {
+		return rolePersistencePayload{}, fmt.Errorf("encode dungeon instances for %s: %w", role.RoleID, err)
+	}
+	return rolePersistencePayload{
+		runtimeRole:          runtimeRole,
+		appearanceJSON:       appearanceJSON,
+		skillsJSON:           skillsJSON,
+		fastPanelJSON:        fastPanelJSON,
+		currenciesJSON:       currenciesJSON,
+		itemsJSON:            itemsJSON,
+		townBuffsJSON:        townBuffsJSON,
+		roleStateJSON:        roleStateJSON,
+		rolePhysiqueJSON:     rolePhysiqueJSON,
+		dungeonInstancesJSON: dungeonInstancesJSON,
+	}, nil
+}
+
+func upsertRolePersistencePayload(execer rolePersistenceExecer, playerID string, payload rolePersistencePayload) error {
+	role := payload.runtimeRole
+	_, err := execer.Exec(
+		`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, fast_panel_json, currencies_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(role_id) DO UPDATE SET
+		   player_id = excluded.player_id,
+		   display_name = excluded.display_name,
+		   level = excluded.level,
+		   exp = excluded.exp,
+		   voc = excluded.voc,
+		   agi = excluded.agi,
+		   str = excluded.str,
+		   intelligence = excluded.intelligence,
+		   con = excluded.con,
+		   lck = excluded.lck,
+		   map_id = excluded.map_id,
+		   visual_role_id = excluded.visual_role_id,
+		   preset_id = excluded.preset_id,
+		   source_query = excluded.source_query,
+		   battle_source_query = excluded.battle_source_query,
+		   appearance_json = excluded.appearance_json,
+		   skills_json = excluded.skills_json,
+		   fast_panel_json = excluded.fast_panel_json,
+		   currencies_json = excluded.currencies_json,
+		   items_json = excluded.items_json,
+		   town_buffs_json = excluded.town_buffs_json,
+		   role_state_json = excluded.role_state_json,
+		   role_physique_json = excluded.role_physique_json,
+		   dungeon_instances_json = excluded.dungeon_instances_json`,
+		role.RoleID,
+		playerID,
+		role.DisplayName,
+		role.Level,
+		role.Exp,
+		role.Voc,
+		role.AGI,
+		role.STR,
+		role.INT,
+		role.CON,
+		role.LCK,
+		role.MapID,
+		role.VisualRoleID,
+		role.PresetID,
+		role.SourceQuery,
+		role.BattleSourceQuery,
+		payload.appearanceJSON,
+		payload.skillsJSON,
+		payload.fastPanelJSON,
+		payload.currenciesJSON,
+		payload.itemsJSON,
+		payload.townBuffsJSON,
+		payload.roleStateJSON,
+		payload.rolePhysiqueJSON,
+		payload.dungeonInstancesJSON,
+	)
+	return err
 }
 
 func (store *Store) saveLocked() error {

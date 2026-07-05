@@ -510,6 +510,14 @@ type RoleExpGrantResult struct {
 	LevelChanged bool
 }
 
+type RolePointStats struct {
+	AGI *int
+	STR *int
+	INT *int
+	CON *int
+	LCK *int
+}
+
 type RoleVocationResult struct {
 	Role         RoleSummary
 	PlayerBase   PlayerBaseData
@@ -2036,6 +2044,54 @@ func (store *Store) SetRoleLevel(playerID string, roleID string, level int) Role
 			Found:        true,
 			Granted:      true,
 			LevelChanged: role.Level != previousLevel,
+		}
+	}
+	return RoleExpGrantResult{}
+}
+
+func (store *Store) SetRolePointStats(playerID string, roleID string, stats RolePointStats) RoleExpGrantResult {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		roles[index] = withRoleRuntimeDefaults(roles[index])
+		if stats.AGI != nil {
+			roles[index].AGI = maxInt(0, *stats.AGI)
+		}
+		if stats.STR != nil {
+			roles[index].STR = maxInt(0, *stats.STR)
+		}
+		if stats.INT != nil {
+			roles[index].INT = maxInt(0, *stats.INT)
+		}
+		if stats.CON != nil {
+			roles[index].CON = maxInt(0, *stats.CON)
+		}
+		if stats.LCK != nil {
+			roles[index].LCK = maxInt(0, *stats.LCK)
+		}
+		roles[index] = syncRoleProgressionRuntimeData(roles[index])
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist set role point stats failed: %v", err)
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		playerBase := playerBaseDataFromRole(playerID, role)
+		roleState := *playerBase.RoleState
+		rolePhysique := *playerBase.RolePhysique
+		return RoleExpGrantResult{
+			Role:         role,
+			PlayerBase:   playerBase,
+			RoleState:    roleState,
+			RolePhysique: rolePhysique,
+			Found:        true,
+			Granted:      true,
 		}
 	}
 	return RoleExpGrantResult{}

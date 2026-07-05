@@ -8540,10 +8540,12 @@ func TestDevSetLevelHandlerSetsRoleLevel(t *testing.T) {
 		RoleTemplateID: 1,
 	})
 
+	str := 30
 	payload := devSetLevelRequest{
 		PlayerID: login.PlayerID,
 		RoleID:   create.Role.RoleID,
 		Level:    20,
+		STR:      &str,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -8564,6 +8566,9 @@ func TestDevSetLevelHandlerSetsRoleLevel(t *testing.T) {
 	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, create.Role.RoleID)
 	if !ok || role.Level != 20 || playerBase.Level != 20 || playerBase.RoleState == nil || playerBase.RoleState.Lv != 20 {
 		t.Fatalf("expected persisted level 20 runtime data, ok=%v role=%+v base=%+v", ok, role, playerBase)
+	}
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.STR != 30 || playerBase.RolePhysique.PhyAtk != 40 {
+		t.Fatalf("expected set-level dev helper to set STR runtime data, base=%+v", playerBase)
 	}
 }
 

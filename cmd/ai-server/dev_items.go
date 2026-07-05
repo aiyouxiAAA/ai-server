@@ -70,6 +70,11 @@ type devSetLevelRequest struct {
 	PlayerID string `json:"playerId"`
 	RoleID   string `json:"roleId"`
 	Level    int    `json:"level"`
+	AGI      *int   `json:"AGI,omitempty"`
+	STR      *int   `json:"STR,omitempty"`
+	INT      *int   `json:"INT,omitempty"`
+	CON      *int   `json:"CON,omitempty"`
+	LCK      *int   `json:"LCK,omitempty"`
 }
 
 type devSetLevelResponse struct {
@@ -276,6 +281,23 @@ func handleDevSetLevel(writer http.ResponseWriter, request *http.Request, store 
 			ErrorMessage: "设置失败，角色不存在。",
 		})
 		return
+	}
+	if payload.AGI != nil || payload.STR != nil || payload.INT != nil || payload.CON != nil || payload.LCK != nil {
+		result = store.SetRolePointStats(payload.PlayerID, payload.RoleID, session.RolePointStats{
+			AGI: payload.AGI,
+			STR: payload.STR,
+			INT: payload.INT,
+			CON: payload.CON,
+			LCK: payload.LCK,
+		})
+		if !result.Found || !result.Granted {
+			writeDevJSONStatus(writer, http.StatusBadRequest, devSetLevelResponse{
+				Success:      false,
+				ErrorCode:    "set_point_stats_failed",
+				ErrorMessage: "设置属性失败，角色不存在。",
+			})
+			return
+		}
 	}
 	role, ok := buildDevItemRole(store, payload.PlayerID, payload.RoleID)
 	if !ok {

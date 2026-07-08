@@ -1159,6 +1159,7 @@ func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, r
 		Round:       runtime.Round,
 		Sequence:    request.Sequence,
 		Power:       classicBattleRetryPower(runtime, actorHandle),
+		Commands:    sourceBattleRetryCommandDefinitions(runtime, actorHandle),
 	}
 	if strings.TrimSpace(warning) != "" {
 		result.errorMessages = []classicTownErrorPush{{
@@ -1168,6 +1169,16 @@ func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, r
 		}}
 	}
 	return result
+}
+
+func sourceBattleRetryCommandDefinitions(runtime *battle.Runtime, actorHandle string) []battle.CommandDefinition {
+	if runtime == nil {
+		return nil
+	}
+	if skills, ok := runtime.RoleSkillsByHandle[strings.TrimSpace(actorHandle)]; ok {
+		return battle.CommandDefinitionsForSkills(skills)
+	}
+	return battle.CommandDefinitionsForSkills(runtime.RoleSkills)
 }
 
 func classicBattleRetryPower(runtime *battle.Runtime, actorHandle string) int {
@@ -1192,6 +1203,10 @@ func classicBattleActionRequiredItemName(commandID string) string {
 		return "毒药"
 	case battle.CommandGuanJiaLianShi, "贯甲连矢":
 		return "穿甲箭"
+	case battle.CommandBingJianSuShe, "冰箭速射":
+		return "冰之箭"
+	case battle.CommandMoLiSuShe, "魔力速射":
+		return "魔箭"
 	case battle.CommandAnYingJian, "暗影箭":
 		return "暗之箭"
 	case battle.CommandDuShi, "毒矢":
@@ -2478,7 +2493,10 @@ func buildClassicTownDestroyItemResult(store *session.Store, socketSession *pack
 		return packetResult{handled: true}
 	}
 
-	useResult := store.ConsumeRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index, request.Count)
+	useResult := store.ConsumeRoleItemMutationOnly(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index, request.Count)
+	if strings.TrimSpace(request.Type) == "装备" {
+		useResult = store.ConsumeRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index, request.Count)
+	}
 	if !useResult.Found {
 		log.Printf("[ai-server] classic town DestroyItem ignored missing role roleId=%s type=%s index=%d count=%d", socketSession.selectedRole.RoleID, request.Type, request.Index, request.Count)
 		return packetResult{handled: true}
@@ -2488,8 +2506,6 @@ func buildClassicTownDestroyItemResult(store *session.Store, socketSession *pack
 		return packetResult{handled: true}
 	}
 
-	socketSession.selectedRole = &useResult.Role
-	socketSession.playerBase = &useResult.PlayerBase
 	result := packetResult{
 		itemInfos:  make([]classicTownItemInfoPush, 0, 1),
 		itemClears: make([]classicTownItemInfoClearPush, 0, len(useResult.ClearedItems)),
@@ -2504,14 +2520,16 @@ func buildClassicTownDestroyItemResult(store *session.Store, socketSession *pack
 	}
 	if useResult.UpdatedItem != nil {
 		item := *useResult.UpdatedItem
-		item.Handle = useResult.Role.RoleID
+		item.Handle = socketSession.selectedRole.RoleID
 		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
 	}
 	if request.Type == "装备" {
+		socketSession.selectedRole = &useResult.Role
+		socketSession.playerBase = &useResult.PlayerBase
 		result.createPlayer = buildClassicTownCreatePlayerPush(useResult.Role, useResult.PlayerBase)
 		result.rolePhysique = useResult.PlayerBase.RolePhysique
 	}
-	log.Printf("[ai-server] classic town DestroyItem roleId=%s type=%s index=%d count=%d item=%s", useResult.Role.RoleID, request.Type, request.Index, request.Count, useResult.Item.Name)
+	log.Printf("[ai-server] classic town DestroyItem roleId=%s type=%s index=%d count=%d item=%s", socketSession.selectedRole.RoleID, request.Type, request.Index, request.Count, useResult.Item.Name)
 	return result
 }
 

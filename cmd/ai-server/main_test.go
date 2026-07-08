@@ -2445,7 +2445,7 @@ func TestHandlePacketClassicTownTryEquipCapturedFashionSetPreview(t *testing.T) 
 	}
 }
 
-func TestHandlePacketClassicTownEquipItemPushesReplacedDaggerFor333Bow(t *testing.T) {
+func TestHandlePacketClassicTownEquipItemPushesReplacedBowFor333Dagger(t *testing.T) {
 	store := session.NewStore()
 	login := store.Login(session.LoginRequest{
 		UserName: "33333333",
@@ -2474,26 +2474,26 @@ func TestHandlePacketClassicTownEquipItemPushesReplacedDaggerFor333Bow(t *testin
 	if !selectResult.handled || selectResult.townBootstrap == nil {
 		t.Fatalf("expected 333 role select to seed town bootstrap, got %+v", selectResult)
 	}
-	grantedBow, ok := store.GrantRoleItem(login.PlayerID, create.Role.RoleID, session.RoleItem{
+	grantedDagger, ok := store.GrantRoleItem(login.PlayerID, create.Role.RoleID, session.RoleItem{
 		Type:        "背包",
-		Name:        "万相",
+		Name:        "绯雨匕首",
 		ItemType:    "equip",
-		Display:     "58.png",
-		Description: "f_i_万相&24@武器·弓系&25@1&22@游侠",
+		Display:     "51.png",
+		Description: "f_i_绯雨匕首&24@武器·匕首系&25@1&22@游侠",
 		Count:       1,
 		Index:       20,
 		ItemLevel:   2,
 	})
 	if !ok {
-		t.Fatal("expected to grant captured bow")
+		t.Fatal("expected to grant captured dagger")
 	}
 
 	result := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicTownEquipItemReq,
 		Seq: 2,
 		Payload: mustJSON(t, classicTownEquipItemRequest{
-			Type:  grantedBow.Type,
-			Index: grantedBow.Index,
+			Type:  grantedDagger.Type,
+			Index: grantedDagger.Index,
 			Count: 1,
 		}),
 	}, socketSession)
@@ -2501,24 +2501,24 @@ func TestHandlePacketClassicTownEquipItemPushesReplacedDaggerFor333Bow(t *testin
 	if !result.handled {
 		t.Fatal("expected EquipItem to be handled")
 	}
-	if result.createPlayer == nil || !strings.Contains(result.createPlayer.SourceQuery, "w1=55") || strings.Contains(result.createPlayer.SourceQuery, "w3=49") {
-		t.Fatalf("expected bow source query and no stale dagger appearance, got %+v", result.createPlayer)
+	if result.createPlayer == nil || !strings.Contains(result.createPlayer.SourceQuery, "w3=49") || strings.Contains(result.createPlayer.SourceQuery, "w1=55") {
+		t.Fatalf("expected dagger source query and no stale bow appearance, got %+v", result.createPlayer)
 	}
-	if len(result.itemClears) != 1 || result.itemClears[0].Type != "背包" || result.itemClears[0].Index != grantedBow.Index {
-		t.Fatalf("expected bow source bag slot to clear, got %+v", result.itemClears)
+	if len(result.itemClears) != 1 || result.itemClears[0].Type != "背包" || result.itemClears[0].Index != grantedDagger.Index {
+		t.Fatalf("expected dagger source bag slot to clear, got %+v", result.itemClears)
 	}
 	byTypeIndex := map[string]classicTownItemInfoPush{}
 	for _, item := range result.itemInfos {
 		byTypeIndex[item.Type+":"+strconv.Itoa(item.Index)] = item
 	}
-	if item := byTypeIndex["装备:3"]; item.Name != "万相" || item.Display != "58.png" {
-		t.Fatalf("expected bow equipment itemInfo, got %+v from %+v", item, result.itemInfos)
+	if item := byTypeIndex["装备:3"]; item.Name != "绯雨匕首" || item.Display != "51.png" {
+		t.Fatalf("expected dagger equipment itemInfo, got %+v from %+v", item, result.itemInfos)
 	}
-	if item := byTypeIndex["背包:"+strconv.Itoa(grantedBow.Index)]; item.Name != "绯雨匕首" {
-		t.Fatalf("expected replaced dagger bag itemInfo, got %+v from %+v", item, result.itemInfos)
+	if item := byTypeIndex["背包:"+strconv.Itoa(grantedDagger.Index)]; item.Name != "万相" {
+		t.Fatalf("expected replaced bow bag itemInfo, got %+v from %+v", item, result.itemInfos)
 	}
-	if socketSession.selectedRole == nil || !strings.Contains(socketSession.selectedRole.SourceQuery, "w1=55") || strings.Contains(socketSession.selectedRole.SourceQuery, "w3=49") {
-		t.Fatalf("expected socket selected role to keep bow appearance, got %+v", socketSession.selectedRole)
+	if socketSession.selectedRole == nil || !strings.Contains(socketSession.selectedRole.SourceQuery, "w3=49") || strings.Contains(socketSession.selectedRole.SourceQuery, "w1=55") {
+		t.Fatalf("expected socket selected role to keep dagger appearance, got %+v", socketSession.selectedRole)
 	}
 }
 
@@ -3494,11 +3494,22 @@ func TestHandlePacketClassicTownFinishingContainerStacksBagItems(t *testing.T) {
 	if !result.handled {
 		t.Fatal("expected FinishingContainer to be handled")
 	}
-	if len(result.itemClears) != 1 || result.itemClears[0].Type != "背包" || result.itemClears[0].Index != 22 {
-		t.Fatalf("expected merged source meat slot 22 to be cleared, got %+v", result.itemClears)
+	expectedClears := []int{7, 19, 22, 25}
+	if len(result.itemClears) != len(expectedClears) {
+		t.Fatalf("expected compact clears %+v, got %+v", expectedClears, result.itemClears)
 	}
-	if len(result.itemInfos) != 1 || result.itemInfos[0].Name != "肉" || result.itemInfos[0].Index != 7 || result.itemInfos[0].Count != 5 {
-		t.Fatalf("expected stacked meat push at original slot 7, got %+v", result.itemInfos)
+	for index, expected := range expectedClears {
+		if result.itemClears[index].Type != "背包" || result.itemClears[index].Index != expected {
+			t.Fatalf("expected compact clear slot %d at position %d, got %+v", expected, index, result.itemClears)
+		}
+	}
+	resultItemsByIndex := map[int]classicTownItemInfoPush{}
+	for _, item := range result.itemInfos {
+		resultItemsByIndex[item.Index] = item
+	}
+	if resultItemsByIndex[0].Name != "肉" || resultItemsByIndex[0].Count != 5 ||
+		resultItemsByIndex[1].Name != "铁斧" || resultItemsByIndex[2].Name != "头骨" {
+		t.Fatalf("expected compact item pushes at slots 0..2, got %+v", result.itemInfos)
 	}
 
 	listResult := handlePacketWithSession(store, protocol.Packet{
@@ -3510,12 +3521,14 @@ func TestHandlePacketClassicTownFinishingContainerStacksBagItems(t *testing.T) {
 	for _, item := range listResult.itemInfos {
 		itemsByIndex[item.Index] = item
 	}
-	if itemsByIndex[7].Name != "肉" || itemsByIndex[7].Count != 5 ||
-		itemsByIndex[19].Name != "铁斧" || itemsByIndex[25].Name != "头骨" {
-		t.Fatalf("expected stacked bag to persist without compacting unrelated slots, got %+v", listResult.itemInfos)
+	if itemsByIndex[0].Name != "肉" || itemsByIndex[0].Count != 5 ||
+		itemsByIndex[1].Name != "铁斧" || itemsByIndex[2].Name != "头骨" {
+		t.Fatalf("expected compact stacked bag to persist, got %+v", listResult.itemInfos)
 	}
-	if _, exists := itemsByIndex[22]; exists {
-		t.Fatalf("expected merged source slot 22 to be empty, got %+v", listResult.itemInfos)
+	for _, emptyIndex := range expectedClears {
+		if _, exists := itemsByIndex[emptyIndex]; exists {
+			t.Fatalf("expected old slot %d to be empty after compact finish, got %+v", emptyIndex, listResult.itemInfos)
+		}
 	}
 }
 
@@ -4257,10 +4270,10 @@ func TestHandlePacketClassicTownCapturedWoodcutter333PushesCapturedFinalSkillsAn
 		Seq:     2,
 		Payload: mustJSON(t, map[string]any{}),
 	}, socketSession)
-	if !skillResult.handled || skillResult.skillCap == nil || skillResult.skillCap.Count != 12 || len(skillResult.skillInfos) != 9 {
+	if !skillResult.handled || skillResult.skillCap == nil || skillResult.skillCap.Count != 12 || len(skillResult.skillInfos) != 12 {
 		t.Fatalf("expected captured final 333 skill list, got %+v", skillResult)
 	}
-	expectedSkillOrder := []string{"普通攻击", "武器娴熟", "灵力进修", "精神力", "爆发力", "幻影", "强射", "贯甲连矢", "强力飞镖"}
+	expectedSkillOrder := []string{"普通攻击", "武器娴熟", "灵力进修", "精神力", "爆发力", "幻影", "贯甲连矢", "暗影箭", "奥义.轰雷矢", "毒矢", "魔力速射", "冰箭速射"}
 	for index, expectedName := range expectedSkillOrder {
 		if skillResult.skillInfos[index].Name != expectedName {
 			t.Fatalf("expected captured 333 skill order %v, got %+v", expectedSkillOrder, skillResult.skillInfos)
@@ -4272,6 +4285,21 @@ func TestHandlePacketClassicTownCapturedWoodcutter333PushesCapturedFinalSkillsAn
 	}
 	if skillByName["贯甲连矢"].Level != 5 || !strings.Contains(skillByName["贯甲连矢"].Description, "&2@28") {
 		t.Fatalf("expected captured final 333 贯甲连矢 Lv5, got %+v", skillByName["贯甲连矢"])
+	}
+	if skillByName["暗影箭"].Level != 1 || !strings.Contains(skillByName["暗影箭"].Description, "暗影箭x1") {
+		t.Fatalf("expected captured final 333 暗影箭 Lv1, got %+v", skillByName["暗影箭"])
+	}
+	if skillByName["毒矢"].Level != 1 || !strings.Contains(skillByName["毒矢"].Description, "毒箭x1") {
+		t.Fatalf("expected captured final 333 毒矢 Lv1, got %+v", skillByName["毒矢"])
+	}
+	if skillByName["奥义.轰雷矢"].Level != 1 || !strings.Contains(skillByName["奥义.轰雷矢"].Description, "需要2格魂元") {
+		t.Fatalf("expected captured final 333 奥义.轰雷矢 Lv1, got %+v", skillByName["奥义.轰雷矢"])
+	}
+	if skillByName["魔力速射"].Level != 5 || !strings.Contains(skillByName["魔力速射"].Description, "魔箭x1") {
+		t.Fatalf("expected captured final 333 魔力速射 Lv5, got %+v", skillByName["魔力速射"])
+	}
+	if skillByName["冰箭速射"].Level != 5 || !strings.Contains(skillByName["冰箭速射"].Description, "冰之箭x1") {
+		t.Fatalf("expected captured final 333 冰箭速射 Lv5, got %+v", skillByName["冰箭速射"])
 	}
 	if _, ok := skillByName["奥义.暗杀者"]; ok {
 		t.Fatalf("expected captured final 333 skillInfo not to reuse stale 222 dagger list, got %+v", skillResult.skillInfos)
@@ -4292,11 +4320,11 @@ func TestHandlePacketClassicTownCapturedWoodcutter333PushesCapturedFinalSkillsAn
 	}{
 		{0, "skill", "普通攻击"},
 		{1, "skill", "贯甲连矢"},
-		{2, "skill", "强射"},
-		{3, "skill", "投毒"},
-		{4, "skill", "疾风刺"},
-		{5, "skill", "解毒术"},
-		{6, "skill", "魔力突刺"},
+		{2, "skill", "魔力速射"},
+		{3, "skill", "暗影箭"},
+		{4, "skill", "毒矢"},
+		{5, "skill", "奥义.轰雷矢"},
+		{6, "skill", "冰箭速射"},
 		{8, "item", "馒头"},
 		{9, "item", "小瓶甘露"},
 	} {
@@ -6337,6 +6365,12 @@ func TestClassicBattleActionRequiredItemNameIncludesCapturedRangerBowArrows(t *t
 	}
 	if got := classicBattleActionRequiredItemName(battle.CommandQiangShe); got != "" {
 		t.Fatalf("expected 强射 to have no item requirement, got %q", got)
+	}
+	if got := classicBattleActionRequiredItemName(battle.CommandBingJianSuShe); got != "冰之箭" {
+		t.Fatalf("expected 冰箭速射 to require 冰之箭, got %q", got)
+	}
+	if got := classicBattleActionRequiredItemName(battle.CommandMoLiSuShe); got != "魔箭" {
+		t.Fatalf("expected 魔力速射 to require 魔箭, got %q", got)
 	}
 	if got := classicBattleActionRequiredItemName(battle.CommandAnYingJian); got != "暗之箭" {
 		t.Fatalf("expected 暗影箭 to require 暗之箭, got %q", got)

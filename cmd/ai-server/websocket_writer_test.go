@@ -1,9 +1,14 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"ai-server/internal/protocol"
 	"ai-server/internal/world"
+	"github.com/gorilla/websocket"
 )
 
 func TestClassicTownSourceMonsterChasePrefersPlayerTargetWithinCaptureRadius(t *testing.T) {
@@ -111,11 +116,159 @@ func TestClassicTownSourceMonsterChaseSkipsOutsideCaptureRadiusAndWrongMap(t *te
 	}
 }
 
+func TestClassicTownSourceMonsterChaseDoesNotContinueWhenPlayerLeavesCaptureRadius(t *testing.T) {
+	writer := &websocketWriter{}
+	writer.resetClassicTownSourceMonsterState(world.TownBootstrapSnapshot{
+		CreateRoles: []world.RolePush{
+			{
+				Handle:     "monster-a",
+				RoleID:     "-2",
+				Kind:       "monster",
+				MapID:      "131",
+				SpawnFlash: world.SpawnPoint{X: 1057, Y: 545},
+			},
+		},
+	})
+
+	firstMoves := writer.classicTownSourceMonsterChaseMoves(world.RoleMovePush{
+		Handle: "player-a",
+		Type:   "Run",
+		X:      1024,
+		Y:      580,
+		TX:     1198,
+		TY:     580,
+		MapID:  "131",
+	})
+	if len(firstMoves) != 1 {
+		t.Fatalf("expected initial chase move, got %+v", firstMoves)
+	}
+
+	farMoves := writer.classicTownSourceMonsterChaseMoves(world.RoleMovePush{
+		Handle: "player-a",
+		Type:   "Run",
+		X:      1600,
+		Y:      580,
+		TX:     1700,
+		TY:     580,
+		MapID:  "131",
+	})
+	if len(farMoves) != 0 {
+		t.Fatalf("expected no continued chase push outside capture radius, got %+v", farMoves)
+	}
+}
+
+func TestClassicTownSourceMonsterChaseRetargetsToLatestNearbyPlayerMove(t *testing.T) {
+	writer := &websocketWriter{}
+	writer.resetClassicTownSourceMonsterState(world.TownBootstrapSnapshot{
+		CreateRoles: []world.RolePush{
+			{
+				Handle:     "monster-a",
+				RoleID:     "-2",
+				Kind:       "monster",
+				MapID:      "131",
+				SpawnFlash: world.SpawnPoint{X: 1057, Y: 545},
+			},
+		},
+	})
+
+	firstMoves := writer.classicTownSourceMonsterChaseMoves(world.RoleMovePush{
+		Handle: "player-a",
+		Type:   "Run",
+		X:      1024,
+		Y:      580,
+		TX:     1198,
+		TY:     580,
+		MapID:  "131",
+	})
+	if len(firstMoves) != 1 || firstMoves[0].TX != 1198 || firstMoves[0].TY != 580 {
+		t.Fatalf("expected first player chase target, got %+v", firstMoves)
+	}
+
+	secondMoves := writer.classicTownSourceMonsterChaseMoves(world.RoleMovePush{
+		Handle: "player-b",
+		Type:   "Run",
+		X:      1240,
+		Y:      575,
+		TX:     1300,
+		TY:     575,
+		MapID:  "131",
+	})
+	if len(secondMoves) != 1 {
+		t.Fatalf("expected retarget chase move for second nearby player move, got %+v", secondMoves)
+	}
+	if secondMoves[0].Handle != "monster-a" || secondMoves[0].X != 1198 || secondMoves[0].Y != 580 || secondMoves[0].TX != 1300 || secondMoves[0].TY != 575 {
+		t.Fatalf("unexpected retarget chase move: %+v", secondMoves[0])
+	}
+}
+
 func TestClassicTownSourceMonsterReplaySkipsCapturedRunChaseSteps(t *testing.T) {
 	if classicTownSourceMonsterReplayableStep(world.RoleMovePush{Type: "Run"}) {
 		t.Fatal("captured Run moveRole steps are chase samples and must not replay as static patrol")
 	}
 	if !classicTownSourceMonsterReplayableStep(world.RoleMovePush{Type: "Move"}) {
 		t.Fatal("captured Move moveRole steps must remain replayable patrol movement")
+	}
+}
+
+func TestWebsocketWriterOutboundQueuePreservesOrderAndServerSeq(t *testing.T) {
+	releaseServer := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		conn, err := upgrader.Upgrade(response, request, nil)
+		if err != nil {
+			t.Errorf("upgrade failed: %v", err)
+			return
+		}
+		socketWriter := &websocketWriter{conn: conn, nextServerSeq: 1000}
+		socketWriter.startOutbound()
+		defer socketWriter.stopOutbound()
+
+		if err := socketWriter.writePush(2001, []byte(`{"kind":"push-a"}`)); err != nil {
+			t.Errorf("write first push failed: %v", err)
+			return
+		}
+		if err := socketWriter.writePacket(2002, 77, []byte(`{"kind":"response"}`)); err != nil {
+			t.Errorf("write response failed: %v", err)
+			return
+		}
+		if err := socketWriter.writePush(2003, []byte(`{"kind":"push-b"}`)); err != nil {
+			t.Errorf("write second push failed: %v", err)
+			return
+		}
+		<-releaseServer
+	}))
+	defer server.Close()
+
+	url := "ws" + strings.TrimPrefix(server.URL, "http")
+	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer conn.Close()
+	defer close(releaseServer)
+
+	got := make([]protocol.Packet, 0, 3)
+	for len(got) < 3 {
+		messageType, data, err := conn.ReadMessage()
+		if err != nil {
+			t.Fatalf("read message failed after %d packets: %v", len(got), err)
+		}
+		if messageType != websocket.BinaryMessage {
+			t.Fatalf("expected binary websocket message, got %d", messageType)
+		}
+		packet, err := protocol.Decode(data)
+		if err != nil {
+			t.Fatalf("decode packet failed: %v", err)
+		}
+		got = append(got, packet)
+	}
+
+	if got[0].Cmd != 2001 || got[0].Seq != 1000 {
+		t.Fatalf("unexpected first push: %+v", got[0])
+	}
+	if got[1].Cmd != 2002 || got[1].Seq != 77 {
+		t.Fatalf("unexpected response packet: %+v", got[1])
+	}
+	if got[2].Cmd != 2003 || got[2].Seq != 1001 {
+		t.Fatalf("unexpected second push: %+v", got[2])
 	}
 }

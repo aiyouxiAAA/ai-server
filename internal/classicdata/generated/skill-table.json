@@ -2,7 +2,7 @@
     "schemaVersion":  1,
     "name":  "skill",
     "source":  "internal/classicdata/source/skill-table.csv",
-    "rowCount":  23,
+    "rowCount":  25,
     "rows":  [
                  {
                      "command_id":  "skill-normal-attack",
@@ -283,6 +283,34 @@
                      "hp_drain_chance_percent":  "0",
                      "hp_drain_multiplier":  "0",
                      "direct_attack_bonus_multiplier":  "0.15"
+                 },
+                 {
+                     "command_id":  "skill-bing-jian-su-she",
+                     "kind":  "skill",
+                     "label":  "冰箭速射",
+                     "source_type":  "oneE",
+                     "action_name":  "冰箭速射",
+                     "source_action_label":  "w1/iceShoot",
+                     "target":  "enemy",
+                     "damage_multiplier":  "0.7",
+                     "mp_cost":  "28",
+                     "hp_drain_chance_percent":  "0",
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
+                 },
+                 {
+                     "command_id":  "skill-mo-li-su-she",
+                     "kind":  "skill",
+                     "label":  "魔力速射",
+                     "source_type":  "oneE",
+                     "action_name":  "魔力速射",
+                     "source_action_label":  "w1/magicShoot",
+                     "target":  "enemy",
+                     "damage_multiplier":  "0.5",
+                     "mp_cost":  "34",
+                     "hp_drain_chance_percent":  "0",
+                     "hp_drain_multiplier":  "0",
+                     "direct_attack_bonus_multiplier":  "0"
                  },
                  {
                      "command_id":  "skill-an-ying-jian",

@@ -7,7 +7,7 @@ import (
 
 // Rows returns a detached copy of a generated classic data table.
 func Rows(name string) ([]map[string]string, error) {
-	table, err := LoadTable(name)
+	table, err := loadTableCached(name)
 	if err != nil {
 		return nil, err
 	}

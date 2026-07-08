@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math"
 	"sync"
@@ -16,11 +17,23 @@ type websocketWriter struct {
 	conn                      *websocket.Conn
 	mu                        sync.Mutex
 	nextServerSeq             uint64
+	outboundStateMu           sync.Mutex
+	outboundQueue             chan websocketOutboundMessage
+	outboundStop              chan struct{}
+	outboundDone              chan struct{}
+	outboundClosed            bool
+	outboundCloseOnce         sync.Once
 	sourceMonsterReplayMu     sync.Mutex
 	sourceMonsterReplayCancel context.CancelFunc
 	sourceMonsterStateMu      sync.Mutex
 	sourceMonsterStates       map[string]classicTownSourceMonsterMoveState
 	sourceMonsterLastTargets  map[string]world.SpawnPoint
+}
+
+type websocketOutboundMessage struct {
+	cmd  uint64
+	seq  uint64
+	data []byte
 }
 
 type classicTownSourceMonsterMoveState struct {
@@ -29,6 +42,7 @@ type classicTownSourceMonsterMoveState struct {
 }
 
 const (
+	websocketWriterQueueCapacity               = 4096
 	classicTownSourceMonsterReplayInitialDelay = 250 * time.Millisecond
 	classicTownSourceMonsterWalkSpeed          = 130.0
 	classicTownSourceMonsterRunMultiplier      = 2.0
@@ -36,6 +50,80 @@ const (
 	classicTownSourceMonsterReplayMaxDelay     = 8 * time.Second
 	classicTownSourceMonsterChaseRadius        = 200.0
 )
+
+var (
+	errWebsocketWriterClosed       = errors.New("websocket writer closed")
+	errWebsocketWriterBackpressure = errors.New("websocket writer outbound queue full")
+)
+
+func (writer *websocketWriter) startOutbound() {
+	if writer.conn == nil {
+		return
+	}
+
+	writer.outboundStateMu.Lock()
+	if writer.outboundQueue != nil {
+		writer.outboundStateMu.Unlock()
+		return
+	}
+	writer.outboundQueue = make(chan websocketOutboundMessage, websocketWriterQueueCapacity)
+	writer.outboundStop = make(chan struct{})
+	writer.outboundDone = make(chan struct{})
+	writer.outboundStateMu.Unlock()
+
+	go writer.runOutbound()
+}
+
+func (writer *websocketWriter) stopOutbound() {
+	writer.closeOutboundSignal()
+
+	writer.outboundStateMu.Lock()
+	done := writer.outboundDone
+	writer.outboundStateMu.Unlock()
+	if done != nil {
+		<-done
+	}
+}
+
+func (writer *websocketWriter) closeOutboundSignal() {
+	writer.outboundCloseOnce.Do(func() {
+		writer.outboundStateMu.Lock()
+		writer.outboundClosed = true
+		stop := writer.outboundStop
+		conn := writer.conn
+		writer.outboundStateMu.Unlock()
+
+		if stop != nil {
+			close(stop)
+		}
+		if conn != nil {
+			_ = conn.Close()
+		}
+	})
+}
+
+func (writer *websocketWriter) runOutbound() {
+	writer.outboundStateMu.Lock()
+	queue := writer.outboundQueue
+	stop := writer.outboundStop
+	done := writer.outboundDone
+	conn := writer.conn
+	writer.outboundStateMu.Unlock()
+
+	defer close(done)
+	for {
+		select {
+		case <-stop:
+			return
+		case message := <-queue:
+			if err := conn.WriteMessage(websocket.BinaryMessage, message.data); err != nil {
+				log.Printf("[ai-server] websocket outbound write failed cmd=%d seq=%d: %v", message.cmd, message.seq, err)
+				writer.closeOutboundSignal()
+				return
+			}
+		}
+	}
+}
 
 func (writer *websocketWriter) writePacket(cmd uint64, seq uint64, payload []byte) error {
 	response := protocol.Encode(protocol.Packet{
@@ -47,7 +135,7 @@ func (writer *websocketWriter) writePacket(cmd uint64, seq uint64, payload []byt
 
 	writer.mu.Lock()
 	defer writer.mu.Unlock()
-	return writer.conn.WriteMessage(websocket.BinaryMessage, response)
+	return writer.enqueueOutboundLocked(websocketOutboundMessage{cmd: cmd, seq: seq, data: response})
 }
 
 func (writer *websocketWriter) writePush(cmd uint64, payload []byte) error {
@@ -65,7 +153,41 @@ func (writer *websocketWriter) writePush(cmd uint64, payload []byte) error {
 	if writer.conn == nil {
 		return nil
 	}
-	return writer.conn.WriteMessage(websocket.BinaryMessage, response)
+	return writer.enqueueOutboundLocked(websocketOutboundMessage{cmd: cmd, seq: seq, data: response})
+}
+
+func (writer *websocketWriter) enqueueOutboundLocked(message websocketOutboundMessage) error {
+	writer.outboundStateMu.Lock()
+	queue := writer.outboundQueue
+	closed := writer.outboundClosed
+	writer.outboundStateMu.Unlock()
+	if writer.conn == nil {
+		return nil
+	}
+	if closed {
+		return errWebsocketWriterClosed
+	}
+	if queue == nil {
+		return writer.conn.WriteMessage(websocket.BinaryMessage, message.data)
+	}
+
+	select {
+	case queue <- message:
+		return nil
+	default:
+		writer.closeOutboundSignal()
+		return errWebsocketWriterBackpressure
+	}
+}
+
+func (writer *websocketWriter) outboundDepth() int {
+	writer.outboundStateMu.Lock()
+	queue := writer.outboundQueue
+	writer.outboundStateMu.Unlock()
+	if queue == nil {
+		return 0
+	}
+	return len(queue)
 }
 
 func (writer *websocketWriter) writeClassicTownBootstrap(snapshot world.TownBootstrapSnapshot) {

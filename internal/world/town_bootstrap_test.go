@@ -416,6 +416,44 @@ func TestBuildTownBootstrapUsesCapturedShuiliandongVisibleMonsters(t *testing.T)
 	}
 }
 
+func TestBuildTownBootstrapUsesCapturedSwampWildEnemyShow(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-56",
+		DisplayName:  "测试女侠",
+		Level:        25,
+		MapID:        56,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        56,
+		VisualRoleID: role.VisualRoleID,
+	}
+
+	for _, mapID := range []int{56, 57, 58, 59, 60, 61, 62, 63, 172, 173, 174, 175, 177, 178} {
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, mapID, SpawnPoint{X: 1000, Y: 600})
+		if !ok {
+			t.Fatalf("expected swamp map %d transfer bootstrap to be supported", mapID)
+		}
+		if !snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected swamp map %d to enable captured wild enemyShow", mapID)
+		}
+	}
+
+	for _, mapID := range []int{171, 176} {
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, mapID, SpawnPoint{X: 1000, Y: 600})
+		if !ok {
+			t.Fatalf("expected swamp map %d transfer bootstrap to be supported", mapID)
+		}
+		if snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected swamp map %d to stay out of wild enemyShow until capture evidence exists", mapID)
+		}
+	}
+}
+
 func TestBuildTownBootstrapOmitsCapturedFeixiandongVisibleMonsterBootstrapMovement(t *testing.T) {
 	testCases := []struct {
 		mapID   int
@@ -1106,8 +1144,9 @@ func TestBuildTownBootstrapUsesCapturedBaiyuanTownTransportData(t *testing.T) {
 		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.XMLURL != "xml/"+itoa(testCase.mapID)+".xml" {
 			t.Fatalf("expected map%d loadMap, got %+v", testCase.mapID, snapshot.LoadMap)
 		}
-		if snapshot.LoadMap.EnemyShow {
-			t.Fatalf("expected map%d enemyShow to stay false", testCase.mapID)
+		_, expectedWildEnemyShow := sourceWildBattleMapIDs[testCase.mapID]
+		if snapshot.LoadMap.EnemyShow != expectedWildEnemyShow {
+			t.Fatalf("expected map%d enemyShow=%v, got %v", testCase.mapID, expectedWildEnemyShow, snapshot.LoadMap.EnemyShow)
 		}
 		transportsByHandle := map[string]RolePush{}
 		for _, rolePush := range snapshot.CreateRoles {

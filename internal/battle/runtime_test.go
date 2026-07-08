@@ -128,6 +128,9 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 			RoleID:      "role_leader",
 			DisplayName: "队长",
 			Level:       12,
+			Skills: []session.RoleSkill{
+				{Name: "贯甲连矢", Level: 5, Type: "oneE", Description: "f_s_贯甲连矢&2@28&4@提升25%的物理伤害&0;增加30%（无视防御）的物理攻击力"},
+			},
 		},
 		PlayerBase: session.PlayerBaseData{
 			PlayerID:    "player_leader",
@@ -145,6 +148,9 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 			RoleID:      "role_member",
 			DisplayName: "队员",
 			Level:       12,
+			Skills: []session.RoleSkill{
+				{Name: "盘龙棍法", Level: 2, Type: "all", Description: "f_s_盘龙棍法&2@14&4@对所有敌人造成82%的物理伤害"},
+			},
 		},
 		PlayerBase: session.PlayerBaseData{
 			PlayerID:    "player_member",
@@ -167,6 +173,9 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 	}
 	if len(runtime.livingCells(CampTeam)) != 2 || bundle.StartCommand.ActorHandle != leader.Role.RoleID {
 		t.Fatalf("expected leader to act first in two-player team battle, got cells=%+v start=%+v", runtime.Cells, bundle.StartCommand)
+	}
+	if !commandDefinitionsContain(bundle.StartCommand.Commands, CommandGuanJiaLianShi) || commandDefinitionsContain(bundle.StartCommand.Commands, CommandPanLongGunFa) {
+		t.Fatalf("expected initial team startCommand to use leader commands, got %+v", bundle.StartCommand.Commands)
 	}
 	target := runtime.firstLiving(CampEnemy)
 	if target == nil {
@@ -194,6 +203,18 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 	if playOver.StartCommand == nil || playOver.StartCommand.ActorHandle != member.Role.RoleID {
 		t.Fatalf("expected next startCommand for member, got %+v", playOver.StartCommand)
 	}
+	if !commandDefinitionsContain(playOver.StartCommand.Commands, CommandPanLongGunFa) || commandDefinitionsContain(playOver.StartCommand.Commands, CommandGuanJiaLianShi) {
+		t.Fatalf("expected member startCommand to switch to member commands, got %+v", playOver.StartCommand.Commands)
+	}
+}
+
+func commandDefinitionsContain(commands []CommandDefinition, commandID string) bool {
+	for _, command := range commands {
+		if command.ID == commandID {
+			return true
+		}
+	}
+	return false
 }
 
 func TestBuildOverUsesCapturedMap49RobberRewardWithExperience(t *testing.T) {
@@ -754,6 +775,46 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 		if config.Cell.Name == "魔族射手" {
 			t.Fatalf("expected map50 special-event 魔族射手 to stay out of normal wild encounters, got %+v", map50Configs)
 		}
+	}
+
+	swampCases := []struct {
+		mapID   string
+		names   []string
+		maxHPs  []int
+		attacks []int
+	}{
+		{mapID: "56", names: []string{"小恶鬼", "瘴气泥巴"}, maxHPs: []int{600, 510}, attacks: []int{228, 154}},
+		{mapID: "57", names: []string{"瘴气泥巴", "瘴气泥巴"}, maxHPs: []int{520, 525}, attacks: []int{154, 163}},
+		{mapID: "58", names: []string{"瘴气泥巴", "瘴气泥巴"}, maxHPs: []int{520, 525}, attacks: []int{154, 163}},
+		{mapID: "59", names: []string{"王花", "王花"}, maxHPs: []int{750, 760}, attacks: []int{246, 252}},
+		{mapID: "60", names: []string{"毒蜂", "王花"}, maxHPs: []int{680, 750}, attacks: []int{246, 246}},
+		{mapID: "61", names: []string{"王花", "王花"}, maxHPs: []int{750, 760}, attacks: []int{246, 252}},
+		{mapID: "62", names: []string{"毒蜂"}, maxHPs: []int{680}, attacks: []int{246}},
+		{mapID: "63", names: []string{"金斑鳄", "金斑鳄"}, maxHPs: []int{980, 1020}, attacks: []int{270, 278}},
+		{mapID: "172", names: []string{"玄龟兽", "玄龟兽"}, maxHPs: []int{1221, 1260}, attacks: []int{273, 273}},
+		{mapID: "173", names: []string{"玄龟兽"}, maxHPs: []int{1221}, attacks: []int{273}},
+		{mapID: "174", names: []string{"玄龟兽"}, maxHPs: []int{1260}, attacks: []int{273}},
+		{mapID: "175", names: []string{"赤蛰子", "毒蜂", "玄龟兽"}, maxHPs: []int{3100, 850, 1260}, attacks: []int{330, 278, 313}},
+		{mapID: "177", names: []string{"赤蛰子", "毒蜂"}, maxHPs: []int{3100, 850}, attacks: []int{304, 281}},
+		{mapID: "178", names: []string{"毒蜂"}, maxHPs: []int{850}, attacks: []int{282}},
+	}
+	for _, testCase := range swampCases {
+		configs := sourceEnemyConfigsForMap(testCase.mapID)
+		if len(configs) != len(testCase.names) {
+			t.Fatalf("expected swamp map %s to have %d captured wild configs, got %+v", testCase.mapID, len(testCase.names), configs)
+		}
+		for index, expectedName := range testCase.names {
+			config := configs[index]
+			if config.Cell.Name != expectedName || config.Cell.MaxHP != testCase.maxHPs[index] || config.Cell.Attack != testCase.attacks[index] {
+				t.Fatalf("expected swamp map %s enemy %d %s hp=%d attack=%d, got %+v", testCase.mapID, index, expectedName, testCase.maxHPs[index], testCase.attacks[index], config.Cell)
+			}
+		}
+	}
+	if _, ok := sourceEnemyConfigForMap("171"); ok {
+		t.Fatal("map171 must stay out of wild encounters until battle/reward capture evidence exists")
+	}
+	if _, ok := sourceEnemyConfigForMap("176"); ok {
+		t.Fatal("map176 must stay out of wild encounters until battle/reward capture evidence exists")
 	}
 
 	for mapID, configs := range sourceWildEnemyConfigsByMapID {
@@ -2440,9 +2501,28 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			expectedMP:     72,
 		},
 		{
+			name:           "魔力速射",
+			level:          5,
+			description:    "f_s_魔力速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@34&4@<font color='#00cc00'>特殊发动条件:需要【魔箭x1】</font><br>造成50%的物理伤害&0;并追加120%的魔法伤害(进攻时提高25%的魔法攻击力)",
+			commandID:      CommandMoLiSuShe,
+			label:          "w1/magicShoot",
+			expectedDamage: 64,
+			expectedMP:     66,
+			magicAttack:    36,
+		},
+		{
+			name:           "冰箭速射",
+			level:          5,
+			description:    "f_s_冰箭速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【冰之箭x1】</font><br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font><br>造成70%的物理伤害&0;击中敌人时有90%的机率使敌人进入内伤状态(3回合内削弱敌人30%~35%的物理攻击和魔法攻击)",
+			commandID:      CommandBingJianSuShe,
+			label:          "w1/iceShoot",
+			expectedDamage: 30,
+			expectedMP:     72,
+		},
+		{
 			name:           "暗影箭",
 			level:          1,
-			description:    "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
+			description:    "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗之箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
 			commandID:      CommandAnYingJian,
 			label:          "w1/darkShoot",
 			expectedDamage: 32,
@@ -2726,6 +2806,14 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 0.82,
 		},
 		{
+			name:       "夜叉棍法",
+			level:      1,
+			desc:       "f_s_夜叉棍法^5BC46D&9@单体·攻击&8@战士 &10@棍&22@战斗&2@15&4@提升12%的物理伤害&0;击中敌人时有90%的机率对敌人造成内伤(削减敌人32%的物理攻击和魔法攻击)3回合<br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font>",
+			label:      "w11/yaksa",
+			mpCost:     15,
+			multiplier: 1.12,
+		},
+		{
 			name:       "强力飞镖",
 			level:      2,
 			desc:       "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高48%（无视防御）的物理攻击力",
@@ -2782,9 +2870,25 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 			multiplier: 3.4,
 		},
 		{
+			name:       "魔力速射",
+			level:      5,
+			desc:       "f_s_魔力速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@34&4@<font color='#00cc00'>特殊发动条件:需要【魔箭x1】</font><br>造成50%的物理伤害&0;并追加120%的魔法伤害(进攻时提高25%的魔法攻击力)",
+			label:      "w1/magicShoot",
+			mpCost:     34,
+			multiplier: 0.5,
+		},
+		{
+			name:       "冰箭速射",
+			level:      5,
+			desc:       "f_s_冰箭速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【冰之箭x1】</font><br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font><br>造成70%的物理伤害&0;击中敌人时有90%的机率使敌人进入内伤状态(3回合内削弱敌人30%~35%的物理攻击和魔法攻击)",
+			label:      "w1/iceShoot",
+			mpCost:     28,
+			multiplier: 0.7,
+		},
+		{
 			name:       "暗影箭",
 			level:      1,
-			desc:       "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
+			desc:       "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗之箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
 			label:      "w1/darkShoot",
 			mpCost:     20,
 			multiplier: 0.72,
@@ -2847,6 +2951,15 @@ func TestBattleSkillProfileFromCapturedDescriptions(t *testing.T) {
 		}
 		if testCase.name == "毒矢" && (profile.StatusName != "中毒" || profile.StatusChance != 70 || profile.StatusRounds != 4 || profile.StatusDefensePercent != 20 || profile.StatusTickMin != 5 || profile.StatusTickMax != 10) {
 			t.Fatalf("expected 毒矢 captured poison status, got %+v", profile)
+		}
+		if testCase.name == "魔力速射" && (profile.AdditionalMagicBonus != 1.2 || profile.MagicAttackBoost != 0.25) {
+			t.Fatalf("expected 魔力速射 captured physical+magic profile, got %+v", profile)
+		}
+		if testCase.name == "冰箭速射" && (profile.StatusName != "内伤" || profile.StatusChance != 90 || profile.StatusRounds != 3 || profile.StatusAttackMin != 30 || profile.StatusAttackMax != 35) {
+			t.Fatalf("expected 冰箭速射 captured inner-injury profile, got %+v", profile)
+		}
+		if testCase.name == "夜叉棍法" && (profile.StatusName != "内伤" || profile.StatusChance != 90 || profile.StatusRounds != 3 || profile.StatusAttackMin != 32 || profile.StatusAttackMax != 32) {
+			t.Fatalf("expected 夜叉棍法 captured inner-injury profile, got %+v", profile)
 		}
 		if testCase.name == "奥义.轰雷矢" && (profile.DefenseType != "magic" || !profile.UseMagicAttack || profile.StatusName != "麻痹" || profile.StatusChance != 20 || profile.StatusTickMin != 30 || !profile.SkipTurn) {
 			t.Fatalf("expected 奥义.轰雷矢 captured magic/palsy profile, got %+v", profile)
@@ -3017,6 +3130,26 @@ func TestBattleSkillProfileUsesCapturedLevelWhenStoredDescriptionIsStale(t *test
 		t.Fatalf("expected 盘龙棍法 Lv1 captured profile to ignore stale description, got %+v", panLongGunFa)
 	}
 
+	piShanGunFa := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "劈山棍法",
+		Level:       5,
+		Type:        "oneE",
+		Description: "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@16&4@提升75%的物理伤害",
+	})
+	if piShanGunFa.SourceActionLabel != "w11/cutHill2" || piShanGunFa.MPCost != 16 || piShanGunFa.DamageMultiplier != 1.75 || piShanGunFa.SourceType != "oneE" {
+		t.Fatalf("expected 劈山棍法 Lv5 captured profile, got %+v", piShanGunFa)
+	}
+
+	yeChaGunFa := sourceBattleSkillProfile(session.RoleSkill{
+		Name:        "夜叉棍法",
+		Level:       1,
+		Type:        "oneE",
+		Description: "提升物理伤害并造成内伤",
+	})
+	if yeChaGunFa.SourceActionLabel != "w11/yaksa" || yeChaGunFa.MPCost != 15 || yeChaGunFa.DamageMultiplier != 1.12 || yeChaGunFa.SourceType != "oneE" || yeChaGunFa.StatusName != "内伤" || yeChaGunFa.StatusAttackMin != 32 || yeChaGunFa.StatusAttackMax != 32 {
+		t.Fatalf("expected 夜叉棍法 Lv1 captured profile to ignore stale description, got %+v", yeChaGunFa)
+	}
+
 	aoYiLiuHeGunFa := sourceBattleSkillProfile(session.RoleSkill{
 		Name:        "奥义.六合棍法",
 		Level:       1,
@@ -3091,6 +3224,18 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_盘龙棍法^ffffff&9@群体·攻击&8@战士 &10@棍&22@战斗&2@14&4@对所有敌人造成82%的物理伤害",
 		},
 		{
+			Name:        "劈山棍法",
+			Level:       5,
+			Type:        "oneE",
+			Description: "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@16&4@提升75%的物理伤害",
+		},
+		{
+			Name:        "夜叉棍法",
+			Level:       1,
+			Type:        "oneE",
+			Description: "f_s_夜叉棍法^5BC46D&9@单体·攻击&8@战士 &10@棍&22@战斗&2@15&4@提升12%的物理伤害&0;击中敌人时有90%的机率对敌人造成内伤(削减敌人32%的物理攻击和魔法攻击)3回合<br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font>",
+		},
+		{
 			Name:        "强力飞镖",
 			Level:       2,
 			Type:        "oneE",
@@ -3133,10 +3278,22 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 			Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@25&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升10%的物理伤害&0;进攻时增加15%（无视防御）的物理攻击力.",
 		},
 		{
+			Name:        "魔力速射",
+			Level:       5,
+			Type:        "oneE",
+			Description: "f_s_魔力速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@34&4@<font color='#00cc00'>特殊发动条件:需要【魔箭x1】</font><br>造成50%的物理伤害&0;并追加120%的魔法伤害(进攻时提高25%的魔法攻击力)",
+		},
+		{
+			Name:        "冰箭速射",
+			Level:       5,
+			Type:        "oneE",
+			Description: "f_s_冰箭速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【冰之箭x1】</font><br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font><br>造成70%的物理伤害&0;击中敌人时有90%的机率使敌人进入内伤状态(3回合内削弱敌人30%~35%的物理攻击和魔法攻击)",
+		},
+		{
 			Name:        "暗影箭",
 			Level:       1,
 			Type:        "oneE",
-			Description: "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
+			Description: "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗之箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
 		},
 		{
 			Name:        "毒矢",
@@ -3208,6 +3365,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	if command := byID[CommandPanLongGunFa]; command.Label != "盘龙棍法" || command.SourceType != "all" || command.Target != "enemy" || command.SourceActionLabel != "w11/circleDargon" || command.MPCost != 14 || command.DamageMultiplier != 0.82 {
 		t.Fatalf("expected captured 盘龙棍法 all-target command, got %+v", command)
 	}
+	if command := byID[CommandPiShanGunFa]; command.Label != "劈山棍法" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w11/cutHill2" || command.MPCost != 16 || command.DamageMultiplier != 1.75 {
+		t.Fatalf("expected captured 劈山棍法 Lv5 command, got %+v", command)
+	}
+	if command := byID[CommandYeChaGunFa]; command.Label != "夜叉棍法" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w11/yaksa" || command.MPCost != 15 || command.DamageMultiplier != 1.12 {
+		t.Fatalf("expected captured 夜叉棍法 Lv1 command, got %+v", command)
+	}
 	if command := byID[CommandQiangLiFeiBiao]; command.Label != "强力飞镖" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w3/powerDart" || command.MPCost != 20 || command.DamageMultiplier != 1.48 {
 		t.Fatalf("expected captured 强力飞镖 Lv2 command, got %+v", command)
 	}
@@ -3228,6 +3391,12 @@ func TestSourceBattleCommandDefinitionsUseCapturedSkillProfiles(t *testing.T) {
 	}
 	if command := byID[CommandGuanJiaLianShi]; command.Label != "贯甲连矢" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/breakArmorShoot2" || command.MPCost != 25 || command.DamageMultiplier != 1.1 {
 		t.Fatalf("expected captured 贯甲连矢 Lv2 command, got %+v", command)
+	}
+	if command := byID[CommandMoLiSuShe]; command.Label != "魔力速射" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/magicShoot" || command.MPCost != 34 || command.DamageMultiplier != 0.5 {
+		t.Fatalf("expected captured 魔力速射 Lv5 command, got %+v", command)
+	}
+	if command := byID[CommandBingJianSuShe]; command.Label != "冰箭速射" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/iceShoot" || command.MPCost != 28 || command.DamageMultiplier != 0.7 {
+		t.Fatalf("expected captured 冰箭速射 Lv5 command, got %+v", command)
 	}
 	if command := byID[CommandAnYingJian]; command.Label != "暗影箭" || command.SourceType != "oneE" || command.Target != "enemy" || command.SourceActionLabel != "w1/darkShoot" || command.MPCost != 20 || command.DamageMultiplier != 0.72 {
 		t.Fatalf("expected captured 暗影箭 Lv1 command, got %+v", command)
@@ -3521,6 +3690,248 @@ func TestPanLongGunFaHitsAllLivingEnemiesAndConsumesCapturedMPOnce(t *testing.T)
 	actor := runtime.cellByHandle("player_21424")
 	if actor == nil || actor.MP != 86 {
 		t.Fatalf("expected 盘龙棍法 to consume MP 14 once, got actor=%+v", actor)
+	}
+}
+
+func TestPiShanGunFaUsesCapturedLv5DamageAndCutHill2(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-pishan",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_21424",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "劈山棍法",
+				Level:       5,
+				Type:        "oneE",
+				Description: "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@16&4@提升75%的物理伤害",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-pishan",
+				Handle:   "player_21424",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Defense:  0,
+				Hit:      100,
+				Fat:      0,
+			},
+			{
+				BattleID: "battle-pishan",
+				Handle:   "enemy_1",
+				Camp:     CampEnemy,
+				HP:       500,
+				MaxHP:    500,
+				Attack:   1,
+				Defense:  0,
+				Dog:      0,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-pishan",
+		ActorHandle:  "player_21424",
+		CommandID:    CommandPiShanGunFa,
+		TargetHandle: "enemy_1",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 劈山棍法 to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 劈山棍法 action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "劈山棍法" || action.SourceMode != "1" || action.SourceActionLabel != "w11/cutHill2" || action.TargetHandle != "enemy_1" {
+		t.Fatalf("expected captured 劈山棍法 single-target action, got %+v", action)
+	}
+	if action.Damage != 175 || action.TargetHP != 325 || action.TargetActionStateCode != "0" {
+		t.Fatalf("expected 劈山棍法 Lv5 captured damage, got %+v", action)
+	}
+	actor := runtime.cellByHandle("player_21424")
+	target := runtime.cellByHandle("enemy_1")
+	if actor == nil || actor.MP != 84 || target == nil || target.HP != 325 {
+		t.Fatalf("expected 劈山棍法 to consume MP 16 and damage target, actor=%+v target=%+v", actor, target)
+	}
+	if len(action.RefreshInfos) != 2 || action.RefreshInfos[0].Handle != "player_21424" || action.RefreshInfos[0].MP != 84 || action.RefreshInfos[1].Handle != "enemy_1" || action.RefreshInfos[1].HP != 325 {
+		t.Fatalf("expected 劈山棍法 to refresh actor MP and target HP, got %+v", action.RefreshInfos)
+	}
+}
+
+func TestYeChaGunFaUsesCapturedLv1DamageAndInnerInjury(t *testing.T) {
+	var runtime *Runtime
+	var actor *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 500; index += 1 {
+		actorHandle := fmt.Sprintf("player_yaksa_%d", index)
+		candidate := &Runtime{
+			BattleID:         "battle-yaksa",
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     actorHandle,
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			RoleSkills: []session.RoleSkill{
+				{
+					Name:        "夜叉棍法",
+					Level:       1,
+					Type:        "oneE",
+					Description: "f_s_夜叉棍法^5BC46D&9@单体·攻击&8@战士 &10@棍&22@战斗&2@15&4@提升12%的物理伤害&0;击中敌人时有90%的机率对敌人造成内伤(削减敌人32%的物理攻击和魔法攻击)3回合<br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font>",
+				},
+			},
+			Cells: []CellInfoPush{
+				{
+					BattleID: "battle-yaksa",
+					Handle:   actorHandle,
+					Camp:     CampTeam,
+					HP:       500,
+					MaxHP:    500,
+					MP:       100,
+					MaxMP:    100,
+					Attack:   100,
+					Defense:  0,
+					Hit:      100,
+					Fat:      0,
+				},
+				{
+					BattleID:    "battle-yaksa",
+					Handle:      "enemy_yaksa",
+					Camp:        CampEnemy,
+					HP:          500,
+					MaxHP:       500,
+					Attack:      180,
+					MagicAttack: 10,
+					Defense:     0,
+					Dog:         0,
+				},
+			},
+		}
+		candidateActor := candidate.cellByHandle(actorHandle)
+		candidateTarget := candidate.cellByHandle("enemy_yaksa")
+		if candidate.hashBattleRollWithSalt(candidateActor, candidateTarget, CommandYeChaGunFa, "status:内伤") < 90 {
+			runtime = candidate
+			actor = candidateActor
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected to find deterministic 夜叉棍法 inner-injury roll below 90")
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-yaksa",
+		ActorHandle:  actor.Handle,
+		CommandID:    CommandYeChaGunFa,
+		TargetHandle: target.Handle,
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 夜叉棍法 to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 1 {
+		t.Fatalf("expected 夜叉棍法 action, got %+v", result.Actions)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "夜叉棍法" || action.SourceMode != "1" || action.SourceActionLabel != "w11/yaksa" || action.TargetHandle != "enemy_yaksa" {
+		t.Fatalf("expected captured 夜叉棍法 single-target action, got %+v", action)
+	}
+	if action.Damage != 112 || action.TargetHP != 388 || action.TargetActionStateCode != "0" {
+		t.Fatalf("expected 夜叉棍法 Lv1 captured damage, got %+v", action)
+	}
+	if actor.MP != 85 || target.HP != 388 || target.Attack != 122 || target.MagicAttack != 7 {
+		t.Fatalf("expected 夜叉棍法 to consume MP and apply 32%% inner injury, actor=%+v target=%+v", actor, target)
+	}
+	if len(result.BuffInfos) != 1 {
+		t.Fatalf("expected one 夜叉棍法 内伤 BuffInfo, got %+v", result.BuffInfos)
+	}
+	buff := result.BuffInfos[0]
+	if buff.Name != "内伤" || buff.Display != "26.png" || buff.Round != 3 || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 夜叉棍法 内伤 BuffInfo metadata, got %+v", buff)
+	}
+	if !strings.Contains(buff.Description, "降低对象58点物理攻击") || !strings.Contains(buff.Description, "3点魔法攻击力") {
+		t.Fatalf("expected captured 夜叉棍法 内伤 reduction description, got %q", buff.Description)
+	}
+	effect := runtime.StatusEffects[target.Handle].Effects["内伤"]
+	if effect.Name != "内伤" || effect.Display != "26.png" || effect.Rounds != 2 || effect.SourceHandle != actor.Handle || effect.SourceSkill != "夜叉棍法" || effect.AttackReduction != 58 || effect.MagicAttackReduction != 3 || effect.StatusAttackMin != 32 || effect.StatusAttackMax != 32 {
+		t.Fatalf("expected runtime 夜叉棍法 内伤 status to be recorded, got %+v", runtime.StatusEffects)
+	}
+}
+
+func TestYeChaGunFaDoesNotApplyInnerInjuryOnDodge(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-yaksa-dodge",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_yaksa_dodge",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		RoleSkills: []session.RoleSkill{
+			{
+				Name:        "夜叉棍法",
+				Level:       1,
+				Type:        "oneE",
+				Description: "f_s_夜叉棍法^5BC46D&9@单体·攻击&8@战士 &10@棍&22@战斗&2@15&4@提升12%的物理伤害&0;击中敌人时有90%的机率对敌人造成内伤(削减敌人32%的物理攻击和魔法攻击)3回合<br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font>",
+			},
+		},
+		Cells: []CellInfoPush{
+			{
+				BattleID: "battle-yaksa-dodge",
+				Handle:   "player_yaksa_dodge",
+				Camp:     CampTeam,
+				HP:       500,
+				MaxHP:    500,
+				MP:       100,
+				MaxMP:    100,
+				Attack:   100,
+				Hit:      0,
+			},
+			{
+				BattleID:    "battle-yaksa-dodge",
+				Handle:      "enemy_yaksa_dodge",
+				Camp:        CampEnemy,
+				HP:          500,
+				MaxHP:       500,
+				Attack:      180,
+				MagicAttack: 10,
+				Defense:     0,
+				Dog:         1,
+			},
+		},
+	}
+
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     "battle-yaksa-dodge",
+		ActorHandle:  "player_yaksa_dodge",
+		CommandID:    CommandYeChaGunFa,
+		TargetHandle: "enemy_yaksa_dodge",
+		Round:        1,
+		Sequence:     1,
+	})
+
+	if result.ErrorCode != "" {
+		t.Fatalf("expected 夜叉棍法 dodge action to be accepted, got %+v", result)
+	}
+	if len(result.Actions) < 1 || result.Actions[0].TargetActionStateCode != "1" || result.Actions[0].Damage != 0 {
+		t.Fatalf("expected 夜叉棍法 dodge to use captured state code 1, got %+v", result.Actions)
+	}
+	if len(result.BuffInfos) != 0 || len(runtime.StatusEffects) != 0 {
+		t.Fatalf("expected dodge to suppress 夜叉棍法 内伤 status, buffs=%+v effects=%+v", result.BuffInfos, runtime.StatusEffects)
 	}
 }
 

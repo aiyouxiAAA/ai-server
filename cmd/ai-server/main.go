@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"ai-server/internal/mall"
 	"ai-server/internal/protocol"
@@ -251,6 +252,8 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		conn:          conn,
 		nextServerSeq: 1000,
 	}
+	socketWriter.startOutbound()
+	defer socketWriter.stopOutbound()
 	socketSession := &packetSession{}
 	registeredTeamRoleID := ""
 	registeredSceneRoleID := ""
@@ -280,6 +283,7 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 			continue
 		}
 
+		packetStart := time.Now()
 		packet, err := protocol.Decode(data)
 		if err != nil {
 			log.Printf("[ai-server] decode packet failed: %v", err)
@@ -287,6 +291,7 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		}
 
 		result := handlePacketWithSession(store, packet, socketSession)
+		handleElapsed := time.Since(packetStart)
 		if !result.handled {
 			log.Printf("[ai-server] unsupported command: %d", packet.Cmd)
 			continue
@@ -816,6 +821,27 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		// syncWorldScenePresence 内部幂等返回,不产生任何 push。
 		if socketSession.selectedRole != nil && socketSession.playerBase != nil {
 			registeredSceneRoleID, registeredSceneMapID = syncWorldScenePresence(socketWriter, socketSession, registeredSceneRoleID, registeredSceneMapID)
+		}
+		totalElapsed := time.Since(packetStart)
+		queueDepth := socketWriter.outboundDepth()
+		if packet.Cmd != cmdHeartbeat && (handleElapsed > 100*time.Millisecond || totalElapsed > 100*time.Millisecond || queueDepth > 128) {
+			roleID := ""
+			mapID := 0
+			if socketSession.selectedRole != nil {
+				roleID = socketSession.selectedRole.RoleID
+			}
+			if socketSession.playerBase != nil {
+				mapID = socketSession.playerBase.MapID
+			}
+			log.Printf("[ai-server] packet timing cmd=%d seq=%d role=%s map=%d handle=%s total=%s outboundDepth=%d",
+				packet.Cmd,
+				packet.Seq,
+				roleID,
+				mapID,
+				handleElapsed.Round(time.Millisecond),
+				totalElapsed.Round(time.Millisecond),
+				queueDepth,
+			)
 		}
 	}
 }

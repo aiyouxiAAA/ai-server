@@ -32,6 +32,8 @@ const (
 	CommandKuangBao        = "skill-kuang-bao"
 	CommandHongYueZhan     = "skill-hong-yue-zhan"
 	CommandXueQie          = "skill-xue-qie"
+	CommandPiShanGunFa     = "skill-pi-shan-gun-fa"
+	CommandYeChaGunFa      = "skill-ye-cha-gun-fa"
 	CommandLiShiGunShu     = "skill-li-shi-gun-shu"
 	CommandPanLongGunFa    = "skill-pan-long-gun-fa"
 	CommandQiangLiFeiBiao  = "skill-qiang-li-fei-biao"
@@ -41,6 +43,8 @@ const (
 	CommandJieDuShu        = "skill-jie-du-shu"
 	CommandQiangShe        = "skill-qiang-she"
 	CommandGuanJiaLianShi  = "skill-guan-jia-lian-shi"
+	CommandBingJianSuShe   = "skill-bing-jian-su-she"
+	CommandMoLiSuShe       = "skill-mo-li-su-she"
 	CommandAnYingJian      = "skill-an-ying-jian"
 	CommandDuShi           = "skill-du-shi"
 	CommandLeiHunZhan      = "skill-lei-hun-zhan"
@@ -204,11 +208,12 @@ type CellInfoPush struct {
 }
 
 type StartCommandPush struct {
-	BattleID    string      `json:"battleId"`
-	ActorHandle string      `json:"actorHandle"`
-	Round       int         `json:"round"`
-	Sequence    int         `json:"sequence"`
-	Power       interface{} `json:"power"`
+	BattleID    string              `json:"battleId"`
+	ActorHandle string              `json:"actorHandle"`
+	Round       int                 `json:"round"`
+	Sequence    int                 `json:"sequence"`
+	Power       interface{}         `json:"power"`
+	Commands    []CommandDefinition `json:"commands,omitempty"`
 }
 
 type CommandDefinition struct {
@@ -361,6 +366,8 @@ type BattleStatusEffect struct {
 	TickMaxPercent          int
 	AttackIncrease          int
 	AttackReduction         int
+	StatusAttackMin         int
+	StatusAttackMax         int
 	MagicAttackReduction    int
 	DefenseReduction        int
 	MagicDefenseReduction   int
@@ -400,6 +407,8 @@ type commandProfile struct {
 	LifeStealChance      int
 	LifeStealRatio       float64
 	DirectAttackBonus    float64
+	AdditionalMagicBonus float64
+	MagicAttackBoost     float64
 	DefenseType          string
 	UseMagicAttack       bool
 	HitMultiplier        float64
@@ -410,6 +419,8 @@ type commandProfile struct {
 	StatusRounds         int
 	StatusChance         int
 	StatusDefensePercent int
+	StatusAttackMin      int
+	StatusAttackMax      int
 	StatusTickMin        int
 	StatusTickMax        int
 	SkipTurn             bool
@@ -555,6 +566,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			Round:       runtime.Round,
 			Sequence:    runtime.nextSequence,
 			Power:       runtime.powerFor(role.RoleID),
+			Commands:    runtime.commandDefinitionsForActor(role.RoleID),
 		},
 	}, true
 }
@@ -1066,6 +1078,7 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			Round:       runtime.Round,
 			Sequence:    runtime.nextSequence,
 			Power:       runtime.powerFor(nextActor.Handle),
+			Commands:    runtime.commandDefinitionsForActor(nextActor.Handle),
 		}
 		runtime.PendingStart = &start
 		runtime.PendingOver = nil
@@ -1216,6 +1229,8 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			AppliedAction:           sourceActionLabel,
 			SourceAttack:            sourceBattleStatusAttack(actor, profile),
 			DefenseReductionPercent: profile.StatusDefensePercent,
+			StatusAttackMin:         profile.StatusAttackMin,
+			StatusAttackMax:         profile.StatusAttackMax,
 			TickMinPercent:          profile.StatusTickMin,
 			TickMaxPercent:          profile.StatusTickMax,
 			SkipTurn:                profile.SkipTurn,
@@ -1224,6 +1239,8 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			runtime.applySlownessStatusEffect(actor, target, effect)
 		} else if strings.TrimSpace(effect.Name) == "中毒" {
 			runtime.applyPoisonStatusEffect(actor, target, effect)
+		} else if strings.TrimSpace(effect.Name) == "内伤" {
+			runtime.applyInnerInjuryStatusEffect(actor, target, effect)
 		} else if strings.TrimSpace(effect.Name) == "卸甲" {
 			runtime.applyArmorBreakStatusEffect(actor, target, effect)
 		} else if strings.TrimSpace(effect.Name) == "麻痹" {
@@ -1292,6 +1309,10 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "红月斩", 1)
 	case CommandXueQie:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "血切", 1)
+	case CommandPiShanGunFa:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "劈山棍法", 5)
+	case CommandYeChaGunFa:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "夜叉棍法", 1)
 	case CommandLiShiGunShu:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "力释棍术", 1)
 	case CommandPanLongGunFa:
@@ -1310,6 +1331,10 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "强射", 5)
 	case CommandGuanJiaLianShi:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "贯甲连矢", 2)
+	case CommandBingJianSuShe:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "冰箭速射", 5)
+	case CommandMoLiSuShe:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "魔力速射", 5)
 	case CommandAnYingJian:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "暗影箭", 1)
 	case CommandDuShi:
@@ -1858,6 +1883,10 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "红月斩")
 	case CommandXueQie:
 		return runtime.hasRoleSkillForActor(handle, "血切")
+	case CommandPiShanGunFa:
+		return runtime.hasRoleSkillForActor(handle, "劈山棍法")
+	case CommandYeChaGunFa:
+		return runtime.hasRoleSkillForActor(handle, "夜叉棍法")
 	case CommandLiShiGunShu:
 		return runtime.hasRoleSkillForActor(handle, "力释棍术")
 	case CommandPanLongGunFa:
@@ -1876,6 +1905,10 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "强射")
 	case CommandGuanJiaLianShi:
 		return runtime.hasRoleSkillForActor(handle, "贯甲连矢")
+	case CommandBingJianSuShe:
+		return runtime.hasRoleSkillForActor(handle, "冰箭速射")
+	case CommandMoLiSuShe:
+		return runtime.hasRoleSkillForActor(handle, "魔力速射")
 	case CommandAnYingJian:
 		return runtime.hasRoleSkillForActor(handle, "暗影箭")
 	case CommandDuShi:
@@ -1952,6 +1985,10 @@ func (runtime *Runtime) skillsForHandle(handle string) []session.RoleSkill {
 		}
 	}
 	return runtime.RoleSkills
+}
+
+func (runtime *Runtime) commandDefinitionsForActor(handle string) []CommandDefinition {
+	return sourceBattleCommandDefinitions(runtime.skillsForHandle(handle))
 }
 
 func (runtime *Runtime) itemsForHandle(handle string) []session.RoleItem {
@@ -2084,6 +2121,28 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusTickMin = 5
 		profile.StatusTickMax = 10
 	}
+	if name == "冰箭速射" {
+		profile.StatusName = "内伤"
+		profile.StatusDisplay = "26.png"
+		profile.StatusRounds = 3
+		profile.StatusChance = 90
+		profile.StatusDescription = "削弱敌人物理攻击和魔法攻击"
+		profile.StatusAttackMin = 30
+		profile.StatusAttackMax = 35
+	}
+	if name == "夜叉棍法" {
+		profile.StatusName = "内伤"
+		profile.StatusDisplay = "26.png"
+		profile.StatusRounds = 3
+		profile.StatusChance = 90
+		profile.StatusDescription = "削弱敌人物理攻击和魔法攻击"
+		profile.StatusAttackMin = 32
+		profile.StatusAttackMax = 32
+	}
+	if name == "魔力速射" {
+		profile.AdditionalMagicBonus = 1.2
+		profile.MagicAttackBoost = 0.25
+	}
 	if name == "奥义.轰雷矢" {
 		profile.DefenseType = "magic"
 		profile.UseMagicAttack = true
@@ -2170,6 +2229,10 @@ func sourceBattleCommandDefinitions(skills []session.RoleSkill) []CommandDefinit
 	return commands
 }
 
+func CommandDefinitionsForSkills(skills []session.RoleSkill) []CommandDefinition {
+	return sourceBattleCommandDefinitions(skills)
+}
+
 func sourceBattleCommandDefinitionFromSkill(label string, profile commandProfile) CommandDefinition {
 	commandID := sourceBattleSkillCommandID(label)
 	if commandID == "" && strings.TrimSpace(label) == "普通攻击" {
@@ -2211,6 +2274,10 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandHongYueZhan
 	case "血切":
 		return CommandXueQie
+	case "劈山棍法":
+		return CommandPiShanGunFa
+	case "夜叉棍法":
+		return CommandYeChaGunFa
 	case "力释棍术":
 		return CommandLiShiGunShu
 	case "盘龙棍法":
@@ -2229,6 +2296,10 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandQiangShe
 	case "贯甲连矢":
 		return CommandGuanJiaLianShi
+	case "冰箭速射":
+		return CommandBingJianSuShe
+	case "魔力速射":
+		return CommandMoLiSuShe
 	case "暗影箭":
 		return CommandAnYingJian
 	case "毒矢":
@@ -2251,7 +2322,7 @@ func sourceBattleSkillSourceType(name string, fallbackType string) string {
 		return sourceType
 	}
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "强射", "贯甲连矢", "暗影箭", "毒矢", "奥义.雷魂斩", "奥义.轰雷矢", "奥义.暗杀者", "奥义.六合棍法":
+	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "劈山棍法", "夜叉棍法", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "强射", "贯甲连矢", "冰箭速射", "魔力速射", "暗影箭", "毒矢", "奥义.雷魂斩", "奥义.轰雷矢", "奥义.暗杀者", "奥义.六合棍法":
 		return "oneE"
 	case "狂爆", "解毒术", "力释棍术":
 		return "own"
@@ -2309,6 +2380,10 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandHongYueZhan
 	case "血切":
 		return CommandXueQie
+	case "劈山棍法":
+		return CommandPiShanGunFa
+	case "夜叉棍法":
+		return CommandYeChaGunFa
 	case "力释棍术":
 		return CommandLiShiGunShu
 	case "盘龙棍法":
@@ -2327,6 +2402,10 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandQiangShe
 	case "贯甲连矢":
 		return CommandGuanJiaLianShi
+	case "冰箭速射":
+		return CommandBingJianSuShe
+	case "魔力速射":
+		return CommandMoLiSuShe
 	case "暗影箭":
 		return CommandAnYingJian
 	case "毒矢":
@@ -2405,6 +2484,25 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Icon:        "182.png",
 			Description: fallbackXueQieDescription(level),
 		}
+	case "劈山棍法":
+		return session.RoleSkill{
+			Name:        "劈山棍法",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "185.png",
+			Description: fallbackPiShanGunFaDescription(level),
+		}
+	case "夜叉棍法":
+		if level != 1 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "夜叉棍法",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "188.png",
+			Description: fallbackYeChaGunFaDescription(level),
+		}
 	case "力释棍术":
 		if level != 1 {
 			return session.RoleSkill{}
@@ -2482,6 +2580,22 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Type:        "oneE",
 			Icon:        "236.png",
 			Description: fallbackGuanJiaLianShiDescription(level),
+		}
+	case "冰箭速射":
+		return session.RoleSkill{
+			Name:        "冰箭速射",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "233.png",
+			Description: fallbackBingJianSuSheDescription(level),
+		}
+	case "魔力速射":
+		return session.RoleSkill{
+			Name:        "魔力速射",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "234.png",
+			Description: fallbackMoLiSuSheDescription(level),
 		}
 	case "暗影箭":
 		return session.RoleSkill{
@@ -2588,6 +2702,28 @@ func fallbackXueQieDescription(level int) string {
 	}
 }
 
+func fallbackPiShanGunFaDescription(level int) string {
+	switch level {
+	case 2:
+		return "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@10&4@提升60%的物理伤害"
+	case 3:
+		return "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@12&4@提升65%的物理伤害"
+	case 4:
+		return "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@14&4@提升70%的物理伤害"
+	case 5:
+		return "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@16&4@提升75%的物理伤害"
+	default:
+		return "f_s_劈山棍法^ffffff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@8&4@提升55%的物理伤害"
+	}
+}
+
+func fallbackYeChaGunFaDescription(level int) string {
+	if level != 1 {
+		return ""
+	}
+	return "f_s_夜叉棍法^5BC46D&9@单体·攻击&8@战士 &10@棍&22@战斗&2@15&4@提升12%的物理伤害&0;击中敌人时有90%的机率对敌人造成内伤(削减敌人32%的物理攻击和魔法攻击)3回合<br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font>"
+}
+
 func fallbackQiangLiFeiBiaoDescription(level int) string {
 	switch level {
 	case 2:
@@ -2655,10 +2791,28 @@ func fallbackGuanJiaLianShiDescription(level int) string {
 	}
 }
 
+func fallbackBingJianSuSheDescription(level int) string {
+	switch level {
+	case 5:
+		return "f_s_冰箭速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【冰之箭x1】</font><br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font><br>造成70%的物理伤害&0;击中敌人时有90%的机率使敌人进入内伤状态(3回合内削弱敌人30%~35%的物理攻击和魔法攻击)"
+	default:
+		return ""
+	}
+}
+
+func fallbackMoLiSuSheDescription(level int) string {
+	switch level {
+	case 5:
+		return "f_s_魔力速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@34&4@<font color='#00cc00'>特殊发动条件:需要【魔箭x1】</font><br>造成50%的物理伤害&0;并追加120%的魔法伤害(进攻时提高25%的魔法攻击力)"
+	default:
+		return ""
+	}
+}
+
 func fallbackAnYingJianDescription(level int) string {
 	switch level {
 	case 1:
-		return "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合"
+		return "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗之箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合"
 	default:
 		return ""
 	}
@@ -2718,6 +2872,10 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w8/redMoonAtk"
 	case "血切":
 		return "w8/cutBlood"
+	case "劈山棍法":
+		return "w11/cutHill2"
+	case "夜叉棍法":
+		return "w11/yaksa"
 	case "力释棍术":
 		return "w11/releasePower"
 	case "盘龙棍法":
@@ -2736,6 +2894,10 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w1/powerShoot"
 	case "贯甲连矢":
 		return "w1/breakArmorShoot2"
+	case "冰箭速射":
+		return "w1/iceShoot"
+	case "魔力速射":
+		return "w1/magicShoot"
 	case "暗影箭":
 		return "w1/darkShoot"
 	case "毒矢":
@@ -2840,6 +3002,24 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		return 0.72
 	case "血切":
 		return 0.3
+	case "劈山棍法":
+		switch level {
+		case 2:
+			return 1.6
+		case 3:
+			return 1.65
+		case 4:
+			return 1.7
+		case 5:
+			return 1.75
+		default:
+			return 1.55
+		}
+	case "夜叉棍法":
+		if level == 1 {
+			return 1.12
+		}
+		return 1
 	case "力释棍术":
 		if level == 1 {
 			return 0
@@ -2877,6 +3057,16 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		}
 		if level == 2 {
 			return 1.1
+		}
+		return 1
+	case "冰箭速射":
+		if level == 5 {
+			return 0.7
+		}
+		return 1
+	case "魔力速射":
+		if level == 5 {
+			return 0.5
 		}
 		return 1
 	case "暗影箭":
@@ -2945,6 +3135,24 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		return 40
 	case "血切":
 		return 19
+	case "劈山棍法":
+		switch level {
+		case 2:
+			return 10
+		case 3:
+			return 12
+		case 4:
+			return 14
+		case 5:
+			return 16
+		default:
+			return 8
+		}
+	case "夜叉棍法":
+		if level == 1 {
+			return 15
+		}
+		return 0
 	case "力释棍术":
 		if level == 1 {
 			return 10
@@ -2982,6 +3190,16 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		}
 		if level == 2 {
 			return 25
+		}
+		return 0
+	case "冰箭速射":
+		if level == 5 {
+			return 28
+		}
+		return 0
+	case "魔力速射":
+		if level == 5 {
+			return 34
 		}
 		return 0
 	case "暗影箭":
@@ -3065,6 +3283,13 @@ func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandPro
 		attack *= 2
 	}
 	damage := maxInt(1, int(math.Round(float64(attack)*profile.DamageMultiplier))-defense)
+	if profile.AdditionalMagicBonus > 0 && actor.MagicAttack > 0 {
+		magicAttack := float64(actor.MagicAttack)
+		if profile.MagicAttackBoost > 0 {
+			magicAttack *= 1 + profile.MagicAttackBoost
+		}
+		damage += maxInt(1, int(math.Round(magicAttack*profile.AdditionalMagicBonus)))
+	}
 	if profile.DirectAttackBonus > 0 {
 		if bonus := int(math.Round(float64(attack) * profile.DirectAttackBonus)); bonus > 0 {
 			damage += bonus
@@ -3224,6 +3449,44 @@ func (runtime *Runtime) applyPoisonStatusEffect(actor *CellInfoPush, target *Cel
 	return true
 }
 
+func (runtime *Runtime) applyInnerInjuryStatusEffect(actor *CellInfoPush, target *CellInfoPush, effect BattleStatusEffect) bool {
+	if runtime == nil || target == nil || strings.TrimSpace(effect.Name) == "" || effect.Rounds <= 0 {
+		return false
+	}
+	runtime.restoreExistingStatusEffect(target.Handle, "内伤")
+	minPercent := effect.StatusAttackMin
+	if minPercent <= 0 {
+		minPercent = equipmentInnerInjuryDefaultMin
+	}
+	maxPercent := effect.StatusAttackMax
+	if maxPercent < minPercent {
+		maxPercent = minPercent
+	}
+	percent := minPercent
+	if maxPercent > minPercent && actor != nil {
+		roll := runtime.hashBattleRollWithSalt(actor, target, effect.AppliedAction, "status:内伤:percent")
+		percent += roll % (maxPercent - minPercent + 1)
+	}
+	attackReduction := percentReduction(target.Attack, percent)
+	magicReduction := percentReduction(target.MagicAttack, percent)
+	if attackReduction > 0 {
+		target.Attack = maxInt(0, target.Attack-attackReduction)
+	}
+	if magicReduction > 0 {
+		target.MagicAttack = maxInt(0, target.MagicAttack-magicReduction)
+	}
+	effect.Name = "内伤"
+	if strings.TrimSpace(effect.Display) == "" {
+		effect.Display = "26.png"
+	}
+	effect.Description = fmt.Sprintf("降低对象%d点物理攻击和%d点魔法攻击力", attackReduction, magicReduction)
+	effect.AttackReduction = attackReduction
+	effect.MagicAttackReduction = magicReduction
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+	return true
+}
+
 func (runtime *Runtime) applyPalsyStatusEffect(actor *CellInfoPush, target *CellInfoPush, effect BattleStatusEffect) bool {
 	if runtime == nil || target == nil || strings.TrimSpace(effect.Name) == "" || effect.Rounds <= 0 {
 		return false
@@ -3323,32 +3586,17 @@ func (runtime *Runtime) applyEquipmentInnerInjuryOnHit(actor *CellInfoPush, targ
 		roll := runtime.hashBattleRollWithSalt(actor, target, commandID, "equipment:内伤:percent")
 		percent += roll % (effectConfig.MaxPercent - effectConfig.MinPercent + 1)
 	}
-	attackReduction := 0
-	if target.Attack > 0 && percent > 0 {
-		attackReduction = maxInt(1, int(math.Round(float64(target.Attack)*float64(percent)/100)))
-	}
-	magicReduction := 0
-	if target.MgcDefense > 0 && percent > 0 {
-		magicReduction = maxInt(1, int(math.Round(float64(target.MgcDefense)*float64(percent)/100)))
-	}
-	runtime.restoreExistingStatusEffect(target.Handle, "内伤")
-	if attackReduction > 0 {
-		target.Attack = maxInt(0, target.Attack-attackReduction)
-	}
 	effect := BattleStatusEffect{
-		Name:                 "内伤",
-		Display:              "26.png",
-		Description:          fmt.Sprintf("降低对象%d点物理攻击和%d点魔法攻击力", attackReduction, magicReduction),
-		Rounds:               effectConfig.Rounds,
-		SourceHandle:         actor.Handle,
-		SourceSkill:          "绯雨匕首",
-		AppliedAction:        "equipment:inner-injury",
-		AttackReduction:      attackReduction,
-		MagicAttackReduction: magicReduction,
+		Name:            "内伤",
+		Display:         "26.png",
+		Rounds:          effectConfig.Rounds,
+		SourceHandle:    actor.Handle,
+		SourceSkill:     "绯雨匕首",
+		AppliedAction:   "equipment:inner-injury",
+		StatusAttackMin: percent,
+		StatusAttackMax: percent,
 	}
-	runtime.applyStatusEffect(target.Handle, effect)
-	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
-	return true
+	return runtime.applyInnerInjuryStatusEffect(actor, target, effect)
 }
 
 func sourceEquipmentInnerInjuryEffect(items []session.RoleItem) (equipmentInnerInjuryEffect, bool) {
@@ -3497,6 +3745,9 @@ func (runtime *Runtime) restoreStatusEffect(target *CellInfoPush, effect BattleS
 	}
 	if effect.AttackReduction > 0 {
 		target.Attack += effect.AttackReduction
+	}
+	if effect.MagicAttackReduction > 0 {
+		target.MagicAttack += effect.MagicAttackReduction
 	}
 	if effect.AttackIncrease > 0 {
 		target.Attack = maxInt(0, target.Attack-effect.AttackIncrease)

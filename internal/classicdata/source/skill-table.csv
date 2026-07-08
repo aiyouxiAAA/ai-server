@@ -19,6 +19,8 @@
 "skill-ao-yi-liu-he-gun-fa","skill","奥义.六合棍法","oneE","奥义.六合棍法","w11/liuhe","enemy","3.1","24","0","0","0"
 "skill-qiang-she","skill","强射","oneE","强射","w1/powerShoot","enemy","1.45","18","0","0","0"
 "skill-guan-jia-lian-shi","skill","贯甲连矢","oneE","贯甲连矢","w1/breakArmorShoot2","enemy","1.1","25","0","0","0.15"
+"skill-bing-jian-su-she","skill","冰箭速射","oneE","冰箭速射","w1/iceShoot","enemy","0.7","28","0","0","0"
+"skill-mo-li-su-she","skill","魔力速射","oneE","魔力速射","w1/magicShoot","enemy","0.5","34","0","0","0"
 "skill-an-ying-jian","skill","暗影箭","oneE","暗影箭","w1/darkShoot","enemy","0.72","20","0","0","0"
 "skill-du-shi","skill","毒矢","oneE","毒矢","w1/drugShoot","enemy","0.9","15","0","0","0"
 "skill-ao-yi-hong-lei-shi","skill","奥义.轰雷矢","oneE","奥义.轰雷矢","w1/bombThunderShoot","enemy","2.2","26","0","0","0"

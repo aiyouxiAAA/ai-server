@@ -342,7 +342,7 @@ func TestStoreCapturedWoodcutter222UsesCapturedSkillsAndFastPanel(t *testing.T) 
 	}
 }
 
-func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
+func TestStoreCapturedWoodcutter333UsesCapturedLatestRuntime(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "33333333", "33333333")
 	createResponse := store.CreateRole(RoleCreateRequest{
@@ -363,31 +363,34 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 	if role.DisplayName != "333" || playerBase.DisplayName != "333" {
 		t.Fatalf("expected 333 account to keep local role name 333, role=%q base=%q", role.DisplayName, playerBase.DisplayName)
 	}
-	if role.Level != 40 || role.Exp != 4361496 || role.Voc != "游侠" ||
-		role.AGI != 162 || role.STR != 66 || role.INT != 19 || role.CON != 0 || role.LCK != 19 {
-		t.Fatalf("expected captured level 40 woodcutter summary, got %+v", role)
+	if role.Level != 44 || role.Exp != 5768622 || role.Voc != "游侠" ||
+		role.AGI != 175 || role.STR != 73 || role.INT != 19 || role.CON != 0 || role.LCK != 19 {
+		t.Fatalf("expected captured latest woodcutter summary, got %+v", role)
 	}
 	if role.MapID != 15 || playerBase.MapID != 15 {
 		t.Fatalf("expected captured final map 15, role=%d base=%d", role.MapID, playerBase.MapID)
 	}
-	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1265 || playerBase.RoleState.MP != 669 ||
-		playerBase.RoleState.Lv != 40 || playerBase.RoleState.Exp != 4361496 || playerBase.RoleState.Speed != 140 {
-		t.Fatalf("expected captured level 40 role state, got %+v", playerBase.RoleState)
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1337 || playerBase.RoleState.MP != 557 ||
+		playerBase.RoleState.Lv != 44 || playerBase.RoleState.Exp != 5768622 || playerBase.RoleState.Speed != 140 {
+		t.Fatalf("expected captured latest role state, got %+v", playerBase.RoleState)
 	}
-	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1265 || playerBase.RolePhysique.MaxMP != 669 ||
-		playerBase.RolePhysique.PhyAtk != 264 || playerBase.RolePhysique.MgcAtk != 36 ||
-		playerBase.RolePhysique.PhyDef != 260 || playerBase.RolePhysique.MgcDef != 87 ||
-		playerBase.RolePhysique.Hit != 453 || playerBase.RolePhysique.Dog != 253 || playerBase.RolePhysique.Fat != 578 {
-		t.Fatalf("expected captured level 40 role physique, got %+v", playerBase.RolePhysique)
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1365 || playerBase.RolePhysique.MaxMP != 709 ||
+		playerBase.RolePhysique.PhyAtk != 297 || playerBase.RolePhysique.MgcAtk != 297 ||
+		playerBase.RolePhysique.PhyDef != 267 || playerBase.RolePhysique.MgcDef != 87 ||
+		playerBase.RolePhysique.Hit != 517 || playerBase.RolePhysique.Dog != 268 || playerBase.RolePhysique.Fat != 577 {
+		t.Fatalf("expected captured latest role physique, got %+v", playerBase.RolePhysique)
 	}
-	for _, part := range []string{"a=29", "b=22", "c=26", "p=64", "se=19", "wr=39", "w3=49"} {
+	for _, part := range []string{"a=29", "b=22", "c=26", "p=64", "se=19", "wr=39", "w1=55"} {
 		if !strings.Contains(role.SourceQuery, part) || !strings.Contains(playerBase.BattleSourceQuery, part) {
-			t.Fatalf("expected captured 40 source query to include %s, role=%q base=%q", part, role.SourceQuery, playerBase.BattleSourceQuery)
+			t.Fatalf("expected captured latest source query to include %s, role=%q base=%q", part, role.SourceQuery, playerBase.BattleSourceQuery)
 		}
+	}
+	if strings.Contains(role.SourceQuery, "w3=49") || strings.Contains(playerBase.BattleSourceQuery, "w3=49") {
+		t.Fatalf("expected captured latest source query to drop stale dagger appearance, role=%q base=%q", role.SourceQuery, playerBase.BattleSourceQuery)
 	}
 
 	skills, cap, ok := store.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
-	if !ok || cap != 12 || len(skills) != 9 {
+	if !ok || cap != 12 || len(skills) != 12 {
 		t.Fatalf("expected captured skills for 333, ok=%v cap=%d skills=%+v", ok, cap, skills)
 	}
 	expectedSkillOrder := []string{
@@ -397,9 +400,12 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 		"精神力",
 		"爆发力",
 		"幻影",
-		"强射",
 		"贯甲连矢",
-		"强力飞镖",
+		"暗影箭",
+		"奥义.轰雷矢",
+		"毒矢",
+		"魔力速射",
+		"冰箭速射",
 	}
 	for index, expectedName := range expectedSkillOrder {
 		if skills[index].Name != expectedName {
@@ -410,19 +416,28 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 	for _, skill := range skills {
 		byName[skill.Name] = skill
 	}
-	for _, staleName := range []string{"奥义.暗杀者", "投毒", "疾风刺", "解毒术", "魔力突刺"} {
+	for _, staleName := range []string{"强射", "强力飞镖", "奥义.暗杀者", "投毒", "疾风刺", "解毒术", "魔力突刺"} {
 		if _, ok := byName[staleName]; ok {
-			t.Fatalf("expected 333 skillInfo to follow 20260627 capture without stale dagger skill %s, got %+v", staleName, skills)
+			t.Fatalf("expected 333 skillInfo to follow latest bow capture without stale dagger skill %s, got %+v", staleName, skills)
 		}
-	}
-	if skill := byName["强力飞镖"]; skill.Level != 5 || skill.Icon != "261.png" || !strings.Contains(skill.Description, "&2@32") {
-		t.Fatalf("expected 333 captured 强力飞镖 Lv5, got %+v", skill)
-	}
-	if skill := byName["强射"]; skill.Level != 5 || skill.Icon != "231.png" {
-		t.Fatalf("expected 333 captured 强射 Lv5, got %+v", skill)
 	}
 	if skill := byName["贯甲连矢"]; skill.Level != 5 || skill.Icon != "236.png" || !strings.Contains(skill.Description, "&2@28") {
 		t.Fatalf("expected 333 captured final 贯甲连矢 Lv5, got %+v", skill)
+	}
+	if skill := byName["暗影箭"]; skill.Level != 1 || skill.Icon != "235.png" || !strings.Contains(skill.Description, "暗影箭x1") {
+		t.Fatalf("expected 333 captured 暗影箭 Lv1, got %+v", skill)
+	}
+	if skill := byName["毒矢"]; skill.Level != 1 || skill.Icon != "237.png" || !strings.Contains(skill.Description, "毒箭x1") {
+		t.Fatalf("expected 333 captured 毒矢 Lv1, got %+v", skill)
+	}
+	if skill := byName["奥义.轰雷矢"]; skill.Level != 1 || skill.Icon != "238.png" || !strings.Contains(skill.Description, "需要2格魂元") {
+		t.Fatalf("expected 333 captured 奥义.轰雷矢 Lv1, got %+v", skill)
+	}
+	if skill := byName["魔力速射"]; skill.Level != 5 || skill.Icon != "234.png" || !strings.Contains(skill.Description, "魔箭x1") || !strings.Contains(skill.Description, "&2@34") {
+		t.Fatalf("expected 333 captured 魔力速射 Lv5, got %+v", skill)
+	}
+	if skill := byName["冰箭速射"]; skill.Level != 5 || skill.Icon != "233.png" || !strings.Contains(skill.Description, "冰之箭x1") || !strings.Contains(skill.Description, "90%的机率") {
+		t.Fatalf("expected 333 captured 冰箭速射 Lv5, got %+v", skill)
 	}
 	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
 	fastPanelByIndex := map[int]RoleFastPanelEntry{}
@@ -431,7 +446,11 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 	}
 	if !ok || len(fastPanel) != 9 ||
 		fastPanelByIndex[1].Name != "贯甲连矢" ||
-		fastPanelByIndex[2].Name != "强射" ||
+		fastPanelByIndex[2].Name != "魔力速射" ||
+		fastPanelByIndex[3].Name != "暗影箭" ||
+		fastPanelByIndex[4].Name != "毒矢" ||
+		fastPanelByIndex[5].Name != "奥义.轰雷矢" ||
+		fastPanelByIndex[6].Name != "冰箭速射" ||
 		fastPanelByIndex[8].Name != "馒头" ||
 		fastPanelByIndex[9].Name != "小瓶甘露" {
 		t.Fatalf("expected 333 captured fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
@@ -440,13 +459,29 @@ func TestStoreCapturedWoodcutter333UsesCapturedLevel40Runtime(t *testing.T) {
 	if !ok {
 		t.Fatal("expected 333 captured bag items")
 	}
-	piercingArrow, ok := findRoleItemByName(bagItems, "穿甲箭")
-	if !ok || piercingArrow.Count != 1900 || piercingArrow.Display != "246.png" {
+	piercingArrow, ok := testRoleItemByName(bagItems, "穿甲箭")
+	if !ok || piercingArrow.Count != 1319 || piercingArrow.Display != "246.png" {
 		t.Fatalf("expected 333 captured bag to include 穿甲箭 for 贯甲连矢, ok=%v item=%+v bag=%+v", ok, piercingArrow, bagItems)
+	}
+	darkArrow, ok := testRoleItemByName(bagItems, "暗之箭")
+	if !ok || darkArrow.Count != 39 || darkArrow.Display != "245.png" {
+		t.Fatalf("expected 333 captured bag to include 暗之箭 for 暗影箭, ok=%v item=%+v bag=%+v", ok, darkArrow, bagItems)
+	}
+	poisonArrow, ok := testRoleItemByName(bagItems, "毒箭")
+	if !ok || poisonArrow.Count != 9 || poisonArrow.Display != "247.png" {
+		t.Fatalf("expected 333 captured bag to include 毒箭 for 毒矢, ok=%v item=%+v bag=%+v", ok, poisonArrow, bagItems)
+	}
+	iceArrow, ok := testRoleItemByName(bagItems, "冰之箭")
+	if !ok || iceArrow.Count != 50 || iceArrow.Display != "243.png" {
+		t.Fatalf("expected 333 captured bag to include 冰之箭 for 冰箭速射, ok=%v item=%+v bag=%+v", ok, iceArrow, bagItems)
+	}
+	magicArrow, ok := testRoleItemByName(bagItems, "魔箭")
+	if !ok || magicArrow.Count != 50 || magicArrow.Display != "244.png" {
+		t.Fatalf("expected 333 captured bag to include 魔箭 for 魔力速射, ok=%v item=%+v bag=%+v", ok, magicArrow, bagItems)
 	}
 }
 
-func TestCapturedWoodcutter333RuntimeDefaultsBackfillPiercingArrows(t *testing.T) {
+func TestCapturedWoodcutter333RuntimeDefaultsBackfillBowMaterialsAndEquipment(t *testing.T) {
 	role := withRoleRuntimeDefaults(RoleSummary{
 		RoleID:      "acct-333-role-legacy",
 		DisplayName: "333",
@@ -461,16 +496,71 @@ func TestCapturedWoodcutter333RuntimeDefaultsBackfillPiercingArrows(t *testing.T
 			ItemLevel:   1,
 		}},
 	})
-	if _, ok := findRoleItemByName(role.Items, "飞镖"); !ok {
+	if _, ok := testRoleItemByName(role.Items, "飞镖"); !ok {
 		t.Fatalf("expected existing 333 bag items to be preserved, got %+v", role.Items)
 	}
-	piercingArrow, ok := findRoleItemByName(role.Items, "穿甲箭")
-	if !ok || piercingArrow.Type != "背包" || piercingArrow.Count != 1900 || piercingArrow.Display != "246.png" {
+	if role.RolePhysique == nil || role.RolePhysique.PhyAtk != 297 || role.RolePhysique.MgcAtk != role.RolePhysique.PhyAtk {
+		t.Fatalf("expected 333 runtime defaults to mirror magic attack to physical attack, got %+v", role.RolePhysique)
+	}
+	piercingArrow, ok := testRoleItemByName(role.Items, "穿甲箭")
+	if !ok || piercingArrow.Type != "背包" || piercingArrow.Count != 1319 || piercingArrow.Display != "246.png" {
 		t.Fatalf("expected legacy 333 bag to backfill 穿甲箭 for 贯甲连矢, ok=%v item=%+v items=%+v", ok, piercingArrow, role.Items)
+	}
+	darkArrow, ok := testRoleItemByName(role.Items, "暗之箭")
+	if !ok || darkArrow.Type != "背包" || darkArrow.Count != 39 || darkArrow.Display != "245.png" {
+		t.Fatalf("expected legacy 333 bag to backfill 暗之箭 for 暗影箭, ok=%v item=%+v items=%+v", ok, darkArrow, role.Items)
+	}
+	poisonArrow, ok := testRoleItemByName(role.Items, "毒箭")
+	if !ok || poisonArrow.Type != "背包" || poisonArrow.Count != 9 || poisonArrow.Display != "247.png" {
+		t.Fatalf("expected legacy 333 bag to backfill 毒箭 for 毒矢, ok=%v item=%+v items=%+v", ok, poisonArrow, role.Items)
+	}
+	byName := map[string]RoleItem{}
+	for _, item := range role.Items {
+		if item.Type == "装备" {
+			byName[item.Name] = item
+		}
+	}
+	for name, expected := range map[string]struct {
+		index   int
+		display string
+	}{
+		"万相":   {index: 3, display: "58.png"},
+		"骷髅戒指": {index: 6, display: "759.png"},
+		"银耳坠":  {index: 7, display: "762.png"},
+		"翡翠项链": {index: 8, display: "760.png"},
+	} {
+		item := byName[name]
+		if item.Name == "" || item.Index != expected.index || item.Display != expected.display {
+			t.Fatalf("expected legacy 333 equipment %s at %d display %s, got %+v", name, expected.index, expected.display, item)
+		}
 	}
 }
 
-func TestStoreCapturedWarrior444UsesCapturedLevel40Runtime(t *testing.T) {
+func TestCapturedWoodcutter333LatestEquipmentTemplates(t *testing.T) {
+	for name, expected := range map[string]struct {
+		index           int
+		display         string
+		descriptionPart string
+	}{
+		"万相":   {index: 3, display: "58.png", descriptionPart: "武器·弓系"},
+		"骷髅戒指": {index: 6, display: "759.png", descriptionPart: "封印抗性:+10%"},
+		"银耳坠":  {index: 7, display: "762.png", descriptionPart: "眩晕抗性:+10%"},
+		"翡翠项链": {index: 8, display: "760.png", descriptionPart: "混乱抗性:+10%"},
+	} {
+		template, ok := CapturedRoleItemTemplate(name)
+		if !ok {
+			t.Fatalf("expected captured 333 equipment template for %s", name)
+		}
+		if template.Type != "装备" || template.ItemType != "equip" || template.Index != expected.index || template.Display != expected.display {
+			t.Fatalf("expected %s template at equipment index %d display %s, got %+v", name, expected.index, expected.display, template)
+		}
+		if !strings.Contains(template.Description, expected.descriptionPart) {
+			t.Fatalf("expected %s template description to include %q, got %q", name, expected.descriptionPart, template.Description)
+		}
+	}
+}
+
+func TestStoreCapturedWarrior444UsesCapturedLevel44Runtime(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "44444444", "44444444")
 	createResponse := store.CreateRole(RoleCreateRequest{
@@ -491,27 +581,53 @@ func TestStoreCapturedWarrior444UsesCapturedLevel40Runtime(t *testing.T) {
 	if role.DisplayName != "444" || playerBase.DisplayName != "444" {
 		t.Fatalf("expected 444 account to keep local role name 444, role=%q base=%q", role.DisplayName, playerBase.DisplayName)
 	}
-	if role.Level != 40 || role.Exp != 4396996 || role.Voc != "战士" ||
-		role.AGI != 63 || role.STR != 155 || role.INT != 5 || role.CON != 3 || role.LCK != 0 {
-		t.Fatalf("expected captured level 40 warrior summary, got %+v", role)
+	if role.Level != 44 || role.Exp != 5793804 || role.Voc != "战士" ||
+		role.AGI != 76 || role.STR != 168 || role.INT != 5 || role.CON != 0 || role.LCK != 0 {
+		t.Fatalf("expected captured level 44 warrior summary, got %+v", role)
 	}
-	if role.MapID != 15 || playerBase.MapID != 15 {
-		t.Fatalf("expected captured final map 15, role=%d base=%d", role.MapID, playerBase.MapID)
+	if role.MapID != 1 || playerBase.MapID != 1 {
+		t.Fatalf("expected captured final map 1, role=%d base=%d", role.MapID, playerBase.MapID)
 	}
-	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1668 || playerBase.RoleState.MP != 436 ||
-		playerBase.RoleState.Lv != 40 || playerBase.RoleState.Exp != 4396996 || playerBase.RoleState.Speed != 147 {
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1344 || playerBase.RoleState.MP != 390 ||
+		playerBase.RoleState.Lv != 44 || playerBase.RoleState.Exp != 5793804 || playerBase.RoleState.Speed != 147 {
 		t.Fatalf("expected captured warrior role state, got %+v", playerBase.RoleState)
 	}
-	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1691 || playerBase.RolePhysique.MaxMP != 484 ||
-		playerBase.RolePhysique.PhyAtk != 325 || playerBase.RolePhysique.MgcAtk != 5 ||
-		playerBase.RolePhysique.PhyDef != 231 || playerBase.RolePhysique.MgcDef != 73 ||
-		playerBase.RolePhysique.Hit != 329 || playerBase.RolePhysique.Dog != 146 || playerBase.RolePhysique.Fat != 256 {
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1775 || playerBase.RolePhysique.MaxMP != 524 ||
+		playerBase.RolePhysique.PhyAtk != 341 || playerBase.RolePhysique.MgcAtk != 5 ||
+		playerBase.RolePhysique.PhyDef != 223 || playerBase.RolePhysique.MgcDef != 73 ||
+		playerBase.RolePhysique.Hit != 350 || playerBase.RolePhysique.Dog != 156 || playerBase.RolePhysique.Fat != 289 {
 		t.Fatalf("expected captured warrior physique, got %+v", playerBase.RolePhysique)
 	}
-	for _, part := range []string{"a=19", "b=21", "c=39", "p=22", "se=29", "w11=53", "wr=19"} {
+	for _, part := range []string{"a=32", "b=21", "c=39", "p=22", "se=29", "w11=53", "wr=19"} {
 		if !strings.Contains(role.SourceQuery, part) || !strings.Contains(playerBase.BattleSourceQuery, part) {
 			t.Fatalf("expected captured warrior source query to include %s, role=%q base=%q", part, role.SourceQuery, playerBase.BattleSourceQuery)
 		}
+	}
+	equipment, equipmentCapacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
+	if !ok || equipmentCapacity != 20 || len(equipment) != 13 {
+		t.Fatalf("expected captured level 44 warrior equipment, ok=%v capacity=%d equipment=%+v", ok, equipmentCapacity, equipment)
+	}
+	warriorEquipmentByName := map[string]RoleItem{}
+	for _, item := range equipment {
+		warriorEquipmentByName[item.Name] = item
+	}
+	for name, expected := range map[string]struct {
+		index   int
+		display string
+	}{
+		"狼人护肩": {index: 1, display: "537.png"},
+		"骷髅戒指": {index: 6, display: "759.png"},
+		"银耳坠":  {index: 7, display: "762.png"},
+		"翡翠项链": {index: 8, display: "760.png"},
+		"泥戒指":  {index: 13, display: "431.png"},
+	} {
+		item := warriorEquipmentByName[name]
+		if item.Name == "" || item.Index != expected.index || item.Display != expected.display || item.Type != "装备" || item.ItemType != "equip" {
+			t.Fatalf("expected captured warrior equipment %s at index %d display %s, got %+v", name, expected.index, expected.display, item)
+		}
+	}
+	if _, ok := warriorEquipmentByName["龙颜单肩"]; ok {
+		t.Fatalf("expected captured level 44 equipment to replace old 龙颜单肩, got %+v", equipment)
 	}
 
 	skills, cap, ok := store.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
@@ -654,7 +770,7 @@ func TestStorePersistentCapturedWoodcutter222KeepsCapturedSkills(t *testing.T) {
 	}
 }
 
-func TestStorePersistentCapturedWoodcutter333KeepsLevel40Snapshot(t *testing.T) {
+func TestStorePersistentCapturedWoodcutter333KeepsLatestSnapshot(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
 	firstStore, err := NewPersistentStore(dbPath)
 	if err != nil {
@@ -687,20 +803,21 @@ func TestStorePersistentCapturedWoodcutter333KeepsLevel40Snapshot(t *testing.T) 
 	if !ok {
 		t.Fatal("expected reopened 333 captured role")
 	}
-	if role.DisplayName != "333" || role.Level != 40 || role.Exp != 4361496 || role.Voc != "游侠" {
-		t.Fatalf("expected reopened 333 to keep captured level 40 role, got %+v", role)
+	if role.DisplayName != "333" || role.Level != 44 || role.Exp != 5768622 || role.Voc != "游侠" {
+		t.Fatalf("expected reopened 333 to keep captured latest role, got %+v", role)
 	}
-	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1265 || playerBase.RoleState.MP != 669 || playerBase.RoleState.Lv != 40 {
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1337 || playerBase.RoleState.MP != 557 || playerBase.RoleState.Lv != 44 {
 		t.Fatalf("expected reopened 333 to keep captured role state, got %+v", playerBase.RoleState)
 	}
-	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1265 || playerBase.RolePhysique.MaxMP != 669 || playerBase.RolePhysique.PhyAtk != 264 {
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1365 || playerBase.RolePhysique.MaxMP != 709 ||
+		playerBase.RolePhysique.PhyAtk != 297 || playerBase.RolePhysique.MgcAtk != 297 {
 		t.Fatalf("expected reopened 333 to keep captured role physique, got %+v", playerBase.RolePhysique)
 	}
-	if !strings.Contains(role.SourceQuery, "p=64") || role.BattleSourceQuery != role.SourceQuery {
+	if !strings.Contains(role.SourceQuery, "p=64") || !strings.Contains(role.SourceQuery, "w1=55") || strings.Contains(role.SourceQuery, "w3=49") || role.BattleSourceQuery != role.SourceQuery {
 		t.Fatalf("expected reopened 333 to keep captured appearance, role=%q battle=%q", role.SourceQuery, role.BattleSourceQuery)
 	}
 	skills, cap, ok := reopened.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
-	if !ok || cap != 12 || len(skills) != 9 || skills[6].Name != "强射" || skills[7].Name != "贯甲连矢" || skills[7].Level != 5 {
+	if !ok || cap != 12 || len(skills) != 12 || skills[6].Name != "贯甲连矢" || skills[6].Level != 5 || skills[7].Name != "暗影箭" || skills[8].Name != "奥义.轰雷矢" || skills[9].Name != "毒矢" || skills[10].Name != "魔力速射" || skills[11].Name != "冰箭速射" {
 		t.Fatalf("expected reopened 333 to keep captured final skills, ok=%v cap=%d skills=%+v", ok, cap, skills)
 	}
 	fastPanel, ok := reopened.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
@@ -708,12 +825,13 @@ func TestStorePersistentCapturedWoodcutter333KeepsLevel40Snapshot(t *testing.T) 
 	for _, entry := range fastPanel {
 		fastPanelByIndex[entry.Index] = entry
 	}
-	if !ok || fastPanelByIndex[1].Name != "贯甲连矢" || fastPanelByIndex[2].Name != "强射" {
+	if !ok || fastPanelByIndex[1].Name != "贯甲连矢" || fastPanelByIndex[2].Name != "魔力速射" ||
+		fastPanelByIndex[3].Name != "暗影箭" || fastPanelByIndex[4].Name != "毒矢" || fastPanelByIndex[5].Name != "奥义.轰雷矢" || fastPanelByIndex[6].Name != "冰箭速射" {
 		t.Fatalf("expected reopened 333 to keep captured final fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
 	}
 }
 
-func TestStorePersistentCapturedWarrior444KeepsLevel40Snapshot(t *testing.T) {
+func TestStorePersistentCapturedWarrior444KeepsLevel44Snapshot(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
 	firstStore, err := NewPersistentStore(dbPath)
 	if err != nil {
@@ -746,17 +864,21 @@ func TestStorePersistentCapturedWarrior444KeepsLevel40Snapshot(t *testing.T) {
 	if !ok {
 		t.Fatal("expected reopened 444 captured role")
 	}
-	if role.DisplayName != "444" || role.Level != 40 || role.Exp != 4396996 || role.Voc != "战士" {
-		t.Fatalf("expected reopened 444 to keep captured level 40 role, got %+v", role)
+	if role.DisplayName != "444" || role.Level != 44 || role.Exp != 5793804 || role.Voc != "战士" {
+		t.Fatalf("expected reopened 444 to keep captured level 44 role, got %+v", role)
 	}
-	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1668 || playerBase.RoleState.MP != 436 || playerBase.RoleState.Lv != 40 {
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1344 || playerBase.RoleState.MP != 390 || playerBase.RoleState.Lv != 44 {
 		t.Fatalf("expected reopened 444 to keep captured role state, got %+v", playerBase.RoleState)
 	}
-	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1691 || playerBase.RolePhysique.MaxMP != 484 || playerBase.RolePhysique.PhyAtk != 325 {
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1775 || playerBase.RolePhysique.MaxMP != 524 || playerBase.RolePhysique.PhyAtk != 341 {
 		t.Fatalf("expected reopened 444 to keep captured role physique, got %+v", playerBase.RolePhysique)
 	}
-	if !strings.Contains(role.SourceQuery, "w11=53") || role.BattleSourceQuery != role.SourceQuery {
+	if !strings.Contains(role.SourceQuery, "a=32") || !strings.Contains(role.SourceQuery, "w11=53") || role.BattleSourceQuery != role.SourceQuery {
 		t.Fatalf("expected reopened 444 to keep captured appearance, role=%q battle=%q", role.SourceQuery, role.BattleSourceQuery)
+	}
+	equipment, _, ok := reopened.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
+	if !ok || len(equipment) != 13 {
+		t.Fatalf("expected reopened 444 to keep captured level 44 equipment, ok=%v equipment=%+v", ok, equipment)
 	}
 }
 
@@ -2121,7 +2243,7 @@ func TestStoreTryEquipSupportsCapturedFashionSetPreview(t *testing.T) {
 	}
 }
 
-func TestStoreCapturedWoodcutter333EquipBowReplacesDaggerAndRebuildsAppearance(t *testing.T) {
+func TestStoreCapturedWoodcutter333EquipDaggerAndBowRebuildsAppearance(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "33333333", "33333333")
 	createResponse := store.CreateRole(RoleCreateRequest{
@@ -2135,36 +2257,36 @@ func TestStoreCapturedWoodcutter333EquipBowReplacesDaggerAndRebuildsAppearance(t
 		t.Fatalf("expected 333 role create success, got %+v", createResponse)
 	}
 
-	grantedBow, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
+	grantedDagger, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, RoleItem{
 		Type:        "背包",
-		Name:        "万相",
+		Name:        "绯雨匕首",
 		ItemType:    "equip",
-		Display:     "58.png",
-		Description: "f_i_万相&24@武器·弓系&25@1&22@游侠",
+		Display:     "51.png",
+		Description: "f_i_绯雨匕首&24@武器·匕首系&25@1&22@游侠",
 		Count:       1,
 		Index:       20,
 		ItemLevel:   2,
 	})
 	if !ok {
-		t.Fatal("expected to grant captured bow")
+		t.Fatal("expected to grant captured dagger")
 	}
 
-	result := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, grantedBow.Type, grantedBow.Index, 1)
+	result := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, grantedDagger.Type, grantedDagger.Index, 1)
 
 	if !result.Found || !result.Equipped {
-		t.Fatalf("expected captured bow equip success, got %+v", result)
+		t.Fatalf("expected captured dagger equip success, got %+v", result)
 	}
-	if result.EquippedItem.Type != "装备" || result.EquippedItem.Index != 3 || result.EquippedItem.Name != "万相" {
-		t.Fatalf("expected bow to equip into weapon slot 3, got %+v", result.EquippedItem)
+	if result.EquippedItem.Type != "装备" || result.EquippedItem.Index != 3 || result.EquippedItem.Name != "绯雨匕首" {
+		t.Fatalf("expected dagger to equip into weapon slot 3, got %+v", result.EquippedItem)
 	}
-	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Type != "背包" || result.UpdatedItems[0].Index != grantedBow.Index || result.UpdatedItems[0].Name != "绯雨匕首" {
-		t.Fatalf("expected replaced dagger to return to source bag slot, got %+v", result.UpdatedItems)
+	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Type != "背包" || result.UpdatedItems[0].Index != grantedDagger.Index || result.UpdatedItems[0].Name != "万相" {
+		t.Fatalf("expected replaced bow to return to source bag slot, got %+v", result.UpdatedItems)
 	}
-	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != grantedBow.Type || result.ClearedItems[0].Index != grantedBow.Index {
-		t.Fatalf("expected bow source bag slot clear, got %+v", result.ClearedItems)
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != grantedDagger.Type || result.ClearedItems[0].Index != grantedDagger.Index {
+		t.Fatalf("expected dagger source bag slot clear, got %+v", result.ClearedItems)
 	}
-	if !strings.Contains(result.Role.SourceQuery, "w1=55") || strings.Contains(result.Role.SourceQuery, "w3=49") {
-		t.Fatalf("expected bow appearance w1=55 and no stale dagger w3=49, got %q", result.Role.SourceQuery)
+	if !strings.Contains(result.Role.SourceQuery, "w3=49") || strings.Contains(result.Role.SourceQuery, "w1=55") {
+		t.Fatalf("expected dagger appearance w3=49 and no stale bow w1=55, got %q", result.Role.SourceQuery)
 	}
 	if result.Role.BattleSourceQuery != result.Role.SourceQuery {
 		t.Fatalf("expected battle source query to follow dynamic equipment appearance, role=%q battle=%q", result.Role.SourceQuery, result.Role.BattleSourceQuery)
@@ -2172,39 +2294,39 @@ func TestStoreCapturedWoodcutter333EquipBowReplacesDaggerAndRebuildsAppearance(t
 
 	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
 	if !ok {
-		t.Fatal("expected bag list after bow equip")
+		t.Fatal("expected bag list after dagger equip")
 	}
-	foundDagger := false
+	foundBow := false
 	for _, item := range bagItems {
-		if item.Index == grantedBow.Index && item.Name == "绯雨匕首" {
-			foundDagger = true
+		if item.Index == grantedDagger.Index && item.Name == "万相" {
+			foundBow = true
 		}
-		if item.Name == "万相" {
-			t.Fatalf("expected bow to leave bag after equip, got %+v", bagItems)
+		if item.Name == "绯雨匕首" {
+			t.Fatalf("expected dagger to leave bag after equip, got %+v", bagItems)
 		}
 	}
-	if !foundDagger {
-		t.Fatalf("expected dagger to occupy bow source bag slot after equip, got %+v", bagItems)
+	if !foundBow {
+		t.Fatalf("expected bow to occupy dagger source bag slot after equip, got %+v", bagItems)
 	}
 
-	revertResult := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", grantedBow.Index)
+	revertResult := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", grantedDagger.Index)
 	if !revertResult.Found || !revertResult.Used || !revertResult.Equipped {
-		t.Fatalf("expected backpack dagger activeItem to equip back, got %+v", revertResult)
+		t.Fatalf("expected backpack bow activeItem to equip back, got %+v", revertResult)
 	}
 	if len(revertResult.UpdatedItems) != 2 {
-		t.Fatalf("expected activeItem equip to push replaced bow and equipped dagger, got %+v", revertResult.UpdatedItems)
+		t.Fatalf("expected activeItem equip to push replaced dagger and equipped bow, got %+v", revertResult.UpdatedItems)
 	}
-	if revertResult.UpdatedItems[0].Type != "背包" || revertResult.UpdatedItems[0].Index != grantedBow.Index || revertResult.UpdatedItems[0].Name != "万相" {
-		t.Fatalf("expected replaced bow to return to dagger source bag slot, got %+v", revertResult.UpdatedItems)
+	if revertResult.UpdatedItems[0].Type != "背包" || revertResult.UpdatedItems[0].Index != grantedDagger.Index || revertResult.UpdatedItems[0].Name != "绯雨匕首" {
+		t.Fatalf("expected replaced dagger to return to bow source bag slot, got %+v", revertResult.UpdatedItems)
 	}
-	if revertResult.UpdatedItems[1].Type != "装备" || revertResult.UpdatedItems[1].Index != 3 || revertResult.UpdatedItems[1].Name != "绯雨匕首" {
-		t.Fatalf("expected dagger equipment push after activeItem equip, got %+v", revertResult.UpdatedItems)
+	if revertResult.UpdatedItems[1].Type != "装备" || revertResult.UpdatedItems[1].Index != 3 || revertResult.UpdatedItems[1].Name != "万相" {
+		t.Fatalf("expected bow equipment push after activeItem equip, got %+v", revertResult.UpdatedItems)
 	}
-	if len(revertResult.ClearedItems) != 1 || revertResult.ClearedItems[0].Type != "背包" || revertResult.ClearedItems[0].Index != grantedBow.Index {
-		t.Fatalf("expected dagger source bag slot clear before replacement item push, got %+v", revertResult.ClearedItems)
+	if len(revertResult.ClearedItems) != 1 || revertResult.ClearedItems[0].Type != "背包" || revertResult.ClearedItems[0].Index != grantedDagger.Index {
+		t.Fatalf("expected bow source bag slot clear before replacement item push, got %+v", revertResult.ClearedItems)
 	}
-	if !strings.Contains(revertResult.Role.SourceQuery, "w3=49") || strings.Contains(revertResult.Role.SourceQuery, "w1=55") {
-		t.Fatalf("expected dagger appearance w3=49 and no stale bow w1=55, got %q", revertResult.Role.SourceQuery)
+	if !strings.Contains(revertResult.Role.SourceQuery, "w1=55") || strings.Contains(revertResult.Role.SourceQuery, "w3=49") {
+		t.Fatalf("expected bow appearance w1=55 and no stale dagger w3=49, got %q", revertResult.Role.SourceQuery)
 	}
 	if revertResult.Role.BattleSourceQuery != revertResult.Role.SourceQuery {
 		t.Fatalf("expected battle source query to follow reverted dagger appearance, role=%q battle=%q", revertResult.Role.SourceQuery, revertResult.Role.BattleSourceQuery)
@@ -2212,19 +2334,19 @@ func TestStoreCapturedWoodcutter333EquipBowReplacesDaggerAndRebuildsAppearance(t
 
 	bagItems, _, ok = store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
 	if !ok {
-		t.Fatal("expected bag list after dagger re-equip")
+		t.Fatal("expected bag list after bow re-equip")
 	}
-	foundBow := false
+	foundDagger := false
 	for _, item := range bagItems {
-		if item.Index == grantedBow.Index && item.Name == "万相" {
-			foundBow = true
+		if item.Index == grantedDagger.Index && item.Name == "绯雨匕首" {
+			foundDagger = true
 		}
-		if item.Name == "绯雨匕首" {
-			t.Fatalf("expected dagger to leave bag after re-equip, got %+v", bagItems)
+		if item.Name == "万相" {
+			t.Fatalf("expected bow to leave bag after re-equip, got %+v", bagItems)
 		}
 	}
-	if !foundBow {
-		t.Fatalf("expected bow to occupy dagger source bag slot after re-equip, got %+v", bagItems)
+	if !foundDagger {
+		t.Fatalf("expected dagger to occupy bow source bag slot after re-equip, got %+v", bagItems)
 	}
 }
 
@@ -2485,11 +2607,22 @@ func TestStoreFinishRoleContainerStacksCompatibleBagItems(t *testing.T) {
 	if !result.Found || !result.Changed {
 		t.Fatalf("expected bag finish success, got %+v", result)
 	}
-	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != "背包" || result.ClearedItems[0].Index != 22 {
-		t.Fatalf("expected merged source meat slot 22 to be cleared, got %+v", result.ClearedItems)
+	expectedClears := []int{7, 19, 22, 25}
+	if len(result.ClearedItems) != len(expectedClears) {
+		t.Fatalf("expected compact clears %+v, got %+v", expectedClears, result.ClearedItems)
 	}
-	if len(result.UpdatedItems) != 1 || result.UpdatedItems[0].Name != "肉" || result.UpdatedItems[0].Index != 7 || result.UpdatedItems[0].Count != 5 {
-		t.Fatalf("expected stacked meat push at original slot 7, got %+v", result.UpdatedItems)
+	for index, expected := range expectedClears {
+		if result.ClearedItems[index].Type != "背包" || result.ClearedItems[index].Index != expected {
+			t.Fatalf("expected compact clear slot %d at position %d, got %+v", expected, index, result.ClearedItems)
+		}
+	}
+	updatedByIndex := map[int]RoleItem{}
+	for _, item := range result.UpdatedItems {
+		updatedByIndex[item.Index] = item
+	}
+	if updatedByIndex[0].Name != "肉" || updatedByIndex[0].Count != 5 ||
+		updatedByIndex[1].Name != "铁斧" || updatedByIndex[2].Name != "头骨" {
+		t.Fatalf("expected compact stacked item pushes at slots 0..2, got %+v", result.UpdatedItems)
 	}
 
 	bagItems, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
@@ -2503,14 +2636,16 @@ func TestStoreFinishRoleContainerStacksCompatibleBagItems(t *testing.T) {
 	for _, item := range bagItems {
 		itemsByIndex[item.Index] = item
 	}
-	if itemsByIndex[7].Name != "肉" || itemsByIndex[7].Count != 5 {
-		t.Fatalf("expected stacked 肉 to remain at slot 7, got %+v", bagItems)
+	if itemsByIndex[0].Name != "肉" || itemsByIndex[0].Count != 5 {
+		t.Fatalf("expected stacked 肉 to compact to slot 0, got %+v", bagItems)
 	}
-	if itemsByIndex[19].Name != "铁斧" || itemsByIndex[25].Name != "头骨" {
-		t.Fatalf("expected unrelated items to keep original slots, got %+v", bagItems)
+	if itemsByIndex[1].Name != "铁斧" || itemsByIndex[2].Name != "头骨" {
+		t.Fatalf("expected unrelated items to compact in stable order, got %+v", bagItems)
 	}
-	if _, exists := itemsByIndex[22]; exists {
-		t.Fatalf("expected merged source slot 22 to be empty, got %+v", bagItems)
+	for _, emptyIndex := range []int{7, 19, 22, 25} {
+		if _, exists := itemsByIndex[emptyIndex]; exists {
+			t.Fatalf("expected old slot %d to be empty after compact finish, got %+v", emptyIndex, bagItems)
+		}
 	}
 }
 

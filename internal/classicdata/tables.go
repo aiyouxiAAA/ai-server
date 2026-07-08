@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 //go:embed generated/*.json
@@ -44,11 +45,40 @@ type Table struct {
 	Rows          []map[string]string `json:"rows"`
 }
 
+var tableCache = struct {
+	sync.RWMutex
+	tables map[string]Table
+}{
+	tables: make(map[string]Table),
+}
+
 func LoadTable(name string) (Table, error) {
+	table, err := loadTableCached(name)
+	if err != nil {
+		return Table{}, err
+	}
+	return cloneTable(table), nil
+}
+
+func loadTableCached(name string) (Table, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return Table{}, fmt.Errorf("classic data table name is empty")
 	}
+
+	tableCache.RLock()
+	if table, ok := tableCache.tables[name]; ok {
+		tableCache.RUnlock()
+		return table, nil
+	}
+	tableCache.RUnlock()
+
+	tableCache.Lock()
+	defer tableCache.Unlock()
+	if table, ok := tableCache.tables[name]; ok {
+		return table, nil
+	}
+
 	path := fmt.Sprintf("generated/%s-table.json", name)
 	data, err := generatedTables.ReadFile(path)
 	if err != nil {
@@ -68,7 +98,13 @@ func LoadTable(name string) (Table, error) {
 	if table.RowCount != len(table.Rows) {
 		return Table{}, fmt.Errorf("classic data table %s rowCount=%d, rows=%d", name, table.RowCount, len(table.Rows))
 	}
+	tableCache.tables[name] = table
 	return table, nil
+}
+
+func cloneTable(table Table) Table {
+	table.Rows = cloneRows(table.Rows)
+	return table
 }
 
 func MustLoadTable(name string) Table {

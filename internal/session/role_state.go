@@ -729,6 +729,10 @@ func capturedWoodcutter40SourceQuery() string {
 	return "human/human.swf?=&a=29&b=22&c=26&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=64&se=19&wr=39&w3=49&"
 }
 
+func capturedWoodcutter333LatestSourceQuery() string {
+	return "human/human.swf?=&a=29&b=22&c=26&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=64&se=19&w1=55&wr=39&"
+}
+
 func capturedWoodcutter333RoleSkills() []RoleSkill {
 	return []RoleSkill{
 		{
@@ -774,13 +778,6 @@ func capturedWoodcutter333RoleSkills() []RoleSkill {
 			Description: "f_s_幻影^ffffff&9@被动&8@游侠 &10@通用&19@10",
 		},
 		{
-			Name:        "强射",
-			Level:       5,
-			Type:        "oneE",
-			Icon:        "231.png",
-			Description: "f_s_强射^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@18&4@提升45%的物理伤害",
-		},
-		{
 			Name:        "贯甲连矢",
 			Level:       5,
 			Type:        "oneE",
@@ -788,11 +785,39 @@ func capturedWoodcutter333RoleSkills() []RoleSkill {
 			Description: "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升25%的物理伤害&0;进攻时增加30%（无视防御）的物理攻击力.",
 		},
 		{
-			Name:        "强力飞镖",
+			Name:        "暗影箭",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "235.png",
+			Description: "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗影箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
+		},
+		{
+			Name:        "奥义.轰雷矢",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "238.png",
+			Description: "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
+		},
+		{
+			Name:        "毒矢",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "237.png",
+			Description: "f_s_毒矢^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@15&4@<font color='#00cc00'>特殊发动条件:需要【毒箭x1】<br>叠加施放将削弱其造成中毒的功效</font><br>对敌人造成90%的物理伤害&0;击中敌人时有70%的机率使敌人中毒(4回合内降低对方20%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的5%~10%)",
+		},
+		{
+			Name:        "魔力速射",
 			Level:       5,
 			Type:        "oneE",
-			Icon:        "261.png",
-			Description: "f_s_强力飞镖^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@32&4@<font color='#00cc00'>特殊发动条件:需要【飞镖x1】</font><br>进攻时提高55%（无视防御）的物理攻击力",
+			Icon:        "234.png",
+			Description: "f_s_魔力速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@34&4@<font color='#00cc00'>特殊发动条件:需要【魔箭x1】</font><br>造成50%的物理伤害&0;并追加120%的魔法伤害(进攻时提高25%的魔法攻击力)",
+		},
+		{
+			Name:        "冰箭速射",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "233.png",
+			Description: "f_s_冰箭速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【冰之箭x1】</font><br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font><br>造成70%的物理伤害&0;击中敌人时有90%的机率使敌人进入内伤状态(3回合内削弱敌人30%~35%的物理攻击和魔法攻击)",
 		},
 	}
 }
@@ -801,11 +826,11 @@ func capturedWoodcutter333FastPanel() []RoleFastPanelEntry {
 	return []RoleFastPanelEntry{
 		{Index: 0, Type: "skill", Name: "普通攻击"},
 		{Index: 1, Type: "skill", Name: "贯甲连矢"},
-		{Index: 2, Type: "skill", Name: "强射"},
-		{Index: 3, Type: "skill", Name: "投毒"},
-		{Index: 4, Type: "skill", Name: "疾风刺"},
-		{Index: 5, Type: "skill", Name: "解毒术"},
-		{Index: 6, Type: "skill", Name: "魔力突刺"},
+		{Index: 2, Type: "skill", Name: "魔力速射"},
+		{Index: 3, Type: "skill", Name: "暗影箭"},
+		{Index: 4, Type: "skill", Name: "毒矢"},
+		{Index: 5, Type: "skill", Name: "奥义.轰雷矢"},
+		{Index: 6, Type: "skill", Name: "冰箭速射"},
 		{Index: 8, Type: "item", Name: "馒头"},
 		{Index: 9, Type: "item", Name: "小瓶甘露"},
 	}
@@ -1019,13 +1044,13 @@ func isCapturedWoodcutter333LocalRole(role RoleSummary) bool {
 func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 	role.Voc = "游侠"
 	role.DisplayName = "333"
-	if role.Level < 40 || role.Exp <= 0 {
-		role.Level = 40
-		role.Exp = 4361496
+	if role.Level < 44 || role.Exp <= 0 {
+		role.Level = 44
+		role.Exp = 5768622
 	}
 	if role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0 {
-		role.AGI = 162
-		role.STR = 66
+		role.AGI = 175
+		role.STR = 73
 		role.INT = 19
 		role.CON = 0
 		role.LCK = 19
@@ -1036,11 +1061,12 @@ func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 	if role.VisualRoleID <= 0 {
 		role.VisualRoleID = 1
 	}
-	if role.RoleState == nil || role.RoleState.Lv < 40 || role.RoleState.Exp <= 0 {
+	if role.RoleState == nil || role.RoleState.Lv < 44 || role.RoleState.Exp <= 0 {
 		roleState := capturedWoodcutter40RoleState(role.RoleID)
 		role.RoleState = &roleState
 	}
-	if role.RolePhysique == nil || role.RolePhysique.MaxHP <= 0 || role.RolePhysique.MaxMP <= 0 {
+	if role.RolePhysique == nil || role.RolePhysique.MaxHP <= 0 || role.RolePhysique.MaxMP <= 0 ||
+		role.RolePhysique.MgcAtk != role.RolePhysique.PhyAtk {
 		rolePhysique := capturedWoodcutter40RolePhysique(role.RoleID)
 		role.RolePhysique = &rolePhysique
 	}
@@ -1050,10 +1076,10 @@ func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 func capturedWoodcutter40RoleState(roleID string) RoleState {
 	return RoleState{
 		Handle: roleID,
-		HP:     1265,
-		MP:     669,
-		Exp:    4361496,
-		Lv:     40,
+		HP:     1337,
+		MP:     557,
+		Exp:    5768622,
+		Lv:     44,
 		Speed:  140,
 		OutG:   0,
 		InG:    0,
@@ -1064,20 +1090,20 @@ func capturedWoodcutter40RolePhysique(roleID string) RolePhysique {
 	return RolePhysique{
 		Handle:    roleID,
 		ResPros:   []string{"冰冻|8", "眩晕|15", "封印|10", "混乱|10", "麻痹|5"},
-		AGI:       162,
-		STR:       66,
+		AGI:       175,
+		STR:       73,
 		INT:       19,
 		CON:       0,
 		LCK:       19,
-		MaxHP:     1265,
-		MaxMP:     669,
-		PhyAtk:    264,
-		MgcAtk:    36,
-		PhyDef:    260,
+		MaxHP:     1365,
+		MaxMP:     709,
+		PhyAtk:    297,
+		MgcAtk:    297,
+		PhyDef:    267,
 		MgcDef:    87,
-		Hit:       453,
-		Dog:       253,
-		Fat:       578,
+		Hit:       517,
+		Dog:       268,
+		Fat:       577,
 		LastPoint: 0,
 	}
 }
@@ -1087,16 +1113,16 @@ func isCapturedWarrior444LocalRole(role RoleSummary) bool {
 	return strings.HasPrefix(roleID, "acct-444-role-") || strings.HasPrefix(roleID, "acct-44444444-role-")
 }
 
-func capturedWarrior40SourceQuery() string {
-	return "human/human.swf?=&a=19&b=21&c=39&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=22&se=29&w11=53&wr=19&"
+func capturedWarrior44SourceQuery() string {
+	return "human/human.swf?=&a=32&b=21&c=39&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=22&se=29&w11=53&wr=19&"
 }
 
 func capturedWoodcutter40BodySourceQuery() string {
-	return clearRoleEquipmentAppearanceSourceQuery(capturedWoodcutter40SourceQuery())
+	return clearRoleEquipmentAppearanceSourceQuery(capturedWoodcutter333LatestSourceQuery())
 }
 
-func capturedWarrior40BodySourceQuery() string {
-	return clearRoleEquipmentAppearanceSourceQuery(capturedWarrior40SourceQuery())
+func capturedWarrior44BodySourceQuery() string {
+	return clearRoleEquipmentAppearanceSourceQuery(capturedWarrior44SourceQuery())
 }
 
 type capturedRoleEquipmentSpec struct {
@@ -1109,47 +1135,161 @@ func capturedWoodcutter333EquipmentItems() []RoleItem {
 		{name: "黄风围巾", index: 0},
 		{name: "蚩颅王护肩", index: 1},
 		{name: "机木护腕", index: 2},
-		{name: "绯雨匕首", index: 3},
+		{name: "万相", index: 3},
 		{name: "寒影锁甲", index: 4},
 		{name: "机木护腿", index: 5},
+		{name: "骷髅戒指", index: 6},
+		{name: "银耳坠", index: 7},
+		{name: "翡翠项链", index: 8},
 		{name: "炎火兽", index: 9},
 		{name: "寒影护腰", index: 10},
 		{name: "寒影靴", index: 12},
 	})
 }
 
+func syncCapturedWoodcutter333EquipmentItems(items []RoleItem) []RoleItem {
+	normalized := normalizeRoleItems(items)
+	if !shouldSyncCapturedWoodcutter333EquipmentItems(normalized) {
+		return normalized
+	}
+	capturedEquipment := capturedWoodcutter333EquipmentItems()
+	for _, captured := range capturedEquipment {
+		replaced := false
+		for index := range normalized {
+			if normalized[index].Type == "装备" && normalized[index].Index == captured.Index {
+				normalized[index] = captured
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			normalized = append(normalized, captured)
+		}
+	}
+	return normalizeRoleItems(normalized)
+}
+
+func shouldSyncCapturedWoodcutter333EquipmentItems(items []RoleItem) bool {
+	hasWanXiang := false
+	hasRing := false
+	hasEarring := false
+	hasNecklace := false
+	for _, item := range items {
+		if item.Name == "万相" {
+			hasWanXiang = true
+		}
+		if item.Type != "装备" {
+			continue
+		}
+		switch {
+		case item.Name == "骷髅戒指" && item.Index == 6:
+			hasRing = true
+		case item.Name == "银耳坠" && item.Index == 7:
+			hasEarring = true
+		case item.Name == "翡翠项链" && item.Index == 8:
+			hasNecklace = true
+		}
+	}
+	return !(hasWanXiang && hasRing && hasEarring && hasNecklace)
+}
+
 func syncCapturedWoodcutter333BattleConsumables(items []RoleItem) []RoleItem {
 	normalized := normalizeRoleItems(items)
-	if totalRoleItemCountByName(normalized, "背包", "穿甲箭") > 0 {
-		return normalized
+	normalized = syncCapturedWoodcutter333BattleConsumable(normalized, "穿甲箭", 1319)
+	normalized = syncCapturedWoodcutter333BattleConsumable(normalized, "暗之箭", 39)
+	normalized = syncCapturedWoodcutter333BattleConsumable(normalized, "毒箭", 9)
+	normalized = syncCapturedWoodcutter333BattleConsumable(normalized, "火之箭", 50)
+	normalized = syncCapturedWoodcutter333BattleConsumable(normalized, "冰之箭", 50)
+	normalized = syncCapturedWoodcutter333BattleConsumable(normalized, "魔箭", 50)
+	return normalizeRoleItems(normalized)
+}
+
+func syncCapturedWoodcutter333BattleConsumable(items []RoleItem, name string, count int) []RoleItem {
+	if totalRoleItemCountByName(items, "背包", name) > 0 {
+		return items
 	}
-	piercingArrow, ok := CapturedRoleItemTemplate("穿甲箭")
+	item, ok := CapturedRoleItemTemplate(name)
 	if !ok {
-		return normalized
+		return items
 	}
-	piercingArrow.Type = "背包"
-	piercingArrow.Count = 1900
-	piercingArrow.Index = -1
-	capacity := effectiveRoleContainerCapacity(normalized, "背包", defaultBagCap)
-	updated, _, granted := grantRoleItemToItems(normalized, capacity, piercingArrow)
+	item.Type = "背包"
+	item.Count = count
+	item.Index = -1
+	capacity := maxInt(effectiveRoleContainerCapacity(items, "背包", defaultBagCap), 42)
+	updated, _, granted := grantRoleItemToItems(items, capacity, item)
 	if !granted {
-		return normalized
+		return items
 	}
-	return normalizeRoleItems(updated)
+	return updated
 }
 
 func capturedWarrior444EquipmentItems() []RoleItem {
 	return capturedRoleEquipmentItems([]capturedRoleEquipmentSpec{
 		{name: "黄风围巾", index: 0},
-		{name: "龙颜单肩", index: 1},
+		{name: "狼人护肩", index: 1},
 		{name: "龙颜护腕", index: 2},
 		{name: "伏魔棍", index: 3},
 		{name: "寨夫人上衣", index: 4},
 		{name: "龙颜护腿", index: 5},
+		{name: "骷髅戒指", index: 6},
+		{name: "银耳坠", index: 7},
+		{name: "翡翠项链", index: 8},
 		{name: "怪木机", index: 9},
 		{name: "龙颜护腰", index: 10},
 		{name: "蛤蟆精战靴", index: 12},
+		{name: "泥戒指", index: 13},
 	})
+}
+
+func syncCapturedWarrior444EquipmentItems(items []RoleItem) []RoleItem {
+	normalized := normalizeRoleItems(items)
+	if !shouldSyncCapturedWarrior444EquipmentItems(normalized) {
+		return normalized
+	}
+	capturedEquipment := capturedWarrior444EquipmentItems()
+	for _, captured := range capturedEquipment {
+		replaced := false
+		for index := range normalized {
+			if normalized[index].Type == "装备" && normalized[index].Index == captured.Index {
+				normalized[index] = captured
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			normalized = append(normalized, captured)
+		}
+	}
+	return normalizeRoleItems(normalized)
+}
+
+func shouldSyncCapturedWarrior444EquipmentItems(items []RoleItem) bool {
+	hasWolfShoulder := false
+	hasRing := false
+	hasEarring := false
+	hasNecklace := false
+	hasMudRing := false
+	hasOldShoulder := false
+	for _, item := range items {
+		if item.Type != "装备" {
+			continue
+		}
+		switch {
+		case item.Name == "狼人护肩" && item.Index == 1:
+			hasWolfShoulder = true
+		case item.Name == "龙颜单肩" && item.Index == 1:
+			hasOldShoulder = true
+		case item.Name == "骷髅戒指" && item.Index == 6:
+			hasRing = true
+		case item.Name == "银耳坠" && item.Index == 7:
+			hasEarring = true
+		case item.Name == "翡翠项链" && item.Index == 8:
+			hasNecklace = true
+		case item.Name == "泥戒指" && item.Index == 13:
+			hasMudRing = true
+		}
+	}
+	return hasOldShoulder || !(hasWolfShoulder && hasRing && hasEarring && hasNecklace && hasMudRing)
 }
 
 func capturedRoleEquipmentItems(specs []capturedRoleEquipmentSpec) []RoleItem {
@@ -1277,65 +1417,70 @@ func capturedWarrior444FastPanel() []RoleFastPanelEntry {
 func withCapturedWarrior444RuntimeDefaults(role RoleSummary) RoleSummary {
 	role.Voc = "战士"
 	role.DisplayName = "444"
-	if role.Level < 40 || role.Exp <= 0 {
-		role.Level = 40
-		role.Exp = 4396996
+	if role.Level < 44 || role.Exp < 5793804 {
+		role.Level = 44
+		role.Exp = 5793804
 	}
-	if role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0 {
-		role.AGI = 63
-		role.STR = 155
+	if (role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0) ||
+		role.AGI < 76 || role.STR < 168 {
+		role.AGI = 76
+		role.STR = 168
 		role.INT = 5
-		role.CON = 3
+		role.CON = 0
 		role.LCK = 0
 	}
-	if role.MapID <= 1 {
-		role.MapID = 15
+	if role.MapID <= 1 || role.MapID == 15 {
+		role.MapID = 1
 	}
 	if role.VisualRoleID <= 0 {
 		role.VisualRoleID = 1
 	}
-	if role.RoleState == nil || role.RoleState.Lv < 40 || role.RoleState.Exp <= 0 {
-		roleState := capturedWarrior40RoleState(role.RoleID)
+	if len(role.Currencies) == 0 || (role.Currencies["银元宝"] == 32 && role.Currencies["铜钱"] == 842) {
+		role.Currencies = RoleCurrencies{"银元宝": 153, "铜钱": 806}
+	}
+	if role.RoleState == nil || role.RoleState.Lv < 44 || role.RoleState.Exp < 5793804 {
+		roleState := capturedWarrior44RoleState(role.RoleID)
 		role.RoleState = &roleState
 	}
-	if role.RolePhysique == nil || role.RolePhysique.MaxHP <= 0 || role.RolePhysique.MaxMP <= 0 {
-		rolePhysique := capturedWarrior40RolePhysique(role.RoleID)
+	if role.RolePhysique == nil || role.RolePhysique.MaxHP < 1775 || role.RolePhysique.MaxMP < 524 ||
+		role.RolePhysique.PhyAtk < 341 {
+		rolePhysique := capturedWarrior44RolePhysique(role.RoleID)
 		role.RolePhysique = &rolePhysique
 	}
 	return role
 }
 
-func capturedWarrior40RoleState(roleID string) RoleState {
+func capturedWarrior44RoleState(roleID string) RoleState {
 	return RoleState{
 		Handle: roleID,
-		HP:     1668,
-		MP:     436,
-		Exp:    4396996,
-		Lv:     40,
+		HP:     1344,
+		MP:     390,
+		Exp:    5793804,
+		Lv:     44,
 		Speed:  147,
 		OutG:   0,
 		InG:    0,
 	}
 }
 
-func capturedWarrior40RolePhysique(roleID string) RolePhysique {
+func capturedWarrior44RolePhysique(roleID string) RolePhysique {
 	return RolePhysique{
 		Handle:    roleID,
 		ResPros:   []string{"冰冻|8", "眩晕|15", "封印|10", "混乱|40", "麻痹|15"},
-		AGI:       63,
-		STR:       155,
+		AGI:       76,
+		STR:       168,
 		INT:       5,
-		CON:       3,
+		CON:       0,
 		LCK:       0,
-		MaxHP:     1691,
-		MaxMP:     484,
-		PhyAtk:    325,
+		MaxHP:     1775,
+		MaxMP:     524,
+		PhyAtk:    341,
 		MgcAtk:    5,
-		PhyDef:    231,
+		PhyDef:    223,
 		MgcDef:    73,
-		Hit:       329,
-		Dog:       146,
-		Fat:       256,
+		Hit:       350,
+		Dog:       156,
+		Fat:       289,
 		LastPoint: 0,
 	}
 }
@@ -1769,7 +1914,11 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.Items = ensureStarterAxeItem(removeCapturedDefaultBagSeeds(normalizeRoleItems(role.Items)))
 	}
 	if isWoodcutter333 {
+		role.Items = syncCapturedWoodcutter333EquipmentItems(role.Items)
 		role.Items = syncCapturedWoodcutter333BattleConsumables(role.Items)
+	}
+	if isWarrior444 {
+		role.Items = syncCapturedWarrior444EquipmentItems(role.Items)
 	}
 	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
 	if isWoodcutter222 {
@@ -1777,7 +1926,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else if isWoodcutter333 {
 		role.SourceQuery = capturedWoodcutter40BodySourceQuery()
 	} else if isWarrior444 {
-		role.SourceQuery = capturedWarrior40BodySourceQuery()
+		role.SourceQuery = capturedWarrior44BodySourceQuery()
 	}
 	role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
 	role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
@@ -2253,6 +2402,72 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 			Count:     1,
 			Index:     0,
 			ItemLevel: 3,
+		},
+		{
+			Type:     "装备",
+			Name:     "万相",
+			ItemType: "equip",
+			Display:  "58.png",
+			Description: `f_i_万相^5BC46D&23@凿孔上限 9 格&24@武器·弓系&25@1&21@40&22@游侠&1@88&9@35&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 敏捷+2&103@0&104@0&105@&107@&108@550`,
+			Count:     1,
+			Index:     3,
+			ItemLevel: 2,
+		},
+		{
+			Type:     "装备",
+			Name:     "狼人护肩",
+			ItemType: "equip",
+			Display:  "537.png",
+			Description: `f_i_狼人护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@23&3@15&13@3&15@3&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 爆击+50&103@0&104@0&105@&107@&108@220`,
+			Count:     1,
+			Index:     1,
+			ItemLevel: 2,
+		},
+		{
+			Type:     "装备",
+			Name:     "骷髅戒指",
+			ItemType: "equip",
+			Display:  "759.png",
+			Description: `f_i_骷髅戒指^5BC46D&23@凿孔上限 9 格&24@饰品&25@1&21@40&3@1&13@3&27@sitem_bs&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+10%</font>
+[精炼+1] 每升一级 封印抗性+1%&103@0&104@0&105@&107@&108@320`,
+			Count:     1,
+			Index:     6,
+			ItemLevel: 2,
+		},
+		{
+			Type:     "装备",
+			Name:     "银耳坠",
+			ItemType: "equip",
+			Display:  "762.png",
+			Description: `f_i_银耳坠^5BC46D&23@凿孔上限 9 格&24@饰品&25@1&21@40&3@1&10@3&27@sitem_bs&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+眩晕抗性:+10%</font>
+[精炼+1] 每升一级 眩晕抗性+1%&103@0&104@0&105@&107@&108@320`,
+			Count:     1,
+			Index:     7,
+			ItemLevel: 2,
+		},
+		{
+			Type:     "装备",
+			Name:     "翡翠项链",
+			ItemType: "equip",
+			Display:  "760.png",
+			Description: `f_i_翡翠项链^5BC46D&23@凿孔上限 9 格&24@饰品&25@1&21@40&3@1&14@3<$jintt>&27@sitem_bs&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+混乱抗性:+10%</font>
+[精炼+1] 每升一级 混乱抗性+1%&103@0&104@0&105@&107@&108@340`,
+			Count:     1,
+			Index:     8,
+			ItemLevel: 2,
 		},
 		{
 			Type:        "背包",

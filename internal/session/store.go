@@ -4283,11 +4283,13 @@ func (store *Store) FinishRoleContainer(playerID string, roleID string, containe
 			return containerItems[left].Index < containerItems[right].Index
 		})
 
-		updatedItems := make([]RoleItem, 0, len(containerItems))
-		clearedItems := make([]RoleItemClear, 0, len(containerItems))
+		originalItemsByIndex := make(map[int]RoleItem, len(containerItems))
+		for _, item := range containerItems {
+			originalItemsByIndex[item.Index] = item
+		}
+
 		removed := make([]bool, len(containerItems))
-		updatedSlotIndexes := make(map[int]int, len(containerItems))
-		changed := false
+		stackChanged := false
 		for targetIndex := range containerItems {
 			if removed[targetIndex] {
 				continue
@@ -4312,22 +4314,50 @@ func (store *Store) FinishRoleContainer(playerID string, roleID string, containe
 					continue
 				}
 
-				changed = true
+				stackChanged = true
 				containerItems[targetIndex].Count += moveCount
 				containerItems[targetIndex] = normalizeRoleItem(containerItems[targetIndex])
-				updatedSlotIndexes[containerItems[targetIndex].Index] = targetIndex
 
 				containerItems[sourceIndex].Count -= moveCount
 				if containerItems[sourceIndex].Count <= 0 {
-					clearedItems = append(clearedItems, RoleItemClear{Type: containerType, Index: containerItems[sourceIndex].Index})
 					removed[sourceIndex] = true
 					continue
 				}
 				containerItems[sourceIndex] = normalizeRoleItem(containerItems[sourceIndex])
-				updatedSlotIndexes[containerItems[sourceIndex].Index] = sourceIndex
 			}
 		}
 
+		compactedItems := make([]RoleItem, 0, len(containerItems))
+		nextIndex := 0
+		for itemIndex, item := range containerItems {
+			if removed[itemIndex] {
+				continue
+			}
+			item.Index = nextIndex
+			item = normalizeRoleItem(item)
+			compactedItems = append(compactedItems, item)
+			nextIndex += 1
+		}
+
+		updatedItems := make([]RoleItem, 0, len(compactedItems))
+		finalItemsByIndex := make(map[int]RoleItem, len(compactedItems))
+		for _, item := range compactedItems {
+			finalItemsByIndex[item.Index] = item
+			originalItem, existed := originalItemsByIndex[item.Index]
+			if !existed || !roleItemsEqualForContainerFinish(originalItem, item) {
+				updatedItems = append(updatedItems, item)
+			}
+		}
+		clearedItems := make([]RoleItemClear, 0, len(originalItemsByIndex))
+		for originalIndex := range originalItemsByIndex {
+			if _, exists := finalItemsByIndex[originalIndex]; !exists {
+				clearedItems = append(clearedItems, RoleItemClear{Type: containerType, Index: originalIndex})
+			}
+		}
+		sort.SliceStable(clearedItems, func(left int, right int) bool {
+			return clearedItems[left].Index < clearedItems[right].Index
+		})
+		changed := stackChanged || len(clearedItems) > 0 || len(updatedItems) > 0
 		if !changed {
 			role := withRoleRuntimeDefaults(roles[index])
 			return RoleFinishContainerResult{
@@ -4337,25 +4367,15 @@ func (store *Store) FinishRoleContainer(playerID string, roleID string, containe
 			}
 		}
 
-		normalizedItems := make([]RoleItem, 0, len(otherItems)+len(containerItems))
+		normalizedItems := make([]RoleItem, 0, len(otherItems)+len(compactedItems))
 		normalizedItems = append(normalizedItems, otherItems...)
-		for itemIndex, item := range containerItems {
-			if removed[itemIndex] {
-				continue
-			}
-			normalizedItems = append(normalizedItems, item)
-		}
+		normalizedItems = append(normalizedItems, compactedItems...)
 		roles[index].Items = normalizeRoleItems(normalizedItems)
 		store.rolesByPID[playerID] = roles
 		roleSnapshot = roles[index]
 		shouldPersist = true
 
 		role := withRoleRuntimeDefaults(roles[index])
-		for _, itemIndex := range updatedSlotIndexes {
-			if !removed[itemIndex] {
-				updatedItems = append(updatedItems, normalizeRoleItem(containerItems[itemIndex]))
-			}
-		}
 		sort.SliceStable(updatedItems, func(left int, right int) bool {
 			return updatedItems[left].Index < updatedItems[right].Index
 		})
@@ -4374,6 +4394,33 @@ func (store *Store) FinishRoleContainer(playerID string, roleID string, containe
 		ErrorCode:    "role_missing",
 		ErrorMessage: "角色不存在。",
 	}
+}
+
+func roleItemsEqualForContainerFinish(left RoleItem, right RoleItem) bool {
+	left = normalizeRoleItem(left)
+	right = normalizeRoleItem(right)
+	return left.Type == right.Type &&
+		left.Name == right.Name &&
+		left.ItemType == right.ItemType &&
+		left.Display == right.Display &&
+		left.Description == right.Description &&
+		left.Count == right.Count &&
+		left.Index == right.Index &&
+		left.Level == right.Level &&
+		left.EndTime == right.EndTime &&
+		left.Owner == right.Owner &&
+		left.ItemLevel == right.ItemLevel &&
+		rolePetItemStatesEqual(left.PetState, right.PetState)
+}
+
+func rolePetItemStatesEqual(left *RolePetItemState, right *RolePetItemState) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return left.Level == right.Level &&
+		left.Exp == right.Exp &&
+		left.Fullness == right.Fullness &&
+		left.PetID == right.PetID
 }
 
 func roleContainerCapacity(containerType string) (int, bool) {
@@ -5125,6 +5172,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "a", "34", true
 	case "蚩颅王护肩":
 		return "a", "29", true
+	case "狼人护肩":
+		return "a", "32", true
 	case "龙颜单肩":
 		return "a", "19", true
 	case "蛮力护腕":

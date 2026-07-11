@@ -1125,11 +1125,15 @@ func TestShihukuVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) {
 		attack int
 		label  string
 	}{
-		{mapID: "158", handle: "5837621591158929", name: "黑影", level: 25, maxHP: 2300, maxMP: 724, attack: 402, label: "普通攻击"},
+		{mapID: "158", handle: "5837621591158929", name: "黑影", level: 25, maxHP: 2300, maxMP: 724, attack: 299, label: "普通攻击"},
 		{mapID: "160", handle: "3824621817512450", name: "蛮虎怪", level: 25, maxHP: 3000, maxMP: 584, attack: 303, label: "普通攻击"},
 		{mapID: "161", handle: "9333621886743795", name: "蛮虎队长", level: 28, maxHP: 3500, maxMP: 600, attack: 322, label: "普通攻击"},
-		{mapID: "163", handle: "8094622782649492", name: "盘狮队长", level: 26, maxHP: 3300, maxMP: 440, attack: 228, label: "普通攻击"},
+		{mapID: "163", handle: "8094622782649492", name: "盘狮队长", level: 26, maxHP: 3300, maxMP: 440, attack: 338, label: "普通攻击"},
 		{mapID: "165", handle: "3856623006745359", name: "黑影队长", level: 26, maxHP: 3000, maxMP: 760, attack: 276, label: "普通攻击"},
+		{mapID: "160", handle: "3826621817513876", name: "盘狮怪", level: 25, maxHP: 2600, maxMP: 384, attack: 314, label: "普通攻击"},
+		{mapID: "163", handle: "8088622782646450", name: "盘狮怪", level: 26, maxHP: 2800, maxMP: 400, attack: 312, label: "普通攻击"},
+		{mapID: "167", handle: "7548622260837633", name: "盘狮怪", level: 27, maxHP: 3000, maxMP: 384, attack: 328, label: "普通攻击"},
+		{mapID: "167", handle: "7546622260836700", name: "蛮虎怪", level: 27, maxHP: 3200, maxMP: 600, attack: 336, label: "普通攻击"},
 		{mapID: "167", handle: "7550622260838906", name: "蚩颅王", level: 30, maxHP: 6000, maxMP: 600, attack: 236, label: "普通攻击"},
 	}
 
@@ -1161,6 +1165,12 @@ func TestShihukuVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T
 			names:   []string{"蛮虎怪", "蛮虎怪"},
 		},
 		{
+			mapID:   "161",
+			handle:  "9325621886740100",
+			handles: []string{"9325621886740100", "9327621886741599"},
+			names:   []string{"蛮虎怪", "蛮虎怪"},
+		},
+		{
 			mapID:   "163",
 			handle:  "8088622782646450",
 			handles: []string{"8088622782646450", "8090622782647529"},
@@ -1178,6 +1188,20 @@ func TestShihukuVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T
 			handles: []string{"7542622260835182", "7544622260836750"},
 			names:   []string{"盘狮怪", "盘狮怪"},
 		},
+		{
+			// 20260616_215712_071_session_41212 packet 5712..5714:
+			// map167 boss window is 蛮虎怪 + 盘狮怪 + 蚩颅王, not boss alone.
+			mapID:   "167",
+			handle:  "7550622260838906",
+			handles: []string{"7546622260836700", "7548622260837633", "7550622260838906"},
+			names:   []string{"蛮虎怪", "盘狮怪", "蚩颅王"},
+		},
+		{
+			mapID:   "167",
+			handle:  "7546622260836700",
+			handles: []string{"7546622260836700", "7548622260837633", "7550622260838906"},
+			names:   []string{"蛮虎怪", "盘狮怪", "蚩颅王"},
+		},
 	}
 
 	for _, testCase := range cases {
@@ -1192,6 +1216,64 @@ func TestShihukuVisibleMonsterEncounterGroupsUseCapturedBattleCells(t *testing.T
 			if configs[index].Cell.Handle != expectedHandle || configs[index].Cell.Name != testCase.names[index] {
 				t.Fatalf("expected captured shihuku encounter member %d %s/%s, got %+v", index, expectedHandle, testCase.names[index], configs[index].Cell)
 			}
+		}
+	}
+}
+
+func TestNewWildBattleUsesCapturedShihukuBossEncounterGroup(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "player_21424",
+		DisplayName: "恐龙抗狼1",
+		Level:       35,
+		SourceQuery: "human/human.swf?a=14&w8=47&",
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:    "player",
+		RoleID:      role.RoleID,
+		DisplayName: role.DisplayName,
+		Level:       35,
+		HP:          1555,
+		MP:          424,
+		MaxHP:       1555,
+		MaxMP:       424,
+		SourceQuery: role.SourceQuery,
+		RolePhysique: &session.RolePhysique{
+			Handle: role.RoleID,
+			MaxHP:  1555,
+			MaxMP:  424,
+			PhyAtk: 500,
+			PhyDef: 200,
+			MgcDef: 30,
+			Hit:    201,
+			Dog:    115,
+			Fat:    156,
+		},
+	}
+
+	runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{
+		MapID:               "167",
+		MapName:             "狮虎窟_10",
+		SourceMonsterHandle: "7550622260838906",
+	})
+	if !ok || runtime == nil {
+		t.Fatalf("expected shihuku boss encounter runtime, got ok=%v runtime=%+v", ok, runtime)
+	}
+	if len(bundle.Cells) != 4 {
+		t.Fatalf("expected player plus captured boss trio, got %+v", bundle.Cells)
+	}
+	expected := []struct {
+		handle string
+		name   string
+		maxHP  int
+	}{
+		{"7546622260836700", "蛮虎怪", 3200},
+		{"7548622260837633", "盘狮怪", 3000},
+		{"7550622260838906", "蚩颅王", 6000},
+	}
+	for index, want := range expected {
+		cell := bundle.Cells[index+1]
+		if cell.Handle != want.handle || cell.Name != want.name || cell.MaxHP != want.maxHP || cell.Camp != CampEnemy {
+			t.Fatalf("expected shihuku boss trio member %d %+v, got %+v", index, want, cell)
 		}
 	}
 }

@@ -1544,6 +1544,54 @@ func (store *Store) GetRoleRuntimeData(playerID string, roleID string) (RoleSumm
 	return RoleSummary{}, emptyPlayerBaseData(playerID), false
 }
 
+// FindRoleByDisplayName 按角色显示名查找任意账号下的角色。
+// 用于 AddFriend(name) / AddBlackList(name) 这类只带名字的社交请求。
+func (store *Store) FindRoleByDisplayName(displayName string) (playerID string, role RoleSummary, ok bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	name := strings.TrimSpace(displayName)
+	if name == "" {
+		return "", RoleSummary{}, false
+	}
+	var foundPlayerID string
+	var foundRole RoleSummary
+	for currentPlayerID, roles := range store.rolesByPID {
+		for _, candidate := range roles {
+			if strings.TrimSpace(candidate.DisplayName) != name {
+				continue
+			}
+			if foundPlayerID != "" {
+				return "", RoleSummary{}, false
+			}
+			foundPlayerID = currentPlayerID
+			foundRole = withRoleRuntimeDefaults(candidate)
+		}
+	}
+	return foundPlayerID, foundRole, foundPlayerID != ""
+}
+
+// FindRoleByID 按 roleId 查找任意账号下的角色。
+func (store *Store) FindRoleByID(roleID string) (playerID string, role RoleSummary, ok bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	id := strings.TrimSpace(roleID)
+	if id == "" {
+		return "", RoleSummary{}, false
+	}
+	for currentPlayerID, roles := range store.rolesByPID {
+		for _, candidate := range roles {
+			if candidate.RoleID != id {
+				continue
+			}
+			candidate = withRoleRuntimeDefaults(candidate)
+			return currentPlayerID, candidate, true
+		}
+	}
+	return "", RoleSummary{}, false
+}
+
 func (store *Store) RemovedQuestTitles(playerID string, roleID string) map[string]bool {
 	store.mu.Lock()
 	defer store.mu.Unlock()

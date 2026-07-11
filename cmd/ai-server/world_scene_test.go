@@ -736,3 +736,89 @@ func TestBuildClassicTownMoveRoleResultIgnoresMismatchedMap(t *testing.T) {
 		t.Fatalf("mismatched map moveRole changed spawn to %+v, want {100 200}", conn.spawn)
 	}
 }
+
+func TestWithClassicMapRoleStateUnitsPreservesHigherDigits(t *testing.T) {
+	if got := withClassicMapRoleStateUnits(0, classicMapRoleStateFightUnits); got != 1 {
+		t.Fatalf("fight from empty = %d, want 1", got)
+	}
+	if got := withClassicMapRoleStateUnits(1, 0); got != 0 {
+		t.Fatalf("clear fight = %d, want 0", got)
+	}
+	// chair(tens=1) + fight(units=1) => 11; clear fight keeps chair.
+	if got := withClassicMapRoleStateUnits(10, classicMapRoleStateFightUnits); got != 11 {
+		t.Fatalf("chair+fight = %d, want 11", got)
+	}
+	if got := withClassicMapRoleStateUnits(11, 0); got != 10 {
+		t.Fatalf("clear fight keep chair = %d, want 10", got)
+	}
+	if got := withClassicMapRoleStateUnits(1001, classicMapRoleStateFightUnits); got != 1001 {
+		t.Fatalf("vip+fight keep = %d, want 1001", got)
+	}
+	if got := withClassicMapRoleStateUnits(1001, 0); got != 1000 {
+		t.Fatalf("clear fight keep vip = %d, want 1000", got)
+	}
+}
+
+func TestApplyClassicMapFightStateTogglesUnitsDigit(t *testing.T) {
+	session := stubSceneSession("A", 1)
+	session.playerBase.State = 10
+	if !applyClassicMapFightState(session, true) {
+		t.Fatal("expected fight state change")
+	}
+	if session.playerBase.State != 11 {
+		t.Fatalf("state after enter fight = %d, want 11", session.playerBase.State)
+	}
+	if applyClassicMapFightState(session, true) {
+		t.Fatal("idempotent enter fight should not report change")
+	}
+	if !applyClassicMapFightState(session, false) {
+		t.Fatal("expected fight clear change")
+	}
+	if session.playerBase.State != 10 {
+		t.Fatalf("state after leave fight = %d, want 10", session.playerBase.State)
+	}
+}
+
+func TestWorldSceneRefreshRolePushesCreateRoleToVisibleObservers(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	hub := resetWorldSceneHub()
+	sessA := stubSceneSession("A", 1)
+	sessB := stubSceneSession("B", 1)
+	sessC := stubSceneSession("C", 1)
+	sessFar := stubSceneSession("far", 1)
+	hub.register("A", 1, &websocketWriter{}, sessA, stubSceneSpawn(0, 0))
+	hub.register("B", 1, &websocketWriter{}, sessB, stubSceneSpawn(100, 0))
+	hub.register("C", 1, &websocketWriter{}, sessC, stubSceneSpawn(200, 0))
+	hub.register("far", 1, &websocketWriter{}, sessFar, stubSceneSpawn(1000, 0))
+	hub.syncMapVisibility(1)
+
+	sessB.playerBase.State = withClassicMapRoleStateUnits(sessB.playerBase.State, classicMapRoleStateFightUnits)
+	actions := hub.refreshRoleActions("B")
+	sawA := false
+	sawC := false
+	sawFar := false
+	for _, action := range actions {
+		if action.createRole == nil || action.createRole.Handle != "B" {
+			continue
+		}
+		if action.createRole.State != classicMapRoleStateFightUnits {
+			t.Fatalf("refresh createRole state = %d, want %d", action.createRole.State, classicMapRoleStateFightUnits)
+		}
+		switch action.recipientID {
+		case "A":
+			sawA = true
+		case "C":
+			sawC = true
+		case "far":
+			sawFar = true
+		case "B":
+			t.Fatal("refresh must not push createRole to actor self")
+		}
+	}
+	if !sawA || !sawC {
+		t.Fatalf("visible observers should receive refresh createRole, sawA=%v sawC=%v", sawA, sawC)
+	}
+	if sawFar {
+		t.Fatal("far observer outside heroSpace should not receive refresh createRole")
+	}
+}

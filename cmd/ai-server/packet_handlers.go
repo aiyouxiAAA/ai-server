@@ -17,75 +17,75 @@ import (
 )
 
 type packetResult struct {
-	responseCmd        uint64
-	responsePayload    []byte
-	serverTime         *classicTownServerTimePush
-	townBootstrap      *world.TownBootstrapSnapshot
-	gameTips           []classicTownGameTipPush
-	answerSpeak        *world.AnswerSpeakPush
-	subGame            *classicTownSubGamePush
-	collectionComplete *classicTownCollectionCompletePush
-	openContainer      *classicTownOpenContainerPush
-	careState          *classicTownCareStatePush
-	createPlayer       *world.RolePush
-	roleState          *session.RoleState
-	rolePhysique       *session.RolePhysique
-	chatMessages       []classicTownChatMessagePush
-	errorMessages      []classicTownErrorPush
-	chatBroadcasts     []classicTownChatBroadcast
-	abilityCount       *classicTownAbilityCountPush
-	skillCap           *classicTownSkillCapPush
-	skillInfos         []classicTownSkillInfoPush
-	skillClears        []classicTownClearSkillInfoPush
-	skillShop          *classicTownSkillShopPush
-	currencyPush       *classicTownCurrencyPush
-	fastPanel          *classicTownFastPanelPush
-	townBuffs          []classicTownBuffInfoPush
-	townBuffClears     []classicTownClearBuffInfoPush
-	buySkillResult     *classicTownBuySkillResultPush
-	buyBackRefresh     *classicTownBuyBackRefreshPush
-	buyBackInfos       []classicTownBuyBackInfoPush
-	containerCap       *classicTownContainerCapacityPush
-	itemInfos          []classicTownItemInfoPush
-	itemClears         []classicTownItemInfoClearPush
-	otherEquipment     *classicTownOtherEquipmentPush
-	tryEquip           *classicTownTryEquipPush
-	questInfos         []classicQuestInfoPush
-	questClears        []classicQuestClearPush
-	questStates        []world.QuestStatePush
-	dungeonInstance    *classicTownDungeonInstancePush
-	mapSpecial         *classicTownMapSpecialPush
-	autoBattleInfo     *classicAutoBattleInfoPush
-	friendInfos        []classicSocialFriendEntry
-	friendClears       []classicSocialClearEntry
-	blackInfos         []classicSocialBlackEntry
-	blackClears        []classicSocialClearEntry
-	enemyInfos         []classicSocialEnemyEntry
-	enemyClears        []classicSocialClearEntry
-	guildInfo          *guild.Guild
-	guildMembers       []guild.Member
-	guildAuth          *guild.Auth
-	guildNotice        *classicGuildNoticePush
-	guildResult        *classicGuildResultPush
-	guildMemberClears  []classicGuildMemberClearPush
-	mallCategories     []mall.Category
-	mallSearchCount    *mall.SearchCountPush
-	mallSearchPage     *mall.SearchPagePush
-	mallCurrency       *mall.CurrencyPush
-	mallPurchase       *mall.PurchaseResult
-	petInfo            *classicPetInfoPush
-	petFeedResult      *classicPetFeedResultPush
-	auctionOpen        *classicAuctionOpenPush
-	auctionList        *classicAuctionListPush
-	mailOpen           *classicMailOpenPush
-	mailList           *classicMailListPush
-	mailInfo           *classicMailInfoPush
-	dailyRewardInfo    *classicDailyRewardInfoPush
-	maskCodeChallenge  *classicMaskCodeChallengePush
-	maskCodeResult     *classicMaskCodeResultPush
-	teamEvents         []team.Event
-	teamSyncTransfer   *classicTeamSyncTransfer
-	teamDungeonReset   *classicTeamDungeonReset
+	responseCmd            uint64
+	responsePayload        []byte
+	serverTime             *classicTownServerTimePush
+	townBootstrap          *world.TownBootstrapSnapshot
+	gameTips               []classicTownGameTipPush
+	answerSpeak            *world.AnswerSpeakPush
+	subGame                *classicTownSubGamePush
+	collectionComplete     *classicTownCollectionCompletePush
+	openContainer          *classicTownOpenContainerPush
+	careState              *classicTownCareStatePush
+	createPlayer           *world.RolePush
+	roleState              *session.RoleState
+	rolePhysique           *session.RolePhysique
+	chatMessages           []classicTownChatMessagePush
+	errorMessages          []classicTownErrorPush
+	chatBroadcasts         []classicTownChatBroadcast
+	abilityCount           *classicTownAbilityCountPush
+	skillCap               *classicTownSkillCapPush
+	skillInfos             []classicTownSkillInfoPush
+	skillClears            []classicTownClearSkillInfoPush
+	skillShop              *classicTownSkillShopPush
+	currencyPush           *classicTownCurrencyPush
+	fastPanel              *classicTownFastPanelPush
+	townBuffs              []classicTownBuffInfoPush
+	townBuffClears         []classicTownClearBuffInfoPush
+	buySkillResult         *classicTownBuySkillResultPush
+	buyBackRefresh         *classicTownBuyBackRefreshPush
+	buyBackInfos           []classicTownBuyBackInfoPush
+	containerCap           *classicTownContainerCapacityPush
+	itemInfos              []classicTownItemInfoPush
+	itemClears             []classicTownItemInfoClearPush
+	otherEquipment         *classicTownOtherEquipmentPush
+	tryEquip               *classicTownTryEquipPush
+	questInfos             []classicQuestInfoPush
+	questClears            []classicQuestClearPush
+	questStates            []world.QuestStatePush
+	dungeonInstance        *classicTownDungeonInstancePush
+	mapSpecial             *classicTownMapSpecialPush
+	autoBattleInfo         *classicAutoBattleInfoPush
+	friendInfos            []classicSocialFriendEntry
+	friendClears           []classicSocialClearEntry
+	blackInfos             []classicSocialBlackEntry
+	blackClears            []classicSocialClearEntry
+	enemyInfos             []classicSocialEnemyEntry
+	enemyClears            []classicSocialClearEntry
+	guildInfo              *guild.Guild
+	guildMembers           []guild.Member
+	guildAuth              *guild.Auth
+	guildNotice            *classicGuildNoticePush
+	guildResult            *classicGuildResultPush
+	guildMemberClears      []classicGuildMemberClearPush
+	mallCategories         []mall.Category
+	mallSearchCount        *mall.SearchCountPush
+	mallSearchPage         *mall.SearchPagePush
+	mallCurrency           *mall.CurrencyPush
+	mallPurchase           *mall.PurchaseResult
+	petInfo                *classicPetInfoPush
+	petFeedResult          *classicPetFeedResultPush
+	auctionOpen            *classicAuctionOpenPush
+	auctionList            *classicAuctionListPush
+	mailOpen               *classicMailOpenPush
+	mailList               *classicMailListPush
+	mailInfo               *classicMailInfoPush
+	dailyRewardInfo        *classicDailyRewardInfoPush
+	maskCodeChallenge      *classicMaskCodeChallengePush
+	maskCodeResult         *classicMaskCodeResultPush
+	teamEvents             []team.Event
+	teamSyncTransfer       *classicTeamSyncTransfer
+	teamDungeonReset       *classicTeamDungeonReset
 	teamBattleStart        *classicTeamBattleStart
 	teamBattleSync         *classicTeamBattleSync
 	teamBattleLoadProgress *classicBattleLoadProgressPush
@@ -102,8 +102,8 @@ type packetResult struct {
 	battleOver             *battle.OverPush
 	battleLoadProgress     *classicBattleLoadProgressPush
 	battleRelive           *classicBattleRelivePush
-	removeRoleHandles  []string
-	moveRole           *world.RoleMovePush
+	removeRoleHandles      []string
+	moveRole               *world.RoleMovePush
 	// sceneTransferFromMapID 标记本次结果是由"传送/切图"触发的,值为玩家传送前的旧 mapId。
 	// main.go 收到 townBootstrap 后据此调用 announceWorldSceneTransfer:给旧图邻居推 removeRole,
 	// 在新图重新互推。首次进图(选角)不走这里,它的互推在 register 区的 syncWorldScenePresence 完成。
@@ -734,9 +734,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		return buildClassicSocialAddFriendResult(socketSession, request)
+		return buildClassicSocialAddFriendResult(store, socketSession, request)
 	case cmdClassicSocialGetFriendListReq:
-		return buildClassicSocialGetFriendListResult(socketSession)
+		return buildClassicSocialGetFriendListResult(store, socketSession)
 	case cmdClassicSocialRemoveFriend:
 		var request classicSocialMutateRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -748,7 +748,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		return buildClassicSocialAddBlackResult(socketSession, request)
+		return buildClassicSocialAddBlackResult(store, socketSession, request)
 	case cmdClassicSocialRemoveBlack:
 		var request classicSocialMutateRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -756,7 +756,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		}
 		return buildClassicSocialRemoveBlackResult(socketSession, request)
 	case cmdClassicSocialGetBlackListReq:
-		return buildClassicSocialGetBlackListResult(socketSession)
+		return buildClassicSocialGetBlackListResult(store, socketSession)
 	case cmdClassicSocialTradeReq:
 		var request classicSocialTradeRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -996,6 +996,9 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 		len(bundle.Cells),
 		enemyCells,
 	)
+	// Map overhead stateICO: units digit 1 = fightIcon for same-map observers.
+	// Source: U_Cell1.1 changeStateICO; project push path reuses createRole.state.
+	announceClassicMapFightState(socketSession, true)
 	// Keep first startCommand immediate. Source battleLoad may still wait on peer
 	// progress client-side, but delaying startCommand until RoleReady deadlocks
 	// when a teammate never enters or shared membership flaps.
@@ -1097,6 +1100,8 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
+		// Clear map overhead fightIcon after battle ends.
+		announceClassicMapFightState(socketSession, false)
 	} else if sharedBattle {
 		updatePlayerBaseRoleStateFromBattle(socketSession)
 	}
@@ -1279,6 +1284,8 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
+		// Clear map overhead fightIcon after battle ends.
+		announceClassicMapFightState(socketSession, false)
 	} else if sharedBattle {
 		updatePlayerBaseRoleStateFromBattle(socketSession)
 	}
@@ -1352,6 +1359,8 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
+		// Clear map overhead fightIcon after battle ends.
+		announceClassicMapFightState(socketSession, false)
 	} else if sharedBattle {
 		updatePlayerBaseRoleStateFromBattle(socketSession)
 	}

@@ -4,9 +4,12 @@ import (
 	"log"
 	"sort"
 	"strings"
+
+	"ai-server/internal/session"
+	"ai-server/internal/world"
 )
 
-const classicSocialFriendSeedCapture = "tmp/capture-timeline-feature-gap-audit.json#GetFrienInfos(132)+c_friendInfo(50028):\u6050\u9f99\u6297\u72fc1|45|29|\u6218\u58eb"
+const classicSocialFriendSeedCapture = "tmp/capture-timeline-feature-gap-audit.json#GetFrienInfos(132)+c_friendInfo(50028):恐龙抗狼1|45|29|战士"
 
 type classicSocialEntryBase struct {
 	RoleID   string `json:"roleId"`
@@ -52,18 +55,20 @@ const (
 	classicSocialTradeClosedCapture     = "20260606_200103_131_session_00324/20260606_200109_321_conn_0002#TradeRequest(108)+c_Error(49999)"
 )
 
-func buildClassicSocialAddFriendResult(socketSession *packetSession, request classicSocialMutateRequest) packetResult {
+func buildClassicSocialAddFriendResult(store *session.Store, socketSession *packetSession, request classicSocialMutateRequest) packetResult {
 	if !hasSelectedSocialRole(socketSession) {
 		log.Printf("[ai-server] classic social AddFriend ignored without selected role roleName=%s", request.RoleName)
 		return packetResult{handled: true}
 	}
-	entry, ok := normalizeFriendEntry(request)
+	entry, ok := normalizeFriendEntry(store, request)
 	if !ok {
 		return packetResult{handled: true}
 	}
 	if socketSession.friends == nil {
 		socketSession.friends = make(map[string]classicSocialFriendEntry)
 	}
+	// 统一以 roleId 为主键；若历史以名字存过，先清掉避免双份。
+	pruneSocialFriendDuplicates(socketSession.friends, entry)
 	socketSession.friends[socialStableKey(entry.RoleID, entry.RoleName)] = entry
 	return packetResult{
 		friendInfos: []classicSocialFriendEntry{entry},
@@ -76,7 +81,7 @@ func buildClassicSocialRemoveFriendResult(socketSession *packetSession, request 
 		log.Printf("[ai-server] classic social RemoveFriend ignored without selected role roleName=%s", request.RoleName)
 		return packetResult{handled: true}
 	}
-	clear, removed := removeSocialEntry(socketSession.friends, request)
+	clear, removed := removeFriendEntry(socketSession.friends, request)
 	if !removed {
 		return packetResult{handled: true}
 	}
@@ -86,15 +91,18 @@ func buildClassicSocialRemoveFriendResult(socketSession *packetSession, request 
 	}
 }
 
-func buildClassicSocialGetFriendListResult(socketSession *packetSession) packetResult {
+func buildClassicSocialGetFriendListResult(store *session.Store, socketSession *packetSession) packetResult {
 	if !hasSelectedSocialRole(socketSession) {
 		log.Printf("[ai-server] classic social GetFrienInfos ignored without selected role")
 		return packetResult{handled: true}
 	}
 	ensureClassicSocialCapturedFriendSeed(socketSession)
 	entries := make([]classicSocialFriendEntry, 0, len(socketSession.friends))
-	for _, entry := range socketSession.friends {
-		entries = append(entries, entry)
+	for key, entry := range socketSession.friends {
+		// 列表拉取时按在线 hub / store 刷新等级、地图与在线态，对齐源码 friendMsg 后按 mapId 段判定在线。
+		refreshed := refreshFriendEntry(store, entry)
+		socketSession.friends[key] = refreshed
+		entries = append(entries, refreshed)
 	}
 	sort.Slice(entries, func(left int, right int) bool {
 		if entries[left].RoleName != entries[right].RoleName {
@@ -108,18 +116,19 @@ func buildClassicSocialGetFriendListResult(socketSession *packetSession) packetR
 	}
 }
 
-func buildClassicSocialAddBlackResult(socketSession *packetSession, request classicSocialMutateRequest) packetResult {
+func buildClassicSocialAddBlackResult(store *session.Store, socketSession *packetSession, request classicSocialMutateRequest) packetResult {
 	if !hasSelectedSocialRole(socketSession) {
 		log.Printf("[ai-server] classic social AddBlack ignored without selected role roleName=%s", request.RoleName)
 		return packetResult{handled: true}
 	}
-	entry, ok := normalizeBlackEntry(request)
+	entry, ok := normalizeBlackEntry(store, request)
 	if !ok {
 		return packetResult{handled: true}
 	}
 	if socketSession.blackList == nil {
 		socketSession.blackList = make(map[string]classicSocialBlackEntry)
 	}
+	pruneSocialBlackDuplicates(socketSession.blackList, entry)
 	socketSession.blackList[socialStableKey(entry.RoleID, entry.RoleName)] = entry
 	return packetResult{
 		blackInfos: []classicSocialBlackEntry{entry},
@@ -132,7 +141,7 @@ func buildClassicSocialRemoveBlackResult(socketSession *packetSession, request c
 		log.Printf("[ai-server] classic social RemoveBlack ignored without selected role roleName=%s", request.RoleName)
 		return packetResult{handled: true}
 	}
-	clear, removed := removeSocialEntry(socketSession.blackList, request)
+	clear, removed := removeBlackEntry(socketSession.blackList, request)
 	if !removed {
 		return packetResult{handled: true}
 	}
@@ -142,14 +151,16 @@ func buildClassicSocialRemoveBlackResult(socketSession *packetSession, request c
 	}
 }
 
-func buildClassicSocialGetBlackListResult(socketSession *packetSession) packetResult {
+func buildClassicSocialGetBlackListResult(store *session.Store, socketSession *packetSession) packetResult {
 	if !hasSelectedSocialRole(socketSession) {
 		log.Printf("[ai-server] classic social GetBlackListInfos ignored without selected role")
 		return packetResult{handled: true}
 	}
 	entries := make([]classicSocialBlackEntry, 0, len(socketSession.blackList))
-	for _, entry := range socketSession.blackList {
-		entries = append(entries, entry)
+	for key, entry := range socketSession.blackList {
+		refreshed := refreshBlackEntry(store, entry)
+		socketSession.blackList[key] = refreshed
+		entries = append(entries, refreshed)
 	}
 	sort.Slice(entries, func(left int, right int) bool {
 		if entries[left].RoleName != entries[right].RoleName {
@@ -183,12 +194,12 @@ func ensureClassicSocialCapturedFriendSeed(socketSession *packetSession) {
 		return
 	}
 	socketSession.friends = map[string]classicSocialFriendEntry{
-		"social-\u6050\u9f99\u6297\u72fc1": {
+		"social-恐龙抗狼1": {
 			classicSocialEntryBase: classicSocialEntryBase{
-				RoleID:   "social-\u6050\u9f99\u6297\u72fc1",
-				RoleName: "\u6050\u9f99\u6297\u72fc1",
+				RoleID:   "social-恐龙抗狼1",
+				RoleName: "恐龙抗狼1",
 				Level:    29,
-				MapName:  "\u5e7f\u9752\u9547_1",
+				MapName:  "广青镇_1",
 				Online:   true,
 			},
 			Relation: "friend",
@@ -196,8 +207,8 @@ func ensureClassicSocialCapturedFriendSeed(socketSession *packetSession) {
 	}
 }
 
-func normalizeFriendEntry(request classicSocialMutateRequest) (classicSocialFriendEntry, bool) {
-	base, ok := normalizeSocialEntryBase(request)
+func normalizeFriendEntry(store *session.Store, request classicSocialMutateRequest) (classicSocialFriendEntry, bool) {
+	base, ok := resolveSocialEntryBase(store, request)
 	if !ok {
 		return classicSocialFriendEntry{}, false
 	}
@@ -207,8 +218,8 @@ func normalizeFriendEntry(request classicSocialMutateRequest) (classicSocialFrie
 	}, true
 }
 
-func normalizeBlackEntry(request classicSocialMutateRequest) (classicSocialBlackEntry, bool) {
-	base, ok := normalizeSocialEntryBase(request)
+func normalizeBlackEntry(store *session.Store, request classicSocialMutateRequest) (classicSocialBlackEntry, bool) {
+	base, ok := resolveSocialEntryBase(store, request)
 	if !ok {
 		return classicSocialBlackEntry{}, false
 	}
@@ -218,12 +229,112 @@ func normalizeBlackEntry(request classicSocialMutateRequest) (classicSocialBlack
 	}, true
 }
 
-func normalizeSocialEntryBase(request classicSocialMutateRequest) (classicSocialEntryBase, bool) {
+// resolveSocialEntryBase 按 在线 hub → store → 最小离线占位 解析目标角色。
+// 源码 AddFriend(roleName) 只带名字；玩家菜单可带 roleId。抓包 c_friendInfo 为 name|mapId|level|voc。
+func resolveSocialEntryBase(store *session.Store, request classicSocialMutateRequest) (classicSocialEntryBase, bool) {
 	roleName := strings.TrimSpace(request.RoleName)
 	roleID := strings.TrimSpace(request.RoleID)
 	if roleName == "" && roleID == "" {
 		return classicSocialEntryBase{}, false
 	}
+
+	if base, ok := resolveSocialEntryFromOnline(roleID, roleName); ok {
+		return base, true
+	}
+	if base, ok := resolveSocialEntryFromStore(store, roleID, roleName); ok {
+		return base, true
+	}
+	return fallbackSocialEntryBase(roleID, roleName), true
+}
+
+func resolveSocialEntryFromOnline(roleID string, roleName string) (classicSocialEntryBase, bool) {
+	if roleID != "" {
+		if conn, ok := worldSceneHub.connectionFor(roleID); ok {
+			if base, ok := socialEntryFromOnlineConnection(conn); ok {
+				return base, true
+			}
+		}
+		return classicSocialEntryBase{}, false
+	}
+	if roleName != "" {
+		if conn, ok := worldSceneHub.connectionByDisplayName(roleName); ok {
+			if base, ok := socialEntryFromOnlineConnection(conn); ok {
+				return base, true
+			}
+		}
+	}
+	return classicSocialEntryBase{}, false
+}
+
+func socialEntryFromOnlineConnection(conn worldSceneConnection) (classicSocialEntryBase, bool) {
+	if conn.session == nil || conn.session.selectedRole == nil {
+		return classicSocialEntryBase{}, false
+	}
+	role := conn.session.selectedRole
+	displayName := strings.TrimSpace(role.DisplayName)
+	if displayName == "" && conn.session.playerBase != nil {
+		displayName = strings.TrimSpace(conn.session.playerBase.DisplayName)
+	}
+	if displayName == "" {
+		displayName = strings.TrimSpace(role.RoleID)
+	}
+	level := role.Level
+	if level <= 0 && conn.session.playerBase != nil {
+		level = conn.session.playerBase.Level
+	}
+	if level <= 0 {
+		level = 1
+	}
+	return classicSocialEntryBase{
+		RoleID:   strings.TrimSpace(role.RoleID),
+		RoleName: displayName,
+		Level:    level,
+		MapName:  world.MapNameForMapID(conn.mapID),
+		Online:   true,
+	}, true
+}
+
+func resolveSocialEntryFromStore(store *session.Store, roleID string, roleName string) (classicSocialEntryBase, bool) {
+	if store == nil {
+		return classicSocialEntryBase{}, false
+	}
+	if roleID != "" {
+		if _, role, ok := store.FindRoleByID(roleID); ok {
+			return socialEntryFromStoredRole(role, false), true
+		}
+		return classicSocialEntryBase{}, false
+	}
+	if roleName != "" {
+		if _, role, ok := store.FindRoleByDisplayName(roleName); ok {
+			return socialEntryFromStoredRole(role, false), true
+		}
+	}
+	return classicSocialEntryBase{}, false
+}
+
+func socialEntryFromStoredRole(role session.RoleSummary, online bool) classicSocialEntryBase {
+	displayName := strings.TrimSpace(role.DisplayName)
+	if displayName == "" {
+		displayName = strings.TrimSpace(role.RoleID)
+	}
+	level := role.Level
+	if level <= 0 {
+		level = 1
+	}
+	mapName := ""
+	if online || role.MapID > 0 {
+		mapName = world.MapNameForMapID(role.MapID)
+	}
+	return classicSocialEntryBase{
+		RoleID:   strings.TrimSpace(role.RoleID),
+		RoleName: displayName,
+		Level:    level,
+		MapName:  mapName,
+		Online:   online,
+	}
+}
+
+func fallbackSocialEntryBase(roleID string, roleName string) classicSocialEntryBase {
 	if roleName == "" {
 		roleName = roleID
 	}
@@ -236,34 +347,141 @@ func normalizeSocialEntryBase(request classicSocialMutateRequest) (classicSocial
 		Level:    1,
 		MapName:  "云隐村",
 		Online:   false,
-	}, true
+	}
 }
 
-func removeSocialEntry[T any](entries map[string]T, request classicSocialMutateRequest) (classicSocialClearEntry, bool) {
-	roleID := strings.TrimSpace(request.RoleID)
-	roleName := strings.TrimSpace(request.RoleName)
-	if entries == nil || (roleID == "" && roleName == "") {
+func refreshFriendEntry(store *session.Store, entry classicSocialFriendEntry) classicSocialFriendEntry {
+	base := refreshSocialEntryBase(store, entry.classicSocialEntryBase)
+	entry.classicSocialEntryBase = base
+	if entry.Relation == "" {
+		entry.Relation = "friend"
+	}
+	return entry
+}
+
+func refreshBlackEntry(store *session.Store, entry classicSocialBlackEntry) classicSocialBlackEntry {
+	base := refreshSocialEntryBase(store, entry.classicSocialEntryBase)
+	entry.classicSocialEntryBase = base
+	if entry.Relation == "" {
+		entry.Relation = "black"
+	}
+	return entry
+}
+
+func refreshSocialEntryBase(store *session.Store, entry classicSocialEntryBase) classicSocialEntryBase {
+	roleID := strings.TrimSpace(entry.RoleID)
+	roleName := strings.TrimSpace(entry.RoleName)
+	if base, ok := resolveSocialEntryFromOnline(roleID, roleName); ok {
+		return base
+	}
+	if base, ok := resolveSocialEntryFromStore(store, roleID, roleName); ok {
+		// 离线时保留上次 mapName（若 store 无 map），避免列表空白。
+		if base.MapName == "" {
+			base.MapName = entry.MapName
+		}
+		return base
+	}
+	// 抓包 seed / 未知名占位：保留上次快照（含 online/map/level），不强行改写。
+	if entry.Level <= 0 {
+		entry.Level = 1
+	}
+	return entry
+}
+
+func removeFriendEntry(entries map[string]classicSocialFriendEntry, request classicSocialMutateRequest) (classicSocialClearEntry, bool) {
+	if entries == nil {
 		return classicSocialClearEntry{}, false
 	}
-	keys := []string{
-		socialStableKey(roleID, roleName),
-		roleName,
-		"social-" + roleName,
-	}
-	for _, key := range keys {
-		if key == "" {
-			continue
-		}
-		if _, ok := entries[key]; !ok {
+	for key, entry := range entries {
+		if !socialIdentityMatches(entry.RoleID, entry.RoleName, key, request) {
 			continue
 		}
 		delete(entries, key)
+		// 再扫一遍同 identity 的残留键，避免 roleId/name 双写。
+		for residualKey, residual := range entries {
+			if socialIdentityMatches(residual.RoleID, residual.RoleName, residualKey, classicSocialMutateRequest{
+				RoleID:   entry.RoleID,
+				RoleName: entry.RoleName,
+			}) {
+				delete(entries, residualKey)
+			}
+		}
 		return classicSocialClearEntry{
-			RoleID:   roleID,
-			RoleName: roleName,
+			RoleID:   entry.RoleID,
+			RoleName: entry.RoleName,
 		}, true
 	}
 	return classicSocialClearEntry{}, false
+}
+
+func removeBlackEntry(entries map[string]classicSocialBlackEntry, request classicSocialMutateRequest) (classicSocialClearEntry, bool) {
+	if entries == nil {
+		return classicSocialClearEntry{}, false
+	}
+	for key, entry := range entries {
+		if !socialIdentityMatches(entry.RoleID, entry.RoleName, key, request) {
+			continue
+		}
+		delete(entries, key)
+		for residualKey, residual := range entries {
+			if socialIdentityMatches(residual.RoleID, residual.RoleName, residualKey, classicSocialMutateRequest{
+				RoleID:   entry.RoleID,
+				RoleName: entry.RoleName,
+			}) {
+				delete(entries, residualKey)
+			}
+		}
+		return classicSocialClearEntry{
+			RoleID:   entry.RoleID,
+			RoleName: entry.RoleName,
+		}, true
+	}
+	return classicSocialClearEntry{}, false
+}
+
+func socialIdentityMatches(roleID string, roleName string, mapKey string, request classicSocialMutateRequest) bool {
+	reqID := strings.TrimSpace(request.RoleID)
+	reqName := strings.TrimSpace(request.RoleName)
+	roleID = strings.TrimSpace(roleID)
+	roleName = strings.TrimSpace(roleName)
+	mapKey = strings.TrimSpace(mapKey)
+	if reqID == "" && reqName == "" {
+		return false
+	}
+	if reqID != "" {
+		return roleID == reqID || mapKey == reqID || isLegacySocialIdentity(roleID, mapKey, reqName)
+	}
+	return roleName == reqName || mapKey == reqName || isLegacySocialIdentity(roleID, mapKey, reqName)
+}
+
+func isLegacySocialIdentity(roleID string, mapKey string, roleName string) bool {
+	if roleName == "" {
+		return false
+	}
+	legacyRoleID := "social-" + roleName
+	return roleID == legacyRoleID || mapKey == legacyRoleID
+}
+
+func pruneSocialFriendDuplicates(entries map[string]classicSocialFriendEntry, entry classicSocialFriendEntry) {
+	for key, existing := range entries {
+		if socialIdentityMatches(existing.RoleID, existing.RoleName, key, classicSocialMutateRequest{
+			RoleID:   entry.RoleID,
+			RoleName: entry.RoleName,
+		}) {
+			delete(entries, key)
+		}
+	}
+}
+
+func pruneSocialBlackDuplicates(entries map[string]classicSocialBlackEntry, entry classicSocialBlackEntry) {
+	for key, existing := range entries {
+		if socialIdentityMatches(existing.RoleID, existing.RoleName, key, classicSocialMutateRequest{
+			RoleID:   entry.RoleID,
+			RoleName: entry.RoleName,
+		}) {
+			delete(entries, key)
+		}
+	}
 }
 
 func socialStableKey(roleID string, roleName string) string {

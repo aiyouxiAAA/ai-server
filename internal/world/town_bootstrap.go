@@ -840,6 +840,17 @@ func DefaultSpawnForMap(mapID int) SpawnPoint {
 	return mapDefinition.DefaultSpawn
 }
 
+// MapNameForMapID 返回嵌入地图表中的显示名;找不到返回空串。
+// 好友列表 c_friendInfo 源码用 myMapObj["m_"+mapId] 显示所在地图,这里给 structured
+// FriendInfo 推送提供同等 mapName。
+func MapNameForMapID(mapID int) string {
+	mapDefinition, ok := townMapBootstrapDefinitions[mapID]
+	if !ok {
+		return ""
+	}
+	return mapDefinition.Name
+}
+
 // BuildPlayerRolePush 把一个在线玩家(RoleSummary + PlayerBaseData)转成 kind="player"
 // 的 RolePush,用于"同 mapId 在线玩家互推 createRole(1103)"。
 // 字段拼装与 buildTownBootstrap 的 CreatePlayer(town_bootstrap.go:795-808)一致,

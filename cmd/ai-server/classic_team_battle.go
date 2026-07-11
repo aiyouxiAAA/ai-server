@@ -44,6 +44,8 @@ func (hub *classicTeamConnectionHub) startSharedBattle(start classicTeamBattleSt
 			continue
 		}
 		connection.session.battleRuntime = start.Runtime
+		// Shared teammates also enter map fight state for same-map observers.
+		announceClassicMapFightState(connection.session, true)
 		startPush := start.Bundle.Start
 		startPush.SelfHandle = member.RoleID
 		if err := connection.writer.writePush(cmdClassicBattleStartPush, encodePayload(startPush)); err != nil {
@@ -128,6 +130,7 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 			result.rolePhysique = rolePhysique
 			result.removeRoleHandles = markDefeatedVisibleMonsterFromBattle(store, connection.session, result.battleOver)
 			connection.session.battleRuntime = nil
+			announceClassicMapFightState(connection.session, false)
 		} else {
 			updatePlayerBaseRoleStateFromBattle(connection.session)
 		}

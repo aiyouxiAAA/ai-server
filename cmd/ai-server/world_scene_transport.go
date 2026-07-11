@@ -5,6 +5,7 @@ import (
 	"log"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -113,6 +114,31 @@ func (hub *worldSceneConnectionHub) connectionFor(roleID string) (worldSceneConn
 	defer hub.mu.Unlock()
 	conn, ok := hub.connections[roleID]
 	return conn, ok
+}
+
+func (hub *worldSceneConnectionHub) connectionByDisplayName(displayName string) (worldSceneConnection, bool) {
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	name := strings.TrimSpace(displayName)
+	if name == "" {
+		return worldSceneConnection{}, false
+	}
+	var found worldSceneConnection
+	foundMatch := false
+	for _, conn := range hub.connections {
+		if conn.session == nil || conn.session.selectedRole == nil {
+			continue
+		}
+		if strings.TrimSpace(conn.session.selectedRole.DisplayName) != name {
+			continue
+		}
+		if foundMatch {
+			return worldSceneConnection{}, false
+		}
+		found = conn
+		foundMatch = true
+	}
+	return found, foundMatch
 }
 
 func (hub *worldSceneConnectionHub) broadcastChatToAll(message classicTownChatMessagePush) {
@@ -467,6 +493,98 @@ func (hub *worldSceneConnectionHub) neighborsInMap(mapID int, exceptRoleID strin
 // broadcastCreateRoleToMap 把一条 createRole push 推给某 mapId 上除自己外所有在线邻居。
 func (hub *worldSceneConnectionHub) broadcastCreateRoleToMap(mapID int, exceptRoleID string, push world.RolePush) {
 	writeWorldSceneActions(hub.syncMapVisibility(mapID))
+}
+
+// refreshRoleActions 给“已经看见 actor”的同图观察者重推 createRole。
+// 用于地图头顶 stateICO 等已在场玩家字段刷新；不新增/删除可见集合，
+// 避免把仅状态变化做成 removeRole+createRole 闪烁。
+// 原版对应 c_RoleInfo(50002) → roleInfo → U_Cell1.1.Refresh → changeStateICO；
+// 本项目复用 createRole(1103) upsert 承载同一 RolePush.state 字段。
+func (hub *worldSceneConnectionHub) refreshRoleActions(actorRoleID string) []worldScenePushAction {
+	if actorRoleID == "" {
+		return nil
+	}
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	actor, ok := hub.connections[actorRoleID]
+	if !ok || !worldSceneCanBuildRolePush(actor) {
+		return nil
+	}
+	push := worldSceneBuildRolePush(actor)
+	actions := make([]worldScenePushAction, 0)
+	observerIDs := make([]string, 0, len(hub.connections))
+	for observerID := range hub.connections {
+		observerIDs = append(observerIDs, observerID)
+	}
+	sort.Strings(observerIDs)
+	for _, observerID := range observerIDs {
+		if observerID == actorRoleID {
+			continue
+		}
+		observer := hub.connections[observerID]
+		if observer.mapID != actor.mapID || observer.writer == nil || observer.visible == nil {
+			continue
+		}
+		if _, visible := observer.visible[actorRoleID]; !visible {
+			continue
+		}
+		rolePush := push
+		actions = append(actions, worldScenePushAction{
+			writer:      observer.writer,
+			recipientID: observerID,
+			createRole:  &rolePush,
+		})
+	}
+	return actions
+}
+
+func broadcastWorldSceneRoleRefresh(roleID string) {
+	if roleID == "" {
+		return
+	}
+	writeWorldSceneActions(worldSceneHub.refreshRoleActions(roleID))
+}
+
+// classic map overhead stateICO units digit (source U_Cell1.1 changeStateICO):
+// 0=none, 1=fight, 2=die, 4=look, 5=battle. Tens digit chair / higher VIP remain intact.
+const classicMapRoleStateFightUnits = 1
+
+func withClassicMapRoleStateUnits(state int, units int) int {
+	if state < 0 {
+		state = 0
+	}
+	if units < 0 {
+		units = 0
+	}
+	units %= 10
+	return state - state%10 + units
+}
+
+func applyClassicMapFightState(socketSession *packetSession, inFight bool) bool {
+	if socketSession == nil || socketSession.playerBase == nil {
+		return false
+	}
+	nextUnits := 0
+	if inFight {
+		nextUnits = classicMapRoleStateFightUnits
+	}
+	next := withClassicMapRoleStateUnits(socketSession.playerBase.State, nextUnits)
+	if next == socketSession.playerBase.State {
+		return false
+	}
+	socketSession.playerBase.State = next
+	return true
+}
+
+// announceClassicMapFightState 设置/清除玩家地图头顶“战斗中”状态，并刷新已看见该玩家的邻居 createRole。
+func announceClassicMapFightState(socketSession *packetSession, inFight bool) {
+	if !applyClassicMapFightState(socketSession, inFight) {
+		return
+	}
+	if socketSession == nil || socketSession.selectedRole == nil {
+		return
+	}
+	broadcastWorldSceneRoleRefresh(socketSession.selectedRole.RoleID)
 }
 
 // broadcastRemoveRoleToMap 把一条 removeRole push 推给某 mapId 上除自己外所有在线邻居。

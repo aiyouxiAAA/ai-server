@@ -7703,6 +7703,186 @@ func TestHandlePacketClassicSocialGetFriendListSeedsCapturedFriendInfo(t *testin
 	}
 }
 
+func TestHandlePacketClassicSocialAddFriendResolvesStoredRoleAndClearUsesStoredIdentity(t *testing.T) {
+	store := session.NewStore()
+	ownerSession, _ := seedSelectedRoleSessionInStore(t, store, "好友主人")
+	_, targetRole := seedSelectedRoleSessionInStore(t, store, "目标侠客")
+	if _, foundRole, ok := store.FindRoleByDisplayName("目标侠客"); !ok || foundRole.RoleID != targetRole.RoleID {
+		t.Fatalf("expected target role in store, got ok=%v role=%+v", ok, foundRole)
+	}
+
+	addFriend := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicSocialAddFriendReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicSocialMutateRequest{
+			RoleName: "目标侠客",
+		}),
+	}, ownerSession)
+	if !addFriend.handled || len(addFriend.friendInfos) != 1 {
+		t.Fatalf("expected FriendInfo push for stored role, got %+v", addFriend)
+	}
+	friend := addFriend.friendInfos[0]
+	if friend.RoleName != "目标侠客" {
+		t.Fatalf("expected resolved role name 目标侠客, got %+v", friend)
+	}
+	if friend.RoleID != targetRole.RoleID || strings.HasPrefix(friend.RoleID, "social-") {
+		t.Fatalf("expected real roleId %s from store, got %+v", targetRole.RoleID, friend)
+	}
+	if friend.Level < 1 {
+		t.Fatalf("expected positive level from store role, got %+v", friend)
+	}
+	if friend.Online {
+		t.Fatalf("expected offline stored role to report Online=false, got %+v", friend)
+	}
+	if friend.Relation != "friend" {
+		t.Fatalf("expected relation friend, got %+v", friend)
+	}
+
+	removeFriend := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicSocialRemoveFriend,
+		Seq: 3,
+		Payload: mustJSON(t, classicSocialMutateRequest{
+			RoleName: "目标侠客",
+		}),
+	}, ownerSession)
+	if !removeFriend.handled || len(removeFriend.friendClears) != 1 {
+		t.Fatalf("expected ClearFriendInfo push, got %+v", removeFriend)
+	}
+	clear := removeFriend.friendClears[0]
+	if clear.RoleID != friend.RoleID || clear.RoleName != "目标侠客" {
+		t.Fatalf("expected clear payload to use stored identity roleId=%s roleName=目标侠客, got %+v", friend.RoleID, clear)
+	}
+	if len(ownerSession.friends) != 0 {
+		t.Fatalf("expected friend map empty after remove, got %+v", ownerSession.friends)
+	}
+}
+
+func TestHandlePacketClassicSocialAddFriendResolvesOnlineHubRole(t *testing.T) {
+	swapWorldSceneHub(t)
+
+	store := session.NewStore()
+	ownerSession, _ := seedSelectedRoleSessionInStore(t, store, "在线主人")
+	targetSession, targetRole := seedSelectedRoleSessionInStore(t, store, "在线目标")
+	targetSession.selectedRole.Level = 44
+	targetSession.playerBase.Level = 44
+	targetSession.selectedRole.MapID = 45
+	targetSession.playerBase.MapID = 45
+
+	worldSceneHub.register(targetRole.RoleID, 45, &websocketWriter{}, targetSession, world.SpawnPoint{X: 100, Y: 200})
+
+	addFriend := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicSocialAddFriendReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicSocialMutateRequest{
+			RoleName: "在线目标",
+		}),
+	}, ownerSession)
+	if !addFriend.handled || len(addFriend.friendInfos) != 1 {
+		t.Fatalf("expected FriendInfo push for online role, got %+v", addFriend)
+	}
+	friend := addFriend.friendInfos[0]
+	if friend.RoleID != targetRole.RoleID || friend.RoleName != "在线目标" {
+		t.Fatalf("expected online hub identity, got %+v", friend)
+	}
+	if !friend.Online || friend.Level != 44 {
+		t.Fatalf("expected online level 44, got %+v", friend)
+	}
+	if friend.MapName != "广青镇_1" {
+		t.Fatalf("expected mapName 广青镇_1 for map 45, got %+v", friend)
+	}
+
+	list := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicSocialGetFriendListReq,
+		Seq: 3,
+	}, ownerSession)
+	if !list.handled || len(list.friendInfos) != 1 || !list.friendInfos[0].Online || list.friendInfos[0].MapName != "广青镇_1" {
+		t.Fatalf("expected get list to refresh online map/level, got %+v", list)
+	}
+}
+
+func TestHandlePacketClassicSocialSameNameRoleIDsRemainIndependent(t *testing.T) {
+	store := session.NewStore()
+	ownerSession, _ := seedSelectedRoleSessionInStore(t, store, "同名好友主人")
+	_, firstRole := seedSelectedRoleSessionInStore(t, store, "同名目标")
+	_, secondRole := seedSelectedRoleSessionInStore(t, store, "同名目标")
+
+	for index, role := range []session.RoleSummary{firstRole, secondRole} {
+		result := handlePacketWithSession(store, protocol.Packet{
+			Cmd: cmdClassicSocialAddFriendReq,
+			Seq: uint64(index + 2),
+			Payload: mustJSON(t, classicSocialMutateRequest{
+				RoleID:   role.RoleID,
+				RoleName: role.DisplayName,
+			}),
+		}, ownerSession)
+		if !result.handled || len(result.friendInfos) != 1 || result.friendInfos[0].RoleID != role.RoleID {
+			t.Fatalf("expected exact same-name roleId %s, got %+v", role.RoleID, result)
+		}
+	}
+	if len(ownerSession.friends) != 2 {
+		t.Fatalf("expected two same-name friend roleIds to remain, got %+v", ownerSession.friends)
+	}
+
+	remove := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicSocialRemoveFriend,
+		Seq: 4,
+		Payload: mustJSON(t, classicSocialMutateRequest{
+			RoleID:   firstRole.RoleID,
+			RoleName: firstRole.DisplayName,
+		}),
+	}, ownerSession)
+	if !remove.handled || len(remove.friendClears) != 1 || remove.friendClears[0].RoleID != firstRole.RoleID {
+		t.Fatalf("expected only first same-name role to clear, got %+v", remove)
+	}
+	if len(ownerSession.friends) != 1 || ownerSession.friends[secondRole.RoleID].RoleID != secondRole.RoleID {
+		t.Fatalf("expected second same-name role to remain, got %+v", ownerSession.friends)
+	}
+}
+
+func TestHandlePacketClassicSocialNameOnlyDoesNotResolveAmbiguousStoredRole(t *testing.T) {
+	store := session.NewStore()
+	ownerSession, _ := seedSelectedRoleSessionInStore(t, store, "重名查询主人")
+	seedSelectedRoleSessionInStore(t, store, "重名查询目标")
+	seedSelectedRoleSessionInStore(t, store, "重名查询目标")
+
+	if _, _, ok := store.FindRoleByDisplayName("重名查询目标"); ok {
+		t.Fatal("expected duplicate display-name lookup to refuse an arbitrary role")
+	}
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicSocialAddFriendReq,
+		Seq: 2,
+		Payload: mustJSON(t, classicSocialMutateRequest{
+			RoleName: "重名查询目标",
+		}),
+	}, ownerSession)
+	if !result.handled || len(result.friendInfos) != 1 || result.friendInfos[0].RoleID != "social-重名查询目标" || result.friendInfos[0].Online {
+		t.Fatalf("expected ambiguous name to remain an offline legacy placeholder, got %+v", result)
+	}
+}
+
+func TestHandlePacketClassicSocialRoleIDDoesNotFallBackToName(t *testing.T) {
+	store := session.NewStore()
+	ownerSession, _ := seedSelectedRoleSessionInStore(t, store, "身份优先主人")
+	_, targetRole := seedSelectedRoleSessionInStore(t, store, "身份优先目标")
+	request := classicSocialMutateRequest{
+		RoleID:   "missing-role-id",
+		RoleName: targetRole.DisplayName,
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicSocialAddFriendReq,
+		Seq:     2,
+		Payload: mustJSON(t, request),
+	}, ownerSession)
+	if !result.handled || len(result.friendInfos) != 1 {
+		t.Fatalf("expected fallback friend push, got %+v", result)
+	}
+	friend := result.friendInfos[0]
+	if friend.RoleID != request.RoleID || friend.RoleID == targetRole.RoleID || friend.Online {
+		t.Fatalf("expected unresolved roleId to stay authoritative instead of resolving %s by name, got %+v", targetRole.RoleID, friend)
+	}
+}
+
 func TestHandlePacketClassicSocialGetBlackListReturnsCurrentSnapshot(t *testing.T) {
 	_, socketSession := seedSelectedRoleSession(t)
 

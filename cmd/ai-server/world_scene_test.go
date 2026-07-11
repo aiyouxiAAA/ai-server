@@ -605,6 +605,74 @@ func TestWorldSceneMoveRoleRemovesWhenActorLeavesHeroSpace(t *testing.T) {
 	}
 }
 
+func TestWorldScenePositionReconcileUsesLatestVisiblePosition(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	hub := resetWorldSceneHub()
+	hub.register("A", 1, &websocketWriter{}, stubSceneSession("A", 1), stubSceneSpawn(0, 0))
+	hub.register("B", 1, &websocketWriter{}, stubSceneSession("B", 1), stubSceneSpawn(100, 0))
+	hub.register("far", 1, &websocketWriter{}, stubSceneSession("far", 1), stubSceneSpawn(1000, 0))
+	hub.register("other-map", 2, &websocketWriter{}, stubSceneSession("other-map", 2), stubSceneSpawn(100, 0))
+	if !hub.updatePosition("B", 1, stubSceneSpawn(123, 234)) {
+		t.Fatal("updatePosition(B) should store the position used by reconciliation")
+	}
+
+	actions := hub.positionReconcileActions()
+	sawCreate := false
+	sawBForA := false
+	for _, action := range actions {
+		if action.recipientID == "A" && action.createRole != nil && action.createRole.Handle == "B" {
+			sawCreate = true
+		}
+		if action.moveRole == nil {
+			continue
+		}
+		if action.recipientID == "B" && action.moveRole.Handle == "B" {
+			t.Fatal("reconciliation must not push a role to itself")
+		}
+		if action.moveRole.Handle == "far" || action.moveRole.Handle == "other-map" {
+			t.Fatalf("reconciliation leaked non-visible role: recipient=%s move=%+v", action.recipientID, action.moveRole)
+		}
+		if action.recipientID == "A" && action.moveRole.Handle == "B" {
+			sawBForA = true
+			if action.moveRole.Type != "Run" || action.moveRole.X != 123 || action.moveRole.Y != 234 || action.moveRole.TX != 123 || action.moveRole.TY != 234 || action.moveRole.Z != 0 || action.moveRole.TZ != 0 || action.moveRole.MapID != "1" {
+				t.Fatalf("reconciliation move = %+v, want static Run at latest B spawn", action.moveRole)
+			}
+		}
+	}
+	if !sawCreate {
+		t.Fatal("reconciliation must preserve visibility createRole actions before position pushes")
+	}
+	if !sawBForA {
+		t.Fatal("A should receive B's latest visible position")
+	}
+}
+
+func TestWorldScenePositionReconcileKeepsSameMapTeammateOutsideHeroSpace(t *testing.T) {
+	resetClassicTeamManagerForWorldSceneTest(t)
+	seedWorldSceneTeam(t, "observer", "teammate", "1")
+	hub := resetWorldSceneHub()
+	hub.register("observer", 1, &websocketWriter{}, stubSceneSession("observer", 1), stubSceneSpawn(0, 0))
+	hub.register("teammate", 1, &websocketWriter{}, stubSceneSession("teammate", 1), stubSceneSpawn(1000, 2000))
+	hub.register("stranger", 1, &websocketWriter{}, stubSceneSession("stranger", 1), stubSceneSpawn(1000, 2000))
+
+	actions := hub.positionReconcileActions()
+	sawTeammate := false
+	for _, action := range actions {
+		if action.moveRole == nil || action.recipientID != "observer" {
+			continue
+		}
+		if action.moveRole.Handle == "stranger" {
+			t.Fatal("reconciliation must not bypass heroSpace for a non-team player")
+		}
+		if action.moveRole.Handle == "teammate" {
+			sawTeammate = true
+		}
+	}
+	if !sawTeammate {
+		t.Fatal("same-map teammate outside heroSpace should receive reconciliation")
+	}
+}
+
 func TestBuildClassicTownMoveRoleResultUsesSessionRoleAndUpdatesHub(t *testing.T) {
 	swapWorldSceneHub(t)
 	sess := stubSceneSession("real-role", 45)

@@ -115,6 +115,13 @@ func buildClassicTeamResetDungeonResult(store *session.Store, socketSession *pac
 			handled:    true,
 		}
 	}
+	teamID, grouped := classicTeamDungeonID(socketSession)
+	if grouped && !store.ResetTeamDungeonInstance(teamID, instanceKey) {
+		return packetResult{
+			teamEvents: []team.Event{classicTeamResultEvent(socketSession.selectedRole.RoleID, false, "resetDungeon", "TEAM_INSTANCE_NOT_FOUND", "队伍副本状态不存在。")},
+			handled:    true,
+		}
+	}
 	if !store.ResetRoleDungeonInstance(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, instanceKey) {
 		return packetResult{
 			teamEvents: []team.Event{classicTeamResultEvent(socketSession.selectedRole.RoleID, false, "resetDungeon", "ROLE_NOT_FOUND", "角色状态不存在。")},

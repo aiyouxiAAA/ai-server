@@ -92,6 +92,7 @@ type packetResult struct {
 	battleCells        []battle.CellInfoPush
 	battleCellCount    *classicBattleCellCountPush
 	battleCommand      *battle.StartCommandPush
+	battleCommands     []battle.StartCommandPush
 	battleActions      []battle.ActionPush
 	battleStopCommand  *classicBattleStopCommandPush
 	battleBuffs        []battle.BuffInfoPush
@@ -983,6 +984,7 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 			Round:       bundle.StartCommand.Round,
 			Sequence:    bundle.StartCommand.Sequence,
 			Power:       bundle.StartCommand.Power,
+			Commands:    bundle.StartCommand.Commands,
 		},
 		teamBattleStart: &classicTeamBattleStart{
 			ActorRoleID: socketSession.selectedRole.RoleID,
@@ -1143,24 +1145,11 @@ func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, r
 		return result
 	}
 	runtime := socketSession.battleRuntime
-	if runtime.Phase != battle.PhaseCommand ||
-		request.BattleID != runtime.BattleID ||
-		request.Round != runtime.Round ||
-		strings.TrimSpace(request.ActorHandle) != strings.TrimSpace(runtime.ActiveHandle) {
+	command, ok := runtime.CommandWindowForActor(request.ActorHandle)
+	if !ok || request.BattleID != command.BattleID || request.Round != command.Round || request.Sequence != command.Sequence {
 		return result
 	}
-	actorHandle := strings.TrimSpace(runtime.ActiveHandle)
-	if actorHandle == "" {
-		actorHandle = strings.TrimSpace(request.ActorHandle)
-	}
-	result.battleCommand = &battle.StartCommandPush{
-		BattleID:    runtime.BattleID,
-		ActorHandle: actorHandle,
-		Round:       runtime.Round,
-		Sequence:    request.Sequence,
-		Power:       classicBattleRetryPower(runtime, actorHandle),
-		Commands:    sourceBattleRetryCommandDefinitions(runtime, actorHandle),
-	}
+	result.battleCommand = &command
 	if strings.TrimSpace(warning) != "" {
 		result.errorMessages = []classicTownErrorPush{{
 			Msg:           warning,
@@ -1169,30 +1158,6 @@ func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, r
 		}}
 	}
 	return result
-}
-
-func sourceBattleRetryCommandDefinitions(runtime *battle.Runtime, actorHandle string) []battle.CommandDefinition {
-	if runtime == nil {
-		return nil
-	}
-	if skills, ok := runtime.RoleSkillsByHandle[strings.TrimSpace(actorHandle)]; ok {
-		return battle.CommandDefinitionsForSkills(skills)
-	}
-	return battle.CommandDefinitionsForSkills(runtime.RoleSkills)
-}
-
-func classicBattleRetryPower(runtime *battle.Runtime, actorHandle string) int {
-	if runtime == nil || strings.TrimSpace(actorHandle) == "" {
-		return 1
-	}
-	power := runtime.StoredPower[actorHandle]
-	if power <= 0 {
-		return 1
-	}
-	if power > 5 {
-		return 5
-	}
-	return power
 }
 
 func classicBattleActionRequiredItemName(commandID string) string {
@@ -1363,6 +1328,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 	}
 	packet := packetResult{
 		battleCommand:     result.StartCommand,
+		battleCommands:    result.StartCommands,
 		battleOver:        result.Over,
 		battleRelive:      buildClassicBattleRelivePush(result.Over),
 		roleState:         roleState,
@@ -1375,7 +1341,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		packet.teamEvents = append(packet.teamEvents, classicTeamMemberSnapshotEventsIfChanged(beforeTeamMember, socketSession)...)
 		packet.teamBattleSync = &classicTeamBattleSync{
 			ActorRoleID: socketSession.selectedRole.RoleID,
-			Result:      packetResult{battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
+			Result:      packetResult{battleCommand: packet.battleCommand, battleCommands: packet.battleCommands, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
 		}
 	}
 	return packet
@@ -1534,12 +1500,17 @@ func markDefeatedVisibleMonsterFromBattle(store *session.Store, socketSession *p
 		return handles
 	}
 	for _, handle := range handles {
-		state, ok := store.MarkRoleDungeonVisibleMonsterDefeated(
-			socketSession.playerBase.PlayerID,
-			socketSession.selectedRole.RoleID,
-			instanceKey,
-			handle,
-		)
+		state := session.DungeonInstanceState{}
+		if teamID, grouped := classicTeamDungeonID(socketSession); grouped {
+			state, ok = store.MarkTeamDungeonVisibleMonsterDefeated(teamID, instanceKey, handle)
+		} else {
+			state, ok = store.MarkRoleDungeonVisibleMonsterDefeated(
+				socketSession.playerBase.PlayerID,
+				socketSession.selectedRole.RoleID,
+				instanceKey,
+				handle,
+			)
+		}
 		if ok {
 			setDefeatedVisibleMonsterHandles(socketSession, state.DefeatedVisibleMonsterHandles)
 		} else {
@@ -3298,6 +3269,11 @@ func consumeDungeonEntryTicketIfNeeded(store *session.Store, socketSession *pack
 	if currentInDungeon && currentInstanceKey == targetInstanceKey {
 		return packetResult{handled: true}, true
 	}
+	if teamID, grouped := classicTeamDungeonID(socketSession); grouped {
+		if _, active := store.GetTeamDungeonInstance(teamID, targetInstanceKey); active {
+			return packetResult{handled: true}, true
+		}
+	}
 	if _, ok := store.GetRoleDungeonInstance(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, targetInstanceKey); ok {
 		return packetResult{handled: true}, true
 	}
@@ -3349,33 +3325,6 @@ func consumeDungeonEntryTicketIfNeeded(store *session.Store, socketSession *pack
 		})
 	}
 	return result, true
-}
-
-func checkDungeonEntryTicketIfNeeded(store *session.Store, socketSession *packetSession, targetMapID int) (string, bool) {
-	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
-		return "队员连接状态异常，队伍同步取消。", false
-	}
-	targetInstanceKey, ok := world.DungeonInstanceKeyForMapID(targetMapID)
-	if !ok {
-		return "", true
-	}
-	rule, ok := dungeonEntryRuleForInstance(targetInstanceKey)
-	if !ok || rule.ConsumePolicy == dungeonEntryConsumeNone || rule.TicketName == "" {
-		return "", true
-	}
-	currentMapID := socketSession.selectedRole.MapID
-	currentInstanceKey, currentInDungeon := world.DungeonInstanceKeyForMapID(currentMapID)
-	if currentInDungeon && currentInstanceKey == targetInstanceKey {
-		return "", true
-	}
-	if _, ok := store.GetRoleDungeonInstance(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, targetInstanceKey); ok {
-		return "", true
-	}
-	ticket, ok := findRoleTicketItem(store, socketSession, rule.TicketName)
-	if !ok || ticket.Count < rule.TicketCount {
-		return "队员【" + socketSession.selectedRole.DisplayName + "】进入" + dungeonInstanceDisplayName(targetInstanceKey) + "需要" + rule.TicketName + "x" + strconv.Itoa(rule.TicketCount) + "，队伍同步取消。", false
-	}
-	return "", true
 }
 
 func dungeonEntryRuleForInstance(instanceKey string) (dungeonEntryRule, bool) {
@@ -3491,11 +3440,19 @@ func syncDungeonInstanceState(store *session.Store, socketSession *packetSession
 			DurationSeconds: session.DungeonInstanceTTLSeconds(),
 		}
 	}
-	state, ok := store.EnsureRoleDungeonInstance(
-		socketSession.playerBase.PlayerID,
-		socketSession.selectedRole.RoleID,
-		instanceKey,
-	)
+	state := session.DungeonInstanceState{}
+	if teamID, grouped := classicTeamDungeonID(socketSession); grouped {
+		if _, ok := store.EnsureRoleDungeonInstance(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, instanceKey); !ok {
+			return nil
+		}
+		state, ok = store.EnsureTeamDungeonInstance(teamID, instanceKey)
+	} else {
+		state, ok = store.EnsureRoleDungeonInstance(
+			socketSession.playerBase.PlayerID,
+			socketSession.selectedRole.RoleID,
+			instanceKey,
+		)
+	}
 	if !ok {
 		return nil
 	}
@@ -3516,6 +3473,13 @@ func syncDungeonInstanceState(store *session.Store, socketSession *packetSession
 		RemainingSeconds:              remainingSeconds,
 		DefeatedVisibleMonsterHandles: append([]string{}, state.DefeatedVisibleMonsterHandles...),
 	}
+}
+
+func classicTeamDungeonID(socketSession *packetSession) (string, bool) {
+	if socketSession == nil || socketSession.selectedRole == nil {
+		return "", false
+	}
+	return classicTeamManager.TeamIDForRole(socketSession.selectedRole.RoleID)
 }
 
 func keepPointCouponThiefDefeatedHandles(socketSession *packetSession) []string {

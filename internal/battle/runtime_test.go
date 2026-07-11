@@ -171,40 +171,105 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 	if !ok {
 		t.Fatal("expected team battle to start")
 	}
-	if len(runtime.livingCells(CampTeam)) != 2 || bundle.StartCommand.ActorHandle != leader.Role.RoleID {
-		t.Fatalf("expected leader to act first in two-player team battle, got cells=%+v start=%+v", runtime.Cells, bundle.StartCommand)
+	leaderCommand, leaderCommandOK := bundle.StartCommandForActor(leader.Role.RoleID)
+	memberCommand, memberCommandOK := bundle.StartCommandForActor(member.Role.RoleID)
+	if len(runtime.livingCells(CampTeam)) != 2 || !leaderCommandOK || !memberCommandOK {
+		t.Fatalf("expected a command window for each living team member, got cells=%+v starts=%+v", runtime.Cells, bundle.TeamStartCommands)
 	}
-	if !commandDefinitionsContain(bundle.StartCommand.Commands, CommandGuanJiaLianShi) || commandDefinitionsContain(bundle.StartCommand.Commands, CommandPanLongGunFa) {
-		t.Fatalf("expected initial team startCommand to use leader commands, got %+v", bundle.StartCommand.Commands)
+	if leaderCommand.Round != memberCommand.Round || leaderCommand.Sequence == memberCommand.Sequence {
+		t.Fatalf("expected concurrent same-round commands with distinct sequences, got leader=%+v member=%+v", leaderCommand, memberCommand)
+	}
+	if !commandDefinitionsContain(leaderCommand.Commands, CommandGuanJiaLianShi) || commandDefinitionsContain(leaderCommand.Commands, CommandPanLongGunFa) {
+		t.Fatalf("expected leader command window to use leader commands, got %+v", leaderCommand.Commands)
+	}
+	if !commandDefinitionsContain(memberCommand.Commands, CommandPanLongGunFa) || commandDefinitionsContain(memberCommand.Commands, CommandGuanJiaLianShi) {
+		t.Fatalf("expected member command window to use member commands, got %+v", memberCommand.Commands)
 	}
 	target := runtime.firstLiving(CampEnemy)
 	if target == nil {
 		t.Fatal("expected enemy target")
 	}
 
-	result := runtime.ProcessAction(ActionRequest{
+	memberResult := runtime.ProcessAction(ActionRequest{
+		BattleID:     bundle.Start.BattleID,
+		ActorHandle:  member.Role.RoleID,
+		CommandID:    CommandNormalAttack,
+		TargetHandle: target.Handle,
+		Round:        memberCommand.Round,
+		Sequence:     memberCommand.Sequence,
+	})
+	if memberResult.ErrorCode != "" || len(memberResult.Actions) == 0 {
+		t.Fatalf("expected first received member action to resolve immediately, got %+v", memberResult)
+	}
+	if runtime.Phase != PhaseCommand || !runtime.HasPendingTeamAction(leader.Role.RoleID) || runtime.PendingStart != nil || len(runtime.PendingStarts) != 0 {
+		t.Fatalf("expected leader command window to remain open after member action, got phase=%s pending=%+v start=%+v starts=%+v", runtime.Phase, runtime.PendingTeamActions, runtime.PendingStart, runtime.PendingStarts)
+	}
+	if replay := runtime.ProcessPlayOver(PlayOverRequest{BattleID: bundle.Start.BattleID}); replay.ErrorCode != "battle_play_over_empty" {
+		t.Fatalf("expected first action playback acknowledgement not to advance the remaining team command, got %+v", replay)
+	}
+
+	leaderResult := runtime.ProcessAction(ActionRequest{
 		BattleID:     bundle.Start.BattleID,
 		ActorHandle:  leader.Role.RoleID,
 		CommandID:    CommandNormalAttack,
 		TargetHandle: target.Handle,
-		Round:        bundle.StartCommand.Round,
-		Sequence:     bundle.StartCommand.Sequence,
+		Round:        leaderCommand.Round,
+		Sequence:     leaderCommand.Sequence,
 	})
-	if result.ErrorCode != "" {
-		t.Fatalf("expected leader action to succeed, got %s", result.ErrorCode)
+	if leaderResult.ErrorCode != "" || len(leaderResult.Actions) == 0 {
+		t.Fatalf("expected remaining leader command to stay valid after member action, got %+v", leaderResult)
 	}
-	if result.StartCommand != nil || runtime.PendingStart == nil {
-		t.Fatalf("expected action to queue pending startCommand, got result=%+v pending=%+v", result.StartCommand, runtime.PendingStart)
+	if len(runtime.PendingTeamActions) != 2 || len(runtime.PendingStarts) != 2 {
+		t.Fatalf("expected enemy turn only after the last team command and then a fresh pair of windows, got pending=%+v starts=%+v", runtime.PendingTeamActions, runtime.PendingStarts)
 	}
 	playOver := runtime.ProcessPlayOver(PlayOverRequest{BattleID: bundle.Start.BattleID})
-	if playOver.ErrorCode != "" {
-		t.Fatalf("expected playOver to succeed, got %s", playOver.ErrorCode)
+	if playOver.ErrorCode != "" || len(playOver.StartCommands) != 2 || playOver.StartCommand != nil {
+		t.Fatalf("expected playback completion to open both next-round command windows, got %+v", playOver)
 	}
-	if playOver.StartCommand == nil || playOver.StartCommand.ActorHandle != member.Role.RoleID {
-		t.Fatalf("expected next startCommand for member, got %+v", playOver.StartCommand)
+	nextLeader := StartCommandPush{}
+	nextMember := StartCommandPush{}
+	for _, command := range playOver.StartCommands {
+		if command.ActorHandle == leader.Role.RoleID {
+			nextLeader = command
+		}
+		if command.ActorHandle == member.Role.RoleID {
+			nextMember = command
+		}
 	}
-	if !commandDefinitionsContain(playOver.StartCommand.Commands, CommandPanLongGunFa) || commandDefinitionsContain(playOver.StartCommand.Commands, CommandGuanJiaLianShi) {
-		t.Fatalf("expected member startCommand to switch to member commands, got %+v", playOver.StartCommand.Commands)
+	if nextLeader.Round != leaderCommand.Round+1 || nextMember.Round != leaderCommand.Round+1 || nextLeader.Sequence == nextMember.Sequence {
+		t.Fatalf("expected distinct next-round command windows, got leader=%+v member=%+v", nextLeader, nextMember)
+	}
+
+	finalRuntime, finalBundle, ok := NewTeamWildBattle([]TeamActor{leader, member}, StartRequest{
+		MapID:       "4",
+		MapName:     "云隐村口",
+		StageFocusX: 120,
+	})
+	if !ok {
+		t.Fatal("expected final-target team battle to start")
+	}
+	finalTarget := finalRuntime.firstLiving(CampEnemy)
+	if finalTarget == nil {
+		t.Fatal("expected final target")
+	}
+	finalTarget.HP = 1
+	finalResult := finalRuntime.ProcessAction(ActionRequest{
+		BattleID:     finalBundle.Start.BattleID,
+		ActorHandle:  leader.Role.RoleID,
+		CommandID:    CommandNormalAttack,
+		TargetHandle: finalTarget.Handle,
+		Round:        finalBundle.StartCommand.Round,
+		Sequence:     finalBundle.StartCommand.Sequence,
+	})
+	if finalResult.ErrorCode != "" {
+		t.Fatalf("expected final target action to succeed, got %s", finalResult.ErrorCode)
+	}
+	if finalRuntime.PendingStart != nil || len(finalRuntime.PendingStarts) != 0 || finalRuntime.PendingOver == nil {
+		t.Fatalf("expected final target kill to finish before the remaining team command, got start=%+v starts=%+v over=%+v", finalRuntime.PendingStart, finalRuntime.PendingStarts, finalRuntime.PendingOver)
+	}
+	finalPlayOver := finalRuntime.ProcessPlayOver(PlayOverRequest{BattleID: finalBundle.Start.BattleID})
+	if finalPlayOver.Over == nil || finalPlayOver.StartCommand != nil {
+		t.Fatalf("expected final target kill to return OverBattle instead of a member command, got %+v", finalPlayOver)
 	}
 }
 
@@ -215,6 +280,25 @@ func commandDefinitionsContain(commands []CommandDefinition, commandID string) b
 		}
 	}
 	return false
+}
+
+func TestTeamWildBattleDeadMemberHasNoCommandWindow(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:             "battle-team-dead-member",
+		Phase:                PhaseCommand,
+		Round:                3,
+		Cells:                []CellInfoPush{{Handle: "leader", Camp: CampTeam, HP: 100, MaxHP: 100}, {Handle: "member", Camp: CampTeam, HP: 0, MaxHP: 100}},
+		PendingTeamActions:   map[string]bool{"leader": true, "member": true},
+		PendingTeamSequences: map[string]int{"leader": 7, "member": 8},
+	}
+
+	if _, ok := runtime.CommandWindowForActor("member"); ok {
+		t.Fatal("expected HP <= 0 teammate to have no command window")
+	}
+	runtime.prunePendingTeamActions()
+	if runtime.HasPendingTeamAction("member") || len(runtime.PendingTeamActions) != 1 || !runtime.PendingTeamActions["leader"] {
+		t.Fatalf("expected dead member to be removed from the pending team phase, got %+v", runtime.PendingTeamActions)
+	}
 }
 
 func TestBuildOverUsesCapturedMap49RobberRewardWithExperience(t *testing.T) {

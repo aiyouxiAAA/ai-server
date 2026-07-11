@@ -352,6 +352,17 @@ func (manager *Manager) RecipientsForTeam(roleID string) ([]string, bool) {
 	return append([]string{}, team.Members...), true
 }
 
+func (manager *Manager) TeamIDForRole(roleID string) (string, bool) {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	teamID := manager.teamByRoleID[strings.TrimSpace(roleID)]
+	team := manager.teams[teamID]
+	if team == nil || len(team.Members) < 2 {
+		return "", false
+	}
+	return teamID, true
+}
+
 func (manager *Manager) BuildSyncTransferPlan(actorRoleID string, fromMapID string) SyncTransferPlan {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()

@@ -228,6 +228,8 @@ func main() {
 	})
 
 	startClassicActivityAnnouncementLoop()
+	stopWorldScenePositionReconcile := startWorldScenePositionReconcileLoop(worldSceneHub)
+	defer stopWorldScenePositionReconcile()
 
 	go func() {
 		log.Println("[ai-server] http api listening on http://127.0.0.1:18080")
@@ -795,6 +797,18 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
 				log.Printf("[ai-server] write classic battle startCommand failed: %v", err)
 				return
+			}
+		}
+		if result.battleStart == nil && socketSession.selectedRole != nil {
+			for _, command := range result.battleCommands {
+				if command.ActorHandle != socketSession.selectedRole.RoleID {
+					continue
+				}
+				if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(command)); err != nil {
+					log.Printf("[ai-server] write classic battle personalized startCommand failed: %v", err)
+					return
+				}
+				break
 			}
 		}
 		if result.teamBattleStart != nil {

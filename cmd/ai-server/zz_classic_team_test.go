@@ -195,6 +195,13 @@ func TestHandlePacketClassicTeamResetDungeonClearsLeaderInstance(t *testing.T) {
 	if _, ok := store.GetRoleDungeonInstance(leaderSession.playerBase.PlayerID, leaderSession.selectedRole.RoleID, session.DungeonInstanceShuiliandong); ok {
 		t.Fatalf("expected shuiliandong instance to be cleared")
 	}
+	teamID, ok := classicTeamManager.TeamIDForRole(leaderSession.selectedRole.RoleID)
+	if !ok {
+		t.Fatal("expected leader team id after reset")
+	}
+	if _, ok := store.GetTeamDungeonInstance(teamID, session.DungeonInstanceShuiliandong); ok {
+		t.Fatal("expected shared shuiliandong instance to be cleared")
+	}
 }
 
 func TestHandlePacketClassicTeamResetDungeonRejectsNonLeader(t *testing.T) {
@@ -222,7 +229,7 @@ func TestHandlePacketClassicTeamResetDungeonRejectsNonLeader(t *testing.T) {
 	}
 }
 
-func TestHandlePacketClassicTeamDungeonSyncRequiresMemberTicket(t *testing.T) {
+func TestHandlePacketClassicTeamDungeonSyncAllowsMemberWithoutTicket(t *testing.T) {
 	classicTeamManager.Reset()
 	classicTeamHub = newClassicTeamConnectionHub()
 
@@ -243,14 +250,49 @@ func TestHandlePacketClassicTeamDungeonSyncRequiresMemberTicket(t *testing.T) {
 		}),
 	}, leaderSession)
 
-	if !result.handled || result.townBootstrap != nil || result.teamSyncTransfer != nil {
-		t.Fatalf("expected dungeon sync to be cancelled before leader transfer, got %+v", result)
+	if !result.handled || result.townBootstrap == nil || result.teamSyncTransfer == nil {
+		t.Fatalf("expected leader ticket to open synced dungeon instance, got %+v", result)
 	}
-	if len(result.chatMessages) != 1 || result.chatMessages[0].Msg == "" {
-		t.Fatalf("expected missing member ticket warning, got %+v", result.chatMessages)
+	if len(result.itemClears) != 1 || len(result.itemInfos) != 0 {
+		t.Fatalf("expected only leader ticket to be consumed, got clears=%+v infos=%+v", result.itemClears, result.itemInfos)
 	}
-	if leaderSession.selectedRole.MapID == 143 {
-		t.Fatalf("expected leader to stay outside dungeon when team preflight fails")
+	memberEntry := buildClassicTownTransferResult(store, memberSession, "143", world.SpawnPoint{X: 631, Y: 450})
+	if memberEntry.townBootstrap == nil || len(memberEntry.itemClears) != 0 || len(memberEntry.itemInfos) != 0 {
+		t.Fatalf("expected member to reuse active team dungeon without ticket, got %+v", memberEntry)
+	}
+}
+
+func TestClassicTeamDungeonSharesStateAndDefeatedMonsters(t *testing.T) {
+	classicTeamManager.Reset()
+
+	store := session.NewStore()
+	leaderSession, memberSession := seedClassicTeamPair(t, store)
+	acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	grantRoleItemTemplateForTest(t, store, leaderSession, "水帘洞通行证", 1)
+
+	leaderEntry := buildClassicTownTransferResult(store, leaderSession, "143", world.SpawnPoint{X: 631, Y: 450})
+	memberEntry := buildClassicTownTransferResult(store, memberSession, "143", world.SpawnPoint{X: 631, Y: 450})
+	if leaderEntry.dungeonInstance == nil || memberEntry.dungeonInstance == nil ||
+		leaderEntry.dungeonInstance.CreatedAtUnix != memberEntry.dungeonInstance.CreatedAtUnix {
+		t.Fatalf("expected teammates to enter one dungeon instance, leader=%+v member=%+v", leaderEntry.dungeonInstance, memberEntry.dungeonInstance)
+	}
+	if len(memberEntry.itemClears) != 0 || len(memberEntry.itemInfos) != 0 {
+		t.Fatalf("expected teammate to enter shared dungeon without a ticket, got %+v", memberEntry)
+	}
+
+	const monsterHandle = "5172206909807859"
+	leaderSession.battleRuntime = &battle.Runtime{MapID: "143", SourceMonsterHandle: monsterHandle}
+	removed := markDefeatedVisibleMonsterFromBattle(store, leaderSession, &battle.OverPush{
+		Winner: battle.CampTeam,
+		Result: battle.ResultPayload{Winner: battle.CampTeam},
+	})
+	if len(removed) != 1 || removed[0] != monsterHandle {
+		t.Fatalf("expected team dungeon monster removal, got %+v", removed)
+	}
+
+	memberState := syncDungeonInstanceState(store, memberSession, 143)
+	if memberState == nil || len(memberState.DefeatedVisibleMonsterHandles) != 1 || memberState.DefeatedVisibleMonsterHandles[0] != monsterHandle {
+		t.Fatalf("expected member to receive shared defeated monster state, got %+v", memberState)
 	}
 }
 
@@ -280,6 +322,9 @@ func TestHandlePacketClassicTeamSharedBattleStartIncludesMember(t *testing.T) {
 
 	if !result.handled || result.battleStart == nil || result.teamBattleStart == nil {
 		t.Fatalf("expected shared team battle start, got %+v", result)
+	}
+	if result.battleCommand == nil || result.battleCommand.ActorHandle != leaderSession.selectedRole.RoleID || len(result.battleCommand.Commands) == 0 {
+		t.Fatalf("expected leader startCommand to retain its own command definitions, got %+v", result.battleCommand)
 	}
 	if len(result.teamBattleStart.Members) != 1 || result.teamBattleStart.Members[0].RoleID != memberSession.selectedRole.RoleID {
 		t.Fatalf("expected member in shared battle start, got %+v", result.teamBattleStart.Members)
@@ -398,7 +443,7 @@ func TestHandlePacketClassicTeamSharedBattleExcludesDifferentMapMember(t *testin
 	}
 }
 
-func TestHandlePacketClassicTeamSharedBattleRejectsNonActiveActorAndAdvances(t *testing.T) {
+func TestHandlePacketClassicTeamSharedBattleAcceptsBothCommandWindowsAndAdvances(t *testing.T) {
 	classicTeamManager.Reset()
 
 	store := session.NewStore()
@@ -419,8 +464,13 @@ func TestHandlePacketClassicTeamSharedBattleRejectsNonActiveActorAndAdvances(t *
 	leaderSession.battleRuntime = runtime
 	memberSession.battleRuntime = runtime
 	target := firstEnemyCellForTest(t, runtime)
+	leaderCommand, leaderCommandOK := bundle.StartCommandForActor(leaderSession.selectedRole.RoleID)
+	memberCommand, memberCommandOK := bundle.StartCommandForActor(memberSession.selectedRole.RoleID)
+	if !leaderCommandOK || !memberCommandOK || leaderCommand.Sequence == memberCommand.Sequence {
+		t.Fatalf("expected distinct command windows for both team members, got leader=%+v member=%+v", leaderCommand, memberCommand)
+	}
 
-	rejected := handlePacketWithSession(store, protocol.Packet{
+	first := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicBattleActionReq,
 		Seq: 9,
 		Payload: mustJSON(t, battle.ActionRequest{
@@ -428,15 +478,15 @@ func TestHandlePacketClassicTeamSharedBattleRejectsNonActiveActorAndAdvances(t *
 			ActorHandle:  memberSession.selectedRole.RoleID,
 			CommandID:    battle.CommandNormalAttack,
 			TargetHandle: target.Handle,
-			Round:        bundle.StartCommand.Round,
-			Sequence:     bundle.StartCommand.Sequence,
+			Round:        memberCommand.Round,
+			Sequence:     memberCommand.Sequence,
 		}),
 	}, memberSession)
-	if !rejected.handled || len(rejected.battleActions) != 0 || rejected.battleCommand != nil {
-		t.Fatalf("expected non-active member action to be rejected without pushes, got %+v", rejected)
+	if !first.handled || len(first.battleActions) == 0 || first.battleCommand != nil {
+		t.Fatalf("expected first received member action to resolve without waiting, got %+v", first)
 	}
 
-	accepted := handlePacketWithSession(store, protocol.Packet{
+	second := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicBattleActionReq,
 		Seq: 10,
 		Payload: mustJSON(t, battle.ActionRequest{
@@ -444,12 +494,12 @@ func TestHandlePacketClassicTeamSharedBattleRejectsNonActiveActorAndAdvances(t *
 			ActorHandle:  leaderSession.selectedRole.RoleID,
 			CommandID:    battle.CommandNormalAttack,
 			TargetHandle: target.Handle,
-			Round:        bundle.StartCommand.Round,
-			Sequence:     bundle.StartCommand.Sequence,
+			Round:        leaderCommand.Round,
+			Sequence:     leaderCommand.Sequence,
 		}),
 	}, leaderSession)
-	if !accepted.handled || len(accepted.battleActions) == 0 {
-		t.Fatalf("expected active leader action to produce battle actions, got %+v", accepted)
+	if !second.handled || len(second.battleActions) == 0 {
+		t.Fatalf("expected leader command to remain valid after member action, got %+v", second)
 	}
 
 	playOver := handlePacketWithSession(store, protocol.Packet{
@@ -459,8 +509,13 @@ func TestHandlePacketClassicTeamSharedBattleRejectsNonActiveActorAndAdvances(t *
 			BattleID: bundle.Start.BattleID,
 		}),
 	}, leaderSession)
-	if !playOver.handled || playOver.battleCommand == nil || playOver.battleCommand.ActorHandle != memberSession.selectedRole.RoleID {
-		t.Fatalf("expected playOver to advance command to member, got %+v", playOver)
+	if !playOver.handled || playOver.battleCommand != nil || len(playOver.battleCommands) != 2 {
+		t.Fatalf("expected playOver to open personalized next-round commands, got %+v", playOver)
+	}
+	for _, command := range playOver.battleCommands {
+		if command.Round != leaderCommand.Round+1 || (command.ActorHandle != leaderSession.selectedRole.RoleID && command.ActorHandle != memberSession.selectedRole.RoleID) {
+			t.Fatalf("expected next command for a living team member, got %+v", command)
+		}
 	}
 }
 

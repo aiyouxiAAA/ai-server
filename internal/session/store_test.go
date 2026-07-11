@@ -219,6 +219,32 @@ func TestStoreDungeonInstancePersistsForOneHour(t *testing.T) {
 	}
 }
 
+func TestStoreTeamDungeonInstanceSharesProgressForOneHour(t *testing.T) {
+	store := NewStore()
+	now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
+	store.now = func() time.Time { return now }
+
+	created, ok := store.EnsureTeamDungeonInstance("team-0001", DungeonInstanceShuiliandong)
+	if !ok || created.CreatedAtUnix != now.Unix() {
+		t.Fatalf("expected team dungeon instance, got ok=%v state=%+v", ok, created)
+	}
+	defeated, ok := store.MarkTeamDungeonVisibleMonsterDefeated("team-0001", DungeonInstanceShuiliandong, "5172206909807859")
+	if !ok || len(defeated.DefeatedVisibleMonsterHandles) != 1 {
+		t.Fatalf("expected team defeated monster state, got ok=%v state=%+v", ok, defeated)
+	}
+
+	now = now.Add(59 * time.Minute)
+	shared, ok := store.GetTeamDungeonInstance("team-0001", DungeonInstanceShuiliandong)
+	if !ok || shared.CreatedAtUnix != created.CreatedAtUnix || len(shared.DefeatedVisibleMonsterHandles) != 1 {
+		t.Fatalf("expected shared team state before expiry, got ok=%v state=%+v", ok, shared)
+	}
+
+	now = now.Add(2 * time.Minute)
+	if state, ok := store.GetTeamDungeonInstance("team-0001", DungeonInstanceShuiliandong); ok || state.CreatedAtUnix != 0 {
+		t.Fatalf("expected expired team instance to be pruned, got ok=%v state=%+v", ok, state)
+	}
+}
+
 func TestStoreGetRoleDungeonInstanceDoesNotCreateNewInstance(t *testing.T) {
 	store := NewStore()
 	now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)

@@ -55,7 +55,11 @@ func (hub *classicTeamConnectionHub) startSharedBattle(start classicTeamBattleSt
 				break
 			}
 		}
-		if err := connection.writer.writePush(cmdClassicBattleStartCommand, encodePayload(start.Bundle.StartCommand)); err != nil {
+		command, ok := start.Bundle.StartCommandForActor(member.RoleID)
+		if !ok {
+			continue
+		}
+		if err := connection.writer.writePush(cmdClassicBattleStartCommand, encodePayload(command)); err != nil {
 			log.Printf("[ai-server] write classic team battle startCommand failed roleId=%s: %v", member.RoleID, err)
 		}
 	}
@@ -76,6 +80,9 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 		}
 		beforeMember := classicTeamMemberFromSession(connection.session)
 		result := sync.Result
+		if connection.session.battleRuntime != nil && connection.session.battleRuntime.HasPendingTeamAction(roleID) {
+			result.battleStopCommand = nil
+		}
 		if result.battleOver != nil {
 			memberBattleOver := *result.battleOver
 			if connection.session.battleRuntime != nil {
@@ -92,7 +99,7 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 			updatePlayerBaseRoleStateFromBattle(connection.session)
 		}
 		if connection.writer != nil {
-			writeClassicTeamBattleResult(connection.writer, result)
+			writeClassicTeamBattleResult(connection.writer, roleID, result)
 		}
 		hub.broadcast(classicTeamMemberSnapshotEventsIfChanged(beforeMember, connection.session))
 	}
@@ -118,7 +125,7 @@ func classicTeamMemberSnapshotEventsIfChanged(before team.Member, socketSession 
 	return classicTeamManager.UpsertOnline(after)
 }
 
-func writeClassicTeamBattleResult(writer *websocketWriter, result packetResult) {
+func writeClassicTeamBattleResult(writer *websocketWriter, recipientRoleID string, result packetResult) {
 	if writer == nil {
 		return
 	}
@@ -190,5 +197,14 @@ func writeClassicTeamBattleResult(writer *websocketWriter, result packetResult) 
 			log.Printf("[ai-server] write classic team battle startCommand failed: %v", err)
 			return
 		}
+	}
+	for _, command := range result.battleCommands {
+		if command.ActorHandle != recipientRoleID {
+			continue
+		}
+		if err := writer.writePush(cmdClassicBattleStartCommand, encodePayload(command)); err != nil {
+			log.Printf("[ai-server] write classic team battle personalized startCommand failed roleId=%s: %v", recipientRoleID, err)
+		}
+		return
 	}
 }

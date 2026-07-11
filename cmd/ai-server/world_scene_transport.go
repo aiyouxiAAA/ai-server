@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"log"
 	"sort"
+	"strconv"
 	"sync"
+	"time"
 
 	"ai-server/internal/world"
 )
 
 const (
-	worldSceneHeroSpace       = 450
-	worldSceneScreenRoleLimit = 20
+	worldSceneHeroSpace                 = 450
+	worldSceneScreenRoleLimit           = 20
+	worldScenePositionReconcileInterval = 500 * time.Millisecond
 )
 
 // worldSceneHub 是"同 mapId 在线玩家"的注册表。
@@ -304,6 +308,98 @@ func (hub *worldSceneConnectionHub) moveRoleActions(mapID int, actorRoleID strin
 		})
 	}
 	return actions
+}
+
+// positionReconcileActions 按原服 c_MoveRole(50012) 的静止 Run 节奏，
+// 给每个观察者重放其当前可见玩家的最新权威坐标。
+//
+// 可见性先通过 syncMapVisibility 刷新，因此 AOI、screenRole 上限和同图队友
+// 强制可见性仍由唯一的 visible 集合裁决；不会给自己或不可见玩家推送。
+func (hub *worldSceneConnectionHub) positionReconcileActions() []worldScenePushAction {
+	hub.mu.Lock()
+	mapIDSet := make(map[int]struct{}, len(hub.connections))
+	for _, conn := range hub.connections {
+		if conn.writer != nil {
+			mapIDSet[conn.mapID] = struct{}{}
+		}
+	}
+	hub.mu.Unlock()
+
+	mapIDs := make([]int, 0, len(mapIDSet))
+	for mapID := range mapIDSet {
+		mapIDs = append(mapIDs, mapID)
+	}
+	sort.Ints(mapIDs)
+
+	actions := make([]worldScenePushAction, 0)
+	for _, mapID := range mapIDs {
+		actions = append(actions, hub.syncMapVisibility(mapID)...)
+	}
+
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	observerIDs := make([]string, 0, len(hub.connections))
+	for observerID := range hub.connections {
+		observerIDs = append(observerIDs, observerID)
+	}
+	sort.Strings(observerIDs)
+	for _, observerID := range observerIDs {
+		observer := hub.connections[observerID]
+		if observer.writer == nil || observer.visible == nil {
+			continue
+		}
+		visibleRoleIDs := make([]string, 0, len(observer.visible))
+		for roleID := range observer.visible {
+			visibleRoleIDs = append(visibleRoleIDs, roleID)
+		}
+		sort.Strings(visibleRoleIDs)
+		for _, roleID := range visibleRoleIDs {
+			if roleID == observerID {
+				continue
+			}
+			actor, ok := hub.connections[roleID]
+			if !ok || actor.mapID != observer.mapID || !worldSceneCanBuildRolePush(actor) {
+				continue
+			}
+			move := world.RoleMovePush{
+				Handle: roleID,
+				Type:   "Run",
+				X:      actor.spawn.X,
+				Y:      actor.spawn.Y,
+				TX:     actor.spawn.X,
+				TY:     actor.spawn.Y,
+				MapID:  strconv.Itoa(actor.mapID),
+			}
+			actions = append(actions, worldScenePushAction{
+				writer:      observer.writer,
+				recipientID: observerID,
+				moveRole:    &move,
+			})
+		}
+	}
+	return actions
+}
+
+// startWorldScenePositionReconcileLoop 启动服务端权威位置校正循环。
+// 调用者持有返回的 stop，服务退出时必须取消，避免后台循环脱离生命周期。
+func startWorldScenePositionReconcileLoop(hub *worldSceneConnectionHub) context.CancelFunc {
+	ctx, cancel := context.WithCancel(context.Background())
+	if hub == nil {
+		return cancel
+	}
+	ticker := time.NewTicker(worldScenePositionReconcileInterval)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				writeWorldSceneActions(hub.positionReconcileActions())
+			}
+		}
+	}()
+	return cancel
 }
 
 func writeWorldSceneActions(actions []worldScenePushAction) {

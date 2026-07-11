@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -340,6 +341,8 @@ type Runtime struct {
 	Cells                 []CellInfoPush
 	ActiveHandle          string
 	ConsumedSequence      map[int]bool
+	PendingTeamActions    map[string]bool
+	PendingTeamSequences  map[string]int
 	DefendingHandles      map[string]bool
 	StatusEffects         map[string]BattleStatusEffects
 	PendingConfusion      map[string]bool
@@ -348,8 +351,11 @@ type Runtime struct {
 	PendingClearBuffInfos []ClearBuffInfoPush
 	PendingSkillSeal      map[string]bool
 	PendingStart          *StartCommandPush
+	PendingStarts         []StartCommandPush
 	PendingOver           *OverPush
 	nextSequence          int
+	actionSequence        int
+	mu                    sync.Mutex
 }
 
 type BattleStatusEffect struct {
@@ -382,9 +388,10 @@ type BattleStatusEffects struct {
 }
 
 type StartBundle struct {
-	Start        StartPush
-	Cells        []CellInfoPush
-	StartCommand StartCommandPush
+	Start             StartPush
+	Cells             []CellInfoPush
+	StartCommand      StartCommandPush
+	TeamStartCommands []StartCommandPush
 }
 
 type ActionResult struct {
@@ -392,6 +399,7 @@ type ActionResult struct {
 	BuffInfos      []BuffInfoPush
 	ClearBuffInfos []ClearBuffInfoPush
 	StartCommand   *StartCommandPush
+	StartCommands  []StartCommandPush
 	Over           *OverPush
 	ErrorCode      string
 }
@@ -596,8 +604,26 @@ func NewTeamWildBattle(actors []TeamActor, request StartRequest) (*Runtime, Star
 		runtime.RoleSkillsByHandle[roleID] = cloneBattleRoleSkills(actor.Role.Skills)
 		runtime.RoleItemsByHandle[roleID] = cloneBattleRoleItems(actor.Role.Items)
 	}
+	runtime.resetPendingTeamActions()
 	bundle.Cells = append([]CellInfoPush(nil), runtime.Cells...)
+	bundle.TeamStartCommands = runtime.pendingTeamStartCommands()
+	if start, ok := bundle.StartCommandForActor(actors[0].Role.RoleID); ok {
+		bundle.StartCommand = start
+	}
 	return runtime, bundle, true
+}
+
+func (bundle StartBundle) StartCommandForActor(handle string) (StartCommandPush, bool) {
+	handle = strings.TrimSpace(handle)
+	for _, command := range bundle.TeamStartCommands {
+		if command.ActorHandle == handle {
+			return command, true
+		}
+	}
+	if bundle.StartCommand.ActorHandle == handle {
+		return bundle.StartCommand, true
+	}
+	return StartCommandPush{}, false
 }
 
 func buildTeamActorCell(battleID string, role session.RoleSummary, playerBase session.PlayerBaseData) CellInfoPush {
@@ -676,6 +702,11 @@ func battleRoleDisplayURL(role session.RoleSummary, playerBase session.PlayerBas
 }
 
 func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
+	if runtime == nil {
+		return ActionResult{ErrorCode: "battle_missing"}
+	}
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
 	actor, validation := runtime.validateActorTurn(actionTurnRequest{
 		BattleID:    request.BattleID,
 		ActorHandle: request.ActorHandle,
@@ -842,6 +873,11 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 }
 
 func (runtime *Runtime) ProcessItemAction(request ItemActionRequest, item ItemAction) ActionResult {
+	if runtime == nil {
+		return ActionResult{ErrorCode: "battle_missing"}
+	}
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
 	actor, validation := runtime.validateActorTurn(actionTurnRequest{
 		BattleID:    request.BattleID,
 		ActorHandle: request.ActorHandle,
@@ -896,6 +932,8 @@ func (runtime *Runtime) ProcessPlayOver(request PlayOverRequest) ActionResult {
 	if runtime == nil {
 		return ActionResult{ErrorCode: "battle_missing"}
 	}
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
 	if request.BattleID != runtime.BattleID {
 		return ActionResult{ErrorCode: "battle_mismatch"}
 	}
@@ -903,7 +941,14 @@ func (runtime *Runtime) ProcessPlayOver(request PlayOverRequest) ActionResult {
 		over := runtime.PendingOver
 		runtime.PendingOver = nil
 		runtime.PendingStart = nil
+		runtime.PendingStarts = nil
 		return ActionResult{Over: over}
+	}
+	if len(runtime.PendingStarts) > 0 {
+		starts := append([]StartCommandPush(nil), runtime.PendingStarts...)
+		runtime.PendingStarts = nil
+		runtime.Phase = PhaseCommand
+		return ActionResult{StartCommands: starts}
 	}
 	if runtime.PendingStart != nil {
 		start := *runtime.PendingStart
@@ -928,10 +973,11 @@ func (runtime *Runtime) validateActorTurn(request actionTurnRequest) (*CellInfoP
 	if request.BattleID != runtime.BattleID {
 		return nil, ActionResult{ErrorCode: "battle_mismatch"}
 	}
-	if request.ActorHandle != runtime.ActiveHandle {
+	command, ok := runtime.commandWindowForActor(request.ActorHandle)
+	if !ok {
 		return nil, ActionResult{ErrorCode: "actor_not_active"}
 	}
-	if request.Round != runtime.Round || request.Sequence != runtime.nextSequence {
+	if request.Round != command.Round || request.Sequence != command.Sequence {
 		return nil, ActionResult{ErrorCode: "sequence_mismatch"}
 	}
 	if runtime.ConsumedSequence[request.Sequence] {
@@ -941,10 +987,42 @@ func (runtime *Runtime) validateActorTurn(request actionTurnRequest) (*CellInfoP
 	if actor == nil || actor.Camp != CampTeam || actor.HP <= 0 {
 		return nil, ActionResult{ErrorCode: "invalid_actor"}
 	}
+	runtime.actionSequence = request.Sequence
 	return actor, ActionResult{}
 }
 
 func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, actions []ActionPush) ActionResult {
+	teamCommandRound := runtime.PendingTeamActions != nil
+	if teamCommandRound {
+		delete(runtime.PendingTeamActions, actor.Handle)
+		delete(runtime.PendingTeamSequences, actor.Handle)
+		runtime.prunePendingTeamActions()
+		if winner := runtime.resolveWinner(); winner != "" {
+			runtime.Phase = PhaseFinished
+			runtime.PendingStart = nil
+			runtime.PendingStarts = nil
+			runtime.PendingOver = runtime.buildOver(winner)
+			return ActionResult{
+				Actions:        actions,
+				BuffInfos:      runtime.consumePendingBuffInfos(),
+				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
+			}
+		}
+		if len(runtime.PendingTeamActions) > 0 {
+			runtime.Phase = PhaseCommand
+			runtime.PendingStart = nil
+			runtime.PendingStarts = nil
+			runtime.PendingOver = nil
+			return ActionResult{
+				Actions:        actions,
+				BuffInfos:      runtime.consumePendingBuffInfos(),
+				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
+			}
+		}
+		runtime.PendingTeamActions = nil
+		runtime.PendingTeamSequences = nil
+	}
+
 	teamHPBeforeEnemyTurn := map[string]int{}
 	for _, cell := range runtime.Cells {
 		if cell.Camp == CampTeam {
@@ -1040,7 +1118,9 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		}
 
 		runtime.Round += 1
-		runtime.nextSequence += 1
+		if !teamCommandRound {
+			runtime.nextSequence += 1
+		}
 		runtime.ActiveHandle = nextActor.Handle
 		runtime.Phase = PhasePlaying
 		runtime.advanceKuangBaoRound(nextActor.Handle)
@@ -1071,6 +1151,17 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 				runtime.powerFor(nextActor.Handle),
 				storedPowerFromSingleHPLoss(maxInt(0, hpBefore-nextActor.HP), nextActor.MaxHP),
 			))
+		}
+		if teamCommandRound && len(runtime.livingCells(CampTeam)) >= 2 {
+			runtime.resetPendingTeamActions()
+			runtime.PendingStarts = runtime.pendingTeamStartCommands()
+			runtime.PendingStart = nil
+			runtime.PendingOver = nil
+			return ActionResult{
+				Actions:        actions,
+				BuffInfos:      runtime.consumePendingBuffInfos(),
+				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
+			}
 		}
 		start := StartCommandPush{
 			BattleID:    runtime.BattleID,
@@ -1165,7 +1256,7 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			TargetDead:            target.HP <= 0,
 			RefreshInfos:          refreshInfos,
 			Round:                 runtime.Round,
-			Sequence:              runtime.nextSequence,
+			Sequence:              runtime.currentActionSequence(),
 		}
 	}
 	if profile.TargetMPDamage > 0 {
@@ -1199,7 +1290,7 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			TargetDead:            target.HP <= 0,
 			RefreshInfos:          refreshInfos,
 			Round:                 runtime.Round,
-			Sequence:              runtime.nextSequence,
+			Sequence:              runtime.currentActionSequence(),
 		}
 	}
 	damage := runtime.baseBattleDamage(actor, profile, defense)
@@ -1277,7 +1368,7 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 		TargetDead:            target.HP <= 0,
 		RefreshInfos:          refreshInfos,
 		Round:                 runtime.Round,
-		Sequence:              runtime.nextSequence,
+		Sequence:              runtime.currentActionSequence(),
 	}
 }
 
@@ -1772,7 +1863,7 @@ func (runtime *Runtime) resolveEnemyDeludeAction(enemy *CellInfoPush, target *Ce
 		TargetDead:            target.HP <= 0,
 		RefreshInfos:          []CellInfoPush{*enemy, *target},
 		Round:                 runtime.Round,
-		Sequence:              runtime.nextSequence,
+		Sequence:              runtime.currentActionSequence(),
 	}
 }
 
@@ -4015,7 +4106,7 @@ func (runtime *Runtime) resolveWoundStatusAction(target *CellInfoPush, effect Ba
 		TargetDead:            target.HP <= 0,
 		RefreshInfos:          []CellInfoPush{*target},
 		Round:                 runtime.Round,
-		Sequence:              runtime.nextSequence,
+		Sequence:              runtime.currentActionSequence(),
 	}
 }
 
@@ -4059,7 +4150,7 @@ func (runtime *Runtime) resolveSkipTurnStatusAction(target *CellInfoPush, effect
 		TargetDead:            target.HP <= 0,
 		RefreshInfos:          []CellInfoPush{*target},
 		Round:                 runtime.Round,
-		Sequence:              runtime.nextSequence,
+		Sequence:              runtime.currentActionSequence(),
 	}
 }
 
@@ -4294,7 +4385,7 @@ func (runtime *Runtime) resolveSelfAction(
 		TargetDead:        actor.HP <= 0,
 		RefreshInfos:      []CellInfoPush{*actor},
 		Round:             runtime.Round,
-		Sequence:          runtime.nextSequence,
+		Sequence:          runtime.currentActionSequence(),
 	}
 }
 
@@ -4349,7 +4440,7 @@ func (runtime *Runtime) resolveItemAction(actor *CellInfoPush, target *CellInfoP
 		TargetDead:        target.HP <= 0,
 		RefreshInfos:      []CellInfoPush{*target},
 		Round:             runtime.Round,
-		Sequence:          runtime.nextSequence,
+		Sequence:          runtime.currentActionSequence(),
 	}
 }
 
@@ -4651,6 +4742,128 @@ func (runtime *Runtime) nextLivingTeamActorAfter(handle string) *CellInfoPush {
 		}
 	}
 	return nil
+}
+
+func (runtime *Runtime) resetPendingTeamActions() {
+	if runtime == nil {
+		return
+	}
+	if len(runtime.livingCells(CampTeam)) < 2 {
+		runtime.PendingTeamActions = nil
+		runtime.PendingTeamSequences = nil
+		return
+	}
+	runtime.PendingTeamActions = map[string]bool{}
+	runtime.PendingTeamSequences = map[string]int{}
+	for _, cell := range runtime.livingCells(CampTeam) {
+		runtime.PendingTeamActions[cell.Handle] = true
+		runtime.PendingTeamSequences[cell.Handle] = runtime.nextSequence
+		runtime.nextSequence += 1
+	}
+}
+
+func (runtime *Runtime) pendingTeamStartCommands() []StartCommandPush {
+	if runtime == nil || len(runtime.PendingTeamActions) == 0 {
+		return nil
+	}
+	commands := make([]StartCommandPush, 0, len(runtime.PendingTeamActions))
+	for _, cell := range runtime.Cells {
+		sequence, ok := runtime.PendingTeamSequences[cell.Handle]
+		if !ok || cell.Camp != CampTeam || cell.HP <= 0 || !runtime.PendingTeamActions[cell.Handle] {
+			continue
+		}
+		commands = append(commands, StartCommandPush{
+			BattleID:    runtime.BattleID,
+			ActorHandle: cell.Handle,
+			Round:       runtime.Round,
+			Sequence:    sequence,
+			Power:       runtime.powerFor(cell.Handle),
+			Commands:    runtime.commandDefinitionsForActor(cell.Handle),
+		})
+	}
+	return commands
+}
+
+func (runtime *Runtime) prunePendingTeamActions() {
+	if runtime == nil {
+		return
+	}
+	for handle := range runtime.PendingTeamActions {
+		cell := runtime.cellByHandle(handle)
+		if cell != nil && cell.Camp == CampTeam && cell.HP > 0 {
+			continue
+		}
+		delete(runtime.PendingTeamActions, handle)
+		delete(runtime.PendingTeamSequences, handle)
+	}
+}
+
+func (runtime *Runtime) commandWindowForActor(handle string) (StartCommandPush, bool) {
+	if runtime == nil {
+		return StartCommandPush{}, false
+	}
+	handle = strings.TrimSpace(handle)
+	actor := runtime.cellByHandle(handle)
+	if actor == nil || actor.Camp != CampTeam || actor.HP <= 0 {
+		return StartCommandPush{}, false
+	}
+	if runtime.PendingTeamActions != nil {
+		sequence, ok := runtime.PendingTeamSequences[handle]
+		if !ok || !runtime.PendingTeamActions[handle] {
+			return StartCommandPush{}, false
+		}
+		return StartCommandPush{
+			BattleID:    runtime.BattleID,
+			ActorHandle: handle,
+			Round:       runtime.Round,
+			Sequence:    sequence,
+			Power:       runtime.powerFor(handle),
+			Commands:    runtime.commandDefinitionsForActor(handle),
+		}, true
+	}
+	if handle != runtime.ActiveHandle {
+		return StartCommandPush{}, false
+	}
+	return StartCommandPush{
+		BattleID:    runtime.BattleID,
+		ActorHandle: handle,
+		Round:       runtime.Round,
+		Sequence:    runtime.nextSequence,
+		Power:       runtime.powerFor(handle),
+		Commands:    runtime.commandDefinitionsForActor(handle),
+	}, true
+}
+
+func (runtime *Runtime) CommandWindowForActor(handle string) (StartCommandPush, bool) {
+	if runtime == nil {
+		return StartCommandPush{}, false
+	}
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
+	if runtime.Phase != PhaseCommand {
+		return StartCommandPush{}, false
+	}
+	return runtime.commandWindowForActor(handle)
+}
+
+func (runtime *Runtime) HasPendingTeamAction(handle string) bool {
+	if runtime == nil {
+		return false
+	}
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
+	if runtime.Phase != PhaseCommand || runtime.PendingTeamActions == nil {
+		return false
+	}
+	_, ok := runtime.commandWindowForActor(handle)
+	return ok
+}
+
+func (runtime *Runtime) currentActionSequence() int {
+	if runtime == nil || runtime.actionSequence <= 0 {
+		return runtime.nextSequence
+	}
+	return runtime.actionSequence
 }
 
 func (runtime *Runtime) isSelfTarget(actor *CellInfoPush, targetHandle string) bool {

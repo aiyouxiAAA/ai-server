@@ -104,9 +104,6 @@ func (hub *classicTeamConnectionHub) preflightDungeonSyncTransfer(store *session
 		if connection.writer == nil || connection.session == nil {
 			return "队员【" + member.Name + "】连接状态异常，队伍同步取消。", false
 		}
-		if warningMessage, ok := checkDungeonEntryTicketIfNeeded(store, connection.session, targetMapID); !ok {
-			return warningMessage, false
-		}
 	}
 	return "", true
 }

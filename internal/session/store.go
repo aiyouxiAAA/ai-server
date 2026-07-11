@@ -542,6 +542,7 @@ type RoleAddPointResult struct {
 type Store struct {
 	mu                   sync.Mutex
 	rolesByPID           map[string][]RoleSummary
+	teamDungeonInstances map[string]map[string]DungeonInstanceState
 	nextRoleSeqByPID     map[string]int
 	accountsByName       map[string]AccountRecord
 	acceptedQuests       map[string]map[string]bool
@@ -570,8 +571,9 @@ type AccountRecord struct {
 
 func NewStore() *Store {
 	return &Store{
-		rolesByPID:       make(map[string][]RoleSummary),
-		nextRoleSeqByPID: make(map[string]int),
+		rolesByPID:           make(map[string][]RoleSummary),
+		teamDungeonInstances: make(map[string]map[string]DungeonInstanceState),
+		nextRoleSeqByPID:     make(map[string]int),
 		accountsByName: map[string]AccountRecord{
 			"mockuser": {
 				UserName:     "mockuser",
@@ -938,6 +940,91 @@ func (store *Store) EnsureRoleDungeonInstance(playerID string, roleID string, ke
 	return DungeonInstanceState{}, false
 }
 
+func (store *Store) EnsureTeamDungeonInstance(teamID string, key string) (DungeonInstanceState, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	teamID = strings.TrimSpace(teamID)
+	key = strings.TrimSpace(key)
+	if teamID == "" || key == "" {
+		return DungeonInstanceState{}, false
+	}
+	instances := store.teamDungeonInstances[teamID]
+	if instances == nil {
+		instances = map[string]DungeonInstanceState{}
+		store.teamDungeonInstances[teamID] = instances
+	}
+	pruneExpiredDungeonInstanceStates(instances, store.now())
+	state, ok := instances[key]
+	if !ok {
+		state = DungeonInstanceState{CreatedAtUnix: store.now().Unix()}
+		instances[key] = state
+	}
+	return cloneDungeonInstanceState(state), true
+}
+
+func (store *Store) GetTeamDungeonInstance(teamID string, key string) (DungeonInstanceState, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	teamID = strings.TrimSpace(teamID)
+	key = strings.TrimSpace(key)
+	instances := store.teamDungeonInstances[teamID]
+	if teamID == "" || key == "" || instances == nil {
+		return DungeonInstanceState{}, false
+	}
+	pruneExpiredDungeonInstanceStates(instances, store.now())
+	state, ok := instances[key]
+	if !ok || state.CreatedAtUnix <= 0 {
+		return DungeonInstanceState{}, false
+	}
+	return cloneDungeonInstanceState(state), true
+}
+
+func (store *Store) ResetTeamDungeonInstance(teamID string, key string) bool {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	teamID = strings.TrimSpace(teamID)
+	key = strings.TrimSpace(key)
+	instances := store.teamDungeonInstances[teamID]
+	if teamID == "" || key == "" || instances == nil {
+		return false
+	}
+	delete(instances, key)
+	if len(instances) == 0 {
+		delete(store.teamDungeonInstances, teamID)
+	}
+	return true
+}
+
+func (store *Store) MarkTeamDungeonVisibleMonsterDefeated(teamID string, key string, handle string) (DungeonInstanceState, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	teamID = strings.TrimSpace(teamID)
+	key = strings.TrimSpace(key)
+	handle = strings.TrimSpace(handle)
+	if teamID == "" || key == "" || handle == "" {
+		return DungeonInstanceState{}, false
+	}
+	instances := store.teamDungeonInstances[teamID]
+	if instances == nil {
+		instances = map[string]DungeonInstanceState{}
+		store.teamDungeonInstances[teamID] = instances
+	}
+	pruneExpiredDungeonInstanceStates(instances, store.now())
+	state := instances[key]
+	if state.CreatedAtUnix == 0 {
+		state.CreatedAtUnix = store.now().Unix()
+	}
+	if !containsString(state.DefeatedVisibleMonsterHandles, handle) {
+		state.DefeatedVisibleMonsterHandles = append(state.DefeatedVisibleMonsterHandles, handle)
+	}
+	instances[key] = state
+	return cloneDungeonInstanceState(state), true
+}
+
 func (store *Store) GetRoleDungeonInstance(playerID string, roleID string, key string) (DungeonInstanceState, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -1050,6 +1137,14 @@ func pruneExpiredDungeonInstances(role *RoleSummary, now time.Time) bool {
 		role.DungeonInstances = nil
 	}
 	return changed
+}
+
+func pruneExpiredDungeonInstanceStates(instances map[string]DungeonInstanceState, now time.Time) {
+	for key, state := range instances {
+		if state.CreatedAtUnix <= 0 || !now.Before(time.Unix(state.CreatedAtUnix, 0).Add(dungeonInstanceTTL)) {
+			delete(instances, key)
+		}
+	}
 }
 
 func (store *Store) GetRoleSkills(playerID string, roleID string) ([]RoleSkill, int, bool) {

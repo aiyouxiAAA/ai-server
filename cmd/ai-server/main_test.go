@@ -6985,6 +6985,9 @@ func TestHandlePacketClassicBattleLoadProtocol(t *testing.T) {
 	if progressResult.battleLoadProgress.BattleID != "battle-load-capture" || progressResult.battleLoadProgress.Progress != 87 {
 		t.Fatalf("expected BattleLoadPro to echo battleId/progress, got %+v", progressResult.battleLoadProgress)
 	}
+	if progressResult.teamBattleLoadProgress == nil || progressResult.teamBattleLoadProgress.Progress != 87 {
+		t.Fatalf("expected BattleLoadPro to mark team broadcast progress, got %+v", progressResult.teamBattleLoadProgress)
+	}
 	if !strings.Contains(progressResult.battleLoadProgress.SourceCapture, "BattleLoadPro") {
 		t.Fatalf("expected BattleLoadPro capture pointer, got %s", progressResult.battleLoadProgress.SourceCapture)
 	}
@@ -7001,6 +7004,13 @@ func TestHandlePacketClassicBattleLoadProtocol(t *testing.T) {
 	}
 	if readyResult.battleLoadProgress.Progress != 100 {
 		t.Fatalf("expected BattleRoleReady to mark progress 100, got %+v", readyResult.battleLoadProgress)
+	}
+	if readyResult.teamBattleLoadProgress == nil || readyResult.teamBattleLoadProgress.Progress != 100 {
+		t.Fatalf("expected BattleRoleReady to mark team broadcast progress 100, got %+v", readyResult.teamBattleLoadProgress)
+	}
+	// RoleReady remains report-only; it only fans out progress and never releases commands.
+	if len(readyResult.battleCommands) != 0 {
+		t.Fatalf("expected RoleReady not to release startCommand, got %+v", readyResult)
 	}
 	if !strings.Contains(readyResult.battleLoadProgress.SourceCapture, "BattleRoleReady") {
 		t.Fatalf("expected BattleRoleReady capture pointer, got %s", readyResult.battleLoadProgress.SourceCapture)

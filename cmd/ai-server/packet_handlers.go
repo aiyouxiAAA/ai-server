@@ -86,21 +86,22 @@ type packetResult struct {
 	teamEvents         []team.Event
 	teamSyncTransfer   *classicTeamSyncTransfer
 	teamDungeonReset   *classicTeamDungeonReset
-	teamBattleStart    *classicTeamBattleStart
-	teamBattleSync     *classicTeamBattleSync
-	battleStart        *battle.StartPush
-	battleCells        []battle.CellInfoPush
-	battleCellCount    *classicBattleCellCountPush
-	battleCommand      *battle.StartCommandPush
-	battleCommands     []battle.StartCommandPush
-	battleActions      []battle.ActionPush
-	battleStopCommand  *classicBattleStopCommandPush
-	battleBuffs        []battle.BuffInfoPush
-	battleClearBuffs   []battle.ClearBuffInfoPush
-	battleClearCells   []classicBattleClearCellInfoPush
-	battleOver         *battle.OverPush
-	battleLoadProgress *classicBattleLoadProgressPush
-	battleRelive       *classicBattleRelivePush
+	teamBattleStart        *classicTeamBattleStart
+	teamBattleSync         *classicTeamBattleSync
+	teamBattleLoadProgress *classicBattleLoadProgressPush
+	battleStart            *battle.StartPush
+	battleCells            []battle.CellInfoPush
+	battleCellCount        *classicBattleCellCountPush
+	battleCommand          *battle.StartCommandPush
+	battleCommands         []battle.StartCommandPush
+	battleActions          []battle.ActionPush
+	battleStopCommand      *classicBattleStopCommandPush
+	battleBuffs            []battle.BuffInfoPush
+	battleClearBuffs       []battle.ClearBuffInfoPush
+	battleClearCells       []classicBattleClearCellInfoPush
+	battleOver             *battle.OverPush
+	battleLoadProgress     *classicBattleLoadProgressPush
+	battleRelive           *classicBattleRelivePush
 	removeRoleHandles  []string
 	moveRole           *world.RoleMovePush
 	// sceneTransferFromMapID 标记本次结果是由"传送/切图"触发的,值为玩家传送前的旧 mapId。
@@ -937,6 +938,17 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 		log.Printf("[ai-server] classic battle StartBattle ignored without selected role mapId=%s", request.MapID)
 		return packetResult{handled: true}
 	}
+	// Shared-team StartBattle already attaches the same runtime to teammates. A
+	// second CrossRole/wild request must not open a parallel private battle.
+	if socketSession.battleRuntime != nil && strings.TrimSpace(socketSession.battleRuntime.BattleID) != "" {
+		log.Printf(
+			"[ai-server] classic battle StartBattle ignored active runtime battleId=%s roleId=%s mapId=%s",
+			socketSession.battleRuntime.BattleID,
+			socketSession.selectedRole.RoleID,
+			request.MapID,
+		)
+		return packetResult{handled: true}
+	}
 	if mapID, ok := battle.ParseMapID(request.MapID); ok {
 		_ = syncDungeonInstanceState(store, socketSession, mapID)
 	}
@@ -962,14 +974,31 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 			enemyCells = append(enemyCells, cell.Handle+":"+cell.Name)
 		}
 	}
+	sharedNames := make([]string, 0, len(sharedMembers))
+	for _, member := range sharedMembers {
+		sharedNames = append(sharedNames, member.RoleID+":"+member.Name)
+	}
+	teamCells := 0
+	for _, cell := range bundle.Cells {
+		if cell.Camp == battle.CampTeam {
+			teamCells++
+		}
+	}
 	log.Printf(
-		"[ai-server] classic battle StartBattle battleId=%s roleId=%s mapId=%s sourceMonsterHandle=%s enemies=%v",
+		"[ai-server] classic battle StartBattle battleId=%s roleId=%s mapId=%s sourceMonsterHandle=%s sharedMembers=%v teamCells=%d enemyCells=%d totalCells=%d enemies=%v",
 		bundle.Start.BattleID,
 		socketSession.selectedRole.RoleID,
 		request.MapID,
 		request.SourceMonsterHandle,
+		sharedNames,
+		teamCells,
+		len(enemyCells),
+		len(bundle.Cells),
 		enemyCells,
 	)
+	// Keep first startCommand immediate. Source battleLoad may still wait on peer
+	// progress client-side, but delaying startCommand until RoleReady deadlocks
+	// when a teammate never enters or shared membership flaps.
 	return packetResult{
 		battleStart: &bundle.Start,
 		battleCells: bundle.Cells,
@@ -1360,17 +1389,31 @@ func buildClassicBattleRelivePush(over *battle.OverPush) *classicBattleRelivePus
 }
 
 func buildClassicBattleLoadProgressResult(socketSession *packetSession, request classicBattleLoadProgressRequest) packetResult {
-	return packetResult{
-		battleLoadProgress: buildClassicBattleLoadProgressPush(socketSession, request.BattleID, request.Progress, classicBattleLoadProgressRequestCapture),
+	progress := buildClassicBattleLoadProgressPush(socketSession, request.BattleID, request.Progress, classicBattleLoadProgressRequestCapture)
+	result := packetResult{
+		battleLoadProgress: progress,
 		handled:            true,
 	}
+	if progress != nil {
+		// Source c_battleLoadPro is peer progress; the reporter ignores their own
+		// name on the client, so only teammates need the broadcast copy.
+		result.teamBattleLoadProgress = progress
+	}
+	return result
 }
 
 func buildClassicBattleRoleReadyResult(socketSession *packetSession, request classicBattleRoleReadyRequest) packetResult {
-	return packetResult{
-		battleLoadProgress: buildClassicBattleLoadProgressPush(socketSession, request.BattleID, 100, classicBattleRoleReadyRequestCapture),
+	progress := buildClassicBattleLoadProgressPush(socketSession, request.BattleID, 100, classicBattleRoleReadyRequestCapture)
+	result := packetResult{
+		battleLoadProgress: progress,
 		handled:            true,
 	}
+	if progress != nil {
+		// RoleReady is report-only on the source client; still fan out 100% so
+		// teammates can update peer battleLoad bars.
+		result.teamBattleLoadProgress = progress
+	}
+	return result
 }
 
 func buildClassicBattleLoadProgressPush(socketSession *packetSession, battleID string, progress int, sourceCapture string) *classicBattleLoadProgressPush {

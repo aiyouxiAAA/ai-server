@@ -708,15 +708,18 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
-		for _, battleCell := range result.battleCells {
-			if err := socketWriter.writePush(cmdClassicBattleCellInfoPush, encodePayload(battleCell)); err != nil {
-				log.Printf("[ai-server] write classic battle BattleCellInfo failed: %v", err)
-				return
-			}
-		}
+		// Capture order is StartBattle -> battleCellCount -> BattleCellInfo*.
+		// Push count first so clients can wait for the full cell set instead of
+		// entering after the first partial BattleCellInfo.
 		if result.battleCellCount != nil {
 			if err := socketWriter.writePush(cmdClassicBattleCellCountPush, encodePayload(*result.battleCellCount)); err != nil {
 				log.Printf("[ai-server] write classic battle battleCellCount failed: %v", err)
+				return
+			}
+		}
+		for _, battleCell := range result.battleCells {
+			if err := socketWriter.writePush(cmdClassicBattleCellInfoPush, encodePayload(battleCell)); err != nil {
+				log.Printf("[ai-server] write classic battle BattleCellInfo failed: %v", err)
 				return
 			}
 		}
@@ -731,6 +734,10 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				log.Printf("[ai-server] write classic battle battleLoadPro failed: %v", err)
 				return
 			}
+		}
+		if result.teamBattleLoadProgress != nil && socketSession.selectedRole != nil {
+			// Source c_battleLoadPro is peer progress for other clients.
+			classicTeamHub.broadcastBattleLoadProgress(socketSession.selectedRole.RoleID, *result.teamBattleLoadProgress)
 		}
 		for _, battleBuff := range result.battleBuffs {
 			if err := socketWriter.writePush(cmdClassicBattleBuffInfoPush, encodePayload(battleBuff)); err != nil {

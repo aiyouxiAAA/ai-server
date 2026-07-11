@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"strconv"
+	"strings"
 
 	"ai-server/internal/battle"
 	"ai-server/internal/session"
@@ -49,6 +50,13 @@ func (hub *classicTeamConnectionHub) startSharedBattle(start classicTeamBattleSt
 			log.Printf("[ai-server] write classic team battle StartBattle failed roleId=%s: %v", member.RoleID, err)
 			continue
 		}
+		// Capture order: StartBattle -> battleCellCount -> BattleCellInfo*.
+		cellCount := buildClassicBattleCellCountPush(start.Bundle.Start.BattleID, len(start.Bundle.Cells), false)
+		if cellCount != nil {
+			if err := connection.writer.writePush(cmdClassicBattleCellCountPush, encodePayload(*cellCount)); err != nil {
+				log.Printf("[ai-server] write classic team battle battleCellCount failed roleId=%s: %v", member.RoleID, err)
+			}
+		}
 		for _, cell := range start.Bundle.Cells {
 			if err := connection.writer.writePush(cmdClassicBattleCellInfoPush, encodePayload(cell)); err != nil {
 				log.Printf("[ai-server] write classic team battle BattleCellInfo failed roleId=%s: %v", member.RoleID, err)
@@ -61,6 +69,31 @@ func (hub *classicTeamConnectionHub) startSharedBattle(start classicTeamBattleSt
 		}
 		if err := connection.writer.writePush(cmdClassicBattleStartCommand, encodePayload(command)); err != nil {
 			log.Printf("[ai-server] write classic team battle startCommand failed roleId=%s: %v", member.RoleID, err)
+		}
+	}
+}
+
+func (hub *classicTeamConnectionHub) broadcastBattleLoadProgress(actorRoleID string, progress classicBattleLoadProgressPush) {
+	if strings.TrimSpace(actorRoleID) == "" {
+		return
+	}
+	recipients, ok := classicTeamManager.RecipientsForTeam(actorRoleID)
+	if !ok {
+		return
+	}
+	for _, roleID := range recipients {
+		if roleID == actorRoleID {
+			continue
+		}
+		connection := hub.connectionFor(roleID)
+		if connection.writer == nil || connection.session == nil || connection.session.battleRuntime == nil {
+			continue
+		}
+		if progress.BattleID != "" && connection.session.battleRuntime.BattleID != progress.BattleID {
+			continue
+		}
+		if err := connection.writer.writePush(cmdClassicBattleLoadProPush, encodePayload(progress)); err != nil {
+			log.Printf("[ai-server] write classic team battleLoadPro failed roleId=%s: %v", roleID, err)
 		}
 	}
 }

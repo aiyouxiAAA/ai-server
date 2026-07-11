@@ -323,8 +323,10 @@ func TestHandlePacketClassicTeamSharedBattleStartIncludesMember(t *testing.T) {
 	if !result.handled || result.battleStart == nil || result.teamBattleStart == nil {
 		t.Fatalf("expected shared team battle start, got %+v", result)
 	}
-	if result.battleCommand == nil || result.battleCommand.ActorHandle != leaderSession.selectedRole.RoleID || len(result.battleCommand.Commands) == 0 {
-		t.Fatalf("expected leader startCommand to retain its own command definitions, got %+v", result.battleCommand)
+	// Keep first startCommand immediate. Delaying it until RoleReady caused
+	// team-entry deadlocks when membership flapped or a peer never loaded.
+	if result.battleCommand == nil {
+		t.Fatalf("expected shared team battle to keep immediate startCommand, got nil")
 	}
 	if len(result.teamBattleStart.Members) != 1 || result.teamBattleStart.Members[0].RoleID != memberSession.selectedRole.RoleID {
 		t.Fatalf("expected member in shared battle start, got %+v", result.teamBattleStart.Members)
@@ -337,6 +339,120 @@ func TestHandlePacketClassicTeamSharedBattleStartIncludesMember(t *testing.T) {
 	}
 	if teamCells != 2 {
 		t.Fatalf("expected two team cells in shared battle, got cells=%+v", result.battleCells)
+	}
+}
+
+func TestHandlePacketClassicTeamSharedBattleBroadcastsLoadProgress(t *testing.T) {
+	classicTeamManager.Reset()
+	classicTeamHub = newClassicTeamConnectionHub()
+
+	store := session.NewStore()
+	leaderSession, memberSession := seedClassicTeamPair(t, store)
+	acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	moveClassicTeamSessionToMap(t, store, leaderSession, 4)
+	moveClassicTeamSessionToMap(t, store, memberSession, 4)
+	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(leaderSession))
+	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(memberSession))
+	classicTeamHub.register(memberSession.selectedRole.RoleID, &websocketWriter{}, memberSession)
+
+	start := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 8,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, leaderSession)
+	if !start.handled || start.battleStart == nil || start.teamBattleStart == nil || start.battleCommand == nil {
+		t.Fatalf("expected shared battle start with immediate startCommand, got %+v", start)
+	}
+	battleID := start.battleStart.BattleID
+	if memberSession.battleRuntime == nil || memberSession.battleRuntime.BattleID != battleID {
+		memberSession.battleRuntime = leaderSession.battleRuntime
+	}
+
+	leaderProgress := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleLoadProReq,
+		Seq: 9,
+		Payload: mustJSON(t, classicBattleLoadProgressRequest{
+			BattleID: battleID,
+			Progress: 64,
+		}),
+	}, leaderSession)
+	if !leaderProgress.handled || leaderProgress.battleLoadProgress == nil || leaderProgress.teamBattleLoadProgress == nil {
+		t.Fatalf("expected BattleLoadPro to echo and mark team broadcast, got %+v", leaderProgress)
+	}
+	if leaderProgress.teamBattleLoadProgress.Name != leaderSession.selectedRole.DisplayName ||
+		leaderProgress.teamBattleLoadProgress.Progress != 64 {
+		t.Fatalf("expected peer LoadPro broadcast payload, got %+v", leaderProgress.teamBattleLoadProgress)
+	}
+
+	leaderReady := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleRoleReadyReq,
+		Seq: 10,
+		Payload: mustJSON(t, classicBattleRoleReadyRequest{
+			BattleID: battleID,
+		}),
+	}, leaderSession)
+	if !leaderReady.handled || leaderReady.battleLoadProgress == nil || leaderReady.battleLoadProgress.Progress != 100 {
+		t.Fatalf("expected leader RoleReady progress 100, got %+v", leaderReady)
+	}
+	if leaderReady.teamBattleLoadProgress == nil || leaderReady.teamBattleLoadProgress.Progress != 100 {
+		t.Fatalf("expected RoleReady to fan out progress 100, got %+v", leaderReady.teamBattleLoadProgress)
+	}
+	if len(leaderReady.battleCommands) != 0 {
+		t.Fatalf("expected RoleReady to remain report-only, got commands %+v", leaderReady.battleCommands)
+	}
+}
+
+func TestHandlePacketClassicTeamSharedBattleIgnoresSecondStartWhileActive(t *testing.T) {
+	classicTeamManager.Reset()
+	classicTeamHub = newClassicTeamConnectionHub()
+
+	store := session.NewStore()
+	leaderSession, memberSession := seedClassicTeamPair(t, store)
+	acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	moveClassicTeamSessionToMap(t, store, leaderSession, 4)
+	moveClassicTeamSessionToMap(t, store, memberSession, 4)
+	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(leaderSession))
+	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(memberSession))
+	classicTeamHub.register(memberSession.selectedRole.RoleID, &websocketWriter{}, memberSession)
+
+	start := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 8,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, leaderSession)
+	if !start.handled || start.battleStart == nil || leaderSession.battleRuntime == nil {
+		t.Fatalf("expected shared battle start, got %+v", start)
+	}
+	// Mirror startSharedBattle attaching the runtime to the teammate.
+	memberSession.battleRuntime = leaderSession.battleRuntime
+	activeBattleID := leaderSession.battleRuntime.BattleID
+
+	second := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 9,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               "4",
+			MapName:             "云隐村口",
+			StageFocusX:         120,
+			ReturnRoute:         "town-placeholder",
+			SourceMonsterHandle: "monster-duplicate",
+		}),
+	}, memberSession)
+	if !second.handled || second.battleStart != nil || second.teamBattleStart != nil {
+		t.Fatalf("expected active shared runtime to block a second StartBattle, got %+v", second)
+	}
+	if memberSession.battleRuntime == nil || memberSession.battleRuntime.BattleID != activeBattleID {
+		t.Fatalf("expected member to keep shared battle runtime %s, got %+v", activeBattleID, memberSession.battleRuntime)
 	}
 }
 

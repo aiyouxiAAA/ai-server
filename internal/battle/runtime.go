@@ -116,8 +116,8 @@ const (
 	enemyShihukuChilukingPieceChance   = 11
 	enemyShihukuBlackshadowWoundMin    = 6
 	enemyShihukuBlackshadowWoundMax    = 9
-	enemyShihukuChilukingWoundMin      = 10
-	enemyShihukuChilukingWoundMax      = 15
+	enemyShihukuChilukingWoundMin      = 7
+	enemyShihukuChilukingWoundMax      = 10
 	enemyShihukuPieceWoundRounds       = 5
 	enemyShihukuSkillMPCost            = 10
 	enemyShihukuPieceDamageMultiplier  = 1.4
@@ -1041,9 +1041,8 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			}
 		}
 
-		team := runtime.firstLiving(CampTeam)
 		for _, enemy := range runtime.livingCells(CampEnemy) {
-			if team == nil {
+			if runtime.firstLiving(CampTeam) == nil {
 				break
 			}
 			statusActions, skipTurn := runtime.resolveStatusStartActions(enemy)
@@ -1052,7 +1051,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 				break
 			}
 			if enemy.HP <= 0 || skipTurn {
-				team = runtime.firstLiving(CampTeam)
 				continue
 			}
 			if runtime.consumePendingConfusion(enemy.Handle) {
@@ -1060,11 +1058,16 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 					actions = append(actions, *action)
 				}
 				runtime.setStoredPower(enemy.Handle, 0)
-				team = runtime.firstLiving(CampTeam)
 				if runtime.resolveWinner() != "" {
 					break
 				}
 				continue
+			}
+			// Pick a living team target per enemy action so multi-player battles
+			// do not always hit the first living team cell.
+			team := runtime.resolveEnemyTeamTarget(enemy)
+			if team == nil {
+				break
 			}
 			actions = append(actions, runtime.resolveEnemyRampageActions(enemy)...)
 			targetHandle := team.Handle
@@ -1077,7 +1080,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			if _, ok := teamHPBeforeEnemyTurn[targetHandle]; !ok {
 				teamHPBeforeEnemyTurn[targetHandle] = team.HP
 			}
-			team = runtime.firstLiving(CampTeam)
 			if runtime.resolveWinner() != "" {
 				break
 			}
@@ -4692,6 +4694,24 @@ func (runtime *Runtime) cellByHandle(handle string) *CellInfoPush {
 		}
 	}
 	return nil
+}
+
+func (runtime *Runtime) resolveEnemyTeamTarget(enemy *CellInfoPush) *CellInfoPush {
+	if runtime == nil || enemy == nil {
+		return nil
+	}
+	targets := runtime.livingCells(CampTeam)
+	switch len(targets) {
+	case 0:
+		return nil
+	case 1:
+		return targets[0]
+	default:
+		// Deterministic roll among living team members so multi-player battles
+		// do not always hit firstLiving(CampTeam).
+		roll := runtime.hashBattleRollWithSalt(enemy, enemy, CommandEnemyAttack, "enemy-target")
+		return targets[roll%len(targets)]
+	}
 }
 
 func (runtime *Runtime) firstLiving(camp Camp) *CellInfoPush {

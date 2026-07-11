@@ -306,11 +306,11 @@
       "status_buff_id": "external-injury",
       "status_chance_percent": "100",
       "status_rounds": "5",
-      "status_tick_min_percent": "10",
-      "status_tick_max_percent": "15",
+      "status_tick_min_percent": "7",
+      "status_tick_max_percent": "10",
       "evidence_status": "partial",
       "evidence": ".planning/SHIHUKU_PHASED_DEVELOPMENT_PLAN.md + tmp/shihuku-preaction-skill-multiplier-summary.csv + shihuku-wound-percent-reverse-grouped.csv",
-      "notes": "action/status/MP confirmed; damage multiplier is capture-backed approximation from pre-action refresh and same-actor normal attack calibration"
+      "notes": "action/status/MP confirmed; damage multiplier capture-backed; wound 7%~10% recalibrated after Attack 236->342 (old 10%~15% was against mis-sampled 236)"
     },
     {
       "monster_skill_id": "monster-whorllion-lionroars",

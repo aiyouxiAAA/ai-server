@@ -212,10 +212,10 @@ map_id,map_name,handle,name,display_url,level,vocation,max_hp,max_mp,speed,attac
 164,狮虎窟_7,7283622130690284,黑影,monstermap/blackshadow.swf,27,游侠+,2750,724,130,300,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
 164,狮虎窟_7,7285622130691644,黑影,monstermap/blackshadow.swf,27,游侠+,2750,724,130,300,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
 164,狮虎窟_7,7287622130692195,黑影,monstermap/blackshadow.swf,27,游侠+,2750,724,130,300,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
-165,狮虎窟_8,3850623006742112,黑影,monstermap/blackshadow.swf,26,游侠+,2500,724,130,276,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
-165,狮虎窟_8,3852623006743553,黑影,monstermap/blackshadow.swf,26,游侠+,2500,724,130,276,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
-165,狮虎窟_8,3854623006744837,黑影,monstermap/blackshadow.swf,26,游侠+,2500,724,130,276,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
-165,狮虎窟_8,3856623006745359,黑影队长,monstermap/blackshadow.swf,26,游侠+,3000,760,130,276,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
+165,狮虎窟_8,3850623006742112,黑影,monstermap/blackshadow.swf,26,游侠+,2500,724,130,301,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
+165,狮虎窟_8,3852623006743553,黑影,monstermap/blackshadow.swf,26,游侠+,2500,724,130,301,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
+165,狮虎窟_8,3854623006744837,黑影,monstermap/blackshadow.swf,26,游侠+,2500,724,130,301,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
+165,狮虎窟_8,3856623006745359,黑影队长,monstermap/blackshadow.swf,26,游侠+,3000,760,130,378,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
 166,狮虎窟_9,1957622577207441,蛮虎怪,monstermap/powertiger.swf,27,战士+,3200,600,130,336,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,
 166,狮虎窟_9,1959622577208401,盘狮怪,monstermap/whorllion.swf,27,战士+,3000,384,130,328,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,1959622577208401;1961622577209280
 166,狮虎窟_9,1961622577209280,盘狮怪,monstermap/whorllion.swf,27,战士+,3000,384,130,328,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,1959622577208401;1961622577209280
@@ -223,4 +223,4 @@ map_id,map_name,handle,name,display_url,level,vocation,max_hp,max_mp,speed,attac
 167,狮虎窟_10,7544622260836750,盘狮怪,monstermap/whorllion.swf,27,战士+,3000,384,130,328,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,7542622260835182;7544622260836750
 167,狮虎窟_10,7546622260836700,蛮虎怪,monstermap/powertiger.swf,27,战士+,3200,600,130,336,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,7546622260836700;7548622260837633;7550622260838906
 167,狮虎窟_10,7548622260837633,盘狮怪,monstermap/whorllion.swf,27,战士+,3000,384,130,328,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,7546622260836700;7548622260837633;7550622260838906
-167,狮虎窟_10,7550622260838906,蚩颅王,monstermap/chiluking.swf,30,战士++,6000,600,130,236,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,7546622260836700;7548622260837633;7550622260838906
+167,狮虎窟_10,7550622260838906,蚩颅王,monstermap/chiluking.swf,30,战士++,6000,600,130,342,0,普通攻击,physical,1,4,20260616_215712_071_session_41212/20260616_215718_725_conn_0002#createRole+cell+hp-delta,7546622260836700;7548622260837633;7550622260838906

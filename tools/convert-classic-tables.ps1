@@ -2,6 +2,19 @@ param(
   [string]$ServerRoot = ''
 )
 
+if ($PSVersionTable.PSVersion.Major -lt 6) {
+  $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+  if ($null -eq $pwsh) {
+    throw 'convert-classic-tables.ps1 requires PowerShell 7 or newer for stable generated JSON output.'
+  }
+  $pwshArguments = @('-NoProfile', '-File', $PSCommandPath)
+  if (![string]::IsNullOrWhiteSpace($ServerRoot)) {
+    $pwshArguments += @('-ServerRoot', $ServerRoot)
+  }
+  & $pwsh.Source @pwshArguments
+  exit $LASTEXITCODE
+}
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 

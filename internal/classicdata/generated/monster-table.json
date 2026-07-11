@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "monster",
   "source": "internal/classicdata/source/monster-table.csv",
-  "rowCount": 280,
+  "rowCount": 282,
   "rows": [
     {
       "monster_id": "wild-4-7089932810872715",
@@ -269,6 +269,28 @@
       "source": "20260524_113450_799_conn_0002"
     },
     {
+      "monster_id": "wild-40-6132760366794317",
+      "source_kind": "wild",
+      "map_id": "40",
+      "map_name": "平原_9",
+      "handle": "6132760366794317",
+      "name": "刺鸟",
+      "display_url": "monstermap/swordbird.swf",
+      "level": "11",
+      "vocation": "游侠",
+      "max_hp": "230",
+      "max_mp": "160",
+      "speed": "0",
+      "attack": "175",
+      "defense": "0",
+      "command_label": "普通攻击",
+      "damage_defense_type": "",
+      "queue_index_team": "1",
+      "queue_index_enemy": "4",
+      "encounter_handles": "",
+      "source": "instance2.staging/20260606_215548_514_conn_0005"
+    },
+    {
       "monster_id": "wild-41-4022545119904439",
       "source_kind": "wild",
       "map_id": "41",
@@ -487,6 +509,28 @@
       "queue_index_enemy": "4",
       "encounter_handles": "",
       "source": "20260523_210149_461_conn_0002"
+    },
+    {
+      "monster_id": "wild-52-7014979944725157",
+      "source_kind": "wild",
+      "map_id": "52",
+      "map_name": "平原_18",
+      "handle": "7014979944725157",
+      "name": "巡路小鬼",
+      "display_url": "monstermap/lilghost.swf",
+      "level": "18",
+      "vocation": "战士",
+      "max_hp": "545",
+      "max_mp": "184",
+      "speed": "0",
+      "attack": "216",
+      "defense": "0",
+      "command_label": "普通攻击",
+      "damage_defense_type": "",
+      "queue_index_team": "1",
+      "queue_index_enemy": "4",
+      "encounter_handles": "",
+      "source": "instance2.staging/20260612_211850_206_conn_0002"
     },
     {
       "monster_id": "wild-52-1478600550966619",

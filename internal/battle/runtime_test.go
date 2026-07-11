@@ -1927,6 +1927,7 @@ func TestNewWildBattleSelectsCapturedMapCandidatesByStageFocusX(t *testing.T) {
 		mapID          string
 		mapName        string
 		stageFocusX    float64
+		handle         string
 		enemyName      string
 		level          int
 		maxHP          int
@@ -1938,7 +1939,9 @@ func TestNewWildBattleSelectsCapturedMapCandidatesByStageFocusX(t *testing.T) {
 		{mapID: "50", mapName: "平原_16", stageFocusX: 0, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, attack: 203, encounterLabel: "平原_16 暗雷", enemyCount: 2},
 		{mapID: "50", mapName: "平原_16", stageFocusX: 800, enemyName: "巡路小鬼", level: 17, maxHP: 545, maxMP: 184, attack: 216, encounterLabel: "平原_16 暗雷", enemyCount: 2},
 		{mapID: "50", mapName: "平原_16", stageFocusX: 1600, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, attack: 203, encounterLabel: "平原_16 暗雷", enemyCount: 2},
-		{mapID: "52", mapName: "平原_18", stageFocusX: 800, enemyName: "单刀狼人", level: 21, maxHP: 2500, maxMP: 334, attack: 260, encounterLabel: "平原_18 首领", enemyCount: 4},
+		{mapID: "40", mapName: "平原_9", stageFocusX: 800, handle: "6132760366794317", enemyName: "刺鸟", level: 11, maxHP: 230, maxMP: 160, attack: 175, encounterLabel: "平原_9 暗雷", enemyCount: 1},
+		{mapID: "52", mapName: "平原_18", stageFocusX: 800, handle: "7014979944725157", enemyName: "巡路小鬼", level: 18, maxHP: 545, maxMP: 184, attack: 216, encounterLabel: "平原_18 暗雷", enemyCount: 1},
+		{mapID: "52", mapName: "平原_18", stageFocusX: 1600, handle: "1478600550966619", enemyName: "单刀狼人", level: 21, maxHP: 2500, maxMP: 334, attack: 260, encounterLabel: "平原_18 首领", enemyCount: 4},
 	}
 
 	for _, testCase := range cases {
@@ -1957,7 +1960,10 @@ func TestNewWildBattleSelectsCapturedMapCandidatesByStageFocusX(t *testing.T) {
 		if enemy.Name != testCase.enemyName || enemy.Level != testCase.level || enemy.MaxHP != testCase.maxHP || enemy.MaxMP != testCase.maxMP || enemy.Attack != testCase.attack {
 			t.Fatalf("expected candidate enemy for map %s at %.0f, got %+v", testCase.mapID, testCase.stageFocusX, enemy)
 		}
-		if testCase.mapID == "52" && testCase.stageFocusX == 800 {
+		if testCase.handle != "" && enemy.Handle != testCase.handle {
+			t.Fatalf("expected source handle %s for map %s at %.0f, got %+v", testCase.handle, testCase.mapID, testCase.stageFocusX, enemy)
+		}
+		if testCase.mapID == "52" && testCase.stageFocusX == 1600 {
 			names := []string{bundle.Cells[1].Name, bundle.Cells[2].Name, bundle.Cells[3].Name, bundle.Cells[4].Name}
 			if names[0] != "单刀狼人" || names[1] != "盗贼" || names[2] != "盗贼" || names[3] != "盗贼" {
 				t.Fatalf("expected captured 平原_18 boss encounter 单刀狼人 + 3 盗贼, got %+v", names)
@@ -2002,7 +2008,7 @@ func TestNewWildBattleRandomizesCapturedNormalEnemyCountButKeepsBossFixed(t *tes
 	restore = useSourceEncounterRoll(func(maxExclusive int) int {
 		return 0
 	})
-	_, bossBundle, bossOK := NewWildBattle(role, playerBase, StartRequest{MapID: "52", MapName: "平原_18", StageFocusX: 800})
+	_, bossBundle, bossOK := NewWildBattle(role, playerBase, StartRequest{MapID: "52", MapName: "平原_18", StageFocusX: 1600})
 	restore()
 	if !bossOK || len(bossBundle.Cells) != 5 {
 		t.Fatalf("expected boss encounter count to stay fixed at four enemies plus player, got ok=%v bundle=%+v", bossOK, bossBundle)
@@ -2140,7 +2146,7 @@ func TestProcessActionQueuesAllLivingCapturedEnemies(t *testing.T) {
 		},
 	}
 
-	runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{MapID: "52", MapName: "平原_18", StageFocusX: 800})
+	runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{MapID: "52", MapName: "平原_18", StageFocusX: 1600})
 	if !ok || runtime == nil || len(bundle.Cells) != 5 {
 		t.Fatalf("expected captured four-enemy 平原_18 battle, got ok=%v bundle=%+v", ok, bundle)
 	}

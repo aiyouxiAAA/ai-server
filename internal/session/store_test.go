@@ -2177,6 +2177,60 @@ func TestStoreEquipStarterAxeMovesBagItemToWeaponSlot(t *testing.T) {
 	}
 }
 
+func TestStoreEquipPromotedContainerEquipmentUsesCapturedSlots(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "装备槽验证",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+
+	for _, spec := range []struct {
+		name          string
+		expectedIndex int
+	}{
+		{name: "如意之戒", expectedIndex: 6},
+		{name: "琉璃耳环", expectedIndex: 7},
+		{name: "白玉项链", expectedIndex: 8},
+		{name: "死灵蓝娃", expectedIndex: 9},
+		{name: "红色圣诞", expectedIndex: 11},
+	} {
+		template, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			t.Fatalf("expected promoted template for %s", spec.name)
+		}
+		template.Type = "背包"
+		template.Index = -1
+		granted, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, template)
+		if !ok {
+			t.Fatalf("expected grant for %s", spec.name)
+		}
+		result := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index, 1)
+		if !result.Found || !result.Equipped || result.EquippedItem.Index != spec.expectedIndex {
+			t.Fatalf("expected %s to equip to captured slot %d, got %+v", spec.name, spec.expectedIndex, result)
+		}
+	}
+}
+
+func TestNormalizeRoleItemKeepsCapturedPetInstanceDescription(t *testing.T) {
+	item := normalizeRoleItem(RoleItem{
+		Type:        "装备",
+		Name:        "死灵蓝娃",
+		ItemType:    "equip",
+		Display:     "970.png",
+		Description: "f_i_死灵蓝娃^00ccff&24@宠物&25@1&19@喜好食物&103@0&104@0&105@s4_妮可露露&107@&108@0&19@宠物等级:45",
+		Count:       1,
+		Index:       rolePetEquipIndex,
+		ItemLevel:   2,
+	})
+	if !strings.Contains(item.Description, "宠物等级:45") || !strings.Contains(item.Description, "s4_妮可露露") {
+		t.Fatalf("expected captured pet instance description to remain intact, got %q", item.Description)
+	}
+}
+
 func TestStoreTryEquipSupportsCapturedTreasureAndMountSlots(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")

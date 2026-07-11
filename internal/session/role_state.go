@@ -544,12 +544,23 @@ func isStaleEquipmentTemplateDescription(item RoleItem, template RoleItem) bool 
 	if description == "" || description == template.Description {
 		return false
 	}
+	// Non-source text such as truncated "精炼潜质: [精炼+1" must be refreshed.
 	if !strings.HasPrefix(description, "f_i_") {
 		return true
 	}
-	return !strings.Contains(description, "&21@") ||
-		!strings.Contains(description, "&24@") ||
-		!strings.Contains(description, "&108@")
+	// Keep instance-specific f_i_ payloads (pet level, remaining energy, owner fields).
+	// Only treat as stale when core identity markers are missing.
+	// Do not require &21@ — pets/法宝 often omit level requirements.
+	if !strings.Contains(description, "&24@") {
+		return true
+	}
+	if strings.Contains(template.Description, "&108@") && !strings.Contains(description, "&108@") {
+		return true
+	}
+	if strings.Contains(template.Description, "&21@") && !strings.Contains(description, "&21@") {
+		return true
+	}
+	return false
 }
 
 func genericCollectionRewardDescription(name string) string {
@@ -2054,7 +2065,7 @@ func classicDataRoleItemTemplate(name string) (RoleItem, bool) {
 			Display:     icon,
 			Description: descriptionText,
 			Count:       1,
-			Index:       classicDataRoleItemEquipmentSlot(category),
+			Index:       classicDataRoleItemEquipmentSlot(name, category),
 			ItemLevel:   itemLevel,
 		}, true
 	}
@@ -2076,13 +2087,20 @@ func classicDataRoleItemTemplate(name string) (RoleItem, bool) {
 		Display:     icon,
 		Description: description,
 		Count:       1,
-		Index:       classicDataRoleItemEquipmentSlot(category),
+		Index:       classicDataRoleItemEquipmentSlot(name, category),
 		ItemLevel:   itemLevel,
 	}, true
 }
 
-func classicDataRoleItemEquipmentSlot(category string) int {
+func classicDataRoleItemEquipmentSlot(name string, category string) int {
+	if index, ok := capturedEquipmentSlotForName(name); ok {
+		return index
+	}
 	switch {
+	case strings.Contains(category, "宠物"):
+		return rolePetEquipIndex
+	case strings.Contains(category, "幻·时装"):
+		return roleFashionEquipIndex
 	case strings.Contains(category, "护具·头部"):
 		return 0
 	case strings.Contains(category, "护具·肩部"):
@@ -2099,8 +2117,25 @@ func classicDataRoleItemEquipmentSlot(category string) int {
 		return 10
 	case strings.Contains(category, "护具·足部"):
 		return 12
+	case strings.Contains(category, "法宝"):
+		return roleTreasureEquipIndex
+	case strings.Contains(category, "坐骑"):
+		return roleMountEquipIndex
 	default:
 		return 0
+	}
+}
+
+func capturedEquipmentSlotForName(name string) (int, bool) {
+	switch strings.TrimSpace(name) {
+	case "如意之戒", "骷髅戒指":
+		return 6, true
+	case "琉璃耳环", "银耳坠":
+		return 7, true
+	case "白玉项链", "翡翠项链":
+		return 8, true
+	default:
+		return 0, false
 	}
 }
 

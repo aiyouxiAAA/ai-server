@@ -32,6 +32,7 @@ const (
 	rolePetEquipIndex      = 9
 	roleTreasureEquipIndex = 14
 	roleMountEquipIndex    = 18
+	roleFashionEquipIndex  = 11
 	roleFashionClothIndex  = 4
 	roleFashionPantsIndex  = 5
 	roleFashionShoesIndex  = 12
@@ -5076,6 +5077,15 @@ func roleEquipTargetIndex(item RoleItem) (int, bool) {
 		return 5, true
 	case "布鞋":
 		return 12, true
+	}
+	if index, ok := capturedEquipmentSlotForName(item.Name); ok {
+		return index, true
+	}
+	if strings.Contains(item.Description, "宠物") {
+		return rolePetEquipIndex, true
+	}
+	if strings.Contains(item.Description, "幻·时装") {
+		return roleFashionEquipIndex, true
 	}
 	if strings.Contains(item.Description, "武器") {
 		return 3, true

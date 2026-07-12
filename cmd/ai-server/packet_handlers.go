@@ -1480,13 +1480,44 @@ func classicBattleOverChatMessages(socketSession *packetSession, over *battle.Ov
 	if over.Result.Winner != battle.CampTeam || over.Result.Escaped {
 		return nil
 	}
-	if !classicactivity.IsPointCouponThiefHandleAnyMap(socketSession.battleRuntime.SourceMonsterHandle) {
-		return nil
+	if classicactivity.IsPointCouponThiefHandleAnyMap(socketSession.battleRuntime.SourceMonsterHandle) {
+		return []classicTownChatMessagePush{{
+			Channel: "system",
+			Msg:     "<w>[" + socketSession.selectedRole.DisplayName + "]消灭了[点券盗贼]，幸运的获得点券奖励。",
+		}}
 	}
-	return []classicTownChatMessagePush{{
-		Channel: "system",
-		Msg:     "<w>[" + socketSession.selectedRole.DisplayName + "]消灭了[点券盗贼]，幸运的获得点券奖励。",
-	}}
+	if classicactivity.IsBainianChongjingHandleAnyMap(socketSession.battleRuntime.SourceMonsterHandle) ||
+		classicactivity.IsBainianChongjingEncounterHandle(socketSession.battleRuntime.SourceMonsterHandle) {
+		killerNames := classicBattleKillerDisplayNames(socketSession, over)
+		return []classicTownChatMessagePush{classicBainianChongjingKillAnnouncementMessage(killerNames...)}
+	}
+	return nil
+}
+
+func classicBattleKillerDisplayNames(socketSession *packetSession, over *battle.OverPush) []string {
+	names := make([]string, 0, 2)
+	seen := map[string]bool{}
+	appendName := func(name string) {
+		name = strings.TrimSpace(name)
+		if name == "" || seen[name] {
+			return
+		}
+		seen[name] = true
+		names = append(names, name)
+	}
+	if socketSession != nil && socketSession.selectedRole != nil {
+		appendName(socketSession.selectedRole.DisplayName)
+	}
+	if socketSession != nil && socketSession.battleRuntime != nil {
+		for _, cell := range socketSession.battleRuntime.Cells {
+			if cell.Camp != battle.CampTeam {
+				continue
+			}
+			appendName(cell.Name)
+		}
+	}
+	_ = over
+	return names
 }
 
 func shouldBroadcastTeamBattle(socketSession *packetSession) bool {
@@ -1539,6 +1570,13 @@ func markDefeatedVisibleMonsterFromBattle(store *session.Store, socketSession *p
 	handles := visibleMonsterRemoveHandles(socketSession.battleRuntime, over)
 	if len(handles) == 0 {
 		return nil
+	}
+	if classicactivity.IsBainianChongjingHandleAnyMap(socketSession.battleRuntime.SourceMonsterHandle) ||
+		classicactivity.IsBainianChongjingEncounterHandle(socketSession.battleRuntime.SourceMonsterHandle) {
+		// World-event kill: hide for the rest of this cycle for everyone currently on map171.
+		classicactivity.MarkBainianChongjingKilled(time.Now())
+		handles = classicactivity.BainianChongjingEncounterHandles()
+		worldSceneHub.broadcastStaticRemoveHandlesToMap(classicactivity.BainianChongjingMapID, handles)
 	}
 	mapID, ok := battle.ParseMapID(socketSession.battleRuntime.MapID)
 	instanceKey := ""

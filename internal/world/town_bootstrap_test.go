@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"ai-server/internal/classicactivity"
 	"ai-server/internal/session"
@@ -451,6 +452,55 @@ func TestBuildTownBootstrapUsesCapturedSwampWildEnemyShow(t *testing.T) {
 		if snapshot.LoadMap.EnemyShow {
 			t.Fatalf("expected swamp map %d to stay out of wild enemyShow until capture evidence exists", mapID)
 		}
+	}
+
+	// map171 is a timed special-event map: no wild enemyShow; 百年虫精 only bootstraps while active.
+	originalBootstrapNow := bootstrapNow
+	t.Cleanup(func() { bootstrapNow = originalBootstrapNow })
+
+	cycleStart := classicactivity.BainianChongjingCycleStart(time.Date(2026, 7, 12, 12, 0, 0, 0, time.Local))
+	bootstrapNow = func() time.Time { return cycleStart.Add(5 * time.Minute) }
+	snapshotWarning, ok := BuildTownTransferBootstrap(role, playerBase, 171, SpawnPoint{X: 1000, Y: 600})
+	if !ok {
+		t.Fatal("expected map171 transfer bootstrap to be supported during warning window")
+	}
+	for _, rolePush := range snapshotWarning.CreateRoles {
+		if classicactivity.IsBainianChongjingEncounterHandle(rolePush.Handle) {
+			t.Fatalf("expected no 百年虫精 encounter roles during warning window, got %+v", rolePush)
+		}
+	}
+
+	bootstrapNow = func() time.Time {
+		return cycleStart.Add(classicactivity.BainianChongjingWarningLead + time.Minute)
+	}
+	snapshot171, ok := BuildTownTransferBootstrap(role, playerBase, 171, SpawnPoint{X: 1000, Y: 600})
+	if !ok {
+		t.Fatal("expected map171 transfer bootstrap to be supported while active")
+	}
+	foundBoss := false
+	foundMilitia := 0
+	for _, rolePush := range snapshot171.CreateRoles {
+		if rolePush.Handle == "7893833328746190" {
+			foundBoss = true
+			if rolePush.DisplayName != "百年虫精" || rolePush.Level != 30 || rolePush.Vocation != "术士++" || rolePush.SourceQuery != "monstermap/wocmon.swf" {
+				t.Fatalf("expected captured 百年虫精 map role, got %+v", rolePush)
+			}
+			if rolePush.SpawnFlash.X != 1560 || rolePush.SpawnFlash.Y != 516 {
+				t.Fatalf("expected 百年虫精 spawn 1560,516 got %+v", rolePush.SpawnFlash)
+			}
+			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-monstermap/wocmon/wocmon-movieclip-ir" {
+				t.Fatalf("expected wocmon map movieclip visual, got %+v", rolePush.SourceNPCVisual)
+			}
+		}
+		if rolePush.DisplayName == "被控制的民兵" {
+			foundMilitia++
+		}
+	}
+	if !foundBoss {
+		t.Fatal("expected map171 visible 百年虫精 while active")
+	}
+	if foundMilitia != 3 {
+		t.Fatalf("expected map171 to include 3 captured 被控制的民兵 while active, got %d", foundMilitia)
 	}
 }
 
@@ -2544,5 +2594,27 @@ func TestSupportsTownTransferMapRejectsMissingMap(t *testing.T) {
 	}
 	if SupportsTownTransferMap(9999) {
 		t.Fatal("expected missing map9999 to reject transfer")
+	}
+}
+
+func TestBainianChongjingLiveRolePushes(t *testing.T) {
+	roles := BainianChongjingLiveRolePushes()
+	if len(roles) != 4 {
+		t.Fatalf("expected 4 live roles (boss+3 militia), got %d", len(roles))
+	}
+	handles := map[string]bool{}
+	for _, role := range roles {
+		handles[role.Handle] = true
+		if role.RoleID != "-2" || role.Kind != "monster" || role.MapID != "171" {
+			t.Fatalf("unexpected live role push %+v", role)
+		}
+		if role.SourceNPCVisual == nil {
+			t.Fatalf("expected movieclip visual on live role %+v", role)
+		}
+	}
+	for _, handle := range classicactivity.BainianChongjingEncounterHandles() {
+		if !handles[handle] {
+			t.Fatalf("missing live handle %s", handle)
+		}
 	}
 }

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "monster-skill",
   "source": "internal/classicdata/source/monster-skill-table.csv",
-  "rowCount": 18,
+  "rowCount": 19,
   "rows": [
     {
       "monster_skill_id": "monster-robber-slidecut",
@@ -359,8 +359,8 @@
     {
       "monster_skill_id": "monster-rampage-power",
       "command_id": "enemy-rampage-power",
-      "monster_name": "Boss/点券盗贼",
-      "display_url": "monstermap/largerock.swf|monstermap/magicrockman.swf|monstermap/hfscastellan.swf|monstermap/hfcastellan.swf|monstermap/hflady.swf|monstermap/chiluking.swf|monstermap/militia.swf",
+      "monster_name": "Boss/点券盗贼/百年虫精",
+      "display_url": "monstermap/largerock.swf|monstermap/magicrockman.swf|monstermap/hfscastellan.swf|monstermap/hfcastellan.swf|monstermap/hflady.swf|monstermap/chiluking.swf|monstermap/militia.swf|monstermap/wocmon.swf",
       "action_name": "暴走之力",
       "source_type": "own",
       "source_action_label": "battleStand",
@@ -399,6 +399,28 @@
       "evidence_status": "partial",
       "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + runtime Robotawl tests",
       "notes": "roundatk source/status chain confirmed; AI and armor-break chances are sample approximations"
+    },
+    {
+      "monster_skill_id": "monster-wocmon-chaos-hit",
+      "command_id": "enemy-chaos-hit",
+      "monster_name": "百年虫精",
+      "display_url": "monstermap/wocmon.swf",
+      "action_name": "混沌击",
+      "source_type": "oneE",
+      "source_action_label": "nomalAtk",
+      "target": "enemy",
+      "runtime_chance_percent": "30",
+      "damage_multiplier": "1",
+      "mp_cost": "0",
+      "defense_type": "magic",
+      "status_buff_id": "",
+      "status_chance_percent": "",
+      "status_rounds": "",
+      "status_tick_min_percent": "",
+      "status_tick_max_percent": "",
+      "evidence_status": "confirmed",
+      "evidence": "20260712_120132_155_auto_move_session capture: 3x 混沌击 all use sourceActionLabel=nomalAtk; no skills/ path / chaosskyhit.swf / MP cost; AI chance 3/10 sample. skills/zhamulin/chaosskyhit.swf is unrelated and unused by this encounter.",
+      "notes": "broadcast name only; same animation/damage path as 法术普通攻击; no independent skill IR"
     }
   ]
 }

@@ -895,7 +895,37 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 		}
 	}
 	if _, ok := sourceEnemyConfigForMap("171"); ok {
-		t.Fatal("map171 must stay out of wild encounters until battle/reward capture evidence exists")
+		t.Fatal("map171 must stay out of wild encounters; 百年虫精 is a visible special-event encounter")
+	}
+
+	// 百年虫精 is a capture-backed visible special event on map171, not a wild encounter.
+	bainian, ok := sourceVisibleMonsterConfigForHandle("171", "7893833328746190")
+	if !ok {
+		t.Fatal("expected map171 visible 百年虫精 config")
+	}
+	if bainian.Cell.Name != "百年虫精" || bainian.Cell.DisplayURL != "monstermap/wocmon.swf" || bainian.Cell.Level != 30 || bainian.Cell.MaxHP != 8000 || bainian.Cell.MaxMP != 1500 || bainian.Cell.Attack != 152 || bainian.Cell.CommandLabel != "法术普通攻击" || bainian.Cell.DamageDefenseType != "magic" {
+		t.Fatalf("unexpected 百年虫精 config: %+v", bainian.Cell)
+	}
+	group, ok := sourceVisibleMonsterConfigsForHandle("171", "7893833328746190")
+	if !ok || len(group) != 4 {
+		t.Fatalf("expected 百年虫精 encounter group size 4, got %+v", group)
+	}
+	rangerMilitia := group[1].Cell
+	if rangerMilitia.Handle != "7895833328747103" || rangerMilitia.Vocation != "游侠+" || rangerMilitia.MaxHP != 1800 || rangerMilitia.MaxMP != 600 || rangerMilitia.CommandLabel != "普通攻击" || rangerMilitia.DamageDefenseType != "physical" {
+		t.Fatalf("unexpected captured ranger militia config: %+v", rangerMilitia)
+	}
+	reward, ok = sourceBattleRewardConfigForExactEncounter("171", "7893833328746190")
+	if !ok || reward.ExpDelta != 0 {
+		t.Fatalf("expected 百年虫精 reward exp 0, got %+v", reward)
+	}
+	wantItems := []string{"宠物成长药剂x5", "铜钱x500", "魔匣x2", "阴阳结x1"}
+	if len(reward.Items) != len(wantItems) {
+		t.Fatalf("expected 百年虫精 reward items %+v, got %+v", wantItems, reward.Items)
+	}
+	for i, item := range wantItems {
+		if reward.Items[i] != item {
+			t.Fatalf("expected 百年虫精 reward item %d %q, got %+v", i, item, reward.Items)
+		}
 	}
 	if _, ok := sourceEnemyConfigForMap("176"); ok {
 		t.Fatal("map176 must stay out of wild encounters until battle/reward capture evidence exists")
@@ -7378,6 +7408,64 @@ func TestRobotawlEnemyBattleCommandCanUseCapturedRoundAtk(t *testing.T) {
 	runtime := &Runtime{BattleID: battleID, Round: 1, nextSequence: 1}
 	if command := runtime.enemyBattleCommand(enemy, target); command != CommandEnemyRoundAtk {
 		t.Fatalf("expected 机木锥兵 to choose captured 轮转刺伤/roundatk, got %s with battle id %s", command, battleID)
+	}
+}
+
+func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
+	bainian, ok := sourceVisibleMonsterConfigForHandle("171", "7893833328746190")
+	if !ok {
+		t.Fatal("expected map171 visible 百年虫精 config")
+	}
+	if !sourceEnemyCanRampage(&bainian.Cell) {
+		t.Fatalf("expected 百年虫精 to use captured 暴走之力, cell=%+v", bainian.Cell)
+	}
+	if !sourceEnemyCanChaosHit(&bainian.Cell) {
+		t.Fatalf("expected 百年虫精 to use captured 混沌击, cell=%+v", bainian.Cell)
+	}
+	group, ok := sourceVisibleMonsterConfigsForHandle("171", "7893833328746190")
+	if !ok || len(group) != 4 {
+		t.Fatalf("expected four-enemy 百年虫精 encounter, got %+v", group)
+	}
+
+	runtime := &Runtime{
+		BattleID:         "battle-bainian-chongjing",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := bainian.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
+	rampage := runtime.resolveEnemyRampageActions(&actor)
+	if len(rampage) != 1 || rampage[0].ActionName != "暴走之力" || rampage[0].SourceActionLabel != "battleStand" || rampage[0].TargetHandle != actor.Handle {
+		t.Fatalf("expected 百年虫精 rampage battleStand self action, got %+v", rampage)
+	}
+	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Round != 51 || !strings.Contains(runtime.PendingBuffInfos[0].Description, "还有 51 回合暴走") {
+		t.Fatalf("expected captured 百年虫精 first rampage countdown 51, got %+v", runtime.PendingBuffInfos)
+	}
+	for _, militia := range group[1:] {
+		if sourceEnemyCanRampage(&militia.Cell) || len(runtime.resolveEnemyRampageActions(&militia.Cell)) != 0 {
+			t.Fatalf("expected captured militia normal attack only, got %+v", militia.Cell)
+		}
+	}
+	if actor.MP != bainian.Cell.MaxMP {
+		t.Fatalf("expected rampage to keep MP, actor=%+v", actor)
+	}
+
+	target := &CellInfoPush{
+		Handle:     "player_21424",
+		Camp:       CampTeam,
+		Name:       "恐龙抗狼1",
+		MaxHP:      1895,
+		HP:         1895,
+		Defense:    100,
+		MgcDefense: 80,
+	}
+	// Force chaos command path.
+	action := runtime.resolveAttack(&actor, target, CommandEnemyChaosHit)
+	if action.ActionName != "混沌击" || action.SourceActionLabel != "nomalAtk" {
+		t.Fatalf("expected 混沌击 broadcast with nomalAtk animation, got %+v", action)
+	}
+	if bainian.Cell.DamageDefenseType != "magic" {
+		t.Fatalf("expected magic defense type for 百年虫精, got %+v", bainian.Cell)
 	}
 }
 

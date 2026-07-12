@@ -999,3 +999,6 @@
 封印抗性:+10%</font>
 [精炼+1] 每升一级 封印抗性+1%&103@0&104@0&105@&107@&108@320","packet:role_item","promoted_2026-07-12 container_pass; container=装备:33;背包:7"
 "packet_confirmed","high","1339.png","魅惑兔奴","equip","宠物","1","sitem_pet","0","f_i_魅惑兔奴^00ccff&24@宠物&25@1&19@最高拥有4种属性&0;且其中2种属性可以重复&20@光棍节给力宠物！可以前往【广青_1】找锁妖鼎进行调教、合体，可以得到喜出望外的属性数值。&27@sitem_pet&103@0&104@0&105@&107@&108@0","packet:role_item","promoted_2026-07-12 container_pass; container=仓库:26;背包:1"
+"packet_confirmed","high","779.png","宠物成长药剂","own","消耗品","500","sitem_piput","","f_i_宠物成长药剂^ffffff&23@每次喂食 成长 +5 饱食 +2&24@消耗品&25@500&19@高效的宠物成长饲料。&20@一般在商城内可以购得。&27@sitem_piput&101@779.png&103@0&104@0&105@&107@&108@0","packet:reward_markup+20260712_120132_bainian","capture battle reward for 百年虫精"
+"packet_confirmed","high","949.png","魔匣","own","宝物","999","sitem_wood","","f_i_魔匣^C156C7&24@宝物&25@999&19@双击打开后可能获得意外惊喜。&20@看起来非常精致的蓝色木质匣子，里面散发出一股神秘的能量。&27@sitem_wood&101@949.png&103@0&104@0&105@&107@&108@0","packet:reward_markup+20260712_120132_bainian","capture battle reward for 百年虫精"
+"packet_confirmed","high","1337.png","阴阳结","own","材料","99","","","f_i_阴阳结^00ccff&24@材料&25@99&20@可以找【广青_1】的锁妖鼎进行合体，针对魅惑兔奴刷出自己满意的属性数值。&101@1337.png&103@0&104@0&105@&107@&108@0","packet:reward_markup+20260712_120132_bainian","capture battle reward for 百年虫精"

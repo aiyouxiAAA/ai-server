@@ -70,6 +70,7 @@ const (
 	CommandEnemyLionRoars  = "enemy-lion-roars"
 	CommandEnemyGoldHit    = "enemy-gold-hit"
 	CommandEnemyRoundAtk   = "enemy-round-atk"
+	CommandEnemyChaosHit   = "enemy-chaos-hit"
 	CommandDefense         = "defense"
 	CommandStore           = "battle-store"
 	CommandEscape          = "battle-escape"
@@ -88,9 +89,11 @@ const (
 	enemyHelixAtkChance                = 23
 	enemyHelixAtkDamageMultiplier      = 1.32
 	enemyPalsyAtkChance                = 40
+	enemyChaosHitChance                = 30
 	enemyPalsyAtkStatusChance          = 100
 	enemyStunOnHitChance               = 5
 	enemyRampageMaxRounds              = 50
+	enemyBainianRampageMaxRounds       = 51
 	enemyFirePowerMPCost               = 10
 	enemyFirePowerChance               = 60
 	enemyFirePowerDamageMultiplier     = 0.835
@@ -1619,6 +1622,19 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			StatusChance:      enemyRobotawlArmorBreakChance,
 			StatusDescription: "降低对象物理防御力",
 		}
+	case CommandEnemyChaosHit:
+		// Capture: 混沌击 keeps nomalAtk animation and magic normal-attack damage path; only broadcast name changes.
+		profile.ActionName = "混沌击"
+		profile.SourceType = "oneE"
+		profile.SourceActionLabel = "nomalAtk"
+		profile.DamageMultiplier = 1
+		profile.CanDodge = true
+		profile.CanFat = true
+		if actor != nil && strings.TrimSpace(actor.DamageDefenseType) != "" {
+			profile.DefenseType = strings.TrimSpace(actor.DamageDefenseType)
+		} else {
+			profile.DefenseType = "magic"
+		}
 	case CommandNormalAttack, CommandEnemyAttack:
 		if actor == nil || strings.TrimSpace(actor.CommandLabel) == "" {
 			profile.ActionName = "普通攻击"
@@ -1679,6 +1695,9 @@ func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfo
 	if sourceEnemyCanPalsyAtk(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyPalsyAtk, enemyPalsyAtkChance) {
 		return CommandEnemyPalsyAtk
 	}
+	if sourceEnemyCanChaosHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyChaosHit, enemyChaosHitChance) {
+		return CommandEnemyChaosHit
+	}
 	return CommandEnemyAttack
 }
 
@@ -1719,6 +1738,14 @@ func sourceEnemyCanPalsyAtk(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	return strings.TrimSpace(enemy.Name) == "毒蜂" || strings.Contains(normalizedDisplay, "monstermap/drughornets.swf")
+}
+
+func sourceEnemyCanChaosHit(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "百年虫精" || strings.Contains(normalizedDisplay, "monstermap/wocmon.swf")
 }
 
 func sourceEnemyCanRobotawlRoundAtk(enemy *CellInfoPush) bool {
@@ -1874,7 +1901,7 @@ func (runtime *Runtime) resolveEnemyRampageActions(enemy *CellInfoPush) []Action
 		return nil
 	}
 	elapsed := maxInt(0, runtime.Round-1)
-	remaining := maxInt(1, enemyRampageMaxRounds-elapsed)
+	remaining := maxInt(1, sourceEnemyRampageMaxRounds(enemy)-elapsed)
 	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, BuffInfoPush{
 		BattleID:      runtime.BattleID,
 		ReleaseHandle: enemy.Handle,
@@ -1893,7 +1920,7 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	switch strings.TrimSpace(enemy.Name) {
-	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人", "蚩颅王", "点券盗贼":
+	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人", "蚩颅王", "点券盗贼", "百年虫精":
 		return true
 	default:
 		return strings.Contains(normalizedDisplay, "monstermap/largerock.swf") ||
@@ -1902,8 +1929,15 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 			strings.Contains(normalizedDisplay, "monstermap/hfcastellan.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/hflady.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/chiluking.swf") ||
-			strings.Contains(normalizedDisplay, "monstermap/militia.swf")
+			strings.Contains(normalizedDisplay, "monstermap/wocmon.swf")
 	}
+}
+
+func sourceEnemyRampageMaxRounds(enemy *CellInfoPush) int {
+	if enemy != nil && (strings.TrimSpace(enemy.Name) == "百年虫精" || strings.Contains(strings.ToLower(strings.TrimSpace(enemy.DisplayURL)), "monstermap/wocmon.swf")) {
+		return enemyBainianRampageMaxRounds
+	}
+	return enemyRampageMaxRounds
 }
 
 func sourceEnemyCanFirePower(enemy *CellInfoPush) bool {

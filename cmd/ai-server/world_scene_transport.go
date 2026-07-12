@@ -593,6 +593,71 @@ func (hub *worldSceneConnectionHub) broadcastRemoveRoleToMap(mapID int, exceptRo
 	writeWorldSceneActions(hub.removeRoleFromVisibility(mapID, handle))
 }
 
+// staticCreateRoleActions 构造给某 map 上所有在线玩家的静态明怪 createRole actions。
+// 与玩家可见性集合无关：怪物 handle 不进入 player visible 集合。
+func (hub *worldSceneConnectionHub) staticCreateRoleActions(mapID int, roles []world.RolePush) []worldScenePushAction {
+	if hub == nil || len(roles) == 0 {
+		return nil
+	}
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	actions := make([]worldScenePushAction, 0, len(hub.connections)*len(roles))
+	for roleID, conn := range hub.connections {
+		if conn.mapID != mapID || conn.writer == nil {
+			continue
+		}
+		for index := range roles {
+			roleCopy := roles[index]
+			rolePtr := new(world.RolePush)
+			*rolePtr = roleCopy
+			actions = append(actions, worldScenePushAction{
+				writer:      conn.writer,
+				recipientID: roleID,
+				createRole:  rolePtr,
+			})
+		}
+	}
+	return actions
+}
+
+// broadcastStaticCreateRolesToMap 给某 map 上所有在线玩家推送静态明怪 createRole。
+func (hub *worldSceneConnectionHub) broadcastStaticCreateRolesToMap(mapID int, roles []world.RolePush) {
+	writeWorldSceneActions(hub.staticCreateRoleActions(mapID, roles))
+}
+
+// staticRemoveHandleActions 构造给某 map 上所有在线玩家的静态明怪 removeRole actions。
+func (hub *worldSceneConnectionHub) staticRemoveHandleActions(mapID int, handles []string) []worldScenePushAction {
+	if hub == nil || len(handles) == 0 {
+		return nil
+	}
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	actions := make([]worldScenePushAction, 0, len(hub.connections)*len(handles))
+	for roleID, conn := range hub.connections {
+		if conn.mapID != mapID || conn.writer == nil {
+			continue
+		}
+		for _, handle := range handles {
+			handle = strings.TrimSpace(handle)
+			if handle == "" {
+				continue
+			}
+			actions = append(actions, worldScenePushAction{
+				writer:       conn.writer,
+				recipientID:  roleID,
+				removeHandle: handle,
+			})
+		}
+	}
+	return actions
+}
+
+// broadcastStaticRemoveHandlesToMap 给某 map 上所有在线玩家推送静态明怪 removeRole。
+func (hub *worldSceneConnectionHub) broadcastStaticRemoveHandlesToMap(mapID int, handles []string) {
+	writeWorldSceneActions(hub.staticRemoveHandleActions(mapID, handles))
+}
+
+
 // broadcastMoveRoleToMap 按原版 c_MoveRole(50012) 的 moveRole 语义,
 // 把某玩家当前位置/目标点推给同 mapId 上除自己外的在线邻居。
 func (hub *worldSceneConnectionHub) broadcastMoveRoleToMap(mapID int, exceptRoleID string, push world.RoleMovePush) {

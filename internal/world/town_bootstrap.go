@@ -238,6 +238,8 @@ type townMapsIndexEntry struct {
 	SourceXML string `json:"sourceXml"`
 }
 
+var bootstrapNow = time.Now
+
 var sourceWildBattleMapIDs = map[int]struct{}{
 	4:  {},
 	5:  {},
@@ -645,6 +647,10 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneSeventy.SourceNPCs = map170SourceNPCs
 	definitions[170] = mapOneSeventy
 
+	mapOneSeventyOne := definitions[171]
+	mapOneSeventyOne.SourceMonsters = map171SourceMonsters
+	definitions[171] = mapOneSeventyOne
+
 	for _, point := range sourceCollectionPointsByHandle {
 		mapDefinition, ok := definitions[point.MapID]
 		if !ok {
@@ -920,7 +926,9 @@ func buildTownBootstrap(
 ) TownBootstrapSnapshot {
 	mapID := itoa(mapDefinition.ID)
 	sourceMonsters := append([]sourceMonsterEntry{}, mapDefinition.SourceMonsters...)
-	sourceMonsters = appendPointCouponThiefSourceMonster(sourceMonsters, mapDefinition.ID, time.Now())
+	now := bootstrapNow()
+	sourceMonsters = filterBainianChongjingSourceMonsters(sourceMonsters, mapDefinition.ID, now)
+	sourceMonsters = appendPointCouponThiefSourceMonster(sourceMonsters, mapDefinition.ID, now)
 	createRoles := make([]RolePush, 0, len(mapDefinition.SourceNPCs)+len(sourceMonsters))
 	questStates := make([]QuestStatePush, 0, len(mapDefinition.SourceNPCs))
 	for _, npc := range mapDefinition.SourceNPCs {
@@ -998,6 +1006,60 @@ func buildTownBootstrap(
 		RoleState:    playerBase.RoleState,
 		RolePhysique: playerBase.RolePhysique,
 	}
+}
+
+
+func BuildSourceMonsterRolePush(mapID int, monster sourceMonsterEntry) RolePush {
+	push := RolePush{
+		Handle:          monster.Handle,
+		RoleID:          "-2",
+		DisplayName:     monster.DisplayName,
+		Level:           monster.Level,
+		Vocation:        monster.Vocation,
+		MapID:           itoa(mapID),
+		VisualRoleID:    0,
+		SourceQuery:     monster.SourceQuery,
+		Kind:            "monster",
+		SpawnFlash:      monster.SpawnFlash,
+		SourceNPCVisual: buildMonsterVisual(monster),
+	}
+	if monster.Movement.Speed > 0 || monster.Movement.Mode != 0 {
+		movement := monster.Movement
+		push.Movement = &movement
+	}
+	return push
+}
+
+func BainianChongjingLiveRolePushes() []RolePush {
+	roles := make([]RolePush, 0, len(map171SourceMonsters))
+	for _, monster := range map171SourceMonsters {
+		if !classicactivity.IsBainianChongjingEncounterHandle(monster.Handle) {
+			continue
+		}
+		roles = append(roles, BuildSourceMonsterRolePush(classicactivity.BainianChongjingMapID, monster))
+	}
+	return roles
+}
+
+func BainianChongjingLiveHandles() []string {
+	return classicactivity.BainianChongjingEncounterHandles()
+}
+
+func filterBainianChongjingSourceMonsters(monsters []sourceMonsterEntry, mapID int, now time.Time) []sourceMonsterEntry {
+	if mapID != classicactivity.BainianChongjingMapID {
+		return monsters
+	}
+	if classicactivity.BainianChongjingIsAlive(now) {
+		return monsters
+	}
+	filtered := make([]sourceMonsterEntry, 0, len(monsters))
+	for _, monster := range monsters {
+		if classicactivity.IsBainianChongjingEncounterHandle(monster.Handle) {
+			continue
+		}
+		filtered = append(filtered, monster)
+	}
+	return filtered
 }
 
 func appendPointCouponThiefSourceMonster(monsters []sourceMonsterEntry, mapID int, now time.Time) []sourceMonsterEntry {

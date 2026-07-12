@@ -1742,6 +1742,13 @@ var map167SourceMonsters = []sourceMonsterEntry{
 	buildCapturedSourceMonster("7550622260838906", "蚩颅王", "monstermap/chiluking.swf", "chiluking", 30, "战士++", 2189, 451),
 }
 
+var map171SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7893833328746190", "百年虫精", "monstermap/wocmon.swf", "wocmon", 30, "术士++", 1560, 516),
+	buildCapturedSourceMonster("7895833328747103", "被控制的民兵", "monstermap/militia.swf", "militia", 30, "游侠+", 1539, 552),
+	buildCapturedSourceMonster("7897833328748728", "被控制的民兵", "monstermap/militia.swf", "militia", 30, "战士+", 1848, 600),
+	buildCapturedSourceMonster("7899833328749140", "被控制的民兵", "monstermap/militia.swf", "militia", 30, "战士+", 1992, 533),
+}
+
 func buildCapturedSourceTransport(handle string, x int, y int) sourceNPCEntry {
 	return buildCapturedSourceTransportMovieClip(handle, "transp/flag2.swf", "flag2", 158, 258, x, y)
 }

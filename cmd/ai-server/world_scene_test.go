@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"ai-server/internal/classicactivity"
 	"ai-server/internal/session"
 	"ai-server/internal/team"
 	"ai-server/internal/world"
@@ -821,4 +822,89 @@ func TestWorldSceneRefreshRolePushesCreateRoleToVisibleObservers(t *testing.T) {
 	if sawFar {
 		t.Fatal("far observer outside heroSpace should not receive refresh createRole")
 	}
+}
+
+func TestBroadcastStaticCreateAndRemoveRolesToMap(t *testing.T) {
+	swapWorldSceneHub(t)
+	hub := worldSceneHub
+	writerA := &websocketWriter{}
+	writerB := &websocketWriter{}
+	writerOther := &websocketWriter{}
+	sessA := stubSceneSession("A", 171)
+	sessB := stubSceneSession("B", 171)
+	sessOther := stubSceneSession("C", 170)
+	hub.register("A", 171, writerA, sessA, stubSceneSpawn(100, 200))
+	hub.register("B", 171, writerB, sessB, stubSceneSpawn(300, 400))
+	hub.register("C", 170, writerOther, sessOther, stubSceneSpawn(500, 600))
+
+	roles := world.BainianChongjingLiveRolePushes()
+	if len(roles) != 4 {
+		t.Fatalf("expected 4 live roles for map171, got %d", len(roles))
+	}
+
+	createActions := hub.staticCreateRoleActions(classicactivity.BainianChongjingMapID, roles)
+	// 2 players on map171 * 4 roles.
+	if len(createActions) != 8 {
+		t.Fatalf("expected 8 static create actions, got %d", len(createActions))
+	}
+	recipients := map[string]int{}
+	handles := map[string]int{}
+	for _, action := range createActions {
+		if action.createRole == nil {
+			t.Fatalf("create action missing role: %+v", action)
+		}
+		if action.writer == nil {
+			t.Fatal("create action missing writer")
+		}
+		if action.recipientID == "C" {
+			t.Fatal("static create must not target players on other maps")
+		}
+		recipients[action.recipientID]++
+		handles[action.createRole.Handle]++
+		if action.createRole.RoleID != "-2" || action.createRole.Kind != "monster" || action.createRole.MapID != "171" {
+			t.Fatalf("unexpected create role %+v", action.createRole)
+		}
+	}
+	if recipients["A"] != 4 || recipients["B"] != 4 {
+		t.Fatalf("expected each map171 player to receive 4 createRoles, got %+v", recipients)
+	}
+	for _, handle := range classicactivity.BainianChongjingEncounterHandles() {
+		if handles[handle] != 2 {
+			t.Fatalf("expected handle %s to fan out to 2 players, got %d", handle, handles[handle])
+		}
+	}
+
+	// Player-visible remove path must ignore static monster handles.
+	if got := hub.removeRoleFromVisibility(classicactivity.BainianChongjingMapID, classicactivity.BainianChongjingHandle); len(got) != 0 {
+		t.Fatalf("static monster handle must not enter player visibility removes, got %d", len(got))
+	}
+
+	removeActions := hub.staticRemoveHandleActions(classicactivity.BainianChongjingMapID, world.BainianChongjingLiveHandles())
+	if len(removeActions) != 8 {
+		t.Fatalf("expected 8 static remove actions, got %d", len(removeActions))
+	}
+	removeRecipients := map[string]int{}
+	removeHandles := map[string]int{}
+	for _, action := range removeActions {
+		if action.removeHandle == "" {
+			t.Fatalf("remove action missing handle: %+v", action)
+		}
+		if action.recipientID == "C" {
+			t.Fatal("static remove must not target players on other maps")
+		}
+		removeRecipients[action.recipientID]++
+		removeHandles[action.removeHandle]++
+	}
+	if removeRecipients["A"] != 4 || removeRecipients["B"] != 4 {
+		t.Fatalf("expected each map171 player to receive 4 removeRoles, got %+v", removeRecipients)
+	}
+	for _, handle := range classicactivity.BainianChongjingEncounterHandles() {
+		if removeHandles[handle] != 2 {
+			t.Fatalf("expected remove handle %s to fan out to 2 players, got %d", handle, removeHandles[handle])
+		}
+	}
+
+	// Public helpers must not panic when conn is nil (writePush is a no-op).
+	hub.broadcastStaticCreateRolesToMap(classicactivity.BainianChongjingMapID, roles)
+	hub.broadcastStaticRemoveHandlesToMap(classicactivity.BainianChongjingMapID, world.BainianChongjingLiveHandles())
 }

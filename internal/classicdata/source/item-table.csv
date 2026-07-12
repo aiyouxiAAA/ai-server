@@ -1002,3 +1002,397 @@
 "packet_confirmed","high","779.png","宠物成长药剂","own","消耗品","500","sitem_piput","","f_i_宠物成长药剂^ffffff&23@每次喂食 成长 +5 饱食 +2&24@消耗品&25@500&19@高效的宠物成长饲料。&20@一般在商城内可以购得。&27@sitem_piput&101@779.png&103@0&104@0&105@&107@&108@0","packet:reward_markup+20260712_120132_bainian","capture battle reward for 百年虫精"
 "packet_confirmed","high","949.png","魔匣","own","宝物","999","sitem_wood","","f_i_魔匣^C156C7&24@宝物&25@999&19@双击打开后可能获得意外惊喜。&20@看起来非常精致的蓝色木质匣子，里面散发出一股神秘的能量。&27@sitem_wood&101@949.png&103@0&104@0&105@&107@&108@0","packet:reward_markup+20260712_120132_bainian","capture battle reward for 百年虫精"
 "packet_confirmed","high","1337.png","阴阳结","own","材料","99","","","f_i_阴阳结^00ccff&24@材料&25@99&20@可以找【广青_1】的锁妖鼎进行合体，针对魅惑兔奴刷出自己满意的属性数值。&101@1337.png&103@0&104@0&105@&107@&108@0","packet:reward_markup+20260712_120132_bainian","capture battle reward for 百年虫精"
+"packet_confirmed","high","413.png","光芒之冠","equip","护具·头部","1","sitem_ezhj","300","f_i_光芒之冠^5BC46D&23@凿孔上限 9 格&24@护具·头部&25@1&21@50&22@术士&3@23&4@36&14@2&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 精力上限+25&103@0&104@0&105@&107@&108@300","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","419.png","光芒之靴","equip","护具·足部","1","sitem_piput","250","f_i_光芒之靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@50&22@术士&3@25&10@25&17@8&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 敏捷+2&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","414.png","光芒护肩","equip","护具·肩部","1","sitem_piput","250","f_i_光芒护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@50&22@术士&3@25&4@8&11@15&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 爆击+14&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","416.png","光芒护腕","equip","护具·护腕","1","sitem_ezhj","250","f_i_光芒护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@50&22@术士&3@23&4@7&9@15&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","418.png","光芒护腰","equip","护具·腰部","1","sitem_piput","250","f_i_光芒护腰^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@50&22@术士&3@20&4@11&9@30&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 幸运+2&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","417.png","光芒护腿","equip","护具·腿","1","sitem_ezhj","250","f_i_光芒护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@50&22@术士&3@34&4@13&14@3<$jintt>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 耐力+2&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","64.png","光芒法杖","equip","武器·法杖系","1","sitem_jhj","600","f_i_光芒法杖^5BC46D&23@凿孔上限 9 格&24@武器·法杖系&25@1&21@50&22@术士&1@48&2@115&9@30&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 魔法攻击+2
+[精炼+6] 每升一级 智力+2
+<font color='#00cc00'>特殊效果:
+击中敌人时&0;有2%的机率对敌人造成魔法攻击30%的附加伤害</font>&103@0&104@0&105@&107@&108@600","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","415.png","光芒法衣","equip","护具·躯干","1","sitem_piput","350","f_i_光芒法衣^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@50&22@术士&3@44&4@18&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 智力+1
+<font color='#00cc00'>特殊效果:
+封印抗性:+3%
+麻痹抗性:+5%</font>&103@0&104@0&105@&107@&108@350","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","793.png","君子流芳.肩","equip","护具·肩部","1","sitem_ezhj","500","f_i_君子流芳.肩^C156C7&23@凿孔上限 9 格&24@护具·肩部&25@1&21@30&30@10000&3@19&13@6&14@11&15@7&16@10&17@8&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+5%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","799.png","君子流芳.腕","equip","护具·护腕","1","sitem_ezhj","500","f_i_君子流芳.腕^C156C7&23@凿孔上限 9 格&24@护具·护腕&25@1&21@30&30@30000&3@20&13@10<$jstr>&14@10<$jintt>&15@5<$jagi>&16@7<$jcon>&17@8&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+5%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","795.png","君子流芳.腰","equip","护具·腰部","1","sitem_ezhj","500","f_i_君子流芳.腰^C156C7&23@凿孔上限 9 格&24@护具·腰部&25@1&21@30&30@30000&3@16&4@6&13@8<$jstr>&14@12<$jintt>&15@6<$jagi>&16@7<$jcon>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+5%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","798.png","君子流芳.腿","equip","护具·腿","1","sitem_ezhj","500","f_i_君子流芳.腿^C156C7&23@凿孔上限 9 格&24@护具·腿&25@1&21@30&30@30000&3@30&4@10&13@12<$jstr>&14@10<$jintt>&15@11<$jagi>&16@11<$jcon>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+10%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","797.png","君子流芳.足","equip","护具·足部","1","sitem_ezhj","500","f_i_君子流芳.足^C156C7&23@凿孔上限 9 格&24@护具·足部&25@1&21@30&30@30000&3@23&13@6<$jstr>&14@5<$jintt>&15@12<$jagi>&16@12<$jcon>&17@10&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+5%
+[精炼+6] 移动力+10(以后每级递增1)</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","796.png","君子流芳.躯","equip","护具·躯干","1","sitem_ezhj","500","f_i_君子流芳.躯^C156C7&23@凿孔上限 9 格&24@护具·躯干&25@1&21@30&30@30000&3@35&4@13&13@11<$jstr>&14@12<$jintt>&15@10<$jagi>&16@15<$jcon>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+20%</font>
+<font color='#00cc00'>[精炼+6] 被对手爆击时有5%(以后每级递增1%)的机率恢复2%的精力</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","794.png","君子流芳.首","equip","护具·头部","1","sitem_ezhj","500","f_i_君子流芳.首^C156C7&23@凿孔上限 9 格&24@护具·头部&25@1&21@30&30@30000&3@18&4@30&13@12&14@20&15@12&16@12&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+10%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","63.png","天魁","equip","武器·弓系","1","sitem_wood","600","f_i_天魁^5BC46D&23@凿孔上限 9 格&24@武器·弓系&25@1&21@50&22@游侠&1@110&9@40&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 敏捷+2
+<font color='#00cc00'>特殊效果:
+击中敌人时&0;有3%的机率敌人造成溃法3回合(降低敌人魔法防御的15%~20%)</font>&103@0&104@0&105@&107@&108@600","packet:sale+packet:role_item","promoted_20260712_new_scan kind=strong_sale+container"
+"packet_confirmed","high","67.png","央月九影","equip","武器·单刀系","1","sitem_jwep","600","f_i_央月九影^5BC46D&23@凿孔上限 9 格&24@武器·单刀系&25@1&21@50&22@战士&1@120&17@7&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 耐力+2
+<font color='#00cc00'>特殊效果:
+击中敌人时有2%的机率对敌人造成物理攻击30%的附加伤害</font>&103@0&104@0&105@&107@&108@600","packet:sale+packet:role_item","promoted_20260712_new_scan kind=strong_sale+container"
+"packet_confirmed","high","65.png","无雅","equip","武器·单剑系","1","sitem_jwep","600","f_i_无雅^5BC46D&23@凿孔上限 9 格&24@武器·单剑系&25@1&21@50&22@战士&1@110&16@6&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 耐力+2
+<font color='#00cc00'>特殊效果:
+击中敌人时候有1%机率使敌人进入内伤状态3回合(降低敌人15%~20%的物理攻击和魔法攻击)</font>&103@0&104@0&105@&107@&108@600","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","66.png","朽木断浪","equip","武器·棍系","1","sitem_wood","600","f_i_朽木断浪^5BC46D&23@凿孔上限 9 格&24@武器·棍系&25@1&21@50&22@战士&1@113&9@30&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 耐力+2
+<font color='#00cc00'>特殊效果:
+- 击中敌人时&0;有1%的机率对其造成眩晕3回合
+- 击中敌人时&0;有1%的机率对其造成迟钝3回合(降低对方20%的命中及回避)</font>&103@0&104@0&105@&107@&108@600","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","64.png","极.光芒法杖","equip","武器·法杖系","1","sitem_jhj","650","f_i_极.光芒法杖^00ccff&23@凿孔上限 9 格&24@武器·法杖系&25@1&21@60&22@术士&1@58&2@127&14@8&15@8&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+3
+[精炼+1] 每升一级 魔法攻击+3
+[精炼+3] 每升一级 智力+1
+[精炼+6] 每升一级 敏捷+1
+<font color='#00cc00'>特殊效果:
+击中敌人时有3%的机率对敌人造成魔法攻击20%的附加伤害</font>&103@0&104@0&105@&107@&108@650","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","63.png","极.天魁","equip","武器·弓系","1","sitem_wood","650","f_i_极.天魁^00ccff&23@凿孔上限 9 格&24@武器·弓系&25@1&21@60&22@游侠&1@122&13@8&14@8&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+3
+[精炼+3] 每升一级 力量+1
+[精炼+6] 每升一级 智力+1
+<font color='#00cc00'>特殊效果:
+使用【贯甲连矢】击中敌人时将对其造成物理攻击30%的附加伤害.</font>&103@0&104@0&105@&107@&108@650","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","67.png","极.央月九影","equip","武器·单刀系","1","sitem_jwep","650","f_i_极.央月九影^00ccff&23@凿孔上限 9 格&24@武器·单刀系&25@1&21@60&22@战士&1@132&13@8&17@8&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+3
+[精炼+3] 每升一级 力量+1
+[精炼+6] 每升一级 幸运+1
+<font color='#00cc00'>特殊效果:
+击中敌人时有3%的机率对敌人造成物理攻击20%的附加伤害</font>&103@0&104@0&105@&107@&108@650","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","65.png","极.无雅","equip","武器·单剑系","1","sitem_jwep","650","f_i_极.无雅^00ccff&23@凿孔上限 9 格&24@武器·单剑系&25@1&21@60&22@战士&1@120&13@8&16@8&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+3
+[精炼+3] 每升一级 力量+1
+[精炼+6] 每升一级 耐力+1
+<font color='#00cc00'>特殊效果:
+使用【秘奥义.弑神】击中敌人时将对其造成物理攻击30%的附加伤害.</font>&103@0&104@0&105@&107@&108@650","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","66.png","极.朽木断浪","equip","武器·棍系","1","sitem_wood","650","f_i_极.朽木断浪^00ccff&23@凿孔上限 9 格&24@武器·棍系&25@1&21@60&22@战士&1@128&16@8&17@8&27@sitem_wood&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+3
+[精炼+3] 每升一级 幸运+1
+[精炼+6] 每升一级 耐力+1
+<font color='#00cc00'>特殊效果:
+- 击中敌人时&0;有2%的机率对其造成眩晕3回合
+- 击中敌人时&0;有2%的机率对其造成迟钝3回合(降低对方50%的命中及回避)</font>&103@0&104@0&105@&107@&108@650","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","61.png","极.武雷拳套","equip","武器·拳套系","1","sitem_piput","650","f_i_极.武雷拳套^00ccff&23@凿孔上限 9 格&24@武器·拳套系&25@1&21@60&22@游侠&1@125&3@15&13@8&15@5&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+3
+[精炼+1] 每升一级 物理防御+2
+[精炼+3] 每升一级 力量+1
+[精炼+6] 每升一级 敏捷+1
+<font color='#00cc00'>特殊效果:
+冰冻抗性+30%
+麻痹抗性+30%</font>&103@0&104@0&105@&107@&108@650","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","62.png","极.诛魂","equip","武器·匕首系","1","sitem_jwep","650","f_i_极.诛魂^00ccff&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@60&22@游侠&1@120&11@50&15@8&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+3
+[精炼+3] 每升一级 爆击+10
+[精炼+6] 每升一级 敏捷+1
+<font color='#00cc00'>特殊效果:
+击中敌人时有3%的机率对敌人造成物理攻击20%的附加伤害</font>&103@0&104@0&105@&107@&108@650","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","61.png","武雷拳套","equip","武器·拳套系","1","sitem_piput","600","f_i_武雷拳套^5BC46D&23@凿孔上限 9 格&24@武器·拳套系&25@1&21@50&22@游侠&1@113&3@10&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+1] 每升一级 物理防御+1
+[精炼+6] 每升一级 敏捷+2
+<font color='#00cc00'>特殊效果:
+冰冻抗性+15%
+麻痹抗性+15%</font>&103@0&104@0&105@&107@&108@600","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","412.png","炎爆之靴","equip","护具·足部","1","sitem_jhj","250","f_i_炎爆之靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@50&22@游侠&3@25&12@20&16@2<&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 回避+15&103@0&104@0&105@&107@&108@250","packet:sale+packet:role_item","promoted_20260712_new_scan kind=strong_sale+container"
+"packet_confirmed","high","409.png","炎爆护手","equip","护具·护腕","1","sitem_jhj","250","f_i_炎爆护手^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@50&22@游侠&3@23&13@3&17@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 幸运+2&103@0&104@0&105@&107@&108@250","packet:sale+packet:role_item","promoted_20260712_new_scan kind=strong_sale+container"
+"packet_confirmed","high","407.png","炎爆护肩","equip","护具·肩部","1","sitem_jhj","250","f_i_炎爆护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@50&22@游侠&3@26&4@8&11@10&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 爆击+15&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","411.png","炎爆护腰","equip","护具·腰部","1","sitem_jhj","250","f_i_炎爆护腰^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@50&22@游侠&3@22&15@2&16@1&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 气力上限+30&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","410.png","炎爆护腿","equip","护具·腿","1","sitem_piput","250","f_i_炎爆护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@50&22@游侠&3@37&4@8&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 智力+1
+<font color='#00cc00'>特殊效果:
+冰冻抗性:+5%</font>&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","406.png","炎爆面甲","equip","护具·头部","1","sitem_jhj","300","f_i_炎爆面甲^5BC46D&23@凿孔上限 9 格&24@护具·头部&25@1&21@50&22@游侠&3@32&4@12&11@20&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 智力+1&103@0&104@0&105@&107@&108@300","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","408.png","炎爆龙鳞甲","equip","护具·躯干","1","sitem_jhj","350","f_i_炎爆龙鳞甲^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@50&22@游侠&3@47&4@10&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 敏捷+2
+<font color='#00cc00'>特殊效果:
+冰冻抗性:+5%</font>&103@0&104@0&105@&107@&108@350","packet:sale+packet:role_item","promoted_20260712_new_scan kind=strong_sale+container"
+"packet_confirmed","high","801.png","炼月群青.肩","equip","护具·肩部","1","sitem_jhj","500","f_i_炼月群青.肩^C156C7&23@凿孔上限 9 格&24@护具·肩部&25@1&21@30&30@30000&3@27&13@12&14@6&15@8&16@9&17@7&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+眩晕抗性:+10%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","800.png","炼月群青.腕","equip","护具·护腕","1","sitem_jhj","500","f_i_炼月群青.腕^C156C7&23@凿孔上限 9 格&24@护具·护腕&25@1&21@30&30@30000&3@22&4@5&13@16&14@5&15@7&16@12&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+外伤抗性:+5%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","805.png","炼月群青.腰","equip","护具·腰部","1","sitem_jhj","500","f_i_炼月群青.腰^C156C7&23@凿孔上限 9 格&24@护具·腰部&25@1&21@30&30@30000&3@17&4@5&13@12&15@6&16@11&17@4&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+眩晕抗性:+15%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","802.png","炼月群青.腿","equip","护具·腿","1","sitem_jhj","500","f_i_炼月群青.腿^C156C7&23@凿孔上限 9 格&24@护具·腿&25@1&21@30&30@30000&3@33&4@6&13@12&14@10&15@10&16@12&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+外伤抗性:+10%
+[精炼+6] 移动力+5(以后每级递增1)</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","804.png","炼月群青.足","equip","护具·足部","1","sitem_jhj","500","f_i_炼月群青.足^C156C7&23@凿孔上限 9 格&24@护具·足部&25@1&21@30&30@30000&3@23&14@5&15@12&16@10&17@8&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+眩晕抗性:+5%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","803.png","炼月群青.躯","equip","护具·躯干","1","sitem_jhj","500","f_i_炼月群青.躯^C156C7&23@凿孔上限 9 格&24@护具·躯干&25@1&21@30&30@30000&3@45&4@10&13@12&14@12&15@10&16@14&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+外伤抗性:+15%</font>
+<font color='#00cc00'>[精炼+6] 被敌人击中后有5%(以后每级递增1%)的机率恢复2%气力</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","806.png","炼月群青.首","equip","护具·头部","1","sitem_jhj","500","f_i_炼月群青.首^C156C7&23@凿孔上限 9 格&24@护具·头部&25@1&21@30&30@30000&3@30&4@12&13@18&15@10&16@15&17@13&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+眩晕抗性:+20%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","538.png","狼人护腿","equip","护具·腿","1","sitem_ezhj","230","f_i_狼人护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@23&3@20&14@3&16@2&27@sitem_ezhj&19@精炼潜质:
+[精炼+1&1; 每升一级 物理防御+2
+[精炼+1&1; 每升一级 回避+4
+[精炼+6&1; 每升一级 耐力+2&101@538.png&103@0&104@0&105@&107@&108@230","packet:role_item","promoted_20260712_new_scan kind=strong_container"
+"packet_confirmed","high","464.png","蛤蟆精护腕","equip","护具·护腕","1","sitem_piput","210","f_i_蛤蟆精护腕^00ccff&23@凿孔上限 9 格&24@护具·护腕&25@1&21@22&3@15&13@4&2;$jstr&3;&14@2&2;$jintt&3;&16@5&27@sitem_piput&19@精炼潜质:
+[精炼+1&1; 每升一级 物理防御+3
+[精炼+6&1; 每升一级 耐力+3
+[精炼+6&1; 每升一级 爆击+5
+&2;font color='#00cc00'&3;特殊效果:
+外伤抗性:+10%&2;/font&3;
+[精炼+1&1; 每升一级 外伤抗性+1%&101@464.png&103@0&104@0&105@&107@&108@210","packet:role_item","promoted_20260712_new_scan kind=strong_container"
+"packet_confirmed","high","541.png","蛮族护腿","equip","护具·腿","1","sitem_ezhj","100","f_i_蛮族护腿^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@16&3@23&27@sitem_ezhj&19@精炼潜质:
+[精炼+1&1; 每升一级 物理防御+2&101@541.png&103@0&104@0&105@&107@&108@100","packet:role_item","promoted_20260712_new_scan kind=strong_container"
+"packet_confirmed","high","405.png","行刑者之靴","equip","护具·足部","1","sitem_piput","250","f_i_行刑者之靴^5BC46D&23@凿孔上限 9 格&24@护具·足部&25@1&21@50&22@战士&3@27&17@5&27@sitem_piput&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 敏捷+2&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","400.png","行刑者护肩","equip","护具·肩部","1","sitem_jhj","250","f_i_行刑者护肩^5BC46D&23@凿孔上限 9 格&24@护具·肩部&25@1&21@50&22@战士&3@28&13@3&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 气力上限+40&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","402.png","行刑者护腕","equip","护具·护腕","1","sitem_jhj","250","f_i_行刑者护腕^5BC46D&23@凿孔上限 9 格&24@护具·护腕&25@1&21@50&22@战士&3@22&11@50&13@1&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 精力上限+20&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","403.png","行刑者护腿","equip","护具·腿","1","sitem_jhj","250","f_i_行刑者护腿^5BC46D&23@凿孔上限 9 格&24@护具·腿&25@1&21@50&22@战士&3@38&4@10&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 命中+12
+<font color='#00cc00'>特殊效果:
+外伤抗性:+3%</font>&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","401.png","行刑者盔甲","equip","护具·躯干","1","sitem_jhj","350","f_i_行刑者盔甲^5BC46D&23@凿孔上限 9 格&24@护具·躯干&25@1&21@50&22@战士&3@55&17@5&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+6] 每升一级 耐力+2
+<font color='#00cc00'>特殊效果:
+外伤抗性:+5%</font>&103@0&104@0&105@&107@&108@350","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","404.png","行刑者腰带","equip","护具·腰部","1","sitem_jhj","250","f_i_行刑者腰带^5BC46D&23@凿孔上限 9 格&24@护具·腰部&25@1&21@50&22@战士&3@22&4@6&5@100&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 爆击+12&103@0&104@0&105@&107@&108@250","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","399.png","行刑者钢盔","equip","护具·头部","1","sitem_jhj","300","f_i_行刑者钢盔^5BC46D&23@凿孔上限 9 格&24@护具·头部&25@1&21@50&22@战士&3@35&4@13&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+6] 每升一级 力量+1
+<font color='#00cc00'>特殊效果:
+眩晕抗性:+5%</font>&103@0&104@0&105@&107@&108@300","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","62.png","诛魂","equip","武器·匕首系","1","sitem_jwep","600","f_i_诛魂^5BC46D&23@凿孔上限 9 格&24@武器·匕首系&25@1&21@50&22@游侠&1@106&11@40&27@sitem_jwep&19@精炼潜质:
+[精炼+1] 每升一级 物理攻击+2
+[精炼+6] 每升一级 敏捷+2
+<font color='#00cc00'>特殊效果:
+击中敌人时&0;有2%的机率造成迟钝3回合(降低对方25%的命中及回避)</font>&103@0&104@0&105@&107@&108@600","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","1166.png","长虹落日.肩","equip","护具·肩部","1","sitem_jhj","530","f_i_长虹落日.肩^C156C7&23@凿孔上限 9 格&24@护具·肩部&25@1&21@60&30@50000&3@43&13@18&14@20&15@13&16@25&17@10&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+3] 每升一级 毒抗性+2%
+<font color='#00cc00'>特殊效果:
+毒抗性:+10%</font>
+<font color='#00cc00'>混乱抗性:+5%</font>
+<font color='#00cc00'>冰冻抗性:+3%</font>
+&103@0&104@0&105@&107@&108@530","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","1170.png","长虹落日.腕","equip","护具·护腕","1","sitem_jhj","530","f_i_长虹落日.腕^C156C7&23@凿孔上限 9 格&24@护具·护腕&25@1&21@60&30@50000&3@43&4@25&13@18&14@12&15@14&16@20&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+8%</font>
+<font color='#00cc00'>眩晕抗性:+10%</font>
+<font color='#00cc00'>外伤抗性:+5%</font>
+&103@0&104@0&105@&107@&108@530","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","1172.png","长虹落日.腰","equip","护具·腰部","1","sitem_ezhj","530","f_i_长虹落日.腰^C156C7&23@凿孔上限 9 格&24@护具·腰部&25@1&21@60&30@50000&3@43&4@23&13@11<$jstr>&14@14<$jintt>&15@20<$jagi>&16@18<$jcon>&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+封印抗性:+10%</font>
+<font color='#00cc00'>迟钝抗性:+6%</font>
+<font color='#00cc00'>毒抗性:+8%</font>
+&103@0&104@0&105@&107@&108@530","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","1169.png","长虹落日.腿","equip","护具·腿","1","sitem_jhj","530","f_i_长虹落日.腿^C156C7&23@凿孔上限 9 格&24@护具·腿&25@1&21@60&30@50000&3@43&4@25&13@18&14@10&15@12&16@20&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+眩晕抗性:+8%
+<font color='#00cc00'>冰冻抗性:+5%</font>
+<font color='#00cc00'>外伤抗性:+8%</font>
+&103@0&104@0&105@&107@&108@530","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","1171.png","长虹落日.足","equip","护具·足部","1","sitem_ezhj","530","f_i_长虹落日.足^C156C7&23@凿孔上限 9 格&24@护具·足部&25@1&21@60&30@50000&3@45&13@13<$jstr>&14@15<$jintt>&15@18<$jagi>&16@22<$jcon>&17@25&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+10%</font>
+<font color='#00cc00'>冰冻抗性:+3%</font>
+<font color='#00cc00'>眩晕抗性:+5%</font>
+&103@0&104@0&105@&107@&108@530","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","1167.png","长虹落日.躯","equip","护具·躯干","1","sitem_jhj","530","f_i_长虹落日.躯^C156C7&23@凿孔上限 9 格&24@护具·躯干&25@1&21@60&30@50000&3@43&4@25&13@20&14@12&15@14&16@18&27@sitem_jhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+3] 每升一级 外伤抗性+1%
+<font color='#00cc00'>特殊效果:
+外伤抗性:+10%</font>
+<font color='#00cc00'>麻痹抗性:+10%</font>
+<font color='#00cc00'>封印抗性:+5%</font>
+&103@0&104@0&105@&107@&108@530","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","1168.png","长虹落日.首","equip","护具·头部","1","sitem_ezhj","530","f_i_长虹落日.首^C156C7&23@凿孔上限 9 格&24@护具·头部&25@1&21@60&30@50000&3@25&4@43&13@20&14@25&15@20&16@20&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+[精炼+3] 每升一级 封印抗性+1%
+<font color='#00cc00'>特殊效果:
+封印抗性:+10%</font>
+<font color='#00cc00'>毒抗性:+5%</font>
+<font color='#00cc00'>混乱抗性:+10%</font>
+&103@0&104@0&105@&107@&108@530","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","812.png","风雷金隼.肩","equip","护具·肩部","1","sitem_ezhj","500","f_i_风雷金隼.肩^C156C7&23@凿孔上限 9 格&24@护具·肩部&25@1&21@30&30@30000&3@21&13@12&14@10&15@12&16@8&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+5%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","810.png","风雷金隼.腕","equip","护具·护腕","1","sitem_ezhj","500","f_i_风雷金隼.腕^C156C7&23@凿孔上限 9 格&24@护具·护腕&25@1&21@30&30@30000&3@21&4@7&13@12&14@8&15@13&16@8&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+5%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","811.png","风雷金隼.腰","equip","护具·腰部","1","sitem_ezhj","500","f_i_风雷金隼.腰^C156C7&23@凿孔上限 9 格&24@护具·腰部&25@1&21@30&30@30000&3@18&13@8&14@6&15@8&16@7&17@4&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+10%</font>
+<font color='#00cc00'>[精炼+6] 麻痹抗性+15%(以后每级递增 2%)</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","809.png","风雷金隼.腿","equip","护具·腿","1","sitem_ezhj","500","f_i_风雷金隼.腿^C156C7&23@凿孔上限 9 格&24@护具·腿&25@1&21@30&30@30000&3@33&4@11&14@10&15@13&16@10&17@11&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+15%</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","813.png","风雷金隼.足","equip","护具·足部","1","sitem_ezhj","500","f_i_风雷金隼.足^C156C7&23@凿孔上限 9 格&24@护具·足部&25@1&21@30&30@30000&3@22&14@6&15@12&16@8&17@9&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+5%
+[精炼+6] 移动力+15(以后每级递增1)</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","807.png","风雷金隼.躯","equip","护具·躯干","1","sitem_ezhj","500","f_i_风雷金隼.躯^C156C7&23@凿孔上限 9 格&24@护具·躯干&25@1&21@30&30@30000&3@38&4@12&13@12&14@10&15@12&16@14&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+15%</font>
+<font color='#00cc00'>[精炼+6] 被敌人爆击后有20%(以后每级增加1%)的机率获得：回避提升(2%~5% 3回合)</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","808.png","风雷金隼.首","equip","护具·头部","1","sitem_ezhj","500","f_i_风雷金隼.首^C156C7&23@凿孔上限 9 格&24@护具·头部&25@1&21@30&30@30000&3@28&4@10&13@13&14@13&15@20&16@10&27@sitem_ezhj&19@精炼潜质:
+[精炼+1] 每升一级 物理防御+2
+[精炼+1] 每升一级 魔法防御+2
+<font color='#00cc00'>特殊效果:
+毒抗性:+5%</font>
+<font color='#00cc00'>[精炼+6] 被敌人击中后有3%(以后每级递增1%)机率获得2枚魂</font>&103@0&104@0&105@&107@&108@500","packet:sale","promoted_20260712_new_scan kind=strong_sale"
+"packet_confirmed","high","585.png","中国风","equip","幻·时装","1","sitem_ezhj","0","f_i_中国风^5BC46D&24@幻·时装&25@1&20@具有强烈中国风格的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","954.png","侍魂套装","equip","幻·时装","1","sitem_ezhj","0","f_i_侍魂套装^C156C7&24@幻·时装&25@1&9@50&13@30&16@30&19@男性：化身为霸王丸
+女性：化身为娜可露露&20@经典的格斗游戏《侍魂》中的装扮。
+<font color='#ffff00'>注:【12天时限】<\/font>&27@sitem_ezhj&103@0&104@1784833914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","1132.png","兔年呈祥","equip","幻·时装","1","sitem_ezhj","0","f_i_兔年呈祥^C156C7&24@幻·时装&25@1&5@300&14@30&17@30&20@兔年呈祥，本命年的最佳装饰。
+<font color='#ffff00'>注:【12天时限】<\/font>&27@sitem_ezhj&103@0&104@1784833915421&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","1287.png","功夫熊猫","equip","幻·时装","1","sitem_ezhj","0","f_i_功夫熊猫^00ccff&24@幻·时装&25@1&13@20&17@20&19@【注：7天时限】&20@《功夫熊猫》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","1239.png","叛逆的鲁鲁修","equip","幻·时装","1","sitem_ezhj","0","f_i_叛逆的鲁鲁修^00ccff&24@幻·时装&25@1&3@20&4@20&19@【注：7天时限】&20@动漫《叛逆的鲁鲁修》的经典服饰。&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","728.png","哈利波特","equip","幻·时装","1","sitem_ezhj","0","f_i_哈利波特^5BC46D&24@幻·时装&25@1&20@哈利波特的魔法学院服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","586.png","哥特套装","equip","幻·时装","1","sitem_ezhj","0","f_i_哥特套装^5BC46D&24@幻·时装&25@1&19@装备后穿着哥特风格服装。&20@具有哥特风格的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","1306.png","圣斗士","equip","幻·时装","1","sitem_ezhj","0","f_i_圣斗士^00ccff&24@幻·时装&25@1&5@300&14@20&19@【注：7天时限】&20@《圣斗士》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","613.png","奥特曼","equip","幻·时装","1","sitem_ezhj","0","f_i_奥特曼^5BC46D&24@幻·时装&25@1&19@装备后化身为奥特曼。&20@超级囧的的超人服装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","583.png","学生装","equip","幻·时装","1","sitem_ezhj","0","f_i_学生装^5BC46D&24@幻·时装&25@1&19@装备后化身为学生模样。&20@非常合身的学生套装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","1282.png","忍者神龟","equip","幻·时装","1","sitem_ezhj","0","f_i_忍者神龟^00ccff&24@幻·时装&25@1&13@20&15@20&19@【注：7天时限】&20@《忍者神龟》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","751.png","普通礼服","equip","幻·时装","1","sitem_ezhj","0","f_i_普通礼服^5BC46D&24@幻·时装&25@1&19@男性：黑色普通西服套装。
+女性：晚礼服套装。&20@礼服系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","741.png","李洛克","equip","幻·时装","1","sitem_ezhj","0","f_i_李洛克^5BC46D&24@幻·时装&25@1&20@动漫系列之。
+类似《火影忍者》里李洛克的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","584.png","死神套装","equip","幻·时装","1","sitem_ezhj","0","f_i_死神套装^C156C7&24@幻·时装&25@1&10@50&15@30&16@30&19@装备后变化为《死神》中的造型。&20@《死神》是一部人气动漫作品。
+<font color='#ffff00'>注:【12天时限】<\/font>&27@sitem_ezhj&103@0&104@1784833915421&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","582.png","波斯套装","equip","幻·时装","1","sitem_ezhj","0","f_i_波斯套装^5BC46D&24@幻·时装&25@1&19@装备成为波斯装扮。&20@波斯服装穿上后更具风情。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","1246.png","狐仙大人","equip","幻·时装","1","sitem_ezhj","0","f_i_狐仙大人^00ccff&24@幻·时装&25@1&13@20&16@20&19@【注：7天时限】&20@《我家有个狐仙大人》里的经典造型&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","727.png","盛夏清凉","equip","幻·时装","1","sitem_ezhj","0","f_i_盛夏清凉^5BC46D&24@幻·时装&25@1&19@男性：黑Tee潮流滑板裤。
+女性：翠绿流苏无肩短裙黑袜。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","730.png","盛夏潮爆","equip","幻·时装","1","sitem_ezhj","0","f_i_盛夏潮爆^5BC46D&24@幻·时装&25@1&19@男性：白Tee潮流跨裤。
+女性：淡紫皮革短裙白靴。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","729.png","盛夏缤纷","equip","幻·时装","1","sitem_ezhj","0","f_i_盛夏缤纷^5BC46D&24@幻·时装&25@1&19@男性：黑背心时尚牛仔裤。
+女性：彩虹肩带短裙。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","1258.png","精灵一族","equip","幻·时装","1","sitem_ezhj","0","f_i_精灵一族^00ccff&24@幻·时装&25@1&15@20&17@20&19@【注：7天时限】&20@爱好和平的俊男美女精灵&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","732.png","精致礼服","equip","幻·时装","1","sitem_ezhj","0","f_i_精致礼服^5BC46D&24@幻·时装&25@1&19@男性：黑色高档西服套装。
+女性：高档晚礼服套装。&20@礼服系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","199.png","绿色圣诞","equip","幻·时装","99","sitem_ezhj","0","f_i_绿色圣诞^5BC46D&24@幻·时装&25@99&19@装备后化身为圣诞老人。&20@每年的12月25日圣诞节你都可以穿上它。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=6 auction=0"
+"packet_confirmed","high","1305.png","美少女战士","equip","幻·时装","1","sitem_ezhj","0","f_i_美少女战士^00ccff&24@幻·时装&25@1&6@300&13@20&19@【注：7天时限】&20@《美少女战士》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","1281.png","蜘蛛侠","equip","幻·时装","1","sitem_ezhj","0","f_i_蜘蛛侠^00ccff&24@幻·时装&25@1&14@20&15@20&19@【注：7天时限】&20@《蜘蛛侠》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","1279.png","蝙蝠侠","equip","幻·时装","1","sitem_ezhj","0","f_i_蝙蝠侠^00ccff&24@幻·时装&25@1&9@20&16@20&19@【注：7天时限】&20@《蝙蝠侠》里的经典造型&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","1254.png","超人","equip","幻·时装","1","sitem_ezhj","0","f_i_超人^00ccff&24@幻·时装&25@1&10@20&11@20&19@【注：7天时限】&20@超人的经典造型&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","1205.png","超时空要塞","equip","幻·时装","1","sitem_ezhj","0","f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@1779629942695&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=22 auction=0"
+"packet_confirmed","high","1280.png","越狱兔","equip","幻·时装","1","sitem_ezhj","0","f_i_越狱兔^00ccff&24@幻·时装&25@1&10@20&16@20&19@【注：7天时限】&20@《越狱兔》里的经典造型&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","1312.png","通灵王","equip","幻·时装","1","sitem_ezhj","0","f_i_通灵王^00ccff&24@幻·时装&25@1&16@20&17@20&19@【注：7天时限】&20@《通灵王》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","610.png","钱多多","equip","幻·时装","1","sitem_ezhj","0","f_i_钱多多^5BC46D&24@幻·时装&25@1&20@代表财富，充满金钱气的装束。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=2 auction=0"
+"packet_confirmed","high","1242.png","银魂","equip","幻·时装","1","sitem_ezhj","0","f_i_银魂^00ccff&24@幻·时装&25@1&9@20&11@20&19@【注：7天时限】&20@银魂的经典造型&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","1283.png","驱魔少年","equip","幻·时装","1","sitem_ezhj","0","f_i_驱魔少年^00ccff&24@幻·时装&25@1&14@20&16@20&19@【注：7天时限】&20@《驱魔少年》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=4 auction=0"
+"packet_confirmed","high","1261.png","鬼神童子","equip","幻·时装","1","sitem_ezhj","0","f_i_鬼神童子^00ccff&24@幻·时装&25@1&9@20&10@20&19@【注：7天时限】&20@鬼神童子的经典造型&27@sitem_ezhj&103@0&104@1779629947218&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=18 auction=0"
+"packet_confirmed","high","1340.png","魁拔幻化珠","equip","幻·幻化珠","1","sitem_wood","0","f_i_魁拔幻化珠^C156C7&24@幻·幻化珠&25@1&19@装备后幻化为猛将魁魃&20@拥有该类宝物便可随意变换为各种形态。&27@sitem_wood&103@0&104@0&105@&107@&108@0","packet:auction","promoted_20260712_fashion mall=0 auction=2"
+"packet_confirmed","high","1293.png","钢之炼金术师","equip","幻·时装","1","sitem_ezhj","0","f_i_钢之炼金术师^00ccff&24@幻·时装&25@1&14@20&17@20&19@【注：7天时限】&20@《钢之炼金术师》里的经典造型&27@sitem_ezhj&103@0&104@1784401914295&105@&107@&108@0","packet:sale","promoted_20260712_fashion mall=1 auction=0 trailing_space_icon_fix"

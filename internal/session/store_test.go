@@ -4078,6 +4078,36 @@ func TestStoreCapturedWoodcutterEquipmentAppearance(t *testing.T) {
 	}
 }
 
+func TestStorePromotedEquipmentAppearanceMappings(t *testing.T) {
+	for _, spec := range []struct {
+		name  string
+		key   string
+		value string
+	}{
+		{name: "天魁", key: "w1", value: "62"},
+		{name: "央月九影", key: "w8", value: "61"},
+		{name: "炎爆龙鳞甲", key: "c", value: "28"},
+		{name: "狼人护腿", key: "p", value: "29"},
+		{name: "蛮族护腿", key: "p", value: "27"},
+		{name: "炎爆之靴", key: "se", value: "21"},
+		{name: "炎爆护手", key: "wr", value: "21"},
+		{name: "蛤蟆精护腕", key: "wr", value: "26"},
+	} {
+		template, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			t.Fatalf("expected item-table template for %s", spec.name)
+		}
+		key, value, ok := roleItemAppearanceSourceParam(template)
+		if !ok || key != spec.key || value != spec.value {
+			t.Fatalf("expected %s appearance %s=%s, got %s=%s ok=%v", spec.name, spec.key, spec.value, key, value, ok)
+		}
+		query := applyRoleItemAppearanceToSourceQuery("human/human.swf?sex=1&", template)
+		if !strings.Contains(query, spec.key+"="+spec.value+"&") {
+			t.Fatalf("expected %s source query to include %s=%s, got %q", spec.name, spec.key, spec.value, query)
+		}
+	}
+}
+
 func TestStoreRoleSourceQueryReflectsOnlyEquippedItems(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")

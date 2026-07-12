@@ -5298,6 +5298,10 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "w1", "55", true
 	case "伏魔棍":
 		return "w11", "53", true
+	case "天魁":
+		return "w1", "62", true
+	case "央月九影":
+		return "w8", "61", true
 	case "蓝布衣":
 		return "c", "1", true
 	case "蛮力护甲":
@@ -5308,6 +5312,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "c", "17", true
 	case "寒影锁甲":
 		return "c", "26", true
+	case "炎爆龙鳞甲":
+		return "c", "28", true
 	case "寨夫人上衣":
 		return "c", "39", true
 	case "蓝布裤":
@@ -5322,6 +5328,10 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "p", "64", true
 	case "龙颜护腿":
 		return "p", "22", true
+	case "狼人护腿":
+		return "p", "29", true
+	case "蛮族护腿":
+		return "p", "27", true
 	case "布鞋":
 		return "se", "1", true
 	case "蛮力战靴":
@@ -5336,6 +5346,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "se", "12", true
 	case "寒影靴":
 		return "se", "19", true
+	case "炎爆之靴":
+		return "se", "21", true
 	case "蛮力面甲":
 		return "h", "8", true
 	case "威武面甲":
@@ -5374,6 +5386,10 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "wr", "39", true
 	case "龙颜护腕":
 		return "wr", "19", true
+	case "炎爆护手":
+		return "wr", "21", true
+	case "蛤蟆精护腕":
+		return "wr", "26", true
 	}
 	if item.ItemType == "equip" && strings.TrimSpace(item.Display) == "29.png" {
 		return "w8", "5", true

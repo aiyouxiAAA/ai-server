@@ -42,6 +42,11 @@ func TestGeneratedClassicTablesContainKnownRows(t *testing.T) {
 	buffTable := MustLoadTable(TableBuff)
 	assertHasRow(t, buffTable, "name", "中毒")
 	assertHasRow(t, buffTable, "name", "眩晕")
+	assertBuffDescription(t, buffTable, "seal", "作用时间内对象无法使用技能", "fixed")
+	assertBuffDescription(t, buffTable, "hotblood", "提升物理攻击&0;同时降低物理防御", "fixed")
+	assertBuffDescription(t, buffTable, "slow", "降低对象X点命中和Y点回避", "dynamic")
+	assertBuffDescription(t, buffTable, "internal-injury", "降低对象X点物理攻击和Y点魔法攻击力", "dynamic")
+	assertBuffDescription(t, buffTable, "freeze", "", "unknown")
 
 	monsterTable := MustLoadTable(TableMonster)
 	assertHasRow(t, monsterTable, "monster_id", "wild-49-1914555684754474")
@@ -194,4 +199,21 @@ func assertHasRow(t *testing.T, table Table, key string, value string) {
 		}
 	}
 	t.Fatalf("table %s missing row with %s=%s", table.Name, key, value)
+}
+
+func assertBuffDescription(t *testing.T, table Table, buffID string, description string, kind string) {
+	t.Helper()
+	for _, row := range table.Rows {
+		if row["buff_id"] != buffID {
+			continue
+		}
+		if row["description"] != description {
+			t.Fatalf("buff %s description = %q, want %q", buffID, row["description"], description)
+		}
+		if row["description_kind"] != kind {
+			t.Fatalf("buff %s description_kind = %q, want %q", buffID, row["description_kind"], kind)
+		}
+		return
+	}
+	t.Fatalf("table %s missing buff_id=%s", table.Name, buffID)
 }

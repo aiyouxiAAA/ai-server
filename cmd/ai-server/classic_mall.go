@@ -93,9 +93,15 @@ func buildClassicMallCurrencyPush(store *session.Store, socketSession *packetSes
 	if !ok {
 		return nil
 	}
+	// Source rmb_shop binds loginState from proxy_user_money as 玉币.
+	// Prefer 玉币; fall back to the old 银元宝 seed for existing roles.
+	balance := currencies[mall.SourceYubiCurrencyName]
+	if balance <= 0 {
+		balance = currencies[mall.DevCurrencyName]
+	}
 	return &mall.CurrencyPush{
-		CurrencyName: mall.DevCurrencyName,
-		Balance:      currencies[mall.DevCurrencyName],
+		CurrencyName: mall.SourceYubiCurrencyName,
+		Balance:      balance,
 	}
 }
 

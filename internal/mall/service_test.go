@@ -2,6 +2,42 @@ package mall
 
 import "testing"
 
+func TestServiceRecommendedProductsMatchCapturedFirstPage(t *testing.T) {
+	service := NewService()
+	page := service.SearchPage(SearchRequest{
+		CategoryID: "1",
+		OrderType:  "default",
+		Limit:      PageSize,
+	})
+	expectedProductIDs := []string{"9011", "9010", "9009", "5024", "5021", "3001", "1000", "27", "26"}
+	if len(page.Products) != len(expectedProductIDs) {
+		t.Fatalf("expected the captured nine-item recommended page, got %+v", page.Products)
+	}
+	for index, expectedProductID := range expectedProductIDs {
+		product := page.Products[index]
+		if product.ProductID != expectedProductID || !product.Recommended || product.CategoryID != "1" || product.Discount != 1 {
+			t.Fatalf("expected captured recommended product %s at %d, got %+v", expectedProductID, index, product)
+		}
+	}
+	gem := page.Products[3]
+	if gem.Name != "精炼宝石" || gem.Icon != "435.png" || gem.Price != 50 || gem.CouponPrice != 60 {
+		t.Fatalf("expected captured 精炼宝石 dual price, got %+v", gem)
+	}
+	if len(gem.Items) != 1 || gem.Items[0].Name != "精炼宝石" || gem.Items[0].Count != 1 {
+		t.Fatalf("expected captured 精炼宝石 item data, got %+v", gem.Items)
+	}
+
+	couponOnly := service.SearchPage(SearchRequest{
+		CategoryID:      "1",
+		DevCurrencyOnly: true,
+		OrderType:       "default",
+		Limit:           PageSize,
+	})
+	if len(couponOnly.Products) != 1 || couponOnly.Products[0].ProductID != "5024" {
+		t.Fatalf("expected source 点券商品 filter to return 精炼宝石 only, got %+v", couponOnly.Products)
+	}
+}
+
 func TestServiceSearchCapturedFashionProducts(t *testing.T) {
 	service := NewService()
 
@@ -38,7 +74,7 @@ func TestServiceSearchCapturedFashionProducts(t *testing.T) {
 		DevCurrencyOnly: true,
 	})
 	if len(devOnly.Products) != 0 {
-		t.Fatalf("expected captured 玉币 products to be excluded from dev-currency-only search, got %+v", devOnly.Products)
+		t.Fatalf("expected source 点券商品 filter to exclude a 玉币-only product, got %+v", devOnly.Products)
 	}
 
 	summer, ok := service.FindProduct("7033")

@@ -3997,7 +3997,17 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 		}
 		roles[index] = withRoleRuntimeDefaults(roles[index])
 		totalPrice := product.Price * quantity
-		if roles[index].Currencies[product.Currency] < totalPrice {
+		// Source mall spends 玉币. Older development roles only seeded 银元宝;
+		// allow that balance as a temporary fallback so the safe shell can purchase.
+		payCurrency := product.Currency
+		payBalance := roles[index].Currencies[payCurrency]
+		if payCurrency == mall.SourceYubiCurrencyName && payBalance < totalPrice {
+			if roles[index].Currencies[mall.DevCurrencyName] >= totalPrice {
+				payCurrency = mall.DevCurrencyName
+				payBalance = roles[index].Currencies[payCurrency]
+			}
+		}
+		if payBalance < totalPrice {
 			return mall.PurchaseResult{
 				Success:         false,
 				ProductID:       product.ProductID,
@@ -4020,14 +4030,33 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 				ErrorMessage: "商城背包已满。",
 			}
 		}
-		roles[index].Currencies[product.Currency] -= totalPrice
+		itemName := product.Name
+		itemDisplay := product.Icon
+		itemDescription := product.Description
+		itemCount := quantity
+		if len(product.Items) > 0 {
+			productItem := product.Items[0]
+			if productItem.Name != "" {
+				itemName = productItem.Name
+			}
+			if productItem.Display != "" {
+				itemDisplay = productItem.Display
+			}
+			if productItem.Description != "" {
+				itemDescription = productItem.Description
+			}
+			if productItem.Count > 0 {
+				itemCount = productItem.Count * quantity
+			}
+		}
+		roles[index].Currencies[payCurrency] -= totalPrice
 		roles[index].Items = normalizeRoleItems(append(roles[index].Items, RoleItem{
 			Type:        "商城",
-			Name:        product.Name,
+			Name:        itemName,
 			ItemType:    "mall",
-			Display:     product.Icon,
-			Description: product.Description,
-			Count:       quantity,
+			Display:     itemDisplay,
+			Description: itemDescription,
+			Count:       itemCount,
 			Index:       targetIndex,
 			Level:       1,
 			EndTime:     0,
@@ -4038,13 +4067,19 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist mall purchase failed: %v", err)
 		}
+		// Always report 玉币 to the mall shell when the product is source-priced in 玉币.
+		reportCurrency := product.Currency
+		reportBalance := roles[index].Currencies[reportCurrency]
+		if reportCurrency == mall.SourceYubiCurrencyName && reportBalance <= 0 {
+			reportBalance = roles[index].Currencies[mall.DevCurrencyName]
+		}
 		result := mall.PurchaseResult{
 			Success:         true,
 			ProductID:       product.ProductID,
 			Quantity:        quantity,
 			RequestID:       requestID,
-			CurrencyName:    product.Currency,
-			CurrencyBalance: roles[index].Currencies[product.Currency],
+			CurrencyName:    reportCurrency,
+			CurrencyBalance: reportBalance,
 		}
 		if requestID != "" {
 			store.mallRequests[roleID+":"+requestID] = result

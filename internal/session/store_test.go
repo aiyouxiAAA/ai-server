@@ -179,8 +179,8 @@ func TestStoreRoleLifecycle(t *testing.T) {
 	if selectResponse.PlayerBase.RoleID != createResponse.Role.RoleID {
 		t.Fatalf("expected player base role id %q, got %q", createResponse.Role.RoleID, selectResponse.PlayerBase.RoleID)
 	}
-	if selectResponse.PlayerBase.Currencies["铜钱"] != 5000 || selectResponse.PlayerBase.Currencies["银元宝"] != 1 {
-		t.Fatalf("expected default role currencies, got %+v", selectResponse.PlayerBase.Currencies)
+	if selectResponse.PlayerBase.Currencies["铜钱"] != 5000 || selectResponse.PlayerBase.Currencies["银元宝"] != 1 || selectResponse.PlayerBase.Currencies["玉币"] != 1 {
+		t.Fatalf("expected default role currencies including 玉币, got %+v", selectResponse.PlayerBase.Currencies)
 	}
 }
 
@@ -957,13 +957,45 @@ func TestStorePurchaseCapturedMallFashionProductRequiresYubi(t *testing.T) {
 		t.Fatal("expected captured mall fashion product")
 	}
 	result := store.PurchaseMallProduct(login.PlayerID, createResponse.Role.RoleID, product, 1, "captured-fashion")
-	if result.Success || result.ErrorCode != "INSUFFICIENT_CURRENCY" || result.CurrencyName != "玉币" || result.CurrencyBalance != 0 {
-		t.Fatalf("expected captured mall fashion purchase to fail on missing 玉币 balance, got %+v", result)
+	// New roles seed a small development balance, but captured fashion rows
+	// remain far above that seed so purchase must still reject.
+	if result.Success || result.ErrorCode != "INSUFFICIENT_CURRENCY" || result.CurrencyName != "玉币" || result.CurrencyBalance >= product.Price {
+		t.Fatalf("expected captured mall fashion purchase to fail on insufficient 玉币 balance, got %+v", result)
 	}
 
 	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "商城")
 	if !ok || len(items) != 0 {
 		t.Fatalf("expected failed captured fashion purchase not to write 商城 items, ok=%v items=%+v", ok, items)
+	}
+}
+
+func TestStorePurchaseCapturedMallBundleUsesInnerItem(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "商城礼包女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	product, ok := store.Mall.FindProduct("9011")
+	if !ok {
+		t.Fatal("expected captured 高级聚气碟.特x5 product")
+	}
+	store.rolesByPID[login.PlayerID][0].Currencies["玉币"] = product.Price
+	result := store.PurchaseMallProduct(login.PlayerID, createResponse.Role.RoleID, product, 1, "captured-bundle")
+	if !result.Success {
+		t.Fatalf("expected captured bundle purchase success, got %+v", result)
+	}
+
+	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "商城")
+	if !ok || len(items) != 1 {
+		t.Fatalf("expected one purchased bundle item, ok=%v items=%+v", ok, items)
+	}
+	item := items[0]
+	if item.Name != "高级聚气碟.特" || item.Display != "1724.png" || item.Count != 5 || item.Description != product.Items[0].Description {
+		t.Fatalf("expected product inner item to enter 商城 container, got %+v", item)
 	}
 }
 

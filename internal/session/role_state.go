@@ -583,6 +583,9 @@ func defaultRoleCurrencies() RoleCurrencies {
 	return RoleCurrencies{
 		"铜钱":  defaultCopper,
 		"银元宝": defaultSilver,
+		// Source mall (rmb_shop) spends 玉币. Seed a development balance so the
+		// safe mall shell can open and purchase without real recharge.
+		"玉币": defaultSilver,
 	}
 }
 

@@ -70,6 +70,9 @@ const (
 	CommandEnemyLionRoars  = "enemy-lion-roars"
 	CommandEnemyGoldHit    = "enemy-gold-hit"
 	CommandEnemyRoundAtk   = "enemy-round-atk"
+	CommandEnemyRulingAx   = "enemy-ruling-ax"
+	CommandEnemyVacuumKill = "enemy-vacuum-killed"
+	CommandEnemyRobotUp    = "enemy-robot-up"
 	CommandEnemyChaosHit   = "enemy-chaos-hit"
 	CommandDefense         = "defense"
 	CommandStore           = "battle-store"
@@ -128,32 +131,61 @@ const (
 	enemyShihukuGoldDamageMultiplier   = 1.72
 	enemyShihukuLionRoarsChance        = 20
 	enemyShihukuGoldHitChance          = 19
-	enemyRobotawlRoundAtkChance        = 5
+	enemyRobotawlRoundAtkChance        = 23
+	enemyRobotSkillMPCost              = 10
 	enemyRobotawlArmorBreakChance      = 70
 	enemyRobotawlArmorBreakRounds      = 3
 	enemyRobotawlArmorBreakAttackPct   = 10
-	defaultBattleHit                   = 100
-	defaultBattleDog                   = 50
-	defaultBattleFat                   = 5
-	equipmentInnerInjuryDefaultChance  = 1
-	equipmentInnerInjuryDefaultRounds  = 3
-	equipmentInnerInjuryDefaultMin     = 10
-	equipmentInnerInjuryDefaultMax     = 15
-	equipmentSealDefaultChance         = 1
-	equipmentSealDefaultRounds         = 3
-	jiFengCiSlownessChance             = 92
-	jiFengCiSlownessRounds             = 3
-	jiFengCiSlownessPercent            = 50
-	touDuPoisonChance                  = 80
-	touDuPoisonRounds                  = 4
-	touDuPoisonDefensePercent          = 15
-	touDuPoisonTickMin                 = 20
-	touDuPoisonTickMax                 = 25
-	liShiGunShuAttackPercent           = 15
-	liShiGunShuRounds                  = 5
+	// Capture-backed approximate action ratios; they are not original-server AI constants.
+	enemyRobotaxRulingAxChance         = 20
+	enemyRobotaxRulingAxSlownessChance = 30
+	enemyRobotaxRulingAxSlownessRounds = 2
+	enemyRobotaxRulingAxSlownessPct    = 30
+	enemyRobothmarshalVacuumKillChance = 20
+	// robotup is capture-backed local approximation: 516 non-zero heal samples
+	// are 263..338 before max-HP clipping; every cast spends 60 MP.
+	enemyRobotupMPCost                = 60
+	enemyRobotupHealMin               = 263
+	enemyRobotupHealMax               = 338
+	enemyRobotupEmergencyHPPercent    = 20
+	enemyRobotupLowHPChance           = 98
+	enemyRobotupGeneralChance         = 30
+	defaultBattleHit                  = 100
+	defaultBattleDog                  = 50
+	defaultBattleFat                  = 5
+	equipmentInnerInjuryDefaultChance = 1
+	equipmentInnerInjuryDefaultRounds = 3
+	equipmentInnerInjuryDefaultMin    = 10
+	equipmentInnerInjuryDefaultMax    = 15
+	equipmentSealDefaultChance        = 1
+	equipmentSealDefaultRounds        = 3
+	jiFengCiSlownessChance            = 92
+	jiFengCiSlownessRounds            = 3
+	jiFengCiSlownessPercent           = 50
+	touDuPoisonChance                 = 80
+	touDuPoisonRounds                 = 4
+	touDuPoisonDefensePercent         = 15
+	touDuPoisonTickMin                = 20
+	touDuPoisonTickMax                = 25
+	liShiGunShuAttackPercent          = 15
+	liShiGunShuRounds                 = 5
 )
 
 var sourceEncounterRoll = func(maxExclusive int) int {
+	if maxExclusive <= 0 {
+		return 0
+	}
+	return rand.Intn(maxExclusive)
+}
+
+var sourceBattleAttackRoll = func(maxExclusive int) int {
+	if maxExclusive <= 0 {
+		return 0
+	}
+	return rand.Intn(maxExclusive)
+}
+
+var sourceBattleHealRoll = func(maxExclusive int) int {
 	if maxExclusive <= 0 {
 		return 0
 	}
@@ -347,6 +379,7 @@ type Runtime struct {
 	PendingTeamActions    map[string]bool
 	PendingTeamSequences  map[string]int
 	DefendingHandles      map[string]bool
+	EnemyAttackRanges     map[string]battleAttackRange
 	StatusEffects         map[string]BattleStatusEffects
 	PendingConfusion      map[string]bool
 	StoredPower           map[string]int
@@ -361,28 +394,35 @@ type Runtime struct {
 	mu                    sync.Mutex
 }
 
+type battleAttackRange struct {
+	Min int
+	Max int
+}
+
 type BattleStatusEffect struct {
-	Name                    string
-	Display                 string
-	Description             string
-	Rounds                  int
-	SourceHandle            string
-	SourceSkill             string
-	AppliedAction           string
-	SourceAttack            int
-	DefenseReductionPercent int
-	TickMinPercent          int
-	TickMaxPercent          int
-	AttackIncrease          int
-	AttackReduction         int
-	StatusAttackMin         int
-	StatusAttackMax         int
-	MagicAttackReduction    int
-	DefenseReduction        int
-	MagicDefenseReduction   int
-	HitReduction            int
-	DodgeReduction          int
-	SkipTurn                bool
+	Name                     string
+	Display                  string
+	Description              string
+	Rounds                   int
+	SourceHandle             string
+	SourceSkill              string
+	AppliedAction            string
+	SourceAttack             int
+	DefenseReductionPercent  int
+	HitDodgeReductionPercent int
+	TickMinPercent           int
+	TickMaxPercent           int
+	AttackIncrease           int
+	AttackReduction          int
+	StatusAttackMin          int
+	StatusAttackMax          int
+	MagicAttackReduction     int
+	DefenseReduction         int
+	MagicDefenseReduction    int
+	HitReduction             int
+	DodgeReduction           int
+	VisualOnly               bool
+	SkipTurn                 bool
 }
 
 type BattleStatusEffects struct {
@@ -408,33 +448,35 @@ type ActionResult struct {
 }
 
 type commandProfile struct {
-	ActionName           string
-	SourceType           string
-	SourceActionLabel    string
-	DamageMultiplier     float64
-	MPCost               int
-	CanDodge             bool
-	CanFat               bool
-	LifeStealChance      int
-	LifeStealRatio       float64
-	DirectAttackBonus    float64
-	AdditionalMagicBonus float64
-	MagicAttackBoost     float64
-	DefenseType          string
-	UseMagicAttack       bool
-	HitMultiplier        float64
-	TargetMPDamage       int
-	StatusName           string
-	StatusDisplay        string
-	StatusDescription    string
-	StatusRounds         int
-	StatusChance         int
-	StatusDefensePercent int
-	StatusAttackMin      int
-	StatusAttackMax      int
-	StatusTickMin        int
-	StatusTickMax        int
-	SkipTurn             bool
+	ActionName            string
+	SourceType            string
+	SourceActionLabel     string
+	DamageMultiplier      float64
+	MPCost                int
+	CanDodge              bool
+	CanFat                bool
+	LifeStealChance       int
+	LifeStealRatio        float64
+	DirectAttackBonus     float64
+	AdditionalMagicBonus  float64
+	MagicAttackBoost      float64
+	DefenseType           string
+	UseMagicAttack        bool
+	HitMultiplier         float64
+	TargetMPDamage        int
+	StatusName            string
+	StatusDisplay         string
+	StatusDescription     string
+	StatusRounds          int
+	StatusChance          int
+	StatusDefensePercent  int
+	StatusHitDodgePercent int
+	StatusAttackMin       int
+	StatusAttackMax       int
+	StatusTickMin         int
+	StatusTickMax         int
+	StatusVisualOnly      bool
+	SkipTurn              bool
 }
 
 func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, request StartRequest) (*Runtime, StartBundle, bool) {
@@ -526,12 +568,18 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			CommandLabel: "普通攻击",
 		},
 	}
+	enemyAttackRanges := map[string]battleAttackRange{}
 	for index, enemyConfig := range enemyConfigs {
+		var cell CellInfoPush
 		if sourceMonsterHandle != "" {
-			cells = append(cells, enemyConfig.Cell.withBattleID(battleID))
-			continue
+			cell = enemyConfig.Cell.withBattleID(battleID)
+		} else {
+			cell = enemyConfig.Cell.withBattleIDAndSlot(battleID, index)
 		}
-		cells = append(cells, enemyConfig.Cell.withBattleIDAndSlot(battleID, index))
+		cells = append(cells, cell)
+		if enemyConfig.AttackMin > 0 && enemyConfig.AttackMax >= enemyConfig.AttackMin {
+			enemyAttackRanges[cell.Handle] = battleAttackRange{Min: enemyConfig.AttackMin, Max: enemyConfig.AttackMax}
+		}
 	}
 	runtime := &Runtime{
 		BattleID:            battleID,
@@ -548,6 +596,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		ActiveHandle:        role.RoleID,
 		ConsumedSequence:    map[int]bool{},
 		DefendingHandles:    map[string]bool{},
+		EnemyAttackRanges:   enemyAttackRanges,
 		StatusEffects:       map[string]BattleStatusEffects{},
 		PendingConfusion:    map[string]bool{},
 		PendingSkillSeal:    map[string]bool{},
@@ -1316,20 +1365,22 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 	}
 	if target.HP > 0 && runtime.resolveStatusApply(actor, target, commandID, profile) {
 		effect := BattleStatusEffect{
-			Name:                    profile.StatusName,
-			Display:                 profile.StatusDisplay,
-			Description:             profile.StatusDescription,
-			Rounds:                  profile.StatusRounds,
-			SourceHandle:            actor.Handle,
-			SourceSkill:             profile.ActionName,
-			AppliedAction:           sourceActionLabel,
-			SourceAttack:            sourceBattleStatusAttack(actor, profile),
-			DefenseReductionPercent: profile.StatusDefensePercent,
-			StatusAttackMin:         profile.StatusAttackMin,
-			StatusAttackMax:         profile.StatusAttackMax,
-			TickMinPercent:          profile.StatusTickMin,
-			TickMaxPercent:          profile.StatusTickMax,
-			SkipTurn:                profile.SkipTurn,
+			Name:                     profile.StatusName,
+			Display:                  profile.StatusDisplay,
+			Description:              profile.StatusDescription,
+			Rounds:                   profile.StatusRounds,
+			SourceHandle:             actor.Handle,
+			SourceSkill:              profile.ActionName,
+			AppliedAction:            sourceActionLabel,
+			SourceAttack:             sourceBattleStatusAttack(actor, profile),
+			DefenseReductionPercent:  profile.StatusDefensePercent,
+			HitDodgeReductionPercent: profile.StatusHitDodgePercent,
+			StatusAttackMin:          profile.StatusAttackMin,
+			StatusAttackMax:          profile.StatusAttackMax,
+			TickMinPercent:           profile.StatusTickMin,
+			TickMaxPercent:           profile.StatusTickMax,
+			VisualOnly:               profile.StatusVisualOnly,
+			SkipTurn:                 profile.SkipTurn,
 		}
 		if strings.TrimSpace(effect.Name) == "迟钝" {
 			runtime.applySlownessStatusEffect(actor, target, effect)
@@ -1614,6 +1665,7 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			SourceType:        "oneE",
 			SourceActionLabel: "roundatk",
 			DamageMultiplier:  1,
+			MPCost:            enemyRobotSkillMPCost,
 			CanDodge:          true,
 			CanFat:            true,
 			StatusName:        "卸甲",
@@ -1621,6 +1673,39 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			StatusRounds:      enemyRobotawlArmorBreakRounds,
 			StatusChance:      enemyRobotawlArmorBreakChance,
 			StatusDescription: "降低对象物理防御力",
+		}
+	case CommandEnemyRulingAx:
+		return commandProfile{
+			ActionName:            "裁决之斧",
+			SourceType:            "all",
+			SourceActionLabel:     "rulingax",
+			DamageMultiplier:      1,
+			MPCost:                enemyRobotSkillMPCost,
+			CanDodge:              true,
+			CanFat:                true,
+			StatusName:            "迟钝",
+			StatusDisplay:         "16.png",
+			StatusDescription:     "降低对象命中和回避",
+			StatusRounds:          enemyRobotaxRulingAxSlownessRounds,
+			StatusChance:          enemyRobotaxRulingAxSlownessChance,
+			StatusHitDodgePercent: enemyRobotaxRulingAxSlownessPct,
+		}
+	case CommandEnemyVacuumKill:
+		return commandProfile{
+			ActionName:        "真空猎杀",
+			SourceType:        "all",
+			SourceActionLabel: "vacuumkilled",
+			DamageMultiplier:  1,
+			MPCost:            enemyRobotSkillMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+		}
+	case CommandEnemyRobotUp:
+		return commandProfile{
+			ActionName:        "机木修复",
+			SourceType:        "oneO",
+			SourceActionLabel: "robotup",
+			MPCost:            enemyRobotupMPCost,
 		}
 	case CommandEnemyChaosHit:
 		// Capture: 混沌击 keeps nomalAtk animation and magic normal-attack damage path; only broadcast name changes.
@@ -1647,10 +1732,21 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
+	if sourceEnemyCanRobothyunRobotUp(enemy) && enemy.MP >= enemyRobotupMPCost {
+		if repairTarget := runtime.lowestLivingRobothyun(enemy.Camp); repairTarget != nil && runtime.resolveRobotupUse(enemy, repairTarget) {
+			return CommandEnemyRobotUp
+		}
+	}
+	if sourceEnemyCanRobothmarshalVacuumKill(enemy) && enemy.MP >= enemyRobotSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyVacuumKill, enemyRobothmarshalVacuumKillChance) {
+		return CommandEnemyVacuumKill
+	}
+	if sourceEnemyCanRobotaxRulingAx(enemy) && enemy.MP >= enemyRobotSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRulingAx, enemyRobotaxRulingAxChance) {
+		return CommandEnemyRulingAx
+	}
 	if sourceEnemyCanShihukuGoldHit(enemy) && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyGoldHit, enemyShihukuGoldHitChance) {
 		return CommandEnemyGoldHit
 	}
-	if sourceEnemyCanRobotawlRoundAtk(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRoundAtk, enemyRobotawlRoundAtkChance) {
+	if sourceEnemyCanRobotawlRoundAtk(enemy) && enemy.MP >= enemyRobotSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRoundAtk, enemyRobotawlRoundAtkChance) {
 		return CommandEnemyRoundAtk
 	}
 	if sourceEnemyCanShihukuLionRoars(enemy) && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyLionRoars, enemyShihukuLionRoarsChance) {
@@ -1711,6 +1807,21 @@ func (runtime *Runtime) resolveEnemySkillUse(actor *CellInfoPush, target *CellIn
 	return runtime.hashBattleRollWithSalt(actor, target, commandID, "enemy-skill") < chance
 }
 
+func (runtime *Runtime) resolveRobotupUse(actor *CellInfoPush, target *CellInfoPush) bool {
+	if runtime == nil || actor == nil || target == nil || target.HP <= 0 || target.MaxHP <= 0 || actor.MP < enemyRobotupMPCost {
+		return false
+	}
+	missingHPPercent := (target.MaxHP - target.HP) * 100 / target.MaxHP
+	if missingHPPercent <= 0 {
+		return false
+	}
+	chance := enemyRobotupGeneralChance
+	if target.HP*100 < target.MaxHP*enemyRobotupEmergencyHPPercent {
+		chance = enemyRobotupLowHPChance
+	}
+	return runtime.hashBattleRollWithSalt(actor, target, CommandEnemyRobotUp, "enemy-robotup") < chance
+}
+
 func sourceEnemyCanSlideCut(enemy *CellInfoPush) bool {
 	if enemy == nil {
 		return false
@@ -1754,6 +1865,30 @@ func sourceEnemyCanRobotawlRoundAtk(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	return strings.TrimSpace(enemy.Name) == "机木锥兵" || strings.Contains(normalizedDisplay, "monstermap/robotawl.swf")
+}
+
+func sourceEnemyCanRobotaxRulingAx(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "机木斧兵" || strings.Contains(normalizedDisplay, "monstermap/robotax.swf")
+}
+
+func sourceEnemyCanRobothmarshalVacuumKill(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "机木妖帅" || strings.Contains(normalizedDisplay, "monstermap/robothmarshal.swf")
+}
+
+func sourceEnemyCanRobothyunRobotUp(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "机木玄师" || strings.Contains(normalizedDisplay, "monstermap/robothyun.swf")
 }
 
 func sourceEnemyCanRockRain(enemy *CellInfoPush) bool {
@@ -1839,6 +1974,14 @@ func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *
 	if runtime == nil || enemy == nil || target == nil {
 		return nil
 	}
+	if normalizeBattleCommandID(commandID) == CommandEnemyRobotUp {
+		repairTarget := runtime.lowestLivingRobothyun(enemy.Camp)
+		action := runtime.resolveEnemyRobotupAction(enemy, repairTarget)
+		if strings.TrimSpace(action.ActionName) == "" {
+			return nil
+		}
+		return []ActionPush{action}
+	}
 	if normalizeBattleCommandID(commandID) == CommandEnemyDelude {
 		action := runtime.resolveEnemyDeludeAction(enemy, target)
 		if strings.TrimSpace(action.ActionName) == "" {
@@ -1855,6 +1998,52 @@ func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *
 		return []ActionPush{action}
 	}
 	return []ActionPush{runtime.resolveAttack(enemy, target, commandID)}
+}
+
+func (runtime *Runtime) lowestLivingRobothyun(camp Camp) *CellInfoPush {
+	if runtime == nil {
+		return nil
+	}
+	var result *CellInfoPush
+	for _, cell := range runtime.livingCells(camp) {
+		if !sourceEnemyCanRobothyunRobotUp(cell) {
+			continue
+		}
+		if result == nil || cell.HP*result.MaxHP < result.HP*cell.MaxHP || (cell.HP*result.MaxHP == result.HP*cell.MaxHP && cell.Handle < result.Handle) {
+			result = cell
+		}
+	}
+	return result
+}
+
+func (runtime *Runtime) resolveEnemyRobotupAction(actor *CellInfoPush, target *CellInfoPush) ActionPush {
+	if runtime == nil || actor == nil || target == nil || !sourceEnemyCanRobothyunRobotUp(actor) || target.HP <= 0 || target.MaxHP <= 0 || actor.MP < enemyRobotupMPCost {
+		return ActionPush{}
+	}
+	heal := enemyRobotupHealMin + sourceBattleHealRoll(enemyRobotupHealMax-enemyRobotupHealMin+1)
+	target.HP = clampInt(target.HP+heal, 0, target.MaxHP)
+	actor.MP = maxInt(0, actor.MP-enemyRobotupMPCost)
+	refreshInfos := []CellInfoPush{*actor}
+	if target.Handle != actor.Handle {
+		refreshInfos = []CellInfoPush{*target, *actor}
+	}
+	profile := runtime.battleCommandProfile(actor, CommandEnemyRobotUp)
+	return ActionPush{
+		BattleID:          runtime.BattleID,
+		ActorHandle:       actor.Handle,
+		TargetHandle:      target.Handle,
+		CommandID:         CommandEnemyRobotUp,
+		ActionName:        profile.ActionName,
+		SourceMode:        "0",
+		SourceActionLabel: profile.SourceActionLabel,
+		Damage:            0,
+		TargetHP:          target.HP,
+		TargetMP:          target.MP,
+		TargetDead:        false,
+		RefreshInfos:      refreshInfos,
+		Round:             runtime.Round,
+		Sequence:          runtime.currentActionSequence(),
+	}
 }
 
 func (runtime *Runtime) resolveEnemyDeludeAction(enemy *CellInfoPush, target *CellInfoPush) ActionPush {
@@ -3402,7 +3591,7 @@ func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandPro
 	if actor == nil {
 		return 0
 	}
-	attack := actor.Attack
+	attack := runtime.captureBackedEnemyAttack(actor, profile)
 	if profile.UseMagicAttack && actor.MagicAttack > 0 {
 		attack = actor.MagicAttack
 	}
@@ -3423,6 +3612,21 @@ func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandPro
 		}
 	}
 	return damage
+}
+
+func (runtime *Runtime) captureBackedEnemyAttack(actor *CellInfoPush, profile commandProfile) int {
+	if actor == nil {
+		return 0
+	}
+	attack := actor.Attack
+	if runtime == nil || actor.Camp != CampEnemy || profile.SourceActionLabel != "nomalAtk" {
+		return attack
+	}
+	attackRange, ok := runtime.EnemyAttackRanges[actor.Handle]
+	if !ok || attackRange.Min <= 0 || attackRange.Max < attackRange.Min {
+		return attack
+	}
+	return attackRange.Min + sourceBattleAttackRoll(attackRange.Max-attackRange.Min+1)
 }
 
 func sourceBattleStatusAttack(actor *CellInfoPush, profile commandProfile) int {
@@ -3509,8 +3713,16 @@ func (runtime *Runtime) applySlownessStatusEffect(actor *CellInfoPush, target *C
 		return false
 	}
 	runtime.restoreExistingStatusEffect(target.Handle, "迟钝")
-	hitReduction := percentReduction(target.Hit, jiFengCiSlownessPercent)
-	dodgeReduction := percentReduction(target.Dog, jiFengCiSlownessPercent)
+	hitReduction := 0
+	dodgeReduction := 0
+	if !effect.VisualOnly {
+		percent := effect.HitDodgeReductionPercent
+		if percent <= 0 {
+			percent = jiFengCiSlownessPercent
+		}
+		hitReduction = percentReduction(target.Hit, percent)
+		dodgeReduction = percentReduction(target.Dog, percent)
+	}
 	if hitReduction > 0 {
 		target.Hit = maxInt(0, target.Hit-hitReduction)
 	}
@@ -3521,7 +3733,13 @@ func (runtime *Runtime) applySlownessStatusEffect(actor *CellInfoPush, target *C
 	if strings.TrimSpace(effect.Display) == "" {
 		effect.Display = "16.png"
 	}
-	effect.Description = fmt.Sprintf("降低对象%d点命中和%d点回避", hitReduction, dodgeReduction)
+	if effect.VisualOnly {
+		if strings.TrimSpace(effect.Description) == "" {
+			effect.Description = "降低对象命中和回避"
+		}
+	} else {
+		effect.Description = fmt.Sprintf("降低对象%d点命中和%d点回避", hitReduction, dodgeReduction)
+	}
 	effect.HitReduction = hitReduction
 	effect.DodgeReduction = dodgeReduction
 	runtime.applyStatusEffect(target.Handle, effect)
@@ -4991,8 +5209,25 @@ func sourceEnemyConfigsForEncounter(mapID string, stageFocusX float64) []sourceW
 		}
 		return []sourceWildEnemyConfig{selected, normal, normal, normal}
 	}
+	// Capture-backed encounter compositions use stage focus only as a deterministic local selector.
+	if strings.TrimSpace(mapID) == "196" && len(configs) == 4 {
+		if sourceEnemyCandidateIndex(stageFocusX, 2) == 0 {
+			return []sourceWildEnemyConfig{configs[0]}
+		}
+		return []sourceWildEnemyConfig{configs[1], configs[2], configs[2], configs[3]}
+	}
+	if strings.TrimSpace(mapID) == "200" && len(configs) == 2 {
+		switch sourceEnemyCandidateIndex(stageFocusX, 3) {
+		case 0:
+			return []sourceWildEnemyConfig{configs[0]}
+		case 1:
+			return []sourceWildEnemyConfig{configs[0], configs[1]}
+		default:
+			return []sourceWildEnemyConfig{configs[1], configs[1]}
+		}
+	}
 
-	count := capturedSourceEncounterEnemyCount(mapID)
+	count := capturedSourceEncounterEnemyCount(mapID, stageFocusX)
 	if count <= 1 {
 		return []sourceWildEnemyConfig{selected}
 	}
@@ -5024,10 +5259,23 @@ func sourceEncounterHasBoss(configs []sourceWildEnemyConfig) bool {
 	return false
 }
 
-func capturedSourceEncounterEnemyCount(mapID string) int {
+func capturedSourceEncounterEnemyCount(mapID string, stageFocusX float64) int {
 	switch strings.TrimSpace(mapID) {
 	case "36", "49", "50", "51":
 		return 1 + sourceEncounterRoll(2)
+	case "193", "198":
+		return 1 + sourceEnemyCandidateIndex(stageFocusX, 2)
+	case "199", "202":
+		return 2 + sourceEnemyCandidateIndex(stageFocusX, 2)
+	case "201":
+		if sourceEnemyCandidateIndex(stageFocusX, 10) == 0 {
+			return 1
+		}
+		return 2
+	case "204":
+		return 2
+	case "205":
+		return 3
 	default:
 		return 1
 	}

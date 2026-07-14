@@ -23,6 +23,22 @@ func useSourceEncounterRoll(roll func(int) int) func() {
 	}
 }
 
+func useSourceBattleAttackRoll(roll func(int) int) func() {
+	previous := sourceBattleAttackRoll
+	sourceBattleAttackRoll = roll
+	return func() {
+		sourceBattleAttackRoll = previous
+	}
+}
+
+func useSourceBattleHealRoll(roll func(int) int) func() {
+	previous := sourceBattleHealRoll
+	sourceBattleHealRoll = roll
+	return func() {
+		sourceBattleHealRoll = previous
+	}
+}
+
 func requireSourceBattleRewardDropRate(t *testing.T, rates []sourceBattleRewardDropRate, itemName string) sourceBattleRewardDropRate {
 	t.Helper()
 	for _, rate := range rates {
@@ -32,6 +48,15 @@ func requireSourceBattleRewardDropRate(t *testing.T, rates []sourceBattleRewardD
 	}
 	t.Fatalf("expected drop rate for %s in %+v", itemName, rates)
 	return sourceBattleRewardDropRate{}
+}
+
+func containsSourceBattleRewardItem(items []string, expected string) bool {
+	for _, item := range items {
+		if item == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func TestBuildOverUsesCapturedMap5BattleRewards(t *testing.T) {
@@ -696,6 +721,69 @@ func TestBaiyuanYaozhisenRewardCandidatesIncludeLateMapChain(t *testing.T) {
 	}
 }
 
+func TestBuildOverUsesCaptureBackedWuliangYaozhisenCandidateRewards(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	over := (&Runtime{
+		BattleID: "battle-yaozhisen-candidate-boundary",
+		MapID:    "201",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 34},
+			{Camp: CampEnemy, Handle: "enemy_robothyun", Name: "机木玄师", Level: 34, MaxHP: 1189, HP: 1189},
+		},
+	}).buildOver(CampTeam)
+	if over == nil {
+		t.Fatal("expected Yaozhisen OverBattle push")
+	}
+	if over.Result.ExpDelta != 2576 {
+		t.Fatalf("expected map201 captured positive-exp mode 2576, got %+v", over.Result)
+	}
+	for _, item := range []string{"木材x1", "暗力之源x1", "机木护腰x1"} {
+		if !containsSourceBattleRewardItem(over.Result.Items, item) {
+			t.Fatalf("expected map201 captured candidate drop %s, got %+v", item, over.Result.Items)
+		}
+	}
+}
+
+func TestBuildOverWuliangYaozhisenCandidateRewardDoesNotDuplicateForDoubleMystics(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	over := (&Runtime{
+		BattleID: "battle-yaozhisen-double-mystic-reward",
+		MapID:    "201",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 34},
+			{Camp: CampEnemy, Handle: "enemy_robothyun_1", Name: "机木玄师", Level: 34, MaxHP: 1189, HP: 0},
+			{Camp: CampEnemy, Handle: "enemy_robothyun_2", Name: "机木玄师", Level: 34, MaxHP: 1189, HP: 0},
+		},
+	}).buildOver(CampTeam)
+	if over == nil || over.Result.ExpDelta != 2576 {
+		t.Fatalf("expected one map201 candidate reward, got %+v", over)
+	}
+	if containsSourceBattleRewardItem(over.Result.Items, "木材x2") {
+		t.Fatalf("expected one encounter reward roll, not combined double-mystic stacks, got %+v", over.Result.Items)
+	}
+}
+
+func TestBuildOverWuliangYaozhisenCandidateRewardDoesNotApplyOnEscape(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	over := (&Runtime{
+		BattleID: "battle-yaozhisen-escape-reward",
+		MapID:    "202",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 35},
+			{Camp: CampEnemy, Handle: "enemy_robotawl", Name: "机木锥兵", Level: 35, MaxHP: 1330, HP: 1330},
+		},
+	}).buildOver(CampTeam, true)
+	if over == nil || over.Result.ExpDelta != 0 || len(over.Result.Items) != 0 || !over.Result.Escaped {
+		t.Fatalf("expected escaped map202 battle to have no candidate reward, got %+v", over)
+	}
+}
+
 func TestBuildOverRollsCapturedObservedDropRates(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
 	over := (&Runtime{BattleID: "battle-map5-high-roll", MapID: "5", Round: 1}).buildOver(CampTeam)
@@ -937,6 +1025,77 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 				t.Fatalf("expected captured enemy attack to be filled for map %s, got %+v", mapID, config.Cell)
 			}
 		}
+	}
+}
+
+func TestCaptureBackedYaozhisenNormalAttackUsesConfiguredRange(t *testing.T) {
+	defer useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
+
+	enemy, ok := sourceEnemyConfigForMap("201")
+	if !ok || enemy.AttackMin != 218 || enemy.AttackMax != 420 {
+		t.Fatalf("expected map201 capture-backed attack range 218..420, got %+v", enemy)
+	}
+	runtime, bundle, started := NewWildBattle(
+		session.RoleSummary{RoleID: "player_yaozhisen_range", DisplayName: "测试女侠", Level: 34},
+		session.PlayerBaseData{RoleID: "player_yaozhisen_range", DisplayName: "测试女侠", Level: 34},
+		StartRequest{MapID: "201", MapName: "妖之森_10"},
+	)
+	if !started || len(bundle.Cells) != 2 {
+		t.Fatalf("expected map201 capture-backed encounter, got started=%v bundle=%+v", started, bundle)
+	}
+	actor := runtime.cellByHandle(bundle.Cells[1].Handle)
+	if actor == nil || runtime.EnemyAttackRanges[actor.Handle] != (battleAttackRange{Min: 218, Max: 420}) {
+		t.Fatalf("expected map201 range to reach runtime actor, got actor=%+v ranges=%+v", actor, runtime.EnemyAttackRanges)
+	}
+	if damage := runtime.baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 400 {
+		t.Fatalf("expected upper bound 420 minus defense 20, got %d", damage)
+	}
+	if damage := (&Runtime{}).baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 219 {
+		t.Fatalf("expected missing range to retain fixed attack proxy 239 minus defense 20, got %d", damage)
+	}
+}
+
+func TestEnemyRobotupUsesCapturedTargetMPAndHealingRange(t *testing.T) {
+	defer useSourceBattleHealRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
+
+	runtime := &Runtime{
+		BattleID: "battle-robotup",
+		Round:    3,
+		Cells: []CellInfoPush{
+			{Handle: "player_1", Camp: CampTeam, HP: 900, MaxHP: 900},
+			{Handle: "robot_full", Name: "机木玄师", DisplayURL: "monstermap/robothyun.swf", Camp: CampEnemy, HP: 1189, MaxHP: 1189, MP: 910, MaxMP: 910},
+			{Handle: "robot_low", Name: "机木玄师", DisplayURL: "monstermap/robothyun.swf", Camp: CampEnemy, HP: 100, MaxHP: 1189, MP: 910, MaxMP: 910},
+		},
+	}
+	actor := runtime.cellByHandle("robot_full")
+	target := runtime.cellByHandle("robot_low")
+	if command := runtime.enemyBattleCommand(actor, runtime.cellByHandle("player_1")); command != CommandEnemyRobotUp {
+		t.Fatalf("expected capture-backed robotup selection for lowest living mystic, got %q", command)
+	}
+	target.HP = 900
+	action := runtime.resolveEnemyRobotupAction(actor, target)
+	if action.ActionName != "机木修复" || action.CommandID != CommandEnemyRobotUp || action.SourceMode != "0" || action.SourceActionLabel != "robotup" {
+		t.Fatalf("expected captured robotup action fields, got %+v", action)
+	}
+	if action.TargetHandle != target.Handle || target.HP != 1189 || actor.MP != 850 {
+		t.Fatalf("expected robotup to cap target at max HP and spend 60 MP, actor=%+v target=%+v action=%+v", actor, target, action)
+	}
+	if len(action.RefreshInfos) != 2 || action.RefreshInfos[0].Handle != target.Handle || action.RefreshInfos[1].Handle != actor.Handle {
+		t.Fatalf("expected ally robotup refresh order target then actor, got %+v", action.RefreshInfos)
+	}
+}
+
+func TestEnemyRobotupSelfUsesCapturedHealingMinimum(t *testing.T) {
+	defer useSourceBattleHealRoll(func(int) int { return 0 })()
+
+	runtime := &Runtime{BattleID: "battle-robotup-self", Round: 2}
+	actor := &CellInfoPush{Handle: "robot_self", Name: "机木玄师", DisplayURL: "monstermap/robothyun.swf", Camp: CampEnemy, HP: 500, MaxHP: 1189, MP: 910, MaxMP: 910}
+	action := runtime.resolveEnemyRobotupAction(actor, actor)
+	if actor.HP != 763 || actor.MP != 850 || action.TargetHP != 763 {
+		t.Fatalf("expected robotup lower captured healing bound 263 with MP=-60, got actor=%+v action=%+v", actor, action)
+	}
+	if len(action.RefreshInfos) != 1 || action.RefreshInfos[0].Handle != actor.Handle {
+		t.Fatalf("expected self robotup to push one combined actor refresh, got %+v", action.RefreshInfos)
 	}
 }
 
@@ -1819,6 +1978,72 @@ func TestNewWildBattleSupportsCapturedBambooMaps(t *testing.T) {
 	}
 }
 
+func TestNewWildBattleSupportsCaptureBackedYaozhisenMaps(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "player_yaozhisen",
+		DisplayName: "测试女侠",
+		Level:       35,
+		Exp:         10000,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:    "player",
+		RoleID:      role.RoleID,
+		DisplayName: role.DisplayName,
+		Level:       role.Level,
+		Exp:         role.Exp,
+	}
+
+	cases := []struct {
+		mapID       string
+		mapName     string
+		enemyName   string
+		displayURL  string
+		cellCount   int
+		stageFocusX float64
+	}{
+		{mapID: "192", mapName: "妖之森_1", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2},
+		{mapID: "193", mapName: "妖之森_2", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2},
+		{mapID: "196", mapName: "妖之森_5", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2},
+		{mapID: "198", mapName: "妖之森_7", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 2},
+		{mapID: "199", mapName: "妖之森_8", enemyName: "机木玄师", displayURL: "monstermap/robothyun.swf", cellCount: 3},
+		{mapID: "200", mapName: "妖之森_9", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 2},
+		{mapID: "201", mapName: "妖之森_10", enemyName: "机木玄师", displayURL: "monstermap/robothyun.swf", cellCount: 2},
+		{mapID: "202", mapName: "妖之森_11", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 3},
+		{mapID: "204", mapName: "妖之森_13", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 3},
+		{mapID: "205", mapName: "妖之森_14", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 4},
+	}
+
+	for _, testCase := range cases {
+		runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{
+			MapID:       testCase.mapID,
+			MapName:     testCase.mapName,
+			StageFocusX: testCase.stageFocusX,
+		})
+		if !ok || runtime == nil || len(bundle.Cells) != testCase.cellCount {
+			t.Fatalf("expected capture-backed map %s to start with %d cells, ok=%v runtime=%+v bundle=%+v", testCase.mapID, testCase.cellCount, ok, runtime, bundle)
+		}
+		enemy := bundle.Cells[1]
+		if enemy.Name != testCase.enemyName || enemy.DisplayURL != testCase.displayURL {
+			t.Fatalf("expected map %s enemy %s/%s, got %+v", testCase.mapID, testCase.enemyName, testCase.displayURL, enemy)
+		}
+	}
+
+	_, map196BossBundle, map196BossOK := NewWildBattle(role, playerBase, StartRequest{MapID: "196", MapName: "妖之森_5", StageFocusX: 800})
+	if !map196BossOK || len(map196BossBundle.Cells) != 5 || map196BossBundle.Cells[1].Name != "机木妖帅" || map196BossBundle.Cells[2].Name != "机木玄师" || map196BossBundle.Cells[4].Name != "机木锥兵" {
+		t.Fatalf("expected captured map196 boss composition, got %+v", map196BossBundle.Cells)
+	}
+
+	_, map200MixedBundle, map200MixedOK := NewWildBattle(role, playerBase, StartRequest{MapID: "200", MapName: "妖之森_9", StageFocusX: 800})
+	if !map200MixedOK || len(map200MixedBundle.Cells) != 3 || map200MixedBundle.Cells[1].Name != "机木锥兵" || map200MixedBundle.Cells[2].Name != "机木斧兵" {
+		t.Fatalf("expected captured map200 mixed composition, got %+v", map200MixedBundle.Cells)
+	}
+
+	_, map201DoubleBundle, map201DoubleOK := NewWildBattle(role, playerBase, StartRequest{MapID: "201", MapName: "妖之森_10", StageFocusX: 800})
+	if !map201DoubleOK || len(map201DoubleBundle.Cells) != 3 {
+		t.Fatalf("expected captured map201 double mystic candidate, got %+v", map201DoubleBundle.Cells)
+	}
+}
+
 func TestNewWildBattleUsesCapturedPlainEnemyStats(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int {
 		return maxExclusive - 1
@@ -2221,6 +2446,10 @@ func TestNewWildBattleRejectsUncapturedWildMaps(t *testing.T) {
 		{MapID: "9", MapName: "云隐山道_5"},
 		{MapID: "89", MapName: "竹林_6"},
 		{MapID: "91", MapName: "竹林_8"},
+		{MapID: "194", MapName: "妖之森_3"},
+		{MapID: "195", MapName: "妖之森_4"},
+		{MapID: "197", MapName: "妖之森_6"},
+		{MapID: "203", MapName: "雷兽神坛"},
 	}
 
 	for _, request := range cases {
@@ -5960,6 +6189,8 @@ func TestRobotawlRoundAtkAppliesArmorBreakOnHit(t *testing.T) {
 			Camp:       CampEnemy,
 			HP:         1330,
 			MaxHP:      1330,
+			MP:         20,
+			MaxMP:      20,
 			Attack:     624,
 			Hit:        100,
 		}
@@ -6004,6 +6235,9 @@ func TestRobotawlRoundAtkAppliesArmorBreakOnHit(t *testing.T) {
 	if target.Defense != 178 {
 		t.Fatalf("expected target physical defense to be reduced by captured source attack 10%%, got %+v", target)
 	}
+	if enemy.MP != 10 {
+		t.Fatalf("expected captured 轮转刺伤 to consume 10 MP, got %+v", enemy)
+	}
 }
 
 func TestRobotawlRoundAtkDoesNotApplyArmorBreakOnDodge(t *testing.T) {
@@ -6019,6 +6253,8 @@ func TestRobotawlRoundAtkDoesNotApplyArmorBreakOnDodge(t *testing.T) {
 		Name:       "机木锥兵",
 		DisplayURL: "monstermap/robotawl.swf",
 		Camp:       CampEnemy,
+		MP:         20,
+		MaxMP:      20,
 		Attack:     624,
 		Hit:        0,
 	}
@@ -7398,16 +7634,197 @@ func TestRobotawlEnemyBattleCommandCanUseCapturedRoundAtk(t *testing.T) {
 		DisplayURL: "monstermap/robotawl.swf",
 		HP:         1330,
 		MaxHP:      1330,
+		MP:         20,
+		MaxMP:      20,
 		Attack:     624,
 	}
 	battleID, ok := findBattleIDForEnemyCommand(CommandEnemyRoundAtk, enemy, target)
 	if !ok {
-		t.Fatal("expected to find deterministic battle id for 机木锥兵 轮转刺伤 5/100")
+		t.Fatal("expected to find deterministic battle id for 机木锥兵 轮转刺伤 23/100 capture-backed local approximation")
 	}
 
 	runtime := &Runtime{BattleID: battleID, Round: 1, nextSequence: 1}
 	if command := runtime.enemyBattleCommand(enemy, target); command != CommandEnemyRoundAtk {
 		t.Fatalf("expected 机木锥兵 to choose captured 轮转刺伤/roundatk, got %s with battle id %s", command, battleID)
+	}
+}
+
+func TestYaozhisenEnemyCommandsUseCapturedAllTargetLabels(t *testing.T) {
+	target := &CellInfoPush{Handle: "player_21424", Camp: CampTeam, HP: 1085, MaxHP: 1085, Hit: 400, Dog: 200}
+	testCases := []struct {
+		name        string
+		displayURL  string
+		expected    string
+		actionName  string
+		actionLabel string
+	}{
+		{name: "机木斧兵", displayURL: "monstermap/robotax.swf", expected: CommandEnemyRulingAx, actionName: "裁决之斧", actionLabel: "rulingax"},
+		{name: "机木妖帅", displayURL: "monstermap/robothmarshal.swf", expected: CommandEnemyVacuumKill, actionName: "真空猎杀", actionLabel: "vacuumkilled"},
+	}
+
+	for _, testCase := range testCases {
+		enemy := &CellInfoPush{
+			Handle:     "enemy_" + testCase.expected,
+			Camp:       CampEnemy,
+			Name:       testCase.name,
+			DisplayURL: testCase.displayURL,
+			HP:         6500,
+			MaxHP:      6500,
+			MP:         20,
+			MaxMP:      20,
+			Attack:     360,
+		}
+		battleID, ok := findBattleIDForEnemyCommand(testCase.expected, enemy, target)
+		if !ok {
+			t.Fatalf("expected deterministic battle id for %s", testCase.actionName)
+		}
+		runtime := &Runtime{
+			BattleID:         battleID,
+			Round:            1,
+			nextSequence:     1,
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+			Cells: []CellInfoPush{
+				*enemy,
+				*target,
+				{Handle: "player_21432", Camp: CampTeam, HP: 1000, MaxHP: 1000, Hit: 300, Dog: 150},
+			},
+		}
+		actor := runtime.cellByHandle(enemy.Handle)
+		if command := runtime.enemyBattleCommand(actor, runtime.cellByHandle(target.Handle)); command != testCase.expected {
+			t.Fatalf("expected %s to choose %s, got %s", testCase.name, testCase.expected, command)
+		}
+		action := runtime.resolveAllTargetAttack(actor, runtime.livingCells(CampTeam), testCase.expected)
+		if action.ActionName != testCase.actionName || action.SourceActionLabel != testCase.actionLabel || action.TargetHandle != "all" || len(action.TargetActionResults) != 2 {
+			t.Fatalf("expected captured all-target action for %s, got %+v", testCase.name, action)
+		}
+		if actor.MP != 10 {
+			t.Fatalf("expected captured %s to consume 10 MP, got %+v", testCase.actionName, actor)
+		}
+	}
+}
+
+func TestRulingAxSlowStatusReducesHitAndDodgeByCapturedThirtyPercent(t *testing.T) {
+	runtime := &Runtime{StatusEffects: map[string]BattleStatusEffects{}}
+	target := &CellInfoPush{Handle: "player_21424", Camp: CampTeam, HP: 1000, MaxHP: 1000, Hit: 400, Dog: 200}
+	actor := &CellInfoPush{Handle: "enemy_robotax", Camp: CampEnemy, Name: "机木斧兵"}
+
+	if !runtime.applySlownessStatusEffect(actor, target, BattleStatusEffect{
+		Name:                     "迟钝",
+		Display:                  "16.png",
+		Description:              "降低对象命中和回避",
+		Rounds:                   enemyRobotaxRulingAxSlownessRounds,
+		HitDodgeReductionPercent: enemyRobotaxRulingAxSlownessPct,
+	}) {
+		t.Fatal("expected ruling ax slow status to apply")
+	}
+	if target.Hit != 280 || target.Dog != 140 {
+		t.Fatalf("expected captured ruling ax slow to reduce hit/dodge by 30%%, got %+v", target)
+	}
+	buff := runtime.StatusEffects[target.Handle].Effects["迟钝"]
+	if buff.Rounds != 2 || buff.Display != "16.png" || buff.Description != "降低对象120点命中和60点回避" || buff.HitDodgeReductionPercent != 30 || buff.VisualOnly {
+		t.Fatalf("expected capture-backed 30%% ruling ax slow metadata, got %+v", buff)
+	}
+}
+
+func TestRulingAxAppliesCapturedSlowAndMPCostThroughCommandProfile(t *testing.T) {
+	var runtime *Runtime
+	var enemy *CellInfoPush
+	var target *CellInfoPush
+	for index := 0; index < 400; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-rulingax-slow-%d", index),
+			Round:            1,
+			nextSequence:     1,
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+		}
+		candidateEnemy := &CellInfoPush{
+			Handle:     "enemy_robotax",
+			Camp:       CampEnemy,
+			Name:       "机木斧兵",
+			DisplayURL: "monstermap/robotax.swf",
+			HP:         1755,
+			MaxHP:      1755,
+			MP:         20,
+			MaxMP:      20,
+			Attack:     360,
+			Hit:        100,
+		}
+		candidateTarget := &CellInfoPush{
+			Handle:  "player_21424",
+			Camp:    CampTeam,
+			HP:      1215,
+			MaxHP:   1215,
+			Hit:     280,
+			Dog:     138,
+			Defense: 0,
+		}
+		if candidate.hashBattleRollWithSalt(candidateEnemy, candidateTarget, CommandEnemyRulingAx, "status:迟钝") < enemyRobotaxRulingAxSlownessChance {
+			runtime = candidate
+			enemy = candidateEnemy
+			target = candidateTarget
+			break
+		}
+	}
+	if runtime == nil {
+		t.Fatal("expected deterministic 裁决之斧迟钝 roll below candidate status chance")
+	}
+
+	action := runtime.resolveAttack(enemy, target, CommandEnemyRulingAx)
+
+	if action.ActionName != "裁决之斧" || action.SourceActionLabel != "rulingax" || action.TargetActionStateCode == "1" {
+		t.Fatalf("expected captured 裁决之斧 hit action, got %+v", action)
+	}
+	if enemy.MP != 10 {
+		t.Fatalf("expected captured 裁决之斧 to consume 10 MP, got %+v", enemy)
+	}
+	if target.Hit != 196 || target.Dog != 97 {
+		t.Fatalf("expected captured 裁决之斧 to reduce target hit/dodge by 30%%, got %+v", target)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected one 裁决之斧迟钝 BuffInfo, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "迟钝" || buff.Display != "16.png" || buff.Round != 2 || buff.Description != "降低对象84点命中和41点回避" || buff.ReleaseHandle != enemy.Handle || buff.TargetHandle != target.Handle {
+		t.Fatalf("expected captured 裁决之斧迟钝 BuffInfo, got %+v", buff)
+	}
+}
+
+func TestYaozhisenRobotSkillsRequireCapturedTenMP(t *testing.T) {
+	target := &CellInfoPush{Handle: "player_21424", Camp: CampTeam, HP: 1085, MaxHP: 1085}
+	testCases := []struct {
+		name       string
+		displayURL string
+		commandID  string
+	}{
+		{name: "机木锥兵", displayURL: "monstermap/robotawl.swf", commandID: CommandEnemyRoundAtk},
+		{name: "机木斧兵", displayURL: "monstermap/robotax.swf", commandID: CommandEnemyRulingAx},
+		{name: "机木妖帅", displayURL: "monstermap/robothmarshal.swf", commandID: CommandEnemyVacuumKill},
+	}
+
+	for _, testCase := range testCases {
+		enemy := &CellInfoPush{
+			Handle:     "enemy_mp_gate_" + testCase.commandID,
+			Camp:       CampEnemy,
+			Name:       testCase.name,
+			DisplayURL: testCase.displayURL,
+			HP:         2000,
+			MaxHP:      2000,
+			MP:         enemyRobotSkillMPCost,
+			MaxMP:      enemyRobotSkillMPCost,
+			Attack:     360,
+		}
+		battleID, ok := findBattleIDForEnemyCommand(testCase.commandID, enemy, target)
+		if !ok {
+			t.Fatalf("expected deterministic skill roll for %s", testCase.name)
+		}
+		withoutMP := *enemy
+		withoutMP.MP = enemyRobotSkillMPCost - 1
+		runtime := &Runtime{BattleID: battleID, Round: 1, nextSequence: 1}
+		if command := runtime.enemyBattleCommand(&withoutMP, target); command != CommandEnemyAttack {
+			t.Fatalf("expected %s to fall back to normal attack below 10 MP, got %s", testCase.name, command)
+		}
 	}
 }
 

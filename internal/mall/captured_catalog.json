@@ -1,0 +1,3571 @@
+{
+  "schemaVersion": 1,
+  "capture": {
+    "requestCommandKey": 273,
+    "responseCommandKey": 50011,
+    "responseMessage": "商品检索详细json",
+    "sourceFileCount": 11,
+    "responseCount": 150,
+    "uniqueProductCount": 126
+  },
+  "categories": [
+    {
+      "categoryId": "1",
+      "name": "推荐商品"
+    },
+    {
+      "categoryId": "2",
+      "name": "全部"
+    },
+    {
+      "categoryId": "3",
+      "name": "消耗品",
+      "childs": [
+        {
+          "categoryId": "4",
+          "name": "常用"
+        },
+        {
+          "categoryId": "5",
+          "name": "洗点药"
+        },
+        {
+          "categoryId": "6",
+          "name": "符文"
+        },
+        {
+          "categoryId": "7",
+          "name": "宠物药剂"
+        },
+        {
+          "categoryId": "8",
+          "name": "合成"
+        }
+      ]
+    },
+    {
+      "categoryId": "9",
+      "name": "经验卡"
+    },
+    {
+      "categoryId": "10",
+      "name": "仙果"
+    },
+    {
+      "categoryId": "11",
+      "name": "坐骑"
+    },
+    {
+      "categoryId": "12",
+      "name": "装备"
+    },
+    {
+      "categoryId": "13",
+      "name": "宝石"
+    },
+    {
+      "categoryId": "14",
+      "name": "通行证"
+    },
+    {
+      "categoryId": "15",
+      "name": "时装",
+      "childs": [
+        {
+          "categoryId": "16",
+          "name": "永久时装"
+        },
+        {
+          "categoryId": "17",
+          "name": "附加属性"
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "productId": "1",
+      "categoryId": "7",
+      "categoryIds": [
+        "3",
+        "7"
+      ],
+      "categoryOrder": {
+        "3": 31,
+        "7": 1
+      },
+      "name": "奇效宠物药剂x50",
+      "icon": "932.png",
+      "price": 25,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_奇效宠物药剂^5BC46D&23@每次喂食 成长 +10 饱食 +2&24@消耗品&25@500&19@促进宠物急速成长的特效药剂。&20@一般在商城内可以购得。&27@sitem_piput&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "奇效宠物药剂",
+          "display": "932.png",
+          "description": "f_i_奇效宠物药剂^5BC46D&23@每次喂食 成长 +10 饱食 +2&24@消耗品&25@500&19@促进宠物急速成长的特效药剂。&20@一般在商城内可以购得。&27@sitem_piput&103@0&104@0&105@&107@&108@0",
+          "count": 50
+        }
+      ]
+    },
+    {
+      "productId": "2",
+      "categoryId": "7",
+      "categoryIds": [
+        "3",
+        "7"
+      ],
+      "categoryOrder": {
+        "3": 30,
+        "7": 0
+      },
+      "name": "宠物成长药剂x50",
+      "icon": "779.png",
+      "price": 15,
+      "couponPrice": 30,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_宠物成长药剂^ffffff&23@每次喂食 成长 +5 饱食 +2&24@消耗品&25@500&19@高效的宠物成长饲料。&20@一般在商城内可以购得。&27@sitem_piput&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "宠物成长药剂",
+          "display": "779.png",
+          "description": "f_i_宠物成长药剂^ffffff&23@每次喂食 成长 +5 饱食 +2&24@消耗品&25@500&19@高效的宠物成长饲料。&20@一般在商城内可以购得。&27@sitem_piput&103@0&104@0&105@&107@&108@0",
+          "count": 50
+        }
+      ]
+    },
+    {
+      "productId": "3",
+      "categoryId": "6",
+      "categoryIds": [
+        "3",
+        "6"
+      ],
+      "categoryOrder": {
+        "3": 29,
+        "6": 3
+      },
+      "name": "叁级宝石还原符",
+      "icon": "1112.png",
+      "price": 300,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_叁级宝石还原符^f9e000&24@宝物&25@99&19@可将叁级原石中的叁级镶嵌宝石还原为叁级原石。\r<font color='#fee010'>双击使用该物品</font>&20@对镶嵌宝石产生还原效果的的符文。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "叁级宝石还原符",
+          "display": "1112.png",
+          "description": "f_i_叁级宝石还原符^f9e000&24@宝物&25@99&19@可将叁级原石中的叁级镶嵌宝石还原为叁级原石。\r<font color='#fee010'>双击使用该物品</font>&20@对镶嵌宝石产生还原效果的的符文。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4",
+      "categoryId": "6",
+      "categoryIds": [
+        "3",
+        "6"
+      ],
+      "categoryOrder": {
+        "3": 28,
+        "6": 2
+      },
+      "name": "贰级宝石还原符",
+      "icon": "937.png",
+      "price": 80,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_贰级宝石还原符^f9e000&24@宝物&25@99&19@可将贰级镶嵌宝石还原为贰级原石。\r<font color='#fee010'>双击使用该物品</font>&20@对镶嵌宝石产生还原效果的的符文。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "贰级宝石还原符",
+          "display": "937.png",
+          "description": "f_i_贰级宝石还原符^f9e000&24@宝物&25@99&19@可将贰级镶嵌宝石还原为贰级原石。\r<font color='#fee010'>双击使用该物品</font>&20@对镶嵌宝石产生还原效果的的符文。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "5",
+      "categoryId": "6",
+      "categoryIds": [
+        "3",
+        "6"
+      ],
+      "categoryOrder": {
+        "3": 27,
+        "6": 1
+      },
+      "name": "壹级宝石还原符",
+      "icon": "772.png",
+      "price": 30,
+      "couponPrice": 50,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_壹级宝石还原符^f9e000&24@宝物&25@99&19@可将壹级镶嵌宝石还原为壹级原石。\r<font color='#fee010'>双击使用该物品</font>&20@对镶嵌宝石产生还原效果的的符文。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "壹级宝石还原符",
+          "display": "772.png",
+          "description": "f_i_壹级宝石还原符^f9e000&24@宝物&25@99&19@可将壹级镶嵌宝石还原为壹级原石。\r<font color='#fee010'>双击使用该物品</font>&20@对镶嵌宝石产生还原效果的的符文。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7",
+      "categoryId": "6",
+      "categoryIds": [
+        "3",
+        "6"
+      ],
+      "categoryOrder": {
+        "3": 26,
+        "6": 0
+      },
+      "name": "装备重置符",
+      "icon": "777.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_装备重置符^f9e000&24@宝物&25@99&19@可将已经获得的装备重新生成，有可能出现带孔装备同时可以解除装备绑定。\r<font color='#ff0000'>装备重置后精炼等级和装备孔数，以及已镶嵌的宝石都会消失。</font>\r<font color='#fee010'>双击使用该物品</font>&20@用于武器装备的古老咒符。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "装备重置符",
+          "display": "777.png",
+          "description": "f_i_装备重置符^f9e000&24@宝物&25@99&19@可将已经获得的装备重新生成，有可能出现带孔装备同时可以解除装备绑定。\r<font color='#ff0000'>装备重置后精炼等级和装备孔数，以及已镶嵌的宝石都会消失。</font>\r<font color='#fee010'>双击使用该物品</font>&20@用于武器装备的古老咒符。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8",
+      "categoryId": "5",
+      "categoryIds": [
+        "3",
+        "5"
+      ],
+      "categoryOrder": {
+        "3": 25,
+        "5": 4
+      },
+      "name": "强效敏捷洗点药",
+      "icon": "221.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_强效敏捷洗点药^C156C7&24@消耗品&25@99&19@使用后敏捷属性撤点重配.&20@敏捷配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "强效敏捷洗点药",
+          "display": "221.png",
+          "description": "f_i_强效敏捷洗点药^C156C7&24@消耗品&25@99&19@使用后敏捷属性撤点重配.&20@敏捷配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "9",
+      "categoryId": "5",
+      "categoryIds": [
+        "3",
+        "5"
+      ],
+      "categoryOrder": {
+        "3": 24,
+        "5": 3
+      },
+      "name": "强效耐力洗点药",
+      "icon": "222.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_强效耐力洗点药^C156C7&24@消耗品&25@99&19@使用后耐力属性撤点重配.&20@耐力配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "强效耐力洗点药",
+          "display": "222.png",
+          "description": "f_i_强效耐力洗点药^C156C7&24@消耗品&25@99&19@使用后耐力属性撤点重配.&20@耐力配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "10",
+      "categoryId": "5",
+      "categoryIds": [
+        "3",
+        "5"
+      ],
+      "categoryOrder": {
+        "3": 23,
+        "5": 2
+      },
+      "name": "强效智力洗点药",
+      "icon": "220.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_强效智力洗点药^C156C7&24@特殊&25@99&19@使用后智力属性撤点重配.&20@智力配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "强效智力洗点药",
+          "display": "220.png",
+          "description": "f_i_强效智力洗点药^C156C7&24@特殊&25@99&19@使用后智力属性撤点重配.&20@智力配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "11",
+      "categoryId": "5",
+      "categoryIds": [
+        "3",
+        "5"
+      ],
+      "categoryOrder": {
+        "3": 22,
+        "5": 1
+      },
+      "name": "强效力量洗点药",
+      "icon": "219.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_强效力量洗点药^C156C7&24@消耗品&25@99&19@使用后力量属性撤点重配.&20@力量配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "强效力量洗点药",
+          "display": "219.png",
+          "description": "f_i_强效力量洗点药^C156C7&24@消耗品&25@99&19@使用后力量属性撤点重配.&20@力量配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "12",
+      "categoryId": "5",
+      "categoryIds": [
+        "3",
+        "5"
+      ],
+      "categoryOrder": {
+        "3": 21,
+        "5": 0
+      },
+      "name": "强效幸运洗点药",
+      "icon": "223.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_强效幸运洗点药^C156C7&24@消耗品&25@99&19@使用后幸运属性撤点重配.&20@幸运配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "强效幸运洗点药",
+          "display": "223.png",
+          "description": "f_i_强效幸运洗点药^C156C7&24@消耗品&25@99&19@使用后幸运属性撤点重配.&20@幸运配点恢复药水.&27@sitem_yaoji&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "13",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 20,
+        "4": 14
+      },
+      "name": "高级采集手套x20",
+      "icon": "855.png",
+      "price": 20,
+      "couponPrice": 30,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_高级采集手套^00ccff&24@消耗品&25@999&20@质地柔韧的采集手套，拥有它可以大大提高采集效率和质量。&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "高级采集手套",
+          "display": "855.png",
+          "description": "f_i_高级采集手套^00ccff&24@消耗品&25@999&20@质地柔韧的采集手套，拥有它可以大大提高采集效率和质量。&103@0&104@0&105@&107@&108@0",
+          "count": 20
+        }
+      ]
+    },
+    {
+      "productId": "15",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 19,
+        "4": 13
+      },
+      "name": "回魂丹",
+      "icon": "225.png",
+      "price": 10,
+      "couponPrice": 15,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_回魂丹^C156C7&24@消耗品&25@999&19@死亡后与黄泉婆婆对话，可直接复活并回到绑定点。&20@神秘的丹药,传说有让人起死回生的功效。&103@0&104@0&105@&107@&108@32",
+      "items": [
+        {
+          "name": "回魂丹",
+          "display": "225.png",
+          "description": "f_i_回魂丹^C156C7&24@消耗品&25@999&19@死亡后与黄泉婆婆对话，可直接复活并回到绑定点。&20@神秘的丹药,传说有让人起死回生的功效。&103@0&104@0&105@&107@&108@32",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "16",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 18,
+        "4": 12
+      },
+      "name": "魂之石x50",
+      "icon": "248.png",
+      "price": 20,
+      "couponPrice": 30,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_魂之石^00ccff&24@材料 消耗品&25@99&20@闪耀着金光的神秘之石.通过咒语激发,\r可以达到使人起死回生的功效,一般配合法术使用.&27@sitem_jhj&103@0&104@0&105@&107@&108@63",
+      "items": [
+        {
+          "name": "魂之石",
+          "display": "248.png",
+          "description": "f_i_魂之石^00ccff&24@材料 消耗品&25@99&20@闪耀着金光的神秘之石.通过咒语激发,\r可以达到使人起死回生的功效,一般配合法术使用.&27@sitem_jhj&103@0&104@0&105@&107@&108@63",
+          "count": 50
+        }
+      ]
+    },
+    {
+      "productId": "17",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 17,
+        "4": 11
+      },
+      "name": "点券x50",
+      "icon": "659.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_点券^f9e000&24@特殊&25@9999&19@特殊消费或商城购物。&20@游戏中的换购券,用于流通买卖。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "点券",
+          "display": "659.png",
+          "description": "f_i_点券^f9e000&24@特殊&25@9999&19@特殊消费或商城购物。&20@游戏中的换购券,用于流通买卖。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 50
+        }
+      ]
+    },
+    {
+      "productId": "18",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 16,
+        "4": 10
+      },
+      "name": "复仇符",
+      "icon": "1385.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_复仇符^C156C7&24@宝物&25@99&19@双击使用,可以强行PK一次有免战BUFF玩家\r或可以强行PK一次正在战斗中的任意玩家.&20@此物品为一次性使用,战斗后复仇BUFF和偷袭BUFF会同时消失,并获得一张好人卡.\r在据点和BOSS刷新场景使用无效,不会消耗复仇和偷袭BUFF.&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "复仇符",
+          "display": "1385.png",
+          "description": "f_i_复仇符^C156C7&24@宝物&25@99&19@双击使用,可以强行PK一次有免战BUFF玩家\r或可以强行PK一次正在战斗中的任意玩家.&20@此物品为一次性使用,战斗后复仇BUFF和偷袭BUFF会同时消失,并获得一张好人卡.\r在据点和BOSS刷新场景使用无效,不会消耗复仇和偷袭BUFF.&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "19",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 15,
+        "4": 9
+      },
+      "name": "免战卡",
+      "icon": "1386.png",
+      "price": 30,
+      "couponPrice": 50,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_免战卡^00ccff&24@特殊&25@99&19@双击使用后,9小时内无论是否挂机都不会遭遇强行PK.(在据点或BOSS刷新地免战保护无效,仍会遭遇强行PK)&20@免战BUFF时间只覆盖，不叠加。<br/><font color='#ffff00'>注:不可交易</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "免战卡",
+          "display": "1386.png",
+          "description": "f_i_免战卡^00ccff&24@特殊&25@99&19@双击使用后,9小时内无论是否挂机都不会遭遇强行PK.(在据点或BOSS刷新地免战保护无效,仍会遭遇强行PK)&20@免战BUFF时间只覆盖，不叠加。<br/><font color='#ffff00'>注:不可交易</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "20",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 14,
+        "4": 8
+      },
+      "name": "千年灵芝",
+      "icon": "588.png",
+      "price": 30,
+      "couponPrice": 60,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_千年灵芝^f9e000&24@特殊&25@999&19@如果放在背包里,在副本内死亡后可立即原地复活。&20@灵芝自古以来就被认为是吉祥,富贵,美好,长寿的象征,有 仙草 瑞草之称.民间传说灵芝有起死回生,长生不老之功效.&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "千年灵芝",
+          "display": "588.png",
+          "description": "f_i_千年灵芝^f9e000&24@特殊&25@999&19@如果放在背包里,在副本内死亡后可立即原地复活。&20@灵芝自古以来就被认为是吉祥,富贵,美好,长寿的象征,有 仙草 瑞草之称.民间传说灵芝有起死回生,长生不老之功效.&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "21",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 13,
+        "4": 7
+      },
+      "name": "小喇叭x10",
+      "icon": "194.png",
+      "price": 10,
+      "couponPrice": 20,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_小喇叭^5BC46D&24@消耗品&25@9999&19@拥有世界喊话的权限&20@专门用来世界喊话的道具.&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "小喇叭",
+          "display": "194.png",
+          "description": "f_i_小喇叭^5BC46D&24@消耗品&25@9999&19@拥有世界喊话的权限&20@专门用来世界喊话的道具.&103@0&104@0&105@&107@&108@0",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "productId": "22",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 12,
+        "4": 6
+      },
+      "name": "凿孔器",
+      "icon": "776.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_凿孔器^f9e000&24@宝物&25@99&19@<font color='#fee010'>双击使用该物品</font>&20@看起来很普通,但却是锻造装备的神器.<font color='#00ff00'>\r有一定机率给装备增加孔数,装备孔数越多,凿成功的机率越小。</font>&27@sitem_rock&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "凿孔器",
+          "display": "776.png",
+          "description": "f_i_凿孔器^f9e000&24@宝物&25@99&19@<font color='#fee010'>双击使用该物品</font>&20@看起来很普通,但却是锻造装备的神器.<font color='#00ff00'>\r有一定机率给装备增加孔数,装备孔数越多,凿成功的机率越小。</font>&27@sitem_rock&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "23",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 11,
+        "4": 5
+      },
+      "name": "刻刀",
+      "icon": "853.png",
+      "price": 20,
+      "couponPrice": 30,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_刻刀^f9e000&24@特殊&25@99&19@使用后可以在指定的装备上刻字留言。&20@质地坚硬,用于雕刻的钢刀。&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "刻刀",
+          "display": "853.png",
+          "description": "f_i_刻刀^f9e000&24@特殊&25@99&19@使用后可以在指定的装备上刻字留言。&20@质地坚硬,用于雕刻的钢刀。&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "24",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 10,
+        "4": 4
+      },
+      "name": "仓库增大器",
+      "icon": "561.png",
+      "price": 120,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_仓库增大器^00ccff&24@特殊&25@99&19@使用后增加6格仓库容量,扩大上限为120格&20@用于扩展仓库的一套工具.&27@sitem_wood&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "仓库增大器",
+          "display": "561.png",
+          "description": "f_i_仓库增大器^00ccff&24@特殊&25@99&19@使用后增加6格仓库容量,扩大上限为120格&20@用于扩展仓库的一套工具.&27@sitem_wood&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "25",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 9,
+        "4": 3
+      },
+      "name": "背包补丁",
+      "icon": "560.png",
+      "price": 120,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_背包补丁^00ccff&24@特殊&25@99&19@使用后增加6格背包容积,扩大上限为90格&20@缝制和扩展背包的专用补丁.&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "背包补丁",
+          "display": "560.png",
+          "description": "f_i_背包补丁^00ccff&24@特殊&25@99&19@使用后增加6格背包容积,扩大上限为90格&20@缝制和扩展背包的专用补丁.&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "26",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "1": 8,
+        "3": 8,
+        "4": 2
+      },
+      "name": "吉祥袋",
+      "icon": "959.png",
+      "price": 4,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_吉祥袋^f9e000&24@宝物&25@999&19@双击打开，将有可能获得：\r<font color='#00ccff'>奥义秘诀、黑骏马、精炼宝石、凿孔器、经验丹（提升角色经验）、属性药水等超值道具。</font>&20@代表吉祥的神奇袋子的，传说是上人们用于存放物件所制。&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "吉祥袋",
+          "display": "959.png",
+          "description": "f_i_吉祥袋^f9e000&24@宝物&25@999&19@双击打开，将有可能获得：\r<font color='#00ccff'>奥义秘诀、黑骏马、精炼宝石、凿孔器、经验丹（提升角色经验）、属性药水等超值道具。</font>&20@代表吉祥的神奇袋子的，传说是上人们用于存放物件所制。&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "27",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "1": 7,
+        "3": 7,
+        "4": 1
+      },
+      "name": "VIP季卡",
+      "icon": "1332.png",
+      "price": 600,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_VIP季卡^C156C7&24@宝物&25@99&19@有效期3个月,获得以下特权:&20@打怪可以获得2倍经验;\r提升10%物理攻击和魔法攻击;\r提升10%物理和魔法防御;\r可以向VIP大使领取一次VIP高级新手套装;\r装备精炼成功率提高7%;\r装备凿孔成功率提高7%;\r每天可以向VIP大使领取180个L小喇叭;\r每天可以向VIP大使领取8个吉祥袋;\r每天可以向VIP大使领取10个宝匣;\r每天可以向VIP大使领取5个L魔匣;\r每天可向VIP大使领取8颗L初级精炼宝石;\r每天可向VIP大使领取5颗L精炼宝石;\r每天可以向VIP大使领取1个仙匣.\r免费享受找回两件不慎丢弃装备的特权.\r(找回的装备仅限无任何属性的空装备，VIP时间不可叠加，只会覆盖，谨慎使用)&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "VIP季卡",
+          "display": "1332.png",
+          "description": "f_i_VIP季卡^C156C7&24@宝物&25@99&19@有效期3个月,获得以下特权:&20@打怪可以获得2倍经验;\r提升10%物理攻击和魔法攻击;\r提升10%物理和魔法防御;\r可以向VIP大使领取一次VIP高级新手套装;\r装备精炼成功率提高7%;\r装备凿孔成功率提高7%;\r每天可以向VIP大使领取180个L小喇叭;\r每天可以向VIP大使领取8个吉祥袋;\r每天可以向VIP大使领取10个宝匣;\r每天可以向VIP大使领取5个L魔匣;\r每天可向VIP大使领取8颗L初级精炼宝石;\r每天可向VIP大使领取5颗L精炼宝石;\r每天可以向VIP大使领取1个仙匣.\r免费享受找回两件不慎丢弃装备的特权.\r(找回的装备仅限无任何属性的空装备，VIP时间不可叠加，只会覆盖，谨慎使用)&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "28",
+      "categoryId": "4",
+      "categoryIds": [
+        "3",
+        "4"
+      ],
+      "categoryOrder": {
+        "3": 6,
+        "4": 0
+      },
+      "name": "极品天眼符",
+      "icon": "574.png",
+      "price": 500,
+      "couponPrice": 600,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_极品天眼符^00ccff&24@特殊&25@99&19@使用后，击杀怪物有概率额外掉落，效果持续3小时。&20@道家基础符文，据说使用后可以发现肉眼无法看见的事物。<br/><font color='#ffff00'>注：不可交易</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "极品天眼符",
+          "display": "574.png",
+          "description": "f_i_极品天眼符^00ccff&24@特殊&25@99&19@使用后，击杀怪物有概率额外掉落，效果持续3小时。&20@道家基础符文，据说使用后可以发现肉眼无法看见的事物。<br/><font color='#ffff00'>注：不可交易</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "1000",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "9"
+      ],
+      "categoryOrder": {
+        "1": 6,
+        "9": 2
+      },
+      "name": "高阶经验卡",
+      "icon": "578.png",
+      "price": 45,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_高阶双倍经验卡^00ccff&24@特殊&25@99&19@双击使用。击杀怪物后，将获得双倍经验。效果持续时间为6小时。&20@可以获得经验加成的神奇商城道具。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "高阶经验卡",
+          "display": "578.png",
+          "description": "f_i_高阶双倍经验卡^00ccff&24@特殊&25@99&19@双击使用。击杀怪物后，将获得双倍经验。效果持续时间为6小时。&20@可以获得经验加成的神奇商城道具。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "1001",
+      "categoryId": "9",
+      "categoryIds": [
+        "9"
+      ],
+      "categoryOrder": {
+        "9": 1
+      },
+      "name": "进阶经验卡",
+      "icon": "577.png",
+      "price": 25,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_进阶双倍经验卡^00ccff&24@特殊&25@99&19@双击使用。击杀怪物后，将获得双倍经验。效果持续时间为3小时。&20@可以获得经验加成的神奇商城道具。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "进阶经验卡",
+          "display": "577.png",
+          "description": "f_i_进阶双倍经验卡^00ccff&24@特殊&25@99&19@双击使用。击杀怪物后，将获得双倍经验。效果持续时间为3小时。&20@可以获得经验加成的神奇商城道具。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "1002",
+      "categoryId": "9",
+      "categoryIds": [
+        "9"
+      ],
+      "categoryOrder": {
+        "9": 0
+      },
+      "name": "初阶经验卡",
+      "icon": "576.png",
+      "price": 10,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_初阶双倍经验卡^00ccff&24@特殊&25@99&19@双击使用。击杀怪物后，将获得双倍经验。效果持续时间为1小时&20@可以获得经验加成的神奇商城道具。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "初阶经验卡",
+          "display": "576.png",
+          "description": "f_i_初阶双倍经验卡^00ccff&24@特殊&25@99&19@双击使用。击杀怪物后，将获得双倍经验。效果持续时间为1小时&20@可以获得经验加成的神奇商城道具。&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "2000",
+      "categoryId": "10",
+      "categoryIds": [
+        "10"
+      ],
+      "categoryOrder": {
+        "10": 3
+      },
+      "name": "千年人参果",
+      "icon": "921.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_千年人参果^C156C7&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余精力【50000】点&24@法宝&25@1&19@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。&20@<font color='#00ccff'>注:【内置50000精力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "千年人参果",
+          "display": "921.png",
+          "description": "f_i_千年人参果^C156C7&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余精力【50000】点&24@法宝&25@1&19@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。&20@<font color='#00ccff'>注:【内置50000精力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "2001",
+      "categoryId": "10",
+      "categoryIds": [
+        "10"
+      ],
+      "categoryOrder": {
+        "10": 2
+      },
+      "name": "百年人参果",
+      "icon": "917.png",
+      "price": 20,
+      "couponPrice": 30,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_百年人参果^00ccff&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余精力【10000】点&24@法宝&25@1&19@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。&20@<font color='#00ccff'>注:【内置10000精力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "百年人参果",
+          "display": "917.png",
+          "description": "f_i_百年人参果^00ccff&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余精力【10000】点&24@法宝&25@1&19@战斗结束后可自动将精力恢复至满，内置精力值用尽后消失。&20@<font color='#00ccff'>注:【内置10000精力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "2002",
+      "categoryId": "10",
+      "categoryIds": [
+        "10"
+      ],
+      "categoryOrder": {
+        "10": 1
+      },
+      "name": "千年蟠桃",
+      "icon": "920.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_千年蟠桃^C156C7&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余气力【50000】点&24@法宝&25@1&19@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。&20@<font color='#ffff00'>注:【内置50000气力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "千年蟠桃",
+          "display": "920.png",
+          "description": "f_i_千年蟠桃^C156C7&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余气力【50000】点&24@法宝&25@1&19@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。&20@<font color='#ffff00'>注:【内置50000气力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "2003",
+      "categoryId": "10",
+      "categoryIds": [
+        "10"
+      ],
+      "categoryOrder": {
+        "10": 0
+      },
+      "name": "百年蟠桃",
+      "icon": "916.png",
+      "price": 20,
+      "couponPrice": 30,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_百年蟠桃^00ccff&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余气力【10000】点&24@法宝&25@1&19@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。&20@<font color='#ffff00'>注:【内置10000气力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "百年蟠桃",
+          "display": "916.png",
+          "description": "f_i_百年蟠桃^00ccff&23@限制装备至【宝1、宝2、宝3、宝4】格。<br/>剩余气力【10000】点&24@法宝&25@1&19@战斗结束后可自动将气力恢复至满，内置气力值用尽后消失。&20@<font color='#ffff00'>注:【内置10000气力 双击装备后生效】</font>&27@sitem_water&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "3000",
+      "categoryId": "11",
+      "categoryIds": [
+        "11"
+      ],
+      "categoryOrder": {
+        "11": 1
+      },
+      "name": "小白马",
+      "icon": "957.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_小白马^00ccff&23@限制装备至【坐骑】格。&24@坐骑&25@1&12@10&20@<font color='#ffff00'>注:【7天时限，禁止交易】</font>&27@sitem_pet&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "小白马",
+          "display": "957.png",
+          "description": "f_i_小白马^00ccff&23@限制装备至【坐骑】格。&24@坐骑&25@1&12@10&20@<font color='#ffff00'>注:【7天时限，禁止交易】</font>&27@sitem_pet&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "3001",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "11"
+      ],
+      "categoryOrder": {
+        "1": 5,
+        "11": 0
+      },
+      "name": "云生兽",
+      "icon": "1590.png",
+      "price": 998,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_云生兽^C156C7&23@限制装备至【坐骑】格。&24@坐骑&25@1&21@1&12@15&19@装备后不遇敌（明怪除外）。<br/>装备后可任意传送地图。<br/>永久坐骑。&20@拥有强大的驱妖之气，野外行动可使隐藏的妖物无法近身，乃冒险必备坐骑,装备后自动绑定。&27@sitem_piput&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "云生兽",
+          "display": "1590.png",
+          "description": "f_i_云生兽^C156C7&23@限制装备至【坐骑】格。&24@坐骑&25@1&21@1&12@15&19@装备后不遇敌（明怪除外）。<br/>装备后可任意传送地图。<br/>永久坐骑。&20@拥有强大的驱妖之气，野外行动可使隐藏的妖物无法近身，乃冒险必备坐骑,装备后自动绑定。&27@sitem_piput&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4000",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 14
+      },
+      "name": "幸运戒指",
+      "icon": "1067.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_幸运戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&17@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 幸运+1\n[精炼+5] 每升一级 幸运+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "幸运戒指",
+          "display": "1067.png",
+          "description": "f_i_幸运戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&17@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 幸运+1\n[精炼+5] 每升一级 幸运+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4001",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 13
+      },
+      "name": "耐力戒指",
+      "icon": "1066.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_耐力戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&16@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 耐力+1\n[精炼+5] 每升一级 耐力+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "耐力戒指",
+          "display": "1066.png",
+          "description": "f_i_耐力戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&16@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 耐力+1\n[精炼+5] 每升一级 耐力+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4002",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 12
+      },
+      "name": "力量戒指",
+      "icon": "1064.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_力量戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&13@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 力量+1\n[精炼+5] 每升一级 力量+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "力量戒指",
+          "display": "1064.png",
+          "description": "f_i_力量戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&13@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 力量+1\n[精炼+5] 每升一级 力量+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4003",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 11
+      },
+      "name": "敏捷戒指",
+      "icon": "1065.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_敏捷戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&15@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 敏捷+1\n[精炼+5] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "敏捷戒指",
+          "display": "1065.png",
+          "description": "f_i_敏捷戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&15@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 敏捷+1\n[精炼+5] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4004",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 10
+      },
+      "name": "智慧戒指",
+      "icon": "1068.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_智慧戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&14@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 智力+1\n[精炼+5] 每升一级 智力+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "智慧戒指",
+          "display": "1068.png",
+          "description": "f_i_智慧戒指^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&14@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 智力+1\n[精炼+5] 每升一级 智力+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4005",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 9
+      },
+      "name": "力量项链",
+      "icon": "927.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_力量项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&13@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 力量+1\n[精炼+5] 每升一级 力量+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "力量项链",
+          "display": "927.png",
+          "description": "f_i_力量项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&13@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 力量+1\n[精炼+5] 每升一级 力量+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4006",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 8
+      },
+      "name": "幸运项链",
+      "icon": "930.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_幸运项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&17@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 幸运+1\n[精炼+5] 每升一级 幸运+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "幸运项链",
+          "display": "930.png",
+          "description": "f_i_幸运项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&17@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 幸运+1\n[精炼+5] 每升一级 幸运+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4007",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 7
+      },
+      "name": "影之项链",
+      "icon": "928.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_影之项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&15@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 敏捷+1\n[精炼+5] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "影之项链",
+          "display": "928.png",
+          "description": "f_i_影之项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&15@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 敏捷+1\n[精炼+5] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4008",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 6
+      },
+      "name": "耐力项链",
+      "icon": "929.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_耐力项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&16@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 耐力+1\n[精炼+5] 每升一级 耐力+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "耐力项链",
+          "display": "929.png",
+          "description": "f_i_耐力项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&16@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 耐力+1\n[精炼+5] 每升一级 耐力+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4009",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 5
+      },
+      "name": "智慧项链",
+      "icon": "931.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_智慧项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&14@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 智力+1\n[精炼+5] 每升一级 智力+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "智慧项链",
+          "display": "931.png",
+          "description": "f_i_智慧项链^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&14@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 智力+1\n[精炼+5] 每升一级 智力+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4010",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 4
+      },
+      "name": "敏捷耳环",
+      "icon": "923.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_敏捷耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&15@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 敏捷+1\n[精炼+5] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "敏捷耳环",
+          "display": "923.png",
+          "description": "f_i_敏捷耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&15@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 敏捷+1\n[精炼+5] 每升一级 敏捷+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4011",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 3
+      },
+      "name": "耐力耳环",
+      "icon": "924.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_耐力耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&16@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 耐力+1\n[精炼+5] 每升一级 耐力+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "耐力耳环",
+          "display": "924.png",
+          "description": "f_i_耐力耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&16@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 耐力+1\n[精炼+5] 每升一级 耐力+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4012",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 2
+      },
+      "name": "智力耳环",
+      "icon": "926.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_智力耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&14@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 智力+1\n[精炼+5] 每升一级 智力+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "智力耳环",
+          "display": "926.png",
+          "description": "f_i_智力耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&14@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 智力+1\n[精炼+5] 每升一级 智力+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4013",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 1
+      },
+      "name": "力量耳环",
+      "icon": "922.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_力量耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&13@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 力量+1\n[精炼+5] 每升一级 力量+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "力量耳环",
+          "display": "922.png",
+          "description": "f_i_力量耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&13@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 力量+1\n[精炼+5] 每升一级 力量+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "4014",
+      "categoryId": "12",
+      "categoryIds": [
+        "12"
+      ],
+      "categoryOrder": {
+        "12": 0
+      },
+      "name": "幸运耳环",
+      "icon": "925.png",
+      "price": 30,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_幸运耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&17@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 幸运+1\n[精炼+5] 每升一级 幸运+1&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "幸运耳环",
+          "display": "925.png",
+          "description": "f_i_幸运耳环^00ccff&23@凿孔上限 9 格&24@饰品&25@1&21@1&17@2&27@sitem_zgbs&19@精炼潜质:\n[精炼+1] 每升一级 幸运+1\n[精炼+5] 每升一级 幸运+1&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "5021",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "13"
+      ],
+      "categoryOrder": {
+        "1": 4,
+        "13": 6
+      },
+      "name": "壹级原石",
+      "icon": "771.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_壹级原石^f9e000&24@宝物&25@99&19@打碎石块可获得一颗壹级镶嵌宝石。\r<font color='#fee010'>双击使用该物品</font>&20@一块奇特的石头,看似很蹊跷。&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "壹级原石",
+          "display": "771.png",
+          "description": "f_i_壹级原石^f9e000&24@宝物&25@99&19@打碎石块可获得一颗壹级镶嵌宝石。\r<font color='#fee010'>双击使用该物品</font>&20@一块奇特的石头,看似很蹊跷。&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "5022",
+      "categoryId": "13",
+      "categoryIds": [
+        "13"
+      ],
+      "categoryOrder": {
+        "13": 5
+      },
+      "name": "特级精炼宝石",
+      "icon": "1145.png",
+      "price": 120,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_特级精炼宝石^f9e000&24@宝物&25@99&19@精炼+14或以上装备成功率高，精炼失败后等级不会降至+14以下。\r注：适用于精炼等级14及以上装备。\r双击使用该物品</font>&20@罕见的天然宝石，精炼高级装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "特级精炼宝石",
+          "display": "1145.png",
+          "description": "f_i_特级精炼宝石^f9e000&24@宝物&25@99&19@精炼+14或以上装备成功率高，精炼失败后等级不会降至+14以下。\r注：适用于精炼等级14及以上装备。\r双击使用该物品</font>&20@罕见的天然宝石，精炼高级装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "5023",
+      "categoryId": "13",
+      "categoryIds": [
+        "13"
+      ],
+      "categoryOrder": {
+        "13": 4
+      },
+      "name": "高级精炼宝石",
+      "icon": "903.png",
+      "price": 80,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_高级精炼宝石^f9e000&24@宝物&25@99&19@精炼+8或以上装备成功率高，精炼失败后等级不会降至+8以下。\r注：适用于精炼等级8及以上装备。\r双击使用该物品</font>&20@罕见的天然宝石，精炼高级装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "高级精炼宝石",
+          "display": "903.png",
+          "description": "f_i_高级精炼宝石^f9e000&24@宝物&25@99&19@精炼+8或以上装备成功率高，精炼失败后等级不会降至+8以下。\r注：适用于精炼等级8及以上装备。\r双击使用该物品</font>&20@罕见的天然宝石，精炼高级装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "5024",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "13"
+      ],
+      "categoryOrder": {
+        "1": 3,
+        "13": 3
+      },
+      "name": "精炼宝石",
+      "icon": "435.png",
+      "price": 50,
+      "couponPrice": 60,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_精炼宝石^f9e000&24@宝物&25@999&19@精炼+3或以上装备成功率高，精炼失败后等级不会降至+3以下。\r<font color='#fee010'>注：只适用于精炼等级3及以上装备。\r双击使用该物品</font>&20@神奇的天然宝石，是精炼装备的宝物，用于提升武器,护具以及首饰属性。&27@sitem_zgbs&103@0&104@0&105@&107@&108@160",
+      "items": [
+        {
+          "name": "精炼宝石",
+          "display": "435.png",
+          "description": "f_i_精炼宝石^f9e000&24@宝物&25@999&19@精炼+3或以上装备成功率高，精炼失败后等级不会降至+3以下。\r<font color='#fee010'>注：只适用于精炼等级3及以上装备。\r双击使用该物品</font>&20@神奇的天然宝石，是精炼装备的宝物，用于提升武器,护具以及首饰属性。&27@sitem_zgbs&103@0&104@0&105@&107@&108@160",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "5025",
+      "categoryId": "13",
+      "categoryIds": [
+        "13"
+      ],
+      "categoryOrder": {
+        "13": 2
+      },
+      "name": "初级精炼宝石",
+      "icon": "616.png",
+      "price": 20,
+      "couponPrice": 25,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_初级精炼宝石^C156C7&24@宝物&25@999&19@可轻松将装备精炼至+2，之后精炼等级越高成功机率越小。\r<font color='#fee010'>双击使用该物品</font>&20@神奇的天然宝石，是精炼装备的宝物，用于提升武器,护具以及首饰属性。&27@sitem_zgbs&103@0&104@0&105@&107@&108@70",
+      "items": [
+        {
+          "name": "初级精炼宝石",
+          "display": "616.png",
+          "description": "f_i_初级精炼宝石^C156C7&24@宝物&25@999&19@可轻松将装备精炼至+2，之后精炼等级越高成功机率越小。\r<font color='#fee010'>双击使用该物品</font>&20@神奇的天然宝石，是精炼装备的宝物，用于提升武器,护具以及首饰属性。&27@sitem_zgbs&103@0&104@0&105@&107@&108@70",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "6000",
+      "categoryId": "14",
+      "categoryIds": [
+        "14"
+      ],
+      "categoryOrder": {
+        "14": 6
+      },
+      "name": "升天阁通行证",
+      "icon": "1284.png",
+      "price": 80,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_升天阁通行证^00ccff&24@消耗品&25@999&19@<font color='#00ff00'>进入升天阁的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "升天阁通行证",
+          "display": "1284.png",
+          "description": "f_i_升天阁通行证^00ccff&24@消耗品&25@999&19@<font color='#00ff00'>进入升天阁的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "6001",
+      "categoryId": "14",
+      "categoryIds": [
+        "14"
+      ],
+      "categoryOrder": {
+        "14": 5
+      },
+      "name": "清霄城通行证",
+      "icon": "1177.png",
+      "price": 80,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_清霄城通行证^00ccff&24@消耗品&25@999&19@<font color='#00ff00'>进入清霄城的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "清霄城通行证",
+          "display": "1177.png",
+          "description": "f_i_清霄城通行证^00ccff&24@消耗品&25@999&19@<font color='#00ff00'>进入清霄城的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "6002",
+      "categoryId": "14",
+      "categoryIds": [
+        "14"
+      ],
+      "categoryOrder": {
+        "14": 4
+      },
+      "name": "云帝陵通行证",
+      "icon": "1072.png",
+      "price": 60,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_云帝陵通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入云帝陵的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "云帝陵通行证",
+          "display": "1072.png",
+          "description": "f_i_云帝陵通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入云帝陵的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "6003",
+      "categoryId": "14",
+      "categoryIds": [
+        "14"
+      ],
+      "categoryOrder": {
+        "14": 3
+      },
+      "name": "困兽岩通行证",
+      "icon": "1073.png",
+      "price": 60,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_困兽岩通行证^00ccff&24@消耗品&25@999&19@<font color='#00ff00'>进入困兽岩的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "困兽岩通行证",
+          "display": "1073.png",
+          "description": "f_i_困兽岩通行证^00ccff&24@消耗品&25@999&19@<font color='#00ff00'>进入困兽岩的通行证。</font>&27@sitem_book&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "6004",
+      "categoryId": "14",
+      "categoryIds": [
+        "14"
+      ],
+      "categoryOrder": {
+        "14": 2
+      },
+      "name": "画皮寨通行证",
+      "icon": "785.png",
+      "price": 60,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_画皮寨通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>可以进入画皮寨的通行证.</font>&27@sitem_book&103@0&104@0&105@&107@&108@180",
+      "items": [
+        {
+          "name": "画皮寨通行证",
+          "display": "785.png",
+          "description": "f_i_画皮寨通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>可以进入画皮寨的通行证.</font>&27@sitem_book&103@0&104@0&105@&107@&108@180",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "6005",
+      "categoryId": "14",
+      "categoryIds": [
+        "14"
+      ],
+      "categoryOrder": {
+        "14": 1
+      },
+      "name": "葬龙潭通行证",
+      "icon": "784.png",
+      "price": 50,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_葬龙潭通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入葬龙潭修炼的通行证.</font>&27@sitem_book&103@0&104@0&105@&107@&108@170",
+      "items": [
+        {
+          "name": "葬龙潭通行证",
+          "display": "784.png",
+          "description": "f_i_葬龙潭通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入葬龙潭修炼的通行证.</font>&27@sitem_book&103@0&104@0&105@&107@&108@170",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "6006",
+      "categoryId": "14",
+      "categoryIds": [
+        "14"
+      ],
+      "categoryOrder": {
+        "14": 0
+      },
+      "name": "狮虎窟通行证",
+      "icon": "425.png",
+      "price": 40,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_狮虎窟通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入狮虎窟修炼的通行证</font>.&27@sitem_book&103@0&104@0&105@&107@&108@165",
+      "items": [
+        {
+          "name": "狮虎窟通行证",
+          "display": "425.png",
+          "description": "f_i_狮虎窟通行证^00ccff&24@消耗品&25@99&19@<font color='#00ff00'>进入狮虎窟修炼的通行证</font>.&27@sitem_book&103@0&104@0&105@&107@&108@165",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7000",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 55,
+        "16": 35
+      },
+      "name": "HIPHOP套装",
+      "icon": "1103.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_HIPHOP套装^5BC46D&24@幻·时装&25@1&20@时尚的HIPHOP装束。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "HIPHOP套装",
+          "display": "1103.png",
+          "description": "f_i_HIPHOP套装^5BC46D&24@幻·时装&25@1&20@时尚的HIPHOP装束。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7001",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 54,
+        "16": 34
+      },
+      "name": "中秋套装",
+      "icon": "1011.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_中秋套装^5BC46D&24@幻·时装&25@1&20@为中秋节特制的时装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "中秋套装",
+          "display": "1011.png",
+          "description": "f_i_中秋套装^5BC46D&24@幻·时装&25@1&20@为中秋节特制的时装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7002",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 53,
+        "16": 33
+      },
+      "name": "拳皇套装",
+      "icon": "953.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_拳皇套装^5BC46D&24@幻·时装&25@1&19@男性：化身为草稚京\r女性：化身为不知火舞&20@人气格斗游戏《KOF拳皇》的角色装扮。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "拳皇套装",
+          "display": "953.png",
+          "description": "f_i_拳皇套装^5BC46D&24@幻·时装&25@1&19@男性：化身为草稚京\r女性：化身为不知火舞&20@人气格斗游戏《KOF拳皇》的角色装扮。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7003",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 52,
+        "16": 32
+      },
+      "name": "街头霸王套装",
+      "icon": "943.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_街头霸王套装^5BC46D&24@幻·时装&25@1&19@男性：化身为隆\r女性：化身为春丽&20@《街头霸王》是1987年推出的经典游戏，堪称格斗游戏的始祖。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "街头霸王套装",
+          "display": "943.png",
+          "description": "f_i_街头霸王套装^5BC46D&24@幻·时装&25@1&19@男性：化身为隆\r女性：化身为春丽&20@《街头霸王》是1987年推出的经典游戏，堪称格斗游戏的始祖。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7004",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 51,
+        "16": 31
+      },
+      "name": "海贼王套装",
+      "icon": "942.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_海贼王套装^5BC46D&24@幻·时装&25@1&19@男性：化身为路飞\r女性：化身为亚尔丽塔&20@人气动漫《海贼王》。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "海贼王套装",
+          "display": "942.png",
+          "description": "f_i_海贼王套装^5BC46D&24@幻·时装&25@1&19@男性：化身为路飞\r女性：化身为亚尔丽塔&20@人气动漫《海贼王》。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7006",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 50,
+        "16": 30
+      },
+      "name": "怪物猎人",
+      "icon": "1162.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_怪物猎人^5BC46D&24@幻·时装&25@1&20@世界比起现在，已经变得非常单纯，那便是——狩猎，或被狩猎。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "怪物猎人",
+          "display": "1162.png",
+          "description": "f_i_怪物猎人^5BC46D&24@幻·时装&25@1&20@世界比起现在，已经变得非常单纯，那便是——狩猎，或被狩猎。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7007",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 49,
+        "16": 29
+      },
+      "name": "灌篮高手",
+      "icon": "1163.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_灌篮高手^5BC46D&24@幻·时装&25@1&20@灌篮高手，来个盖火锅！&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "灌篮高手",
+          "display": "1163.png",
+          "description": "f_i_灌篮高手^5BC46D&24@幻·时装&25@1&20@灌篮高手，来个盖火锅！&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7008",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 48,
+        "16": 28
+      },
+      "name": "花仙子套装",
+      "icon": "850.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_花仙子套装^5BC46D&23@女性专用时装&24@幻·时装&25@99&19@只有女性可以装备。&20@美女专用,用很多美丽的花瓣缝制而成。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "花仙子套装",
+          "display": "850.png",
+          "description": "f_i_花仙子套装^5BC46D&23@女性专用时装&24@幻·时装&25@99&19@只有女性可以装备。&20@美女专用,用很多美丽的花瓣缝制而成。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7009",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 47,
+        "16": 27
+      },
+      "name": "小白兔套装",
+      "icon": "848.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_小白兔套装^5BC46D&23@女性专用时装&24@幻·时装&25@1&19@只有女性可以装备。&20@美女专用,有一双可爱的兔子耳朵。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "小白兔套装",
+          "display": "848.png",
+          "description": "f_i_小白兔套装^5BC46D&23@女性专用时装&24@幻·时装&25@1&19@只有女性可以装备。&20@美女专用,有一双可爱的兔子耳朵。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7010",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 46,
+        "16": 26
+      },
+      "name": "犬夜叉",
+      "icon": "910.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_犬夜叉^5BC46D&24@幻·时装&25@1&19@装备后化身为犬夜叉造型。&20@《犬夜叉》是著名漫画家高桥留美子于1996年开始在《周刊少年Sunday》杂志连载的漫画。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "犬夜叉",
+          "display": "910.png",
+          "description": "f_i_犬夜叉^5BC46D&24@幻·时装&25@1&19@装备后化身为犬夜叉造型。&20@《犬夜叉》是著名漫画家高桥留美子于1996年开始在《周刊少年Sunday》杂志连载的漫画。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7011",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 45,
+        "16": 25
+      },
+      "name": "网球王子",
+      "icon": "908.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_网球王子^5BC46D&24@幻·时装&25@1&19@装备后化身为网球王子角色造型。&20@《网球王子》是继《灌篮高手》之后，又一部以运动为主题的成功漫画。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "网球王子",
+          "display": "908.png",
+          "description": "f_i_网球王子^5BC46D&24@幻·时装&25@1&19@装备后化身为网球王子角色造型。&20@《网球王子》是继《灌篮高手》之后，又一部以运动为主题的成功漫画。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7012",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 44,
+        "16": 24
+      },
+      "name": "火影套装",
+      "icon": "909.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_火影套装^5BC46D&24@幻·时装&25@1&19@男性：化身为鸣人\r女性：化身为小樱&20@《火影忍者》是日本漫画家岸本齐史的代表作，是目前最受欢迎的动漫作品。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "火影套装",
+          "display": "909.png",
+          "description": "f_i_火影套装^5BC46D&24@幻·时装&25@1&19@男性：化身为鸣人\r女性：化身为小樱&20@《火影忍者》是日本漫画家岸本齐史的代表作，是目前最受欢迎的动漫作品。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7013",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 43,
+        "16": 23
+      },
+      "name": "妖精的尾巴",
+      "icon": "1161.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_妖精的尾巴^5BC46D&24@幻·时装&25@1&20@朝自己相信的道路前进，这才是妖精尾巴的魔导士。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "妖精的尾巴",
+          "display": "1161.png",
+          "description": "f_i_妖精的尾巴^5BC46D&24@幻·时装&25@1&20@朝自己相信的道路前进，这才是妖精尾巴的魔导士。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7014",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 42,
+        "16": 22
+      },
+      "name": "曼联队服",
+      "icon": "907.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_曼联队服^5BC46D&24@幻·时装&25@1&19@装备后化身曼联队员&20@曼彻斯特联足球俱乐部，中文简称曼联，是历史上最伟大的足球俱乐部之一。位于英国英格兰西北区大曼彻斯特郡曼彻斯特市，现处于英格兰足球超级联赛。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "曼联队服",
+          "display": "907.png",
+          "description": "f_i_曼联队服^5BC46D&24@幻·时装&25@1&19@装备后化身曼联队员&20@曼彻斯特联足球俱乐部，中文简称曼联，是历史上最伟大的足球俱乐部之一。位于英国英格兰西北区大曼彻斯特郡曼彻斯特市，现处于英格兰足球超级联赛。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7015",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 41,
+        "16": 21
+      },
+      "name": "巴萨队服",
+      "icon": "906.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_巴萨队服^5BC46D&24@幻·时装&25@1&19@装备后化身巴萨队员&20@巴萨全称巴塞罗那队，巴塞罗那俱乐部是21世纪最著名足球俱乐部之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "巴萨队服",
+          "display": "906.png",
+          "description": "f_i_巴萨队服^5BC46D&24@幻·时装&25@1&19@装备后化身巴萨队员&20@巴萨全称巴塞罗那队，巴塞罗那俱乐部是21世纪最著名足球俱乐部之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7016",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 40,
+        "16": 20
+      },
+      "name": "魔人布欧",
+      "icon": "750.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_魔人布欧^5BC46D&24@幻·时装&25@1&20@动漫系列之一。\r类似《龙珠》里魔人布欧的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "魔人布欧",
+          "display": "750.png",
+          "description": "f_i_魔人布欧^5BC46D&24@幻·时装&25@1&20@动漫系列之一。\r类似《龙珠》里魔人布欧的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7017",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 39,
+        "16": 19
+      },
+      "name": "李小龙套装",
+      "icon": "201.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_李小龙套装^5BC46D&24@幻·时装&25@1&20@功夫巨星李小龙的经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "李小龙套装",
+          "display": "201.png",
+          "description": "f_i_李小龙套装^5BC46D&24@幻·时装&25@1&20@功夫巨星李小龙的经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7018",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 38,
+        "16": 18
+      },
+      "name": "汽车人",
+      "icon": "726.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_汽车人^5BC46D&24@幻·时装&25@1&20@时下最新的变形金刚博派汽车人服饰。&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "汽车人",
+          "display": "726.png",
+          "description": "f_i_汽车人^5BC46D&24@幻·时装&25@1&20@时下最新的变形金刚博派汽车人服饰。&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7019",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 37,
+        "16": 17
+      },
+      "name": "SMOOTH(白)",
+      "icon": "614.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_SMOOTH(白)^5BC46D&24@幻·时装&25@1&20@流行音乐之王经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "SMOOTH(白)",
+          "display": "614.png",
+          "description": "f_i_SMOOTH(白)^5BC46D&24@幻·时装&25@1&20@流行音乐之王经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7020",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 36,
+        "16": 16
+      },
+      "name": "SMOOTH(黑)",
+      "icon": "612.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_SMOOTH(黑)^5BC46D&24@幻·时装&25@1&20@流行音乐之王经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "SMOOTH(黑)",
+          "display": "612.png",
+          "description": "f_i_SMOOTH(黑)^5BC46D&24@幻·时装&25@1&20@流行音乐之王经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7021",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 35,
+        "16": 15
+      },
+      "name": "李洛克",
+      "icon": "741.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_李洛克^5BC46D&24@幻·时装&25@1&20@动漫系列之。\r类似《火影忍者》里李洛克的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "李洛克",
+          "display": "741.png",
+          "description": "f_i_李洛克^5BC46D&24@幻·时装&25@1&20@动漫系列之。\r类似《火影忍者》里李洛克的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7022",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 34,
+        "16": 14
+      },
+      "name": "精致礼服",
+      "icon": "732.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_精致礼服^5BC46D&24@幻·时装&25@1&19@男性：黑色高档西服套装。\r女性：高档晚礼服套装。&20@礼服系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "精致礼服",
+          "display": "732.png",
+          "description": "f_i_精致礼服^5BC46D&24@幻·时装&25@1&19@男性：黑色高档西服套装。\r女性：高档晚礼服套装。&20@礼服系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7023",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 33,
+        "16": 13
+      },
+      "name": "钱多多",
+      "icon": "610.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_钱多多^5BC46D&24@幻·时装&25@1&20@代表财富，充满金钱气的装束。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "钱多多",
+          "display": "610.png",
+          "description": "f_i_钱多多^5BC46D&24@幻·时装&25@1&20@代表财富，充满金钱气的装束。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7024",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 32,
+        "16": 12
+      },
+      "name": "中国风",
+      "icon": "585.png",
+      "price": 80,
+      "couponPrice": 100,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_中国风^5BC46D&24@幻·时装&25@1&20@具有强烈中国风格的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "中国风",
+          "display": "585.png",
+          "description": "f_i_中国风^5BC46D&24@幻·时装&25@1&20@具有强烈中国风格的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7025",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 31,
+        "16": 11
+      },
+      "name": "哈利波特",
+      "icon": "728.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_哈利波特^5BC46D&24@幻·时装&25@1&20@哈利波特的魔法学院服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "哈利波特",
+          "display": "728.png",
+          "description": "f_i_哈利波特^5BC46D&24@幻·时装&25@1&20@哈利波特的魔法学院服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7026",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 30,
+        "16": 10
+      },
+      "name": "波斯套装",
+      "icon": "582.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_波斯套装^5BC46D&24@幻·时装&25@1&19@装备成为波斯装扮。&20@波斯服装穿上后更具风情。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "波斯套装",
+          "display": "582.png",
+          "description": "f_i_波斯套装^5BC46D&24@幻·时装&25@1&19@装备成为波斯装扮。&20@波斯服装穿上后更具风情。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7027",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 29,
+        "16": 9
+      },
+      "name": "BAD",
+      "icon": "605.png",
+      "price": 100,
+      "couponPrice": 150,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_BAD^5BC46D&24@幻·时装&25@1&20@流行音乐之王服装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "BAD",
+          "display": "605.png",
+          "description": "f_i_BAD^5BC46D&24@幻·时装&25@1&20@流行音乐之王服装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7028",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 28,
+        "16": 8
+      },
+      "name": "哥特套装",
+      "icon": "586.png",
+      "price": 100,
+      "couponPrice": 120,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_哥特套装^5BC46D&24@幻·时装&25@1&19@装备后穿着哥特风格服装。&20@具有哥特风格的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "哥特套装",
+          "display": "586.png",
+          "description": "f_i_哥特套装^5BC46D&24@幻·时装&25@1&19@装备后穿着哥特风格服装。&20@具有哥特风格的服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7029",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 27,
+        "16": 7
+      },
+      "name": "学生装",
+      "icon": "583.png",
+      "price": 90,
+      "couponPrice": 110,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_学生装^5BC46D&24@幻·时装&25@1&19@装备后化身为学生模样。&20@非常合身的学生套装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "学生装",
+          "display": "583.png",
+          "description": "f_i_学生装^5BC46D&24@幻·时装&25@1&19@装备后化身为学生模样。&20@非常合身的学生套装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7030",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 26,
+        "16": 6
+      },
+      "name": "普通礼服",
+      "icon": "751.png",
+      "price": 80,
+      "couponPrice": 100,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_普通礼服^5BC46D&24@幻·时装&25@1&19@男性：黑色普通西服套装。\r女性：晚礼服套装。&20@礼服系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "普通礼服",
+          "display": "751.png",
+          "description": "f_i_普通礼服^5BC46D&24@幻·时装&25@1&19@男性：黑色普通西服套装。\r女性：晚礼服套装。&20@礼服系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7031",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 25,
+        "16": 5
+      },
+      "name": "盛夏潮爆",
+      "icon": "730.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_盛夏潮爆^5BC46D&24@幻·时装&25@1&19@男性：白Tee潮流跨裤。\r女性：淡紫皮革短裙白靴。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "盛夏潮爆",
+          "display": "730.png",
+          "description": "f_i_盛夏潮爆^5BC46D&24@幻·时装&25@1&19@男性：白Tee潮流跨裤。\r女性：淡紫皮革短裙白靴。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7032",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 24,
+        "16": 4
+      },
+      "name": "盛夏清凉",
+      "icon": "727.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_盛夏清凉^5BC46D&24@幻·时装&25@1&19@男性：黑Tee潮流滑板裤。\r女性：翠绿流苏无肩短裙黑袜。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "盛夏清凉",
+          "display": "727.png",
+          "description": "f_i_盛夏清凉^5BC46D&24@幻·时装&25@1&19@男性：黑Tee潮流滑板裤。\r女性：翠绿流苏无肩短裙黑袜。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7033",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 23,
+        "16": 3
+      },
+      "name": "盛夏缤纷",
+      "icon": "729.png",
+      "price": 100,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_盛夏缤纷^5BC46D&24@幻·时装&25@1&19@男性：黑背心时尚牛仔裤。\r女性：彩虹肩带短裙。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "盛夏缤纷",
+          "display": "729.png",
+          "description": "f_i_盛夏缤纷^5BC46D&24@幻·时装&25@1&19@男性：黑背心时尚牛仔裤。\r女性：彩虹肩带短裙。&20@盛夏时尚服饰系列之一。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7034",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 22,
+        "16": 2
+      },
+      "name": "奥特曼",
+      "icon": "613.png",
+      "price": 80,
+      "couponPrice": 100,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_奥特曼^5BC46D&24@幻·时装&25@1&19@装备后化身为奥特曼。&20@超级囧的的超人服装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "奥特曼",
+          "display": "613.png",
+          "description": "f_i_奥特曼^5BC46D&24@幻·时装&25@1&19@装备后化身为奥特曼。&20@超级囧的的超人服装。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7035",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 21,
+        "16": 1
+      },
+      "name": "绿色圣诞",
+      "icon": "199.png",
+      "price": 50,
+      "couponPrice": 60,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_绿色圣诞^5BC46D&24@幻·时装&25@99&19@装备后化身为圣诞老人。&20@每年的12月25日圣诞节你都可以穿上它。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "绿色圣诞",
+          "display": "199.png",
+          "description": "f_i_绿色圣诞^5BC46D&24@幻·时装&25@99&19@装备后化身为圣诞老人。&20@每年的12月25日圣诞节你都可以穿上它。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "7036",
+      "categoryId": "16",
+      "categoryIds": [
+        "15",
+        "16"
+      ],
+      "categoryOrder": {
+        "15": 20,
+        "16": 0
+      },
+      "name": "红色圣诞",
+      "icon": "200.png",
+      "price": 50,
+      "couponPrice": 60,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_红色圣诞^5BC46D&24@幻·时装&25@99&19@装备后化身为圣诞老人。&20@每年的12月25日圣诞节你都可以穿上它。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "红色圣诞",
+          "display": "200.png",
+          "description": "f_i_红色圣诞^5BC46D&24@幻·时装&25@99&19@装备后化身为圣诞老人。&20@每年的12月25日圣诞节你都可以穿上它。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8000",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 19
+      },
+      "name": "兔年呈祥",
+      "icon": "1132.png",
+      "price": 180,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_兔年呈祥^C156C7&24@幻·时装&25@1&5@300&14@30&17@30&20@兔年呈祥，本命年的最佳装饰。\r<font color='#ffff00'>注:【12天时限】</font>&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "兔年呈祥",
+          "display": "1132.png",
+          "description": "f_i_兔年呈祥^C156C7&24@幻·时装&25@1&5@300&14@30&17@30&20@兔年呈祥，本命年的最佳装饰。\r<font color='#ffff00'>注:【12天时限】</font>&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8001",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 18
+      },
+      "name": "死神套装",
+      "icon": "584.png",
+      "price": 180,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_死神套装^C156C7&24@幻·时装&25@1&10@50&15@30&16@30&19@装备后变化为《死神》中的造型。&20@《死神》是一部人气动漫作品。\r<font color='#ffff00'>注:【12天时限】</font>&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "死神套装",
+          "display": "584.png",
+          "description": "f_i_死神套装^C156C7&24@幻·时装&25@1&10@50&15@30&16@30&19@装备后变化为《死神》中的造型。&20@《死神》是一部人气动漫作品。\r<font color='#ffff00'>注:【12天时限】</font>&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8002",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 17
+      },
+      "name": "侍魂套装",
+      "icon": "954.png",
+      "price": 180,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_侍魂套装^C156C7&24@幻·时装&25@1&9@50&13@30&16@30&19@男性：化身为霸王丸\r女性：化身为娜可露露&20@经典的格斗游戏《侍魂》中的装扮。\r<font color='#ffff00'>注:【12天时限】</font>&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "侍魂套装",
+          "display": "954.png",
+          "description": "f_i_侍魂套装^C156C7&24@幻·时装&25@1&9@50&13@30&16@30&19@男性：化身为霸王丸\r女性：化身为娜可露露&20@经典的格斗游戏《侍魂》中的装扮。\r<font color='#ffff00'>注:【12天时限】</font>&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8003",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 16
+      },
+      "name": "通灵王",
+      "icon": "1312.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_通灵王^00ccff&24@幻·时装&25@1&16@20&17@20&19@【注：7天时限】&20@《通灵王》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "通灵王",
+          "display": "1312.png",
+          "description": "f_i_通灵王^00ccff&24@幻·时装&25@1&16@20&17@20&19@【注：7天时限】&20@《通灵王》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8004",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 15
+      },
+      "name": "圣斗士",
+      "icon": "1306.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_圣斗士^00ccff&24@幻·时装&25@1&5@300&14@20&19@【注：7天时限】&20@《圣斗士》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "圣斗士",
+          "display": "1306.png",
+          "description": "f_i_圣斗士^00ccff&24@幻·时装&25@1&5@300&14@20&19@【注：7天时限】&20@《圣斗士》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8005",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 14
+      },
+      "name": "美少女战士",
+      "icon": "1305.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_美少女战士^00ccff&24@幻·时装&25@1&6@300&13@20&19@【注：7天时限】&20@《美少女战士》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "美少女战士",
+          "display": "1305.png",
+          "description": "f_i_美少女战士^00ccff&24@幻·时装&25@1&6@300&13@20&19@【注：7天时限】&20@《美少女战士》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8006",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 13
+      },
+      "name": "蜘蛛侠",
+      "icon": "1281.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_蜘蛛侠^00ccff&24@幻·时装&25@1&14@20&15@20&19@【注：7天时限】&20@《蜘蛛侠》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "蜘蛛侠",
+          "display": "1281.png",
+          "description": "f_i_蜘蛛侠^00ccff&24@幻·时装&25@1&14@20&15@20&19@【注：7天时限】&20@《蜘蛛侠》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8007",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 12
+      },
+      "name": "功夫熊猫",
+      "icon": "1287.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_功夫熊猫^00ccff&24@幻·时装&25@1&13@20&17@20&19@【注：7天时限】&20@《功夫熊猫》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "功夫熊猫",
+          "display": "1287.png",
+          "description": "f_i_功夫熊猫^00ccff&24@幻·时装&25@1&13@20&17@20&19@【注：7天时限】&20@《功夫熊猫》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8008",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 11
+      },
+      "name": "钢之炼金术师",
+      "icon": "1293.png ",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_钢之炼金术师^00ccff&24@幻·时装&25@1&14@20&17@20&19@【注：7天时限】&20@《钢之炼金术师》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "钢之炼金术师",
+          "display": "1293.png ",
+          "description": "f_i_钢之炼金术师^00ccff&24@幻·时装&25@1&14@20&17@20&19@【注：7天时限】&20@《钢之炼金术师》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8009",
+      "categoryId": "15",
+      "categoryIds": [
+        "15"
+      ],
+      "categoryOrder": {
+        "15": 10
+      },
+      "name": "忍者神龟",
+      "icon": "1282.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_忍者神龟^00ccff&24@幻·时装&25@1&13@20&15@20&19@【注：7天时限】&20@《忍者神龟》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "忍者神龟",
+          "display": "1282.png",
+          "description": "f_i_忍者神龟^00ccff&24@幻·时装&25@1&13@20&15@20&19@【注：7天时限】&20@《忍者神龟》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8010",
+      "categoryId": "15",
+      "categoryIds": [
+        "0",
+        "15"
+      ],
+      "categoryOrder": {
+        "0": 17,
+        "15": 9
+      },
+      "name": "驱魔少年",
+      "icon": "1283.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_驱魔少年^00ccff&24@幻·时装&25@1&14@20&16@20&19@【注：7天时限】&20@《驱魔少年》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "驱魔少年",
+          "display": "1283.png",
+          "description": "f_i_驱魔少年^00ccff&24@幻·时装&25@1&14@20&16@20&19@【注：7天时限】&20@《驱魔少年》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8011",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 16,
+        "15": 8,
+        "17": 8
+      },
+      "name": "越狱兔",
+      "icon": "1280.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_越狱兔^00ccff&24@幻·时装&25@1&10@20&16@20&19@【注：7天时限】&20@《越狱兔》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "越狱兔",
+          "display": "1280.png",
+          "description": "f_i_越狱兔^00ccff&24@幻·时装&25@1&10@20&16@20&19@【注：7天时限】&20@《越狱兔》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8012",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 15,
+        "15": 7,
+        "17": 7
+      },
+      "name": "蝙蝠侠",
+      "icon": "1279.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_蝙蝠侠^00ccff&24@幻·时装&25@1&9@20&16@20&19@【注：7天时限】&20@《蝙蝠侠》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "蝙蝠侠",
+          "display": "1279.png",
+          "description": "f_i_蝙蝠侠^00ccff&24@幻·时装&25@1&9@20&16@20&19@【注：7天时限】&20@《蝙蝠侠》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8013",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 14,
+        "15": 6,
+        "17": 6
+      },
+      "name": "狐仙大人",
+      "icon": "1246.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_狐仙大人^00ccff&24@幻·时装&25@1&13@20&16@20&19@【注：7天时限】&20@《我家有个狐仙大人》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "狐仙大人",
+          "display": "1246.png",
+          "description": "f_i_狐仙大人^00ccff&24@幻·时装&25@1&13@20&16@20&19@【注：7天时限】&20@《我家有个狐仙大人》里的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8014",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 13,
+        "15": 5,
+        "17": 5
+      },
+      "name": "超人",
+      "icon": "1254.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_超人^00ccff&24@幻·时装&25@1&10@20&11@20&19@【注：7天时限】&20@超人的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "超人",
+          "display": "1254.png",
+          "description": "f_i_超人^00ccff&24@幻·时装&25@1&10@20&11@20&19@【注：7天时限】&20@超人的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8015",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 12,
+        "15": 4,
+        "17": 4
+      },
+      "name": "银魂",
+      "icon": "1242.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_银魂^00ccff&24@幻·时装&25@1&9@20&11@20&19@【注：7天时限】&20@银魂的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "银魂",
+          "display": "1242.png",
+          "description": "f_i_银魂^00ccff&24@幻·时装&25@1&9@20&11@20&19@【注：7天时限】&20@银魂的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8016",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 11,
+        "15": 3,
+        "17": 3
+      },
+      "name": "鬼神童子",
+      "icon": "1261.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_鬼神童子^00ccff&24@幻·时装&25@1&9@20&10@20&19@【注：7天时限】&20@鬼神童子的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "鬼神童子",
+          "display": "1261.png",
+          "description": "f_i_鬼神童子^00ccff&24@幻·时装&25@1&9@20&10@20&19@【注：7天时限】&20@鬼神童子的经典造型&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8017",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 10,
+        "15": 2,
+        "17": 2
+      },
+      "name": "精灵一族",
+      "icon": "1258.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_精灵一族^00ccff&24@幻·时装&25@1&15@20&17@20&19@【注：7天时限】&20@爱好和平的俊男美女精灵&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "精灵一族",
+          "display": "1258.png",
+          "description": "f_i_精灵一族^00ccff&24@幻·时装&25@1&15@20&17@20&19@【注：7天时限】&20@爱好和平的俊男美女精灵&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8018",
+      "categoryId": "17",
+      "categoryIds": [
+        "0",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "0": 9,
+        "15": 1,
+        "17": 1
+      },
+      "name": "叛逆的鲁鲁修",
+      "icon": "1239.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_叛逆的鲁鲁修^00ccff&24@幻·时装&25@1&3@20&4@20&19@【注：7天时限】&20@动漫《叛逆的鲁鲁修》的经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "叛逆的鲁鲁修",
+          "display": "1239.png",
+          "description": "f_i_叛逆的鲁鲁修^00ccff&24@幻·时装&25@1&3@20&4@20&19@【注：7天时限】&20@动漫《叛逆的鲁鲁修》的经典服饰。&27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "8019",
+      "categoryId": "17",
+      "categoryIds": [
+        "2",
+        "15",
+        "17"
+      ],
+      "categoryOrder": {
+        "2": 8,
+        "15": 0,
+        "17": 0
+      },
+      "name": "超时空要塞",
+      "icon": "1205.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "超时空要塞",
+          "display": "1205.png",
+          "description": "f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "9006",
+      "categoryId": "8",
+      "categoryIds": [
+        "2",
+        "3",
+        "8"
+      ],
+      "categoryOrder": {
+        "2": 7,
+        "3": 5,
+        "8": 5
+      },
+      "name": "初级聚气碟x5",
+      "icon": "1711.png",
+      "price": 100,
+      "couponPrice": 150,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_初级聚气碟^f9e000&24@材料&25@99&20@炼制【下品纳元丹】(60级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取100,000经验值</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "初级聚气碟",
+          "display": "1711.png",
+          "description": "f_i_初级聚气碟^f9e000&24@材料&25@99&20@炼制【下品纳元丹】(60级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取100,000经验值</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "productId": "9007",
+      "categoryId": "8",
+      "categoryIds": [
+        "2",
+        "3",
+        "8"
+      ],
+      "categoryOrder": {
+        "2": 6,
+        "3": 4,
+        "8": 4
+      },
+      "name": "中级聚气碟x5",
+      "icon": "1712.png",
+      "price": 150,
+      "couponPrice": 225,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_中级聚气碟^f9e000&24@材料&25@99&20@炼制【中品纳元丹】(70级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取200,000经验值</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "中级聚气碟",
+          "display": "1712.png",
+          "description": "f_i_中级聚气碟^f9e000&24@材料&25@99&20@炼制【中品纳元丹】(70级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取200,000经验值</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "productId": "9008",
+      "categoryId": "8",
+      "categoryIds": [
+        "2",
+        "3",
+        "8"
+      ],
+      "categoryOrder": {
+        "2": 5,
+        "3": 3,
+        "8": 3
+      },
+      "name": "高级聚气碟x5",
+      "icon": "1713.png",
+      "price": 250,
+      "couponPrice": 375,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_高级聚气碟^f9e000&24@材料&25@99&20@炼制【上品纳元丹】(80级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取1,000,000经验值</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "高级聚气碟",
+          "display": "1713.png",
+          "description": "f_i_高级聚气碟^f9e000&24@材料&25@99&20@炼制【上品纳元丹】(80级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取1,000,000经验值</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "productId": "9009",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "2",
+        "3",
+        "8"
+      ],
+      "categoryOrder": {
+        "1": 2,
+        "2": 4,
+        "3": 2,
+        "8": 2
+      },
+      "name": "初级聚气碟.特x5",
+      "icon": "1722.png",
+      "price": 150,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_初级聚气碟.特^f9e000&24@材料&25@99&20@炼制【下品纳元丹.特】(60级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取100,000经验值(增益50%)</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "初级聚气碟.特",
+          "display": "1722.png",
+          "description": "f_i_初级聚气碟.特^f9e000&24@材料&25@99&20@炼制【下品纳元丹.特】(60级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取100,000经验值(增益50%)</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "productId": "9010",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "2",
+        "3",
+        "8"
+      ],
+      "categoryOrder": {
+        "1": 1,
+        "2": 3,
+        "3": 1,
+        "8": 1
+      },
+      "name": "中级聚气碟.特x5",
+      "icon": "1723.png",
+      "price": 225,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_中级聚气碟.特^f9e000&24@材料&25@99&20@炼制【中品纳元丹.特】(70级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取200,000经验值(增益50%)</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "中级聚气碟.特",
+          "display": "1723.png",
+          "description": "f_i_中级聚气碟.特^f9e000&24@材料&25@99&20@炼制【中品纳元丹.特】(70级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取200,000经验值(增益50%)</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "productId": "9011",
+      "categoryId": "1",
+      "categoryIds": [
+        "1",
+        "2",
+        "3",
+        "8"
+      ],
+      "categoryOrder": {
+        "1": 0,
+        "2": 2,
+        "3": 0,
+        "8": 0
+      },
+      "name": "高级聚气碟.特x5",
+      "icon": "1724.png",
+      "price": 375,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": true,
+      "currency": "玉币",
+      "description": "f_i_高级聚气碟.特^f9e000&24@材料&25@99&20@炼制【上品纳元丹.特】(80级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取1,000,000经验值(增益50%)</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "高级聚气碟.特",
+          "display": "1724.png",
+          "description": "f_i_高级聚气碟.特^f9e000&24@材料&25@99&20@炼制【上品纳元丹.特】(80级及以上适用)的容器，可抽取【四象镜】内灵气转化为提升修为的丹药。<br/><font color='#ffff00'>双击提取1,000,000经验值(增益50%)</font>&27@sitem_jhj&103@0&104@0&105@&107@&108@0",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "productId": "10040",
+      "categoryId": "13",
+      "categoryIds": [
+        "2",
+        "13"
+      ],
+      "categoryOrder": {
+        "2": 1,
+        "13": 1
+      },
+      "name": "超级精炼宝石",
+      "icon": "1320.png",
+      "price": 160,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_超级精炼宝石^f9e000&24@宝物&25@99&19@精炼+18或以上装备成功率高，精炼失败后等级不会降至+18以下。\r<font color='#fee010'>注1：适用于等级80及以上的装备。<br/>注2：只适用于精炼等级18及以上装备。\r双击使用该物品</font>&20@罕见的天然宝石，精炼高级装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "超级精炼宝石",
+          "display": "1320.png",
+          "description": "f_i_超级精炼宝石^f9e000&24@宝物&25@99&19@精炼+18或以上装备成功率高，精炼失败后等级不会降至+18以下。\r<font color='#fee010'>注1：适用于等级80及以上的装备。<br/>注2：只适用于精炼等级18及以上装备。\r双击使用该物品</font>&20@罕见的天然宝石，精炼高级装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "productId": "10074",
+      "categoryId": "13",
+      "categoryIds": [
+        "2",
+        "13"
+      ],
+      "categoryOrder": {
+        "2": 0,
+        "13": 0
+      },
+      "name": "究极精炼宝石",
+      "icon": "1429.png",
+      "price": 200,
+      "couponPrice": 0,
+      "discount": 1,
+      "recommended": false,
+      "currency": "玉币",
+      "description": "f_i_究极精炼宝石^f9e000&24@宝物&25@99&19@精炼+21或以上装备成功率高，精炼失败后等级不会降至+21以下。\r<font color='#fee010'>注1：适用于等级100及以上的装备。<br/>注2：只适用于精炼等级21以及以上装备。\r双击使用该物品</font>&20@土豪特供的宝石，精炼极品装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+      "items": [
+        {
+          "name": "究极精炼宝石",
+          "display": "1429.png",
+          "description": "f_i_究极精炼宝石^f9e000&24@宝物&25@99&19@精炼+21或以上装备成功率高，精炼失败后等级不会降至+21以下。\r<font color='#fee010'>注1：适用于等级100及以上的装备。<br/>注2：只适用于精炼等级21以及以上装备。\r双击使用该物品</font>&20@土豪特供的宝石，精炼极品装备有奇效。&27@sitem_zgbs&103@0&104@0&105@&107@&108@0",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

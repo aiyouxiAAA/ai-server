@@ -2358,6 +2358,9 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		log.Printf("[ai-server] classic town ActiveItem ignored without selected role type=%s index=%d", request.Type, request.Index)
 		return packetResult{handled: true}
 	}
+	if request.TargetType != "" || request.TargetIndex != nil {
+		return buildClassicTownEquipmentRefinementResult(store, socketSession, request)
+	}
 
 	useResult := classicTownUseRoleItem(store, socketSession, request)
 	if !useResult.Found {
@@ -2466,6 +2469,61 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 	if useResult.RoleStateChanged {
 		result.roleState = useResult.PlayerBase.RoleState
 	}
+	return result
+}
+
+func buildClassicTownEquipmentRefinementResult(store *session.Store, socketSession *packetSession, request classicTownActiveItemRequest) packetResult {
+	if request.TargetType == "" || request.TargetIndex == nil {
+		return packetResult{
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage("精炼目标参数不完整。")},
+			handled:      true,
+		}
+	}
+
+	refinement := store.RefineRoleEquipment(
+		socketSession.playerBase.PlayerID,
+		socketSession.selectedRole.RoleID,
+		request.Type,
+		request.Index,
+		request.TargetType,
+		*request.TargetIndex,
+	)
+	if !refinement.Found {
+		log.Printf("[ai-server] classic town refinement ignored missing role roleId=%s source=%s:%d target=%s:%d", socketSession.selectedRole.RoleID, request.Type, request.Index, request.TargetType, *request.TargetIndex)
+		return packetResult{handled: true}
+	}
+	if !refinement.Refined {
+		log.Printf("[ai-server] classic town refinement rejected roleId=%s source=%s:%d target=%s:%d error=%s", socketSession.selectedRole.RoleID, request.Type, request.Index, request.TargetType, *request.TargetIndex, refinement.ErrorCode)
+		return packetResult{
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(refinement.ErrorMessage)},
+			handled:      true,
+		}
+	}
+
+	socketSession.selectedRole = &refinement.Role
+	socketSession.playerBase = &refinement.PlayerBase
+	result := packetResult{
+		itemInfos:  make([]classicTownItemInfoPush, 0, len(refinement.UpdatedItems)),
+		itemClears: make([]classicTownItemInfoClearPush, 0, len(refinement.ClearedItems)),
+		chatMessages: []classicTownChatMessagePush{
+			classicTownSystemChatMessage(refinement.ResultMessage + "（暂定概率，非原版行为）"),
+		},
+		createPlayer: buildClassicTownCreatePlayerPush(refinement.Role, refinement.PlayerBase),
+		rolePhysique: refinement.PlayerBase.RolePhysique,
+		handled:      true,
+	}
+	for _, clear := range refinement.ClearedItems {
+		result.itemClears = append(result.itemClears, classicTownItemInfoClearPush{
+			Handle: refinement.Role.RoleID,
+			Type:   clear.Type,
+			Index:  clear.Index,
+		})
+	}
+	for _, item := range refinement.UpdatedItems {
+		item.Handle = refinement.Role.RoleID
+		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
+	}
+	log.Printf("[ai-server] classic town refinement roleId=%s source=%s:%d target=%s:%d gem=%s success=%t rule=%s/%d-%d status=%s", refinement.Role.RoleID, request.Type, request.Index, request.TargetType, *request.TargetIndex, refinement.SourceItem.Name, refinement.Succeeded, refinement.Rule.ItemName, refinement.Rule.MinRefineLevel, refinement.Rule.MaxRefineLevel, refinement.Rule.DesignStatus)
 	return result
 }
 

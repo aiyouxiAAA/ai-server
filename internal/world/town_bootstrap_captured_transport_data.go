@@ -610,4 +610,15 @@ var capturedSourceTransportsByMapID = map[int][]sourceNPCEntry{
 		buildCapturedSourceTransportMovieClip("transp_201", "transp/flag2.swf", "flag2", 158, 258, 2800, 730),
 		buildCapturedSourceTransportMovieClip("transp_205", "transp/flag2.swf", "flag2", 158, 258, 40, 600),
 	},
+	203: {
+		buildCapturedSourceTransportMovieClip("transp_204", "transp/flag2.swf", "flag2", 158, 258, 1936, 570),
+	},
+	204: {
+		buildCapturedSourceTransportMovieClip("transp_195", "transp/flag2.swf", "flag2", 158, 258, 1750, 730),
+		buildCapturedSourceTransportMovieClip("transp_203", "transp/flag2.swf", "flag2", 158, 258, 40, 530),
+	},
+	205: {
+		buildCapturedSourceTransportMovieClip("transp_202", "transp/flag2.swf", "flag2", 158, 258, 2939, 580),
+		buildCapturedSourceTransportMovieClip("transp_207", "transp/flag2.swf", "flag2", 158, 258, 26, 550),
+	},
 }

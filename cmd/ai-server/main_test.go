@@ -2610,6 +2610,83 @@ func TestHandlePacketClassicTownActiveItemEquipsSourceArmor(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTownActiveItemRefinesEquipmentWithTemporaryRule(t *testing.T) {
+	store := session.NewStore()
+	socketSession, role := seedSelectedRoleSessionInStore(t, store, "精炼协议测试")
+	gem, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, role.RoleID, session.RoleItem{
+		Type:        "背包",
+		Name:        "初级精炼宝石",
+		ItemType:    "oneI",
+		Display:     "616.png",
+		Description: "f_i_初级精炼宝石&24@宝物&25@999",
+		Count:       2,
+		Index:       -1,
+	})
+	if !ok {
+		t.Fatal("expected refinement gem grant")
+	}
+	target, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, role.RoleID, session.RoleItem{
+		Type:        "装备",
+		Name:        "精炼协议测试护肩",
+		ItemType:    "equip",
+		Display:     "603.png",
+		Description: "f_i_精炼协议测试护肩&24@护具·肩部&25@1&21@10&3@10(+3)&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+3",
+		Count:       1,
+		Index:       19,
+		Level:       1,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected refinement target grant")
+	}
+	targetIndex := target.Index
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveItemReq,
+		Seq: 9,
+		Payload: mustJSON(t, classicTownActiveItemRequest{
+			Type:        gem.Type,
+			Index:       gem.Index,
+			TargetType:  target.Type,
+			TargetIndex: &targetIndex,
+		}),
+	}, socketSession)
+
+	if !result.handled || result.rolePhysique == nil || result.createPlayer == nil {
+		t.Fatalf("expected refinement to refresh player and physique, got %+v", result)
+	}
+	if !packetChatMessagesContain(result.chatMessages, "精炼成功&0;等级上升1") || !packetChatMessagesContain(result.chatMessages, "暂定概率，非原版行为") {
+		t.Fatalf("expected marked temporary refinement message, got %+v", result.chatMessages)
+	}
+	items := itemInfosByName(result.itemInfos)
+	if items["初级精炼宝石"].Count != 1 {
+		t.Fatalf("expected refinement gem count to decrease, got %+v", result.itemInfos)
+	}
+	if item := items["精炼协议测试护肩"]; item.Level != 2 || !strings.Contains(item.Description, "&3@10(+6)") {
+		t.Fatalf("expected target refinement refresh, got %+v", item)
+	}
+}
+
+func TestHandlePacketClassicTownActiveItemRejectsIncompleteRefinementTarget(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveItemReq,
+		Seq: 9,
+		Payload: mustJSON(t, classicTownActiveItemRequest{
+			Type:       "背包",
+			Index:      0,
+			TargetType: "装备",
+		}),
+	}, socketSession)
+
+	if !result.handled || !packetChatMessagesContain(result.chatMessages, "精炼目标参数不完整") {
+		t.Fatalf("expected incomplete refinement target rejection, got %+v", result)
+	}
+	if len(result.itemInfos) != 0 || len(result.itemClears) != 0 {
+		t.Fatalf("expected incomplete refinement request to leave inventory untouched, got %+v", result)
+	}
+}
+
 func TestHandlePacketClassicTownActiveItemExchangesCopperToSilver(t *testing.T) {
 	store := session.NewStore()
 	socketSession, role := seedSelectedRoleSessionInStore(t, store, "铜钱兑换测试")
@@ -4382,63 +4459,75 @@ func TestHandlePacketClassicTownCapturedWoodcutter222PushesCapturedEquipment(t *
 	}
 }
 
-func TestHandlePacketClassicTownOtherEquipmentUsesCapturedLookDetailFixture(t *testing.T) {
+func TestHandlePacketClassicTownOtherEquipmentUsesCapturedLookDetailSnapshots(t *testing.T) {
 	store := session.NewStore()
 	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "look-equipment")
 
-	result := handlePacketWithSession(store, protocol.Packet{
-		Cmd: cmdClassicTownOtherEquipmentReq,
-		Seq: 2,
-		Payload: mustJSON(t, classicTownOtherEquipmentRequest{
-			RoleName: "恐龙抗狼1",
-			RoleID:   "player_21424",
-			Handle:   "player_21424",
-		}),
-	}, socketSession)
-
-	if !result.handled || result.otherEquipment == nil {
-		t.Fatalf("expected captured other equipment response, got %+v", result)
-	}
-	equipment := result.otherEquipment
-	if equipment.Handle != "player_21424" || equipment.RoleID != "player_21424" || equipment.RoleName != "恐龙抗狼1" {
-		t.Fatalf("expected captured target identity, got %+v", equipment)
-	}
-	if equipment.Type != "装备" || equipment.Capacity != 20 || !equipment.Partial {
-		t.Fatalf("expected partial captured equipment container, got %+v", equipment)
-	}
-	if !strings.Contains(equipment.SourceCapture, "GetLookDetail(player_21424)") {
-		t.Fatalf("expected source capture pointer to GetLookDetail, got %q", equipment.SourceCapture)
-	}
-	if len(equipment.Items) != 10 {
-		t.Fatalf("expected captured other equipment rows, got %+v", equipment.Items)
-	}
-
-	itemsByName := itemInfosByName(equipment.Items)
-	expectedEquipment := map[string]struct {
-		index   int
-		display string
+	targets := []struct {
+		handle        string
+		name          string
+		count         int
+		items         map[int]string
+		tooltipTokens map[int]string
 	}{
-		"无双头盔":  {index: 0, display: "357.png"},
-		"无双护肩":  {index: 1, display: "358.png"},
-		"无双铁腕":  {index: 2, display: "360.png"},
-		"饮血刀":   {index: 3, display: "48.png"},
-		"寨夫人上衣": {index: 4, display: "474.png"},
-		"无双护腿":  {index: 5, display: "361.png"},
-		"泥戒指":   {index: 6, display: "431.png"},
-		"怪木机":   {index: 9, display: "333.png"},
-		"无双铁腰带": {index: 10, display: "362.png"},
-		"蛤蟆精战靴": {index: 12, display: "503.png"},
+		{handle: "player_3800", name: "s4_妮可露露", count: 19, items: map[int]string{0: "御影面具", 14: "筋斗云", 18: "萌兔宝宝"}, tooltipTokens: map[int]string{0: "&3@65(+255)"}},
+		{handle: "player_18590", name: "幡", count: 19, items: map[int]string{3: "灰飞烟灭", 18: "狰狞神骑"}, tooltipTokens: map[int]string{6: "&105@幡"}},
+		{handle: "player_21437", name: "小帅哥⁡", count: 18, items: map[int]string{6: "炫法之戒", 15: "混天绫"}, tooltipTokens: map[int]string{0: "&3@65(+315)"}},
+		{handle: "player_17011", name: "風也很温柔", count: 19, items: map[int]string{3: "千疮百孔", 13: "超凡之戒", 14: "试炼印"}, tooltipTokens: map[int]string{14: "f_i_试炼印^f9e000"}},
+		{handle: "player_20000", name: "阿华田", count: 19, items: map[int]string{16: "混天绫", 17: "聚宝鼎"}, tooltipTokens: map[int]string{0: "&3@65(+300)"}},
+		{handle: "player_21424", name: "恐龙抗狼1", count: 11, items: map[int]string{0: "无双头盔", 6: "泥戒指", 13: "泥戒指"}},
+		{handle: "player_5793", name: "FangLv", count: 18, items: map[int]string{10: "炎煌护腰.游", 17: "聚宝鼎"}},
+		{handle: "player_16984", name: "雨田尚文文文", count: 19, items: map[int]string{2: "炎煌护腕.游", 11: "龙娃幻化珠"}},
+		{handle: "player_18485", name: "是那晚夜", count: 19, items: map[int]string{0: "聚仙法冠", 17: "筋斗云"}},
 	}
-	for name, expected := range expectedEquipment {
-		item := itemsByName[name]
-		if item.Name == "" || item.Index != expected.index || item.Display != expected.display || item.Type != "装备" || item.ItemType != "equip" {
-			t.Fatalf("expected captured other equipment %s at index %d display %s, got %+v", name, expected.index, expected.display, item)
+	if len(classicTownCapturedLookEquipmentSnapshots) != len(targets) {
+		t.Fatalf("expected %d captured look-equipment snapshots, got %d", len(targets), len(classicTownCapturedLookEquipmentSnapshots))
+	}
+
+	for index, target := range targets {
+		result := handlePacketWithSession(store, protocol.Packet{
+			Cmd: cmdClassicTownOtherEquipmentReq,
+			Seq: uint64(index + 2),
+			Payload: mustJSON(t, classicTownOtherEquipmentRequest{
+				RoleName: target.name,
+				RoleID:   target.handle,
+				Handle:   target.handle,
+			}),
+		}, socketSession)
+		if !result.handled || result.otherEquipment == nil {
+			t.Fatalf("expected captured other equipment response for %s, got %+v", target.handle, result)
+		}
+		equipment := result.otherEquipment
+		if equipment.Handle != target.handle || equipment.RoleID != target.handle || equipment.RoleName != target.name {
+			t.Fatalf("expected captured target identity for %s, got %+v", target.handle, equipment)
+		}
+		if equipment.Type != "装备" || equipment.Capacity != 20 || !equipment.Partial || len(equipment.Items) != target.count {
+			t.Fatalf("expected captured equipment snapshot for %s, got %+v", target.handle, equipment)
+		}
+		if !strings.Contains(equipment.SourceCapture, "GetLookDetail("+target.handle+")") {
+			t.Fatalf("expected source capture pointer for %s, got %q", target.handle, equipment.SourceCapture)
+		}
+		itemsByIndex := make(map[int]classicTownItemInfoPush, len(equipment.Items))
+		for _, item := range equipment.Items {
+			itemsByIndex[item.Index] = item
+		}
+		for itemIndex, itemName := range target.items {
+			item, ok := itemsByIndex[itemIndex]
+			if !ok || item.Name != itemName || item.Type != "装备" || item.ItemType != "equip" || item.Display == "" {
+				t.Fatalf("expected %s at %s equipment index %d, got %+v", itemName, target.handle, itemIndex, item)
+			}
+		}
+		for itemIndex, token := range target.tooltipTokens {
+			item, ok := itemsByIndex[itemIndex]
+			if !ok || !strings.Contains(item.Description, token) {
+				t.Fatalf("expected source tooltip token %q at %s equipment index %d, got %+v", token, target.handle, itemIndex, item)
+			}
 		}
 	}
 
 	missingResult := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicTownOtherEquipmentReq,
-		Seq: 3,
+		Seq: 100,
 		Payload: mustJSON(t, classicTownOtherEquipmentRequest{
 			RoleName: "未恢复目标",
 			RoleID:   "player_unrestored",
@@ -4450,6 +4539,18 @@ func TestHandlePacketClassicTownOtherEquipmentUsesCapturedLookDetailFixture(t *t
 	}
 	if missingResult.otherEquipment.ErrorCode != "look_equipment_unrestored" || len(missingResult.otherEquipment.Items) != 0 {
 		t.Fatalf("expected unrestored-target error without guessed items, got %+v", missingResult.otherEquipment)
+	}
+
+	conflictingIdentityResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownOtherEquipmentReq,
+		Seq: 101,
+		Payload: mustJSON(t, classicTownOtherEquipmentRequest{
+			RoleName: "幡",
+			Handle:   "player_unrestored",
+		}),
+	}, socketSession)
+	if conflictingIdentityResult.otherEquipment == nil || conflictingIdentityResult.otherEquipment.ErrorCode != "look_equipment_unrestored" || len(conflictingIdentityResult.otherEquipment.Items) != 0 {
+		t.Fatalf("expected unresolved handle to stay authoritative instead of falling back to role name, got %+v", conflictingIdentityResult)
 	}
 }
 
@@ -8107,8 +8208,8 @@ func TestHandlePacketClassicMallSearchPurchaseAndErrors(t *testing.T) {
 			"devCurrencyOnly": true,
 		}),
 	}, socketSession)
-	if !count.handled || count.mallSearchCount == nil || count.mallSearchCount.Count < 9 {
-		t.Fatalf("expected mall search count, got %+v", count)
+	if !count.handled || count.mallSearchCount == nil || count.mallSearchCount.Count != 37 {
+		t.Fatalf("expected captured 点券商品 count, got %+v", count)
 	}
 
 	page := handlePacketWithSession(store, protocol.Packet{
@@ -8121,8 +8222,8 @@ func TestHandlePacketClassicMallSearchPurchaseAndErrors(t *testing.T) {
 			"limit":           99,
 		}),
 	}, socketSession)
-	if !page.handled || page.mallSearchPage == nil || page.mallSearchPage.Limit != 9 || len(page.mallSearchPage.Products) != 9 {
-		t.Fatalf("expected 9-limit mall page with hot products, got %+v", page.mallSearchPage)
+	if !page.handled || page.mallSearchPage == nil || page.mallSearchPage.Limit != 9 || len(page.mallSearchPage.Products) != 9 || page.mallSearchPage.Products[0].ProductID != "2" {
+		t.Fatalf("expected captured 点券商品 page, got %+v", page.mallSearchPage)
 	}
 
 	purchase := handlePacketWithSession(store, protocol.Packet{
@@ -8136,6 +8237,12 @@ func TestHandlePacketClassicMallSearchPurchaseAndErrors(t *testing.T) {
 	}, socketSession)
 	if !purchase.handled || purchase.mallPurchase == nil || !purchase.mallPurchase.Success {
 		t.Fatalf("expected mall purchase success, got %+v", purchase)
+	}
+	if purchase.mallPurchase.Delivery == nil || purchase.mallPurchase.Delivery.ContainerType != "商城" || purchase.mallPurchase.Delivery.ItemName != "L百年人参果" || purchase.mallPurchase.Delivery.ItemCount != 1 {
+		t.Fatalf("expected authoritative mall delivery metadata, got %+v", purchase.mallPurchase)
+	}
+	if len(purchase.itemInfos) != 1 || purchase.itemInfos[0].Type != "商城" || purchase.itemInfos[0].Name != "L百年人参果" || purchase.itemInfos[0].Index != purchase.mallPurchase.Delivery.ItemIndex {
+		t.Fatalf("expected mall purchase to push delivered container item, got %+v", purchase.itemInfos)
 	}
 	items, _, ok := store.GetRoleItems(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "商城")
 	if !ok || len(items) != 1 || items[0].Name != "L百年人参果" {
@@ -8151,7 +8258,7 @@ func TestHandlePacketClassicMallSearchPurchaseAndErrors(t *testing.T) {
 			"requestId": "mall-req-1",
 		}),
 	}, socketSession)
-	if duplicate.mallPurchase == nil || duplicate.mallPurchase.ErrorCode != "DUPLICATE_REQUEST" {
+	if duplicate.mallPurchase == nil || duplicate.mallPurchase.Success || duplicate.mallPurchase.ErrorCode != "DUPLICATE_REQUEST" || duplicate.mallPurchase.Delivery != nil || len(duplicate.itemInfos) != 0 {
 		t.Fatalf("expected duplicate request rejection, got %+v", duplicate)
 	}
 

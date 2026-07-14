@@ -1,6 +1,51 @@
 package mall
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
+
+func TestCapturedCatalogContainsAllCapturedProducts(t *testing.T) {
+	var catalog capturedCatalog
+	if err := json.Unmarshal(capturedCatalogJSON, &catalog); err != nil {
+		t.Fatalf("decode captured mall catalog: %v", err)
+	}
+	if catalog.SchemaVersion != 1 || catalog.Capture.ResponseCount != 150 || len(catalog.Products) != 126 {
+		t.Fatalf("expected 126 products from 150 captured detail responses, got %+v", catalog)
+	}
+	for _, product := range catalog.Products {
+		if product.ProductID == "" || len(product.CategoryIDs) == 0 || len(product.Items) != 1 {
+			t.Fatalf("expected captured product row with one delivery item, got %+v", product)
+		}
+	}
+}
+
+func TestServiceCategoriesMatchCapturedMallTree(t *testing.T) {
+	service := NewService()
+	categories := service.Categories()
+	if len(categories) != 10 {
+		t.Fatalf("expected ten captured root categories, got %+v", categories)
+	}
+	if categories[0].CategoryID != "1" || categories[0].Name != "推荐商品" {
+		t.Fatalf("expected captured recommended category, got %+v", categories[0])
+	}
+	consumables := categories[2]
+	if consumables.CategoryID != "3" || consumables.Name != "消耗品" || len(consumables.Children) != 5 {
+		t.Fatalf("expected captured consumable tree, got %+v", consumables)
+	}
+	if consumables.Children[0].CategoryID != "4" || consumables.Children[4].CategoryID != "8" {
+		t.Fatalf("expected captured consumable child ids 4..8, got %+v", consumables.Children)
+	}
+	fashion := categories[9]
+	if fashion.CategoryID != "15" || len(fashion.Children) != 2 || fashion.Children[0].CategoryID != "16" || fashion.Children[1].CategoryID != "17" {
+		t.Fatalf("expected captured fashion tree, got %+v", fashion)
+	}
+
+	page := service.SearchPage(SearchRequest{CategoryID: "15", Limit: PageSize})
+	if len(page.Products) < 2 || !matchesCapturedCategory("15", page.Products[0]) {
+		t.Fatalf("expected fashion parent to include captured child products, got %+v", page.Products)
+	}
+}
 
 func TestServiceRecommendedProductsMatchCapturedFirstPage(t *testing.T) {
 	service := NewService()
@@ -86,5 +131,23 @@ func TestServiceSearchCapturedFashionProducts(t *testing.T) {
 	}
 	if len(summer.Items) != 1 || summer.Items[0].Name != "盛夏缤纷" || summer.Items[0].Display != "729.png" || summer.Items[0].Count != 1 {
 		t.Fatalf("expected captured summer product source item details, got %+v", summer.Items)
+	}
+}
+
+func TestServiceSearchesCapturedCategoryMembership(t *testing.T) {
+	service := NewService()
+
+	gem, ok := service.FindProduct("10074")
+	if !ok || !containsCategoryID(gem.CategoryIDs, "13") {
+		t.Fatalf("expected captured 究极精炼宝石 category evidence, got %+v", gem)
+	}
+	gemPage := service.SearchPage(SearchRequest{CategoryID: "13", Limit: PageSize})
+	if len(gemPage.Products) != 7 || gemPage.Products[0].ProductID != "10074" {
+		t.Fatalf("expected captured 宝石 page order, got %+v", gemPage.Products)
+	}
+
+	allCount := service.SearchCount(SearchRequest{CategoryID: "all"})
+	if allCount.Count != 129 {
+		t.Fatalf("expected 126 captured rows plus three local development rows, got %+v", allCount)
 	}
 }

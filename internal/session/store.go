@@ -441,6 +441,22 @@ type RoleUseItemResult struct {
 	ErrorMessage      string
 }
 
+type RoleEquipmentRefinementResult struct {
+	Role          RoleSummary
+	PlayerBase    PlayerBaseData
+	SourceItem    RoleItem
+	TargetItem    RoleItem
+	UpdatedItems  []RoleItem
+	ClearedItems  []RoleItemClear
+	Rule          ClassicEquipmentRefinementRule
+	ResultMessage string
+	Found         bool
+	Refined       bool
+	Succeeded     bool
+	ErrorCode     string
+	ErrorMessage  string
+}
+
 type RoleTownBuffRemoveResult struct {
 	Role       RoleSummary
 	PlayerBase PlayerBaseData
@@ -554,6 +570,7 @@ type Store struct {
 	Guilds               *guild.Service
 	Mall                 *mall.Service
 	mallRequests         map[string]mall.PurchaseResult
+	refinementRoll       func(max int) int
 }
 
 type DevRoleSummary struct {
@@ -588,6 +605,7 @@ func NewStore() *Store {
 		Guilds:               guild.NewMemoryService(),
 		Mall:                 mall.NewService(),
 		mallRequests:         make(map[string]mall.PurchaseResult),
+		refinementRoll:       defaultEquipmentRefinementRoll,
 		acceptedQuests:       make(map[string]map[string]bool),
 		removedQuests:        make(map[string]map[string]bool),
 		rolePersistenceLocks: make(map[string]*sync.Mutex),
@@ -3974,9 +3992,16 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 	if requestID != "" {
 		key := roleID + ":" + requestID
 		if previous, ok := store.mallRequests[key]; ok {
-			previous.ErrorCode = mall.DUPLICATE_REQUEST
-			previous.ErrorMessage = "重复购买请求。"
-			return previous
+			return mall.PurchaseResult{
+				Success:         false,
+				ProductID:       previous.ProductID,
+				Quantity:        previous.Quantity,
+				RequestID:       previous.RequestID,
+				CurrencyName:    previous.CurrencyName,
+				CurrencyBalance: previous.CurrencyBalance,
+				ErrorCode:       mall.DUPLICATE_REQUEST,
+				ErrorMessage:    "重复购买请求。",
+			}
 		}
 	}
 	if quantity <= 0 || quantity > 99 {
@@ -4080,6 +4105,12 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 			RequestID:       requestID,
 			CurrencyName:    reportCurrency,
 			CurrencyBalance: reportBalance,
+			Delivery: &mall.Delivery{
+				ContainerType: "商城",
+				ItemIndex:     targetIndex,
+				ItemName:      itemName,
+				ItemCount:     itemCount,
+			},
 		}
 		if requestID != "" {
 			store.mallRequests[roleID+":"+requestID] = result

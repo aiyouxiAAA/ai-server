@@ -40,8 +40,8 @@ func TestTownBootstrapAppliesCapturedSourceTransportPoints(t *testing.T) {
 			checked++
 		}
 	}
-	if checked != 328 {
-		t.Fatalf("expected 328 captured transport points, checked %d", checked)
+	if checked != 333 {
+		t.Fatalf("expected 333 captured transport points, checked %d", checked)
 	}
 }
 
@@ -1171,6 +1171,17 @@ func TestBuildTownBootstrapUsesCapturedBaiyuanTownTransportData(t *testing.T) {
 			{handle: "transp_201", spawn: SpawnPoint{X: 2800, Y: 730}, sourceQuery: "transp/flag2.swf"},
 			{handle: "transp_205", spawn: SpawnPoint{X: 40, Y: 600}, sourceQuery: "transp/flag2.swf"},
 		}},
+		{mapID: 203, transports: []expectedTransport{
+			{handle: "transp_204", spawn: SpawnPoint{X: 1936, Y: 570}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 204, transports: []expectedTransport{
+			{handle: "transp_195", spawn: SpawnPoint{X: 1750, Y: 730}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_203", spawn: SpawnPoint{X: 40, Y: 530}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 205, transports: []expectedTransport{
+			{handle: "transp_202", spawn: SpawnPoint{X: 2939, Y: 580}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_207", spawn: SpawnPoint{X: 26, Y: 550}, sourceQuery: "transp/flag2.swf"},
+		}},
 	}
 
 	for _, testCase := range cases {
@@ -2088,6 +2099,71 @@ func TestBuildAnswerSpeakMap3PandaHealerIncludesTreatment(t *testing.T) {
 	}
 }
 
+func TestBuildTownBootstrapUsesCapturedMap190NPCs(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:      "acct-test-role-190",
+		DisplayName: "测试游侠",
+		Level:       32,
+		MapID:       190,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:    "acct-test",
+		RoleID:      role.RoleID,
+		DisplayName: role.DisplayName,
+		Level:       role.Level,
+		MapID:       190,
+	}
+
+	snapshot := BuildTownBootstrap(role, playerBase)
+	if snapshot.LoadMap.MapID != "190" || snapshot.LoadMap.XMLURL != "xml/190.xml" {
+		t.Fatalf("expected map190 loadMap, got %+v", snapshot.LoadMap)
+	}
+
+	assertRole := func(handle string, name string, sourceQuery string, spriteName string, x int, y int) {
+		t.Helper()
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.Handle != handle {
+				continue
+			}
+			if rolePush.DisplayName != name || rolePush.SourceQuery != sourceQuery {
+				t.Fatalf("expected %s/%s for %s, got name=%q source=%q", name, sourceQuery, handle, rolePush.DisplayName, rolePush.SourceQuery)
+			}
+			if rolePush.SpawnFlash.X != x || rolePush.SpawnFlash.Y != y {
+				t.Fatalf("expected %s spawn %d,%d got %+v", handle, x, y, rolePush.SpawnFlash)
+			}
+			if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != "runtime/classic-npc/movieclips/"+spriteName+"/"+spriteName+"-movieclip-ir" {
+				t.Fatalf("expected %s source visual, got %+v", handle, rolePush.SourceNPCVisual)
+			}
+			return
+		}
+		t.Fatalf("expected map190 role %s", handle)
+	}
+
+	assertRole("6210542618495892", "妖术狐狸", "npc/狐狸.swf", "huli", 1810, 400)
+	assertRole("6200542618485245", "通天八卦炉<ma>", "npc/通天八卦炉.swf", "bagualu", 2150, 400)
+	assertRole("6180542618405797", "镇山威", "npc/镇山威.swf", "zhenshanwei", 636, 510)
+	assertRole("6190542618476150", "丑四品", "npc/丑四品.swf", "chouwupin", 1482, 452)
+	assertRole("6220542618496305", "排行告示", "npc/公告牌.swf", "gonggaopai", 1029, 474)
+
+	foxSpeak := BuildAnswerSpeak("6210542618495892")
+	if foxSpeak.MsgHandle != "1" || foxSpeak.Msg != "这((乌梁营地))乃镇山威将军抵抗魔军的驻守营寨，少侠想去哪里？~" {
+		t.Fatalf("expected captured Wuliang fox dialogue, got %+v", foxSpeak)
+	}
+	if len(foxSpeak.Answers) != 6 || !hasAnswerOption(foxSpeak.Answers, "3", "传送到【白源镇】(铜钱x600)") || !hasAnswerOption(foxSpeak.Answers, "0", "<c/>关闭（VIP可获每日免费传送次数）") {
+		t.Fatalf("expected captured Wuliang fox answers, got %+v", foxSpeak.Answers)
+	}
+
+	zhenSpeak := BuildAnswerSpeak("6180542618405797")
+	if zhenSpeak.MsgHandle != "1" || !hasAnswerOption(zhenSpeak.Answers, "1", "学习技能") {
+		t.Fatalf("expected captured Zhenshanwei dialogue, got %+v", zhenSpeak)
+	}
+
+	chouSpeak := BuildAnswerSpeak("6190542618476150")
+	if chouSpeak.MsgHandle != "1" || !hasAnswerOption(chouSpeak.Answers, "1", "道具商店") {
+		t.Fatalf("expected captured Chou Sipin shop dialogue, got %+v", chouSpeak)
+	}
+}
+
 func TestBuildTownBootstrapUsesCapturedMap191NPCs(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:      "acct-test-role-191",
@@ -2155,6 +2231,53 @@ func TestBuildTownBootstrapUsesCapturedMap191NPCs(t *testing.T) {
 	specialtyReply := BuildAnswerReply("6350542618650282", "1", "6q41os")
 	if specialtyReply == nil || specialtyReply.MsgHandle != "6q41d_2" || !hasAnswerOption(specialtyReply.Answers, "6q41a_2_1", "<m/>是啊。") {
 		t.Fatalf("expected Hanxiong specialty completion reply, got %+v", specialtyReply)
+	}
+}
+
+func TestBuildTownTransferBootstrapKeepsWuliangMapboxFallbackAndCaptureBackedWildEnemyShow(t *testing.T) {
+	role := session.RoleSummary{
+		RoleID:       "acct-test-role-wuliang-transfer",
+		DisplayName:  "测试游侠",
+		Level:        32,
+		MapID:        190,
+		VisualRoleID: 1,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:     "acct-test",
+		RoleID:       role.RoleID,
+		DisplayName:  role.DisplayName,
+		Level:        role.Level,
+		MapID:        role.MapID,
+		VisualRoleID: role.VisualRoleID,
+	}
+	mapboxFallbackSpawn := SpawnPoint{X: 1000, Y: 600}
+	captureBackedWildBattleMaps := map[int]bool{
+		192: true,
+		193: true,
+		196: true,
+		198: true,
+		199: true,
+		200: true,
+		201: true,
+		202: true,
+		204: true,
+		205: true,
+	}
+
+	for mapID := 190; mapID <= 205; mapID++ {
+		snapshot, ok := BuildTownTransferBootstrap(role, playerBase, mapID, mapboxFallbackSpawn)
+		if !ok {
+			t.Fatalf("expected Wuliang map %d transfer bootstrap to be supported", mapID)
+		}
+		if snapshot.LoadMap.MapID != itoa(mapID) || snapshot.LoadMap.XMLURL != "xml/"+itoa(mapID)+".xml" {
+			t.Fatalf("expected Wuliang map %d loadMap, got %+v", mapID, snapshot.LoadMap)
+		}
+		if snapshot.CreatePlayer.SpawnFlash != mapboxFallbackSpawn {
+			t.Fatalf("expected Wuliang map %d mapbox fallback spawn %+v, got %+v", mapID, mapboxFallbackSpawn, snapshot.CreatePlayer.SpawnFlash)
+		}
+		if snapshot.LoadMap.EnemyShow != captureBackedWildBattleMaps[mapID] {
+			t.Fatalf("expected Wuliang map %d enemyShow=%v, got %+v", mapID, captureBackedWildBattleMaps[mapID], snapshot.LoadMap)
+		}
 	}
 }
 

@@ -1473,6 +1473,143 @@ func TestStoreUseRoleItemRejectsLevel5GiftBoxBelowCapturedLevelGate(t *testing.T
 	t.Fatalf("expected rejected gift box not to be consumed, got %+v", items)
 }
 
+func TestStoreRefineRoleEquipmentUsesTemporaryRuleAndPersists(t *testing.T) {
+	persistencePath := filepath.Join(t.TempDir(), "equipment-refinement.db")
+	store, err := NewPersistentStore(persistencePath)
+	if err != nil {
+		t.Fatalf("create persistent store: %v", err)
+	}
+	defer func() {
+		if closeErr := store.Close(); closeErr != nil {
+			t.Fatalf("close persistent store: %v", closeErr)
+		}
+	}()
+
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "精炼持久化测试",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	gem, ok := store.GrantRoleItem(login.PlayerID, created.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "初级精炼宝石",
+		ItemType:    "oneI",
+		Display:     "616.png",
+		Description: "f_i_初级精炼宝石&24@宝物&25@999",
+		Count:       2,
+		Index:       -1,
+	})
+	if !ok {
+		t.Fatal("expected refinement gem grant")
+	}
+	target, ok := store.GrantRoleItem(login.PlayerID, created.Role.RoleID, RoleItem{
+		Type:        "装备",
+		Name:        "精炼测试护肩",
+		ItemType:    "equip",
+		Display:     "603.png",
+		Description: "f_i_精炼测试护肩&24@护具·肩部&25@1&21@10&3@10(+3)&4@5(+2)&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+3\n[精炼+1] 每升一级 魔法防御+2",
+		Count:       1,
+		Index:       19,
+		Level:       1,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected refinement target grant")
+	}
+
+	result := store.RefineRoleEquipment(login.PlayerID, created.Role.RoleID, gem.Type, gem.Index, target.Type, target.Index)
+	if !result.Found || !result.Refined || !result.Succeeded || result.ResultMessage != "精炼成功&0;等级上升1" {
+		t.Fatalf("expected temporary refinement success, got %+v", result)
+	}
+	if result.TargetItem.Level != 2 || !strings.Contains(result.TargetItem.Description, "&3@10(+6)") || !strings.Contains(result.TargetItem.Description, "&4@5(+4)") {
+		t.Fatalf("expected level two source-style stat contributions, got %+v", result.TargetItem)
+	}
+	if result.PlayerBase.RolePhysique == nil || roleEquipmentStats([]RoleItem{result.TargetItem}).phyDef != 16 || roleEquipmentStats([]RoleItem{result.TargetItem}).mgcDef != 9 {
+		t.Fatalf("expected refinement contributions in role physique calculation, got %+v", result.PlayerBase.RolePhysique)
+	}
+
+	if err := store.Close(); err != nil {
+		t.Fatalf("close before reload: %v", err)
+	}
+	store, err = NewPersistentStore(persistencePath)
+	if err != nil {
+		t.Fatalf("reload persistent store: %v", err)
+	}
+	restoredEquipItems, _, ok := store.GetRoleItems(login.PlayerID, created.Role.RoleID, "装备")
+	restoredTargetLevel := -1
+	for _, item := range restoredEquipItems {
+		if item.Name == "精炼测试护肩" {
+			restoredTargetLevel = item.Level
+		}
+	}
+	if !ok || restoredTargetLevel != 2 {
+		t.Fatalf("expected persisted refined equipment, got %+v", restoredEquipItems)
+	}
+	restoredBagItems, _, ok := store.GetRoleItems(login.PlayerID, created.Role.RoleID, "背包")
+	restoredGemCount := -1
+	for _, item := range restoredBagItems {
+		if item.Name == "初级精炼宝石" {
+			restoredGemCount = item.Count
+		}
+	}
+	if !ok || restoredGemCount != 1 {
+		t.Fatalf("expected persisted consumed refinement gem, got %+v", restoredBagItems)
+	}
+}
+
+func TestStoreRefineRoleEquipmentUsesTemporaryFailureRule(t *testing.T) {
+	store := NewStore()
+	store.refinementRoll = func(int) int { return 9999 }
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "精炼失败测试",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	gem, ok := store.GrantRoleItem(login.PlayerID, created.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "初级精炼宝石",
+		ItemType:    "oneI",
+		Display:     "616.png",
+		Description: "f_i_初级精炼宝石&24@宝物&25@999",
+		Count:       1,
+		Index:       -1,
+	})
+	if !ok {
+		t.Fatal("expected refinement gem grant")
+	}
+	target, ok := store.GrantRoleItem(login.PlayerID, created.Role.RoleID, RoleItem{
+		Type:        "装备",
+		Name:        "精炼失败测试护肩",
+		ItemType:    "equip",
+		Display:     "603.png",
+		Description: "f_i_精炼失败测试护肩&24@护具·肩部&25@1&21@10&3@10(+6)&19@精炼潜质:\n[精炼+1] 每升一级 物理防御+3",
+		Count:       1,
+		Index:       19,
+		Level:       2,
+		ItemLevel:   1,
+	})
+	if !ok {
+		t.Fatal("expected refinement target grant")
+	}
+
+	result := store.RefineRoleEquipment(login.PlayerID, created.Role.RoleID, gem.Type, gem.Index, target.Type, target.Index)
+	if !result.Found || !result.Refined || result.Succeeded || result.ResultMessage != "精炼失败&0;等级下降1" {
+		t.Fatalf("expected temporary refinement failure, got %+v", result)
+	}
+	if result.TargetItem.Level != 1 || !strings.Contains(result.TargetItem.Description, "&3@10(+3)") {
+		t.Fatalf("expected failure to reduce temporary level and contribution, got %+v", result.TargetItem)
+	}
+	if len(result.ClearedItems) != 1 || result.ClearedItems[0].Type != gem.Type || result.ClearedItems[0].Index != gem.Index {
+		t.Fatalf("expected failed attempt to consume its gem, got %+v", result.ClearedItems)
+	}
+}
+
 func TestStoreUseRoleItemLearnsCapturedWeaponFamiliarityPresentation(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")

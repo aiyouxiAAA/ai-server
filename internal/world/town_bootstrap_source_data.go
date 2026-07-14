@@ -1460,6 +1460,90 @@ var map157SourceNPCs = []sourceNPCEntry{
 	buildCapturedSourceTransport("transp_156", 2963, 515),
 }
 
+var map190SourceNPCs = []sourceNPCEntry{
+	{
+		Handle:      "6210542618495892",
+		DisplayName: "妖术狐狸",
+		SourceQuery: "npc/狐狸.swf",
+		SpriteName:  "huli",
+		Width:       48,
+		Height:      48,
+		SpawnFlash:  SpawnPoint{X: 1810, Y: 400},
+		QuestState:  0,
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message:   "这((乌梁营地))乃镇山威将军抵抗魔军的驻守营寨，少侠想去哪里？~",
+			Answers: []AnswerOption{
+				{Handle: "2", Msg: "激活本地传送点"},
+				{Handle: "3", Msg: "传送到【白源镇】(铜钱x600)"},
+				{Handle: "4", Msg: "传送到【牧原镇】(未激活！)"},
+				{Handle: "5", Msg: "传送到【雷兽神坛外】(未激活！)"},
+				{Handle: "help", Msg: "未激活是什么意思？"},
+				{Handle: "0", Msg: "<c/>关闭（VIP可获每日免费传送次数）"},
+			},
+		},
+	},
+	{
+		Handle:      "6200542618485245",
+		DisplayName: "通天八卦炉<ma>",
+		SourceQuery: "npc/通天八卦炉.swf",
+		SpriteName:  "bagualu",
+		Width:       174,
+		Height:      220,
+		SpawnFlash:  SpawnPoint{X: 2150, Y: 400},
+		QuestState:  0,
+	},
+	{
+		Handle:      "6180542618405797",
+		DisplayName: "镇山威",
+		SourceQuery: "npc/镇山威.swf",
+		SpriteName:  "zhenshanwei",
+		Width:       132,
+		Height:      185,
+		SpawnFlash:  SpawnPoint{X: 636, Y: 510},
+		QuestState:  1,
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message: `((行军打仗弃家舍，只为天下太平炊。大敌在前全无惧，战死扬我广青威))
+此次，袁天纲将军命我率广青军来此对抗煞的前锋军团，任务艰苦，责任重大。如不能将可恶的魔军从乌梁这里击退，我怕是再无颜面回我那家乡。`,
+			Answers: []AnswerOption{
+				{Handle: "1", Msg: "学习技能"},
+				{Handle: "0", Msg: "<c/>关闭"},
+			},
+		},
+	},
+	{
+		Handle:      "6190542618476150",
+		DisplayName: "丑四品",
+		SourceQuery: "npc/丑四品.swf",
+		SpriteName:  "chouwupin",
+		Width:       66,
+		Height:      121,
+		SpawnFlash:  SpawnPoint{X: 1482, Y: 452},
+		QuestState:  2,
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message:   "这位客官，我是贩售杂货的丑四品。我们丑氏家族世世代代在这云之大陆上经商，我们的商贸车队也遍布各个村镇，这次听说乌梁这里有买卖可以做&0;要不我也不来了。",
+			Answers: []AnswerOption{
+				{Handle: "1", Msg: "道具商店"},
+				{Handle: "3", Msg: "原石合成"},
+				{Handle: "2", Msg: "查看交易行"},
+				{Handle: "0", Msg: "<c/>取消"},
+			},
+		},
+	},
+	{
+		Handle:      "6220542618496305",
+		DisplayName: "排行告示",
+		SourceQuery: "npc/公告牌.swf",
+		SpriteName:  "gonggaopai",
+		Width:       136,
+		Height:      149,
+		SpawnFlash:  SpawnPoint{X: 1029, Y: 474},
+		QuestState:  0,
+	},
+}
+
 var map191SourceNPCs = []sourceNPCEntry{
 	{
 		Handle:      "6360542618722932",

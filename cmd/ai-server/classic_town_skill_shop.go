@@ -84,8 +84,10 @@ type classicTownTryEquipPush struct {
 }
 
 type classicTownActiveItemRequest struct {
-	Type  string `json:"type"`
-	Index int    `json:"index"`
+	Type        string `json:"type"`
+	Index       int    `json:"index"`
+	TargetType  string `json:"targetType,omitempty"`
+	TargetIndex *int   `json:"targetIndex,omitempty"`
 }
 
 type classicTownDestroyItemRequest struct {

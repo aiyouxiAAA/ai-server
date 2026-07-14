@@ -241,44 +241,54 @@ type townMapsIndexEntry struct {
 var bootstrapNow = time.Now
 
 var sourceWildBattleMapIDs = map[int]struct{}{
-	4:  {},
-	5:  {},
-	11: {},
-	34: {},
-	35: {},
-	36: {},
-	37: {},
-	39: {},
-	40: {},
-	41: {},
-	43: {},
-	44: {},
-	48: {},
-	49: {},
-	50: {},
-	51: {},
-	52: {},
-	56: {},
-	57: {},
-	58: {},
-	59: {},
-	60: {},
-	61: {},
-	62: {},
-	63: {},
-	84: {},
-	85: {},
-	86: {},
-	87: {},
-	88: {},
-	90: {},
-	97: {},
+	4:   {},
+	5:   {},
+	11:  {},
+	34:  {},
+	35:  {},
+	36:  {},
+	37:  {},
+	39:  {},
+	40:  {},
+	41:  {},
+	43:  {},
+	44:  {},
+	48:  {},
+	49:  {},
+	50:  {},
+	51:  {},
+	52:  {},
+	56:  {},
+	57:  {},
+	58:  {},
+	59:  {},
+	60:  {},
+	61:  {},
+	62:  {},
+	63:  {},
+	84:  {},
+	85:  {},
+	86:  {},
+	87:  {},
+	88:  {},
+	90:  {},
+	97:  {},
 	172: {},
 	173: {},
 	174: {},
 	175: {},
 	177: {},
 	178: {},
+	192: {},
+	193: {},
+	196: {},
+	198: {},
+	199: {},
+	200: {},
+	201: {},
+	202: {},
+	204: {},
+	205: {},
 }
 
 var sourceCollectionPointsByHandle = map[string]SourceCollectionPoint{
@@ -580,6 +590,10 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneFiftySeven.SourceNPCs = map157SourceNPCs
 	mapOneFiftySeven.SourceMonsters = map157SourceMonsters
 	definitions[157] = mapOneFiftySeven
+
+	mapOneNinety := definitions[190]
+	mapOneNinety.SourceNPCs = map190SourceNPCs
+	definitions[190] = mapOneNinety
 
 	mapOneNinetyOne := definitions[191]
 	mapOneNinetyOne.SourceNPCs = map191SourceNPCs
@@ -1007,7 +1021,6 @@ func buildTownBootstrap(
 		RolePhysique: playerBase.RolePhysique,
 	}
 }
-
 
 func BuildSourceMonsterRolePush(mapID int, monster sourceMonsterEntry) RolePush {
 	push := RolePush{

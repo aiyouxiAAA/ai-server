@@ -89,6 +89,19 @@ func TestGeneratedClassicItemEquipmentRowsKeepSourceDescriptions(t *testing.T) {
 	}
 }
 
+func TestGeneratedClassicItemTablePromotesTrialSealFromCapturedEquipment(t *testing.T) {
+	item, ok, err := FindItemByName("试炼印")
+	if err != nil {
+		t.Fatalf("FindItemByName(试炼印) error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected captured 试炼印 item row")
+	}
+	if item["item_type"] != "equip" || item["icon"] != "1605.png" || !strings.HasPrefix(item["description"], "f_i_试炼印^f9e000") {
+		t.Fatalf("expected captured trial-seal equipment metadata, got %+v", item)
+	}
+}
+
 func TestClassicDataLookupsReturnDetachedRows(t *testing.T) {
 	item, ok, err := FindItemByName("馒头")
 	if err != nil {

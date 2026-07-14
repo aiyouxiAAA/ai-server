@@ -1746,17 +1746,42 @@ func roleEquipmentStats(items []RoleItem) roleEquipmentStatBonus {
 		if item.Type != "装备" {
 			continue
 		}
-		bonus.phyAtk += parseClassicDescriptionSignedInt(item.Description, "1")
-		bonus.mgcAtk += parseClassicDescriptionSignedInt(item.Description, "2")
-		bonus.phyDef += parseClassicDescriptionSignedInt(item.Description, "3")
-		bonus.mgcDef += parseClassicDescriptionSignedInt(item.Description, "4")
-		bonus.maxHP += parseClassicDescriptionSignedInt(item.Description, "5")
-		bonus.maxMP += parseClassicDescriptionSignedInt(item.Description, "6")
-		bonus.hit += parseClassicDescriptionSignedInt(item.Description, "9")
-		bonus.dog += parseClassicDescriptionSignedInt(item.Description, "10")
-		bonus.fat += parseClassicDescriptionSignedInt(item.Description, "11")
+		bonus.phyAtk += parseClassicDescriptionEquipmentStat(item.Description, "1")
+		bonus.mgcAtk += parseClassicDescriptionEquipmentStat(item.Description, "2")
+		bonus.phyDef += parseClassicDescriptionEquipmentStat(item.Description, "3")
+		bonus.mgcDef += parseClassicDescriptionEquipmentStat(item.Description, "4")
+		bonus.maxHP += parseClassicDescriptionEquipmentStat(item.Description, "5")
+		bonus.maxMP += parseClassicDescriptionEquipmentStat(item.Description, "6")
+		bonus.hit += parseClassicDescriptionEquipmentStat(item.Description, "9")
+		bonus.dog += parseClassicDescriptionEquipmentStat(item.Description, "10")
+		bonus.fat += parseClassicDescriptionEquipmentStat(item.Description, "11")
 	}
 	return bonus
+}
+
+func parseClassicDescriptionEquipmentStat(description string, key string) int {
+	base := parseClassicDescriptionSignedInt(description, key)
+	marker := "&" + strings.TrimSpace(key) + "@"
+	start := strings.LastIndex(description, marker)
+	if start < 0 {
+		return base
+	}
+	start += len(marker)
+	for start < len(description) && (description[start] == '+' || description[start] == '-' || (description[start] >= '0' && description[start] <= '9')) {
+		start++
+	}
+	if start >= len(description) || description[start] != '(' {
+		return base
+	}
+	end := strings.IndexByte(description[start:], ')')
+	if end < 0 {
+		return base
+	}
+	contribution, err := strconv.Atoi(description[start+1 : start+end])
+	if err != nil {
+		return base
+	}
+	return base + contribution
 }
 
 func parseClassicDescriptionSignedInt(description string, key string) int {

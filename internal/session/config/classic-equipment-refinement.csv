@@ -1,0 +1,8 @@
+"item_name","min_refine_level","max_refine_level","min_equipment_level","success_rate_bps","failure_floor","design_status","note"
+"初级精炼宝石","0","1","0","10000","0","temporary_non_original","暂定：+0 至 +2 保证成功，贴合物品说明中的可轻松精炼至+2。"
+"初级精炼宝石","2","2","0","6500","0","temporary_non_original","暂定：冲击+3时65%成功；失败降1级。"
+"精炼宝石","3","7","0","7000","3","temporary_non_original","暂定：+3至+8阶段70%成功；失败不低于+3。"
+"高级精炼宝石","8","13","0","6000","8","temporary_non_original","暂定：+8至+14阶段60%成功；失败不低于+8。"
+"特级精炼宝石","14","17","0","5000","14","temporary_non_original","暂定：+14至+18阶段50%成功；失败不低于+14。"
+"超级精炼宝石","18","20","80","4000","18","temporary_non_original","暂定：80级装备的+18至+21阶段40%成功；失败不低于+18。"
+"究极精炼宝石","21","999","100","3500","21","temporary_non_original","暂定：100级装备的+21以上阶段35%成功；失败不低于+21。"

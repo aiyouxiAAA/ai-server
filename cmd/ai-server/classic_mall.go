@@ -75,7 +75,7 @@ func buildClassicMallPurchaseResult(store *session.Store, socketSession *packetS
 			socketSession.playerBase.Currencies = currencies
 		}
 	}
-	return packetResult{
+	packet := packetResult{
 		mallPurchase: &result,
 		mallCurrency: &mall.CurrencyPush{
 			CurrencyName: result.CurrencyName,
@@ -83,6 +83,21 @@ func buildClassicMallPurchaseResult(store *session.Store, socketSession *packetS
 		},
 		handled: true,
 	}
+	if result.Success && result.Delivery != nil {
+		item, ok := store.GetRoleItem(
+			socketSession.playerBase.PlayerID,
+			socketSession.selectedRole.RoleID,
+			result.Delivery.ContainerType,
+			result.Delivery.ItemIndex,
+		)
+		if !ok {
+			log.Printf("[ai-server] classic mall delivery state missing roleId=%s type=%s index=%d", socketSession.selectedRole.RoleID, result.Delivery.ContainerType, result.Delivery.ItemIndex)
+			return packet
+		}
+		item.Handle = socketSession.selectedRole.RoleID
+		packet.itemInfos = []classicTownItemInfoPush{classicTownItemInfoPushFromRoleItem(item)}
+	}
+	return packet
 }
 
 func buildClassicMallCurrencyPush(store *session.Store, socketSession *packetSession) *mall.CurrencyPush {

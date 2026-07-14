@@ -414,7 +414,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if destination, ok := resolveClassicTownTransportAnswer(socketSession, request.MapID, request.Handle, "goto"); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
-		answerSpeak := world.BuildAnswerSpeak(request.Handle)
+		answerSpeak := buildClassicTownQuestAwareAnswerSpeak(store, socketSession, request.Handle)
 		return packetResult{
 			answerSpeak: &answerSpeak,
 			handled:     true,
@@ -464,6 +464,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 				}},
 				handled: true,
 			}
+		}
+		if result, ok := buildClassicAuctionAnswerResult(request); ok {
+			return result
 		}
 		if result, ok := buildClassicTownHealerResult(store, socketSession, request); ok {
 			return result
@@ -926,7 +929,7 @@ func isClassicTownInactiveTransportAnswer(request classicTownAnswerRequest) bool
 }
 
 func isClassicTownSkillTeacherRequest(request classicTownAnswerRequest) bool {
-	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle || request.Handle == baiyuanSkillTeacherHandle)
+	return request.MsgHandle == "10" && (request.Handle == sourceSkillTeacherHandle || request.Handle == guangqingSkillTeacherHandle || request.Handle == baiyuanSkillTeacherHandle || request.Handle == "6180542618405797")
 }
 
 func isClassicTownVisibleMonsterCrossRole(request classicTownRoleInteractionRequest) bool {
@@ -3005,7 +3008,7 @@ func buildClassicTownBuySkillResult(
 		return packetResult{handled: true}
 	}
 
-	if strings.HasPrefix(strings.TrimSpace(request.ShopID), "item:") {
+	if strings.HasPrefix(strings.TrimSpace(request.ShopID), "item:") || strings.TrimSpace(request.ShopID) == wuliangRockShopID {
 		return buildClassicTownBuyItemResult(store, socketSession, request)
 	}
 

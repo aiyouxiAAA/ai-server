@@ -2145,6 +2145,24 @@ func TestBuildTownBootstrapUsesCapturedMap190NPCs(t *testing.T) {
 	assertRole("6190542618476150", "丑四品", "npc/丑四品.swf", "chouwupin", 1482, 452)
 	assertRole("6220542618496305", "排行告示", "npc/公告牌.swf", "gonggaopai", 1029, 474)
 
+	assertHeadTitle := func(handle string, guildName string, guildPic string) {
+		t.Helper()
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.Handle != handle {
+				continue
+			}
+			if rolePush.GuildName != guildName || rolePush.GuildPic != guildPic {
+				t.Fatalf("expected %s head title %q/%q got %q/%q", handle, guildName, guildPic, rolePush.GuildName, rolePush.GuildPic)
+			}
+			return
+		}
+		t.Fatalf("expected map190 role %s", handle)
+	}
+	assertHeadTitle("6210542618495892", "传送大师", "5005")
+	assertHeadTitle("6200542618485245", "合成道具", "5001")
+	assertHeadTitle("6180542618405797", "技能导师", "5003")
+	assertHeadTitle("6190542618476150", "道具商", "5001")
+
 	foxSpeak := BuildAnswerSpeak("6210542618495892")
 	if foxSpeak.MsgHandle != "1" || foxSpeak.Msg != "这((乌梁营地))乃镇山威将军抵抗魔军的驻守营寨，少侠想去哪里？~" {
 		t.Fatalf("expected captured Wuliang fox dialogue, got %+v", foxSpeak)
@@ -2161,6 +2179,28 @@ func TestBuildTownBootstrapUsesCapturedMap190NPCs(t *testing.T) {
 	chouSpeak := BuildAnswerSpeak("6190542618476150")
 	if chouSpeak.MsgHandle != "1" || !hasAnswerOption(chouSpeak.Answers, "1", "道具商店") {
 		t.Fatalf("expected captured Chou Sipin shop dialogue, got %+v", chouSpeak)
+	}
+
+	baguaSpeak := BuildAnswerSpeak("6200542618485245")
+	if baguaSpeak.MsgHandle != "1" || !hasAnswerOption(baguaSpeak.Answers, "1", "合成稀有道具") {
+		t.Fatalf("expected captured Wuliang Bagua dialogue, got %+v", baguaSpeak)
+	}
+
+	rankSpeak := BuildAnswerSpeak("6220542618496305")
+	if rankSpeak.MsgHandle != "1" || !hasAnswerOption(rankSpeak.Answers, "1", "经验排行,前50") || !hasAnswerOption(rankSpeak.Answers, "2", "声望排行,前50") || !hasAnswerOption(rankSpeak.Answers, "3", "罪恶排行,前50") {
+		t.Fatalf("expected captured Wuliang rank dialogue, got %+v", rankSpeak)
+	}
+	experienceRank := BuildAnswerReply("6220542618496305", "1", "1")
+	prestigeRank := BuildAnswerReply("6220542618496305", "1", "2")
+	crimeRank := BuildAnswerReply("6220542618496305", "1", "3")
+	if experienceRank == nil || strings.Count(experienceRank.Msg, "\n") != 50 || !strings.Contains(experienceRank.Msg, "第1名\tLv115\t\t离") || !strings.Contains(experienceRank.Msg, "第50名\tLv103\t\t千") {
+		t.Fatalf("expected captured experience ranking snapshot, got %+v", experienceRank)
+	}
+	if prestigeRank == nil || strings.Count(prestigeRank.Msg, "\n") != 50 || !strings.Contains(prestigeRank.Msg, "第1名\t声望275337\t\t雪中飞舞") || !strings.Contains(prestigeRank.Msg, "第50名\t声望32715\t\t无为") {
+		t.Fatalf("expected captured prestige ranking snapshot, got %+v", prestigeRank)
+	}
+	if crimeRank == nil || strings.Count(crimeRank.Msg, "\n") != 50 || !strings.Contains(crimeRank.Msg, "第1名\t罪恶9137\t\t李七夜") || !strings.Contains(crimeRank.Msg, "第50名\t罪恶0\t\ts2_晓雷") {
+		t.Fatalf("expected captured crime ranking snapshot, got %+v", crimeRank)
 	}
 }
 
@@ -2208,9 +2248,35 @@ func TestBuildTownBootstrapUsesCapturedMap191NPCs(t *testing.T) {
 	assertRole("6370542618853300", "虞莫", "npc/虞莫.swf", "yumo", 2483, 380)
 	assertRole("6350542618650282", "汉雄", "npc/汉雄.swf", "hanxiong", 1514, 471)
 
+	headTitles := map[string]struct {
+		name string
+		icon string
+	}{
+		"6360542618722932": {name: "医疗师", icon: "5002"},
+		"6370542618853300": {name: "锻造师", icon: "5000"},
+		"6350542618650282": {name: "仓库管理", icon: "5004"},
+	}
+	for _, rolePush := range snapshot.CreateRoles {
+		expected, ok := headTitles[rolePush.Handle]
+		if !ok {
+			continue
+		}
+		if rolePush.GuildName != expected.name || rolePush.GuildPic != expected.icon {
+			t.Fatalf("expected map191 %s head title %s/%s, got %+v", rolePush.Handle, expected.name, expected.icon, rolePush)
+		}
+		delete(headTitles, rolePush.Handle)
+	}
+	if len(headTitles) != 0 {
+		t.Fatalf("missing map191 NPC head titles: %+v", headTitles)
+	}
+
 	xuzhongSpeak := BuildAnswerSpeak("6360542618722932")
 	if !hasAnswerOption(xuzhongSpeak.Answers, "2", "进行治疗") || !hasAnswerOption(xuzhongSpeak.Answers, "1", "查看商店") {
 		t.Fatalf("expected Xuzhong healer/shop answers, got %+v", xuzhongSpeak.Answers)
+	}
+	yumoSpeak := BuildAnswerSpeak("6370542618853300")
+	if yumoSpeak.MsgHandle != "1" || !hasAnswerOption(yumoSpeak.Answers, "2", "购买武器") || !hasAnswerOption(yumoSpeak.Answers, "3", "购买护具") {
+		t.Fatalf("expected captured Yumo weapon/armor answers, got %+v", yumoSpeak)
 	}
 
 	reply := BuildAnswerReply("6350542618650282", "1", "6q2gs")

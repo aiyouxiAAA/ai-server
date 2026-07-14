@@ -14,6 +14,7 @@ import (
 
 	"ai-server/internal/battle"
 	"ai-server/internal/classicactivity"
+	"ai-server/internal/classicdata"
 	"ai-server/internal/protocol"
 	"ai-server/internal/quest"
 	"ai-server/internal/session"
@@ -5725,6 +5726,46 @@ func TestHandlePacketClassicTownGuangqingCapturedItemShopPushesSaleRows(t *testi
 				}
 			}
 		})
+	}
+}
+
+func TestSourceGuangqingCraftShopPreservesCapturedRefinementLineBreaks(t *testing.T) {
+	entries := sourceItemShopEntries("合成", sourceGuangqingCraftShopRows)
+	if len(entries) == 0 {
+		t.Fatal("expected captured craft shop entries")
+	}
+	description := entries[0].Description
+	want := "精炼潜质:\n[精炼+16] 每升一级 物理攻击+160\n[精炼+16] 每升一级 魔法攻击+160\n[精炼+16] 每升一级 移动+10\n[精炼+18] 每升一级 魔法防御+300\n[精炼+18] 每升一级 物理防御+300\n[精炼+20] 每升一级 命中+20%\n[精炼+20] 每升一级 回避+20%\n[精炼+20] 每升一级 气力上限+1500"
+	if !strings.Contains(description, want) {
+		t.Fatalf("expected captured refinement line breaks, got %q", description)
+	}
+}
+
+func TestSourceItemShopEquipmentDescriptionsMatchCapturedItemTable(t *testing.T) {
+	seen := make(map[string]struct{})
+	for _, routes := range sourceGuangqingItemShopRoutes {
+		for _, route := range routes {
+			for _, entry := range sourceItemShopEntries(route.vocation, route.rows) {
+				if entry.TargetType != "equip" {
+					continue
+				}
+				key := entry.Name + "\x00" + entry.Description
+				if _, exists := seen[key]; exists {
+					continue
+				}
+				seen[key] = struct{}{}
+				row, ok, err := classicdata.FindItemByName(entry.Name)
+				if err != nil {
+					t.Fatalf("load captured item metadata for %s: %v", entry.Name, err)
+				}
+				if !ok {
+					t.Fatalf("missing captured item metadata for shop equipment %s", entry.Name)
+				}
+				if row["description"] != entry.Description {
+					t.Errorf("shop equipment %s description differs from captured item table\nshop: %q\ncaptured: %q", entry.Name, entry.Description, row["description"])
+				}
+			}
+		}
 	}
 }
 

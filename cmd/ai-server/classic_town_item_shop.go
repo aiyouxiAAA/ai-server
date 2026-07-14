@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
+	"ai-server/internal/classicdata"
 	"ai-server/internal/session"
 )
 
@@ -15,6 +17,8 @@ type sourceItemShopRoute struct {
 	vocation     string
 	rows         string
 }
+
+const wuliangRockShopID = "rock"
 
 type sourceItemShopRow struct {
 	id           int
@@ -94,10 +98,6 @@ func sourceItemShopEntries(vocation string, rows string) []classicTownSkillShopE
 
 func findSourceItemShopRow(shopID string, itemID int) (sourceItemShopRow, bool) {
 	normalizedShopID := strings.TrimSpace(shopID)
-	_, ok := strings.CutPrefix(normalizedShopID, "item:")
-	if !ok {
-		return sourceItemShopRow{}, false
-	}
 	for _, routes := range sourceGuangqingItemShopRoutes {
 		for _, route := range routes {
 			if sourceItemShopRouteID(route) != normalizedShopID {
@@ -159,12 +159,16 @@ func parseSourceItemShopRow(line string) (sourceItemShopRow, bool) {
 	if err != nil {
 		return sourceItemShopRow{}, false
 	}
+	description := strings.ReplaceAll(columns[4], `\n`, "\n")
+	if columns[2] == "equip" {
+		description = sourceItemShopEquipmentDescription(columns[1])
+	}
 	row := sourceItemShopRow{
 		id:          id,
 		name:        columns[1],
 		targetType:  columns[2],
 		icon:        columns[3],
-		description: columns[4],
+		description: description,
 		count:       count,
 		level:       level,
 	}
@@ -176,6 +180,18 @@ func parseSourceItemShopRow(line string) (sourceItemShopRow, bool) {
 		row.requirements = append(row.requirements, sourceShopRequirement(columns[index], columns[index+1], reqCount))
 	}
 	return row, true
+}
+
+func sourceItemShopEquipmentDescription(name string) string {
+	row, ok, err := classicdata.FindItemByName(name)
+	if err != nil {
+		panic(fmt.Sprintf("load captured item metadata for shop equipment %s: %v", name, err))
+	}
+	description := strings.TrimSpace(row["description"])
+	if !ok || row["item_type"] != "equip" || description == "" {
+		panic(fmt.Sprintf("missing captured item metadata for shop equipment %s", name))
+	}
+	return description
 }
 
 func sourceItemCategory(description string) string {
@@ -242,6 +258,13 @@ var sourceGuangqingItemShopRoutes = map[string][]sourceItemShopRoute{
 		vocation:     "合成",
 		rows:         sourceGuangqingCraftShopRows,
 	}},
+	"6200542618485245": {{
+		handle:       "6200542618485245",
+		answerHandle: "1",
+		title:        "通天八卦炉合成",
+		vocation:     "合成",
+		rows:         sourceGuangqingCraftShopRows,
+	}},
 	"2500542613172144": {{
 		handle:       "2500542613172144",
 		answerHandle: "1",
@@ -261,7 +284,22 @@ var sourceGuangqingItemShopRoutes = map[string][]sourceItemShopRoute{
 		answerHandle: "1",
 		title:        "虚中的药品商店",
 		vocation:     "医疗",
-		rows:         sourceGuangqingHealerShopRows,
+		rows:         sourceWuliangMap2HealerShopRows,
+	}},
+	"6370542618853300": {{
+		handle:       "6370542618853300",
+		answerHandle: "2",
+		shopID:       "item:6370542618853300:2",
+		title:        "虞莫的武器商店",
+		vocation:     "武器",
+		rows:         sourceWuliangMap2WeaponShopRows,
+	}, {
+		handle:       "6370542618853300",
+		answerHandle: "3",
+		shopID:       "item:6370542618853300:3",
+		title:        "虞莫的护具商店",
+		vocation:     "护具",
+		rows:         sourceWuliangMap2ArmorShopRows,
 	}},
 	"4710542615621525": {{
 		handle:       "4710542615621525",
@@ -305,6 +343,13 @@ var sourceGuangqingItemShopRoutes = map[string][]sourceItemShopRoute{
 		title:        "丑四品的道具商店",
 		vocation:     "道具",
 		rows:         sourceWuliangGroceryShopRows,
+	}, {
+		handle:       "6190542618476150",
+		answerHandle: "3",
+		shopID:       wuliangRockShopID,
+		title:        "丑四品的原石合成",
+		vocation:     "原石",
+		rows:         sourceWuliangRockCraftShopRows,
 	}},
 }
 
@@ -433,7 +478,7 @@ const sourceGuangqingHealerShopRows = `
 `
 
 const sourceGuangqingCraftShopRows = `
-0|狰狞神骑|equip|130.png|f_i_狰狞神骑^f9e000&23@限制装备至【坐骑】格。&24@坐骑&25@1&21@90&13@50&14@50&15@50&16@50&17@50&27@sitem_pet&19@精炼潜质:[精炼+16] 每升一级 物理攻击+160[精炼+16] 每升一级 魔法攻击+160[精炼+16] 每升一级 移动+10[精炼+18] 每升一级 魔法防御+300[精炼+18] 每升一级 物理防御+300[精炼+20] 每升一级 命中+20%[精炼+20] 每升一级 回避+20%[精炼+20] 每升一级 气力上限+1500&103@0&104@0&105@&107@&108@0|1|5|狰狞的头|130.png|99|狰狞的皮|128.png|99|狰狞的尾|131.png|99|狰狞的爪|129.png|99|狰狞精魄|1661.png|100
+0|狰狞神骑|equip|130.png|f_i_狰狞神骑^f9e000&23@限制装备至【坐骑】格。&24@坐骑&25@1&21@90&13@50&14@50&15@50&16@50&17@50&27@sitem_pet&19@精炼潜质:\n[精炼+16] 每升一级 物理攻击+160\n[精炼+16] 每升一级 魔法攻击+160\n[精炼+16] 每升一级 移动+10\n[精炼+18] 每升一级 魔法防御+300\n[精炼+18] 每升一级 物理防御+300\n[精炼+20] 每升一级 命中+20%\n[精炼+20] 每升一级 回避+20%\n[精炼+20] 每升一级 气力上限+1500&103@0&104@0&105@&107@&108@0|1|5|狰狞的头|130.png|99|狰狞的皮|128.png|99|狰狞的尾|131.png|99|狰狞的爪|129.png|99|狰狞精魄|1661.png|100
 1|精炼宝石|null|435.png|f_i_精炼宝石^f9e000&24@材料&25@999&20@装备精炼所需的宝石.&103@0&104@0&105@&107@&108@0|1|5|造物魔晶|857.png|13
 2|宠物锦囊|null|141.png|f_i_宠物锦囊^f9e000&24@宝物&25@99&20@神秘的宠物锦囊。&103@0&104@0&105@&107@&108@0|1|4|造物魔晶|857.png|60
 3|筋斗云|equip|968.png|f_i_筋斗云^f9e000&24@坐骑&25@1&20@传说中的筋斗云。&103@0&104@0&105@&107@&108@0|1|3|造物魔晶|857.png|100
@@ -443,4 +488,9 @@ const sourceGuangqingCraftShopRows = `
 7|奥义秘诀|own|2.png|f_i_奥义秘诀^f9e000&24@消耗品&25@99&20@记载奥义的秘诀。&103@0&104@0&105@&107@&108@0|1|4|造物魔晶|857.png|20
 8|神技天书|own|1257.png|f_i_神技天书^f9e000&24@消耗品&25@99&20@记载神技的天书。&103@0&104@0&105@&107@&108@0|1|4|造物魔晶|857.png|50
 9|盖世神功|own|1230.png|f_i_盖世神功^f9e000&24@消耗品&25@99&20@记载盖世神功的秘籍。&103@0&104@0&105@&107@&108@0|1|5|造物魔晶|857.png|150
+`
+
+const sourceWuliangRockCraftShopRows = `
+0|贰级原石|own|858.png|f_i_贰级原石^f9e000&24@宝物&25@99&19@打碎石块可获得一颗贰级镶嵌宝石。\r<font color='#fee010'>双击使用该物品</font>&20@一块奇特的蓝色石头,看似很神秘。&27@sitem_jhj&103@0&104@0&105@&107@&108@0|1|5|壹级绿碎玉|125.png|1|壹级粉碎玉|122.png|1|壹级紫碎玉|126.png|1|壹级红碎玉|123.png|1|壹级蓝碎玉|124.png|1
+1|叁级原石|own|859.png|f_i_叁级原石^f9e000&24@宝物&25@99&19@打碎石块可获得一颗叁级镶嵌宝石。\r<font color='#fee010'>双击使用该物品</font>&20@一块奇特的红色石头,隐约绽放出宝石的光芒。&27@sitem_jhj&103@0&104@0&105@&107@&108@0|1|5|贰级绿碎玉|864.png|1|贰级粉碎玉|861.png|1|贰级紫碎玉|865.png|1|贰级红碎玉|862.png|1|贰级蓝碎玉|863.png|1
 `

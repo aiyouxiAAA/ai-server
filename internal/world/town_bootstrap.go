@@ -1165,6 +1165,7 @@ func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *Ans
 		map3SourceNPCDialogueReplies,
 		map46SourceNPCDialogueReplies,
 		map169SourceNPCDialogueReplies,
+		map190SourceNPCDialogueReplies,
 		map191SourceNPCDialogueReplies,
 	} {
 		if dialogue, ok = replies[key]; ok {

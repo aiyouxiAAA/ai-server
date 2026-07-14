@@ -2,6 +2,7 @@ package session
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -21,6 +22,12 @@ type rolePersistencePayload struct {
 	roleStateJSON        string
 	rolePhysiqueJSON     string
 	dungeonInstancesJSON string
+}
+
+type persistedRoleItemRepair struct {
+	playerID string
+	roleID   string
+	items    []RoleItem
 }
 
 func configureSQLitePersistence(db *sql.DB) error {
@@ -254,6 +261,7 @@ func (store *Store) loadFromDB() error {
 	}
 	defer roleRows.Close()
 
+	itemRepairs := []persistedRoleItemRepair{}
 	for roleRows.Next() {
 		var role RoleSummary
 		var playerID string
@@ -315,11 +323,25 @@ func (store *Store) loadFromDB() error {
 			return fmt.Errorf("decode role currencies for %s: %w", role.RoleID, err)
 		}
 		role.Currencies = currencies
+		var persistedItems []RoleItem
+		if strings.TrimSpace(itemsJSON) != "" {
+			if err := json.Unmarshal([]byte(itemsJSON), &persistedItems); err != nil {
+				return fmt.Errorf("decode persisted role items for %s: %w", role.RoleID, err)
+			}
+		}
+		itemsNeedRepair := roleItemsNeedEquipmentTemplateRefinementLineBreakRepair(persistedItems)
 		items, err := decodeRoleItems(itemsJSON)
 		if err != nil {
 			return fmt.Errorf("decode role items for %s: %w", role.RoleID, err)
 		}
 		role.Items = items
+		if itemsNeedRepair {
+			itemRepairs = append(itemRepairs, persistedRoleItemRepair{
+				playerID: playerID,
+				roleID:   role.RoleID,
+				items:    items,
+			})
+		}
 		townBuffs, err := decodeRoleTownBuffs(townBuffsJSON)
 		if err != nil {
 			return fmt.Errorf("decode role town buffs for %s: %w", role.RoleID, err)
@@ -344,6 +366,18 @@ func (store *Store) loadFromDB() error {
 	}
 	if err := roleRows.Err(); err != nil {
 		return fmt.Errorf("iterate roles: %w", err)
+	}
+	if err := roleRows.Close(); err != nil {
+		return fmt.Errorf("close roles query: %w", err)
+	}
+	for _, repair := range itemRepairs {
+		itemsJSON, err := encodeRoleItems(repair.items)
+		if err != nil {
+			return fmt.Errorf("encode repaired role items for %s: %w", repair.roleID, err)
+		}
+		if _, err := store.db.Exec(`UPDATE roles SET items_json = ? WHERE role_id = ? AND player_id = ?`, itemsJSON, repair.roleID, repair.playerID); err != nil {
+			return fmt.Errorf("persist repaired role items for %s: %w", repair.roleID, err)
+		}
 	}
 
 	removedQuestRows, err := store.db.Query(`

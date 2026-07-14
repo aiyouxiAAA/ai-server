@@ -172,9 +172,17 @@ func TestCatalogIncludesVisibleWuliangQuestChain(t *testing.T) {
 	if len(specialty.Routes) != 2 || specialty.Routes[1].Handle != "6350542618650282" || specialty.Routes[1].MsgHandle != "6q41d_2" {
 		t.Fatalf("expected captured specialty delivery route, got %+v", specialty.Routes)
 	}
+	waterDam, _ := FindByID("capture-203")
+	if len(waterDam.Routes) != 2 || waterDam.Routes[0].MsgHandle != "6q10d_1" || waterDam.Routes[1].MsgHandle != "6q10d_2" {
+		t.Fatalf("expected captured water dam routes on Yumo, got %+v", waterDam.Routes)
+	}
 	waterwheel, _ := FindByID("capture-207")
-	if len(waterwheel.Routes) != 0 || waterwheel.QuestStateHandle != "6370542618853300" {
-		t.Fatalf("expected waterwheel quest table-only gap on Yumo, got %+v", waterwheel)
+	if len(waterwheel.Routes) != 2 || waterwheel.Routes[0].MsgHandle != "6q16d_1" || waterwheel.Routes[1].MsgHandle != "6q16d_2" || waterwheel.QuestStateHandle != "6370542618853300" {
+		t.Fatalf("expected captured waterwheel routes on Yumo, got %+v", waterwheel)
+	}
+	precisionParts, _ := FindByID("capture-208")
+	if len(precisionParts.Routes) != 2 || precisionParts.Routes[1].Handle != "6370542618853300" || precisionParts.Routes[1].MsgHandle != "6q17d_2" {
+		t.Fatalf("expected captured precision parts completion route on Yumo, got %+v", precisionParts.Routes)
 	}
 }
 

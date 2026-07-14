@@ -513,19 +513,24 @@ func fillMissingRoleItemTemplateFields(item RoleItem) RoleItem {
 	if !ok {
 		return item
 	}
+	repairedDescription, repairedRefinementLineBreaks := repairEquipmentTemplateRefinementLineBreaks(item, template)
+	staleDescription := isStaleEquipmentTemplateDescription(item, template)
 	usesTemplateDisplay := item.Display == "" || item.Display == template.Display
 	usesTemplateDescription := item.Description == "" ||
 		item.Description == genericCollectionRewardDescription(item.Name) ||
 		item.Description == template.Description ||
-		isStaleEquipmentTemplateDescription(item, template)
+		staleDescription ||
+		repairedRefinementLineBreaks
 	if item.Display == "" {
 		item.Display = template.Display
 	}
 	if item.ItemType == "" || (item.ItemType == "own" && template.ItemType != "" && template.ItemType != item.ItemType && usesTemplateDisplay && usesTemplateDescription) {
 		item.ItemType = template.ItemType
 	}
-	if item.Description == "" || item.Description == genericCollectionRewardDescription(item.Name) || isStaleEquipmentTemplateDescription(item, template) {
+	if item.Description == "" || item.Description == genericCollectionRewardDescription(item.Name) || staleDescription {
 		item.Description = template.Description
+	} else if repairedRefinementLineBreaks {
+		item.Description = repairedDescription
 	}
 	if item.ItemLevel <= 0 || (template.ItemLevel > item.ItemLevel && usesTemplateDisplay && usesTemplateDescription && item.ItemType == template.ItemType) {
 		item.ItemLevel = template.ItemLevel
@@ -561,6 +566,82 @@ func isStaleEquipmentTemplateDescription(item RoleItem, template RoleItem) bool 
 		return true
 	}
 	return false
+}
+
+func repairEquipmentTemplateRefinementLineBreaks(item RoleItem, template RoleItem) (string, bool) {
+	if template.ItemType != "equip" || !strings.HasPrefix(template.Description, "f_i_") {
+		return item.Description, false
+	}
+	if item.ItemType != "" && item.ItemType != "equip" {
+		return item.Description, false
+	}
+	return restoreFlattenedEquipmentTemplateRefinementLineBreaks(item.Description, template.Description)
+}
+
+func roleItemsNeedEquipmentTemplateRefinementLineBreakRepair(items []RoleItem) bool {
+	for _, item := range items {
+		template, ok := CapturedRoleItemTemplate(item.Name)
+		if !ok {
+			continue
+		}
+		if _, repaired := repairEquipmentTemplateRefinementLineBreaks(item, template); repaired {
+			return true
+		}
+	}
+	return false
+}
+
+func restoreFlattenedEquipmentTemplateRefinementLineBreaks(description string, templateDescription string) (string, bool) {
+	templateDescription = strings.ReplaceAll(templateDescription, "\r\n", "\n")
+	const refinementFieldPrefix = "&19@"
+
+	repairedDescription := description
+	repaired := false
+	searchStart := 0
+	for searchStart < len(templateDescription) {
+		fieldOffset := strings.Index(templateDescription[searchStart:], refinementFieldPrefix)
+		if fieldOffset < 0 {
+			break
+		}
+		fieldStart := searchStart + fieldOffset
+		valueStart := fieldStart + len(refinementFieldPrefix)
+		fieldEnd := classicDescriptionFieldEnd(templateDescription, valueStart)
+		canonicalValue := templateDescription[valueStart:fieldEnd]
+		searchStart = fieldEnd
+		if !strings.Contains(canonicalValue, "\n") {
+			continue
+		}
+
+		flattenedValue := strings.ReplaceAll(canonicalValue, "\n", "")
+		if flattenedValue == canonicalValue {
+			continue
+		}
+		flattenedField := refinementFieldPrefix + flattenedValue
+		canonicalField := refinementFieldPrefix + canonicalValue
+		if !strings.Contains(repairedDescription, flattenedField) {
+			continue
+		}
+
+		repairedDescription = strings.ReplaceAll(repairedDescription, flattenedField, canonicalField)
+		repaired = true
+	}
+	return repairedDescription, repaired
+}
+
+func classicDescriptionFieldEnd(description string, valueStart int) int {
+	for index := valueStart; index < len(description); index++ {
+		if description[index] != '&' {
+			continue
+		}
+		digitEnd := index + 1
+		for digitEnd < len(description) && description[digitEnd] >= '0' && description[digitEnd] <= '9' {
+			digitEnd += 1
+		}
+		if digitEnd > index+1 && digitEnd < len(description) && description[digitEnd] == '@' {
+			return index
+		}
+	}
+	return len(description)
 }
 
 func genericCollectionRewardDescription(name string) string {
@@ -1025,11 +1106,13 @@ func syncCapturedWoodcutterEquipmentItems(items []RoleItem) []RoleItem {
 	normalized := normalizeRoleItems(items)
 	result := make([]RoleItem, 0, len(normalized)+len(capturedWoodcutterEquipmentItems()))
 	petStates := make(map[int]RolePetItemState)
+	refinedEquipment := make(map[int]RoleItem)
 	for _, item := range normalized {
 		if item.Type == "装备" && item.PetState != nil {
 			petStates[item.Index] = *item.PetState
 		}
 		if item.Type == "装备" {
+			refinedEquipment[item.Index] = item
 			continue
 		}
 		if item.Type == "背包" && item.Name == "铁斧" && item.Display == "29.png" && item.Index == 19 {
@@ -1038,6 +1121,10 @@ func syncCapturedWoodcutterEquipmentItems(items []RoleItem) []RoleItem {
 		result = append(result, item)
 	}
 	for _, item := range capturedWoodcutterEquipmentItems() {
+		if previous, ok := refinedEquipment[item.Index]; ok && previous.Name == item.Name && previous.ItemType == item.ItemType {
+			item.Level = previous.Level
+			item.Description = previous.Description
+		}
 		if state, ok := petStates[item.Index]; ok && item.Index == 9 {
 			item.PetState = &state
 		}

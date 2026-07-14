@@ -18,6 +18,12 @@ var classicAuctionNPCHandles = map[string]bool{
 	"5010542616817526": true,
 }
 
+const (
+	wuliangChouSipinHandle       = "6190542618476150"
+	wuliangChouSipinMsgHandle    = "1"
+	wuliangChouSipinAuctionReply = "2"
+)
+
 type classicAuctionOpenPush struct {
 	ContainerType string `json:"containerType"`
 	NPCHandle     string `json:"npcHandle,omitempty"`
@@ -100,13 +106,26 @@ func buildClassicAuctionOpenResult(request classicTownRoleInteractionRequest) (p
 	if !classicAuctionNPCHandles[handle] {
 		return packetResult{}, false
 	}
+	return buildClassicAuctionOpenResultForHandle(handle), true
+}
+
+func buildClassicAuctionAnswerResult(request classicTownAnswerRequest) (packetResult, bool) {
+	if strings.TrimSpace(request.Handle) != wuliangChouSipinHandle ||
+		strings.TrimSpace(request.MsgHandle) != wuliangChouSipinMsgHandle ||
+		strings.TrimSpace(request.AnswerHandle) != wuliangChouSipinAuctionReply {
+		return packetResult{}, false
+	}
+	return buildClassicAuctionOpenResultForHandle(wuliangChouSipinHandle), true
+}
+
+func buildClassicAuctionOpenResultForHandle(handle string) packetResult {
 	return packetResult{
 		auctionOpen: &classicAuctionOpenPush{
 			ContainerType: classicAuctionContainerType,
 			NPCHandle:     handle,
 		},
 		handled: true,
-	}, true
+	}
 }
 
 func buildClassicAuctionListResult(request classicAuctionListRequest) packetResult {

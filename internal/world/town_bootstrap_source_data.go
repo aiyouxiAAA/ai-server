@@ -1460,6 +1460,161 @@ var map157SourceNPCs = []sourceNPCEntry{
 	buildCapturedSourceTransport("transp_156", 2963, 515),
 }
 
+const wuliangRankMenuMessage = "点击以下选项查看云之大陆当前服务器的角色排行。<br><font color='#990000' size='14'>每日凌晨4:00排行榜更新</font>"
+
+const wuliangExperienceRankSnapshot = "第1名\tLv115\t\t离\n" +
+	"第2名\tLv114\t\ts2_箭羽\n" +
+	"第3名\tLv112\t\t亦琳\n" +
+	"第4名\tLv112\t\t赠你清风\n" +
+	"第5名\tLv112\t\t风雪夜归人\n" +
+	"第6名\tLv112\t\t骨王\n" +
+	"第7名\tLv112\t\ts4_妮可露露\n" +
+	"第8名\tLv111\t\t幕\n" +
+	"第9名\tLv111\t\ts4_北落师门\n" +
+	"第10名\tLv111\t\t阿华田\n" +
+	"第11名\tLv111\t\t安安\n" +
+	"第12名\tLv111\t\t可爱\n" +
+	"第13名\tLv110\t\t楠\n" +
+	"第14名\tLv110\t\t钧瓷\n" +
+	"第15名\tLv110\t\t龍\n" +
+	"第16名\tLv108\t\t时瑾\n" +
+	"第17名\tLv108\t\t风华\n" +
+	"第18名\tLv108\t\t岩\n" +
+	"第19名\tLv108\t\t霒蚀君\n" +
+	"第20名\tLv107\t\t铁马\n" +
+	"第21名\tLv107\t\t法外狂徒\n" +
+	"第22名\tLv107\t\tDukhunf\n" +
+	"第23名\tLv107\t\t小青桔\n" +
+	"第24名\tLv107\t\t森屿\n" +
+	"第25名\tLv106\t\t霜\n" +
+	"第26名\tLv106\t\t不知明月去\n" +
+	"第27名\tLv106\t\ts1咕咕\n" +
+	"第28名\tLv106\t\t遮\n" +
+	"第29名\tLv106\t\t当归\n" +
+	"第30名\tLv106\t\t上杉絵梨衣\n" +
+	"第31名\tLv106\t\t序春\n" +
+	"第32名\tLv106\t\t一羽霓裳ღ\n" +
+	"第33名\tLv106\t\t一箭诛恶\n" +
+	"第34名\tLv106\t\t小青提\n" +
+	"第35名\tLv105\t\t一字涨停\n" +
+	"第36名\tLv105\t\t寻\n" +
+	"第37名\tLv104\t\t十里樱花雪丶\n" +
+	"第38名\tLv104\t\t格杉\n" +
+	"第39名\tLv104\t\ts3_陌路丶\n" +
+	"第40名\tLv104\t\t白色\n" +
+	"第41名\tLv104\t\t超级飞侠\n" +
+	"第42名\tLv104\t\t邂逅\n" +
+	"第43名\tLv104\t\t火乐火乐\n" +
+	"第44名\tLv104\t\t陆清浅\n" +
+	"第45名\tLv103\t\t龙井\n" +
+	"第46名\tLv103\t\t菱\n" +
+	"第47名\tLv103\t\t黑小虎\n" +
+	"第48名\tLv103\t\t꧁༺执念༻꧂\n" +
+	"第49名\tLv103\t\t空鱼\n" +
+	"第50名\tLv103\t\t千\n"
+
+const wuliangPrestigeRankSnapshot = "第1名\t声望275337\t\t雪中飞舞\n" +
+	"第2名\t声望184405\t\t七彩虹\n" +
+	"第3名\t声望180107\t\t雨中漫步\n" +
+	"第4名\t声望140000\t\t亦琳\n" +
+	"第5名\t声望124542\t\t森屿\n" +
+	"第6名\t声望119897\t\t风雨雷\n" +
+	"第7名\t声望104652\t\t雪中情\n" +
+	"第8名\t声望96385\t\ts3_﹏GAN♡゜\n" +
+	"第9名\t声望75925\t\ts3_你仙人板板\n" +
+	"第10名\t声望73797\t\ts2_倾国倾城\n" +
+	"第11名\t声望69754\t\t雨田尚文文文\n" +
+	"第12名\t声望66205\t\t离\n" +
+	"第13名\t声望63410\t\t明日不愁\n" +
+	"第14名\t声望62804\t\t吃肥肉\n" +
+	"第15名\t声望59890\t\ts4_北落师门\n" +
+	"第16名\t声望54976\t\t菱\n" +
+	"第17名\t声望54943\t\ts3_可爱地小朋友\n" +
+	"第18名\t声望53237\t\t幕\n" +
+	"第19名\t声望53022\t\t空鱼\n" +
+	"第20名\t声望52650\t\t黑小虎\n" +
+	"第21名\t声望52400\t\t十月落叶\n" +
+	"第22名\t声望52100\t\t序春\n" +
+	"第23名\t声望52000\t\ts2_箭羽\n" +
+	"第24名\t声望52000\t\t不知明月去\n" +
+	"第25名\t声望51845\t\ts4_南城Gumiho\n" +
+	"第26名\t声望51064\t\t阿狸\n" +
+	"第27名\t声望50315\t\t风华\n" +
+	"第28名\t声望50241\t\tsjtx\n" +
+	"第29名\t声望50094\t\ts3_吕布奉先\n" +
+	"第30名\t声望50001\t\ts3_陌路丶\n" +
+	"第31名\t声望50000\t\t樱樱樱樱樱樱\n" +
+	"第32名\t声望49757\t\t云彩\n" +
+	"第33名\t声望47750\t\t山外青山山\n" +
+	"第34名\t声望44620\t\ts4_迷人的小跟班\n" +
+	"第35名\t声望43277\t\t秋香\n" +
+	"第36名\t声望41947\t\ts3_一笑奈何\n" +
+	"第37名\t声望41928\t\ts3_超级逗比猫\n" +
+	"第38名\t声望40421\t\t雪凤凰\n" +
+	"第39名\t声望38357\t\ts4_冯宝宝\n" +
+	"第40名\t声望37169\t\t風也很温柔\n" +
+	"第41名\t声望37120\t\ts2_咕咕\n" +
+	"第42名\t声望35346\t\t风雪夜归人\n" +
+	"第43名\t声望34937\t\ts3_尜玮\n" +
+	"第44名\t声望34607\t\ts4_大眼睛\n" +
+	"第45名\t声望34340\t\tDukhunf\n" +
+	"第46名\t声望33306\t\ts4_暗影舞者\n" +
+	"第47名\t声望33059\t\ts2_楼外青楼\n" +
+	"第48名\t声望32916\t\t故地重游\n" +
+	"第49名\t声望32841\t\t咕噜猫\n" +
+	"第50名\t声望32715\t\t无为\n"
+
+const wuliangCrimeRankSnapshot = "第1名\t罪恶9137\t\t李七夜\n" +
+	"第2名\t罪恶8332\t\t小白丶\n" +
+	"第3名\t罪恶941\t\t蜂蜜柚子℃\n" +
+	"第4名\t罪恶656\t\ts3_鲁迅\n" +
+	"第5名\t罪恶536\t\t念如歌\n" +
+	"第6名\t罪恶353\t\ts2_乄聂风\n" +
+	"第7名\t罪恶231\t\t初夏丶\n" +
+	"第8名\t罪恶178\t\ts2_第一战\n" +
+	"第9名\t罪恶153\t\t林夕\n" +
+	"第10名\t罪恶146\t\txmj\n" +
+	"第11名\t罪恶145\t\t神隐\n" +
+	"第12名\t罪恶139\t\t白肉鸡\n" +
+	"第13名\t罪恶106\t\tSpiderMan\n" +
+	"第14名\t罪恶93\t\ts3_一切空白\n" +
+	"第15名\t罪恶93\t\t打不中\n" +
+	"第16名\t罪恶93\t\tཉི弑༒神༃\n" +
+	"第17名\t罪恶80\t\ts4_摩尔斯\n" +
+	"第18名\t罪恶80\t\t踏雪\n" +
+	"第19名\t罪恶77\t\tPLPLPL\n" +
+	"第20名\t罪恶76\t\t千斗龙之介\n" +
+	"第21名\t罪恶68\t\t情久蛮蛮1\n" +
+	"第22名\t罪恶63\t\t超凡之戒\n" +
+	"第23名\t罪恶62\t\t北笙\n" +
+	"第24名\t罪恶54\t\ts4_凿孔成功↑了\n" +
+	"第25名\t罪恶50\t\ts2_xtxxxf\n" +
+	"第26名\t罪恶50\t\t心怠慢\n" +
+	"第27名\t罪恶50\t\t徐立国\n" +
+	"第28名\t罪恶50\t\t李老棍子\n" +
+	"第29名\t罪恶50\t\t皮糙肉厚\n" +
+	"第30名\t罪恶49\t\t小小术士\n" +
+	"第31名\t罪恶49\t\t伊\n" +
+	"第32名\t罪恶48\t\t（玩完了）\n" +
+	"第33名\t罪恶48\t\t　66666\n" +
+	"第34名\t罪恶47\t\tWUHU起飞\n" +
+	"第35名\t罪恶43\t\ts2_雅典娜\n" +
+	"第36名\t罪恶40\t\t惩戒之箭\n" +
+	"第37名\t罪恶38\t\t绝蔑\n" +
+	"第38名\t罪恶38\t\t丨〇丨\n" +
+	"第39名\t罪恶35\t\t阎\n" +
+	"第40名\t罪恶28\t\t闪耀的那颗星\n" +
+	"第41名\t罪恶26\t\ts4_小法\n" +
+	"第42名\t罪恶25\t\t故事\n" +
+	"第43名\t罪恶24\t\ts2_流云即浮水\n" +
+	"第44名\t罪恶23\t\t玩了个寂寞づ\n" +
+	"第45名\t罪恶22\t\ts2_无聊2\n" +
+	"第46名\t罪恶18\t\ts2_易碎品\n" +
+	"第47名\t罪恶15\t\t♚瘠薄、\n" +
+	"第48名\t罪恶14\t\ts2_七妹妹\n" +
+	"第49名\t罪恶2\t\t青灵道人\n" +
+	"第50名\t罪恶0\t\ts2_晓雷\n"
+
 var map190SourceNPCs = []sourceNPCEntry{
 	{
 		Handle:      "6210542618495892",
@@ -1470,6 +1625,8 @@ var map190SourceNPCs = []sourceNPCEntry{
 		Height:      48,
 		SpawnFlash:  SpawnPoint{X: 1810, Y: 400},
 		QuestState:  0,
+		GuildName:   "传送大师",
+		GuildPic:    "5005",
 		Dialogue: &sourceNPCDialogueEntry{
 			MsgHandle: "1",
 			Message:   "这((乌梁营地))乃镇山威将军抵抗魔军的驻守营寨，少侠想去哪里？~",
@@ -1492,6 +1649,16 @@ var map190SourceNPCs = []sourceNPCEntry{
 		Height:      220,
 		SpawnFlash:  SpawnPoint{X: 2150, Y: 400},
 		QuestState:  0,
+		GuildName:   "合成道具",
+		GuildPic:    "5001",
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message:   "八卦炉内燃烧着熊熊烈火......\n((如果拥有造物魔晶或特殊布料的话，便可以放入炉内进行冶炼合成稀有的道具。这些材料可以通过打开吉祥袋、如意袋或乾坤袋获得。\n注：在【商城】内可以购入【吉祥袋】。))",
+			Answers: []AnswerOption{
+				{Handle: "1", Msg: "合成稀有道具"},
+				{Handle: "0", Msg: "<c/>取消"},
+			},
+		},
 	},
 	{
 		Handle:      "6180542618405797",
@@ -1502,6 +1669,8 @@ var map190SourceNPCs = []sourceNPCEntry{
 		Height:      185,
 		SpawnFlash:  SpawnPoint{X: 636, Y: 510},
 		QuestState:  1,
+		GuildName:   "技能导师",
+		GuildPic:    "5003",
 		Dialogue: &sourceNPCDialogueEntry{
 			MsgHandle: "1",
 			Message: `((行军打仗弃家舍，只为天下太平炊。大敌在前全无惧，战死扬我广青威))
@@ -1521,6 +1690,8 @@ var map190SourceNPCs = []sourceNPCEntry{
 		Height:      121,
 		SpawnFlash:  SpawnPoint{X: 1482, Y: 452},
 		QuestState:  2,
+		GuildName:   "道具商",
+		GuildPic:    "5001",
 		Dialogue: &sourceNPCDialogueEntry{
 			MsgHandle: "1",
 			Message:   "这位客官，我是贩售杂货的丑四品。我们丑氏家族世世代代在这云之大陆上经商，我们的商贸车队也遍布各个村镇，这次听说乌梁这里有买卖可以做&0;要不我也不来了。",
@@ -1541,6 +1712,66 @@ var map190SourceNPCs = []sourceNPCEntry{
 		Height:      149,
 		SpawnFlash:  SpawnPoint{X: 1029, Y: 474},
 		QuestState:  0,
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message:   wuliangRankMenuMessage,
+			Answers: []AnswerOption{
+				{Handle: "1", Msg: "经验排行,前50"},
+				{Handle: "2", Msg: "声望排行,前50"},
+				{Handle: "3", Msg: "罪恶排行,前50"},
+				{Handle: "0", Msg: "<c/>取消"},
+			},
+		},
+	},
+}
+
+var map190SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialogueEntry{
+	{
+		Handle:       "6180542618405797",
+		MsgHandle:    "1",
+		AnswerHandle: "1",
+	}: {
+		MsgHandle: "10",
+		Message:   "你想学习什么职业的技能?",
+		Answers: []AnswerOption{
+			{Handle: "7", Msg: "战士技能"},
+			{Handle: "8", Msg: "术士技能"},
+			{Handle: "9", Msg: "游侠技能"},
+			{Handle: "0", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6220542618496305",
+		MsgHandle:    "1",
+		AnswerHandle: "1",
+	}: {
+		MsgHandle: "1",
+		Message:   wuliangExperienceRankSnapshot,
+		Answers: []AnswerOption{
+			{Handle: "0", Msg: "<c/>取消"},
+		},
+	},
+	{
+		Handle:       "6220542618496305",
+		MsgHandle:    "1",
+		AnswerHandle: "2",
+	}: {
+		MsgHandle: "1",
+		Message:   wuliangPrestigeRankSnapshot,
+		Answers: []AnswerOption{
+			{Handle: "0", Msg: "<c/>取消"},
+		},
+	},
+	{
+		Handle:       "6220542618496305",
+		MsgHandle:    "1",
+		AnswerHandle: "3",
+	}: {
+		MsgHandle: "1",
+		Message:   wuliangCrimeRankSnapshot,
+		Answers: []AnswerOption{
+			{Handle: "0", Msg: "<c/>取消"},
+		},
 	},
 }
 
@@ -1554,6 +1785,8 @@ var map191SourceNPCs = []sourceNPCEntry{
 		Height:      172,
 		SpawnFlash:  SpawnPoint{X: 1082, Y: 450},
 		QuestState:  0,
+		GuildName:   "医疗师",
+		GuildPic:    "5002",
 		Dialogue: &sourceNPCDialogueEntry{
 			MsgHandle: "1",
 			Message: `((妙手拂尘轻拨面，虚中有实往气盛。但愿从此无战事，乌梁枯木必逢春。))
@@ -1574,6 +1807,17 @@ var map191SourceNPCs = []sourceNPCEntry{
 		Height:      190,
 		SpawnFlash:  SpawnPoint{X: 2483, Y: 380},
 		QuestState:  0,
+		GuildName:   "锻造师",
+		GuildPic:    "5000",
+		Dialogue: &sourceNPCDialogueEntry{
+			MsgHandle: "1",
+			Message:   "嘿，瞧你这身板还算结实，快来帮忙吧。别在那傻站着咯，营长安排了很多事情要做。爷我这次打的武器必能将营外那些可恶的木头人削得片甲不留。哈哈哈哈哈哈哈哈......",
+			Answers: []AnswerOption{
+				{Handle: "2", Msg: "购买武器"},
+				{Handle: "3", Msg: "购买护具"},
+				{Handle: "0", Msg: "<c/>取消"},
+			},
+		},
 	},
 	{
 		Handle:      "6350542618650282",
@@ -1584,6 +1828,8 @@ var map191SourceNPCs = []sourceNPCEntry{
 		Height:      160,
 		SpawnFlash:  SpawnPoint{X: 1514, Y: 471},
 		QuestState:  1,
+		GuildName:   "仓库管理",
+		GuildPic:    "5004",
 		Dialogue: &sourceNPCDialogueEntry{
 			MsgHandle: "1",
 			Message: `((魔军再现天地间，掐指念算必是劫。乌梁一战背水旅，千方百计胜利返。))
@@ -2944,6 +3190,223 @@ var map191SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDial
 		Answers: []AnswerOption{
 			{Handle: "6q11a_1_1", Msg: "<m/>我这就去。"},
 			{Handle: "6q11a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q9os",
+	}: {
+		MsgHandle: "6q9d_2",
+		Message:   "截断水源吗？正好，白河之水途经此处流向妖之森，我们恰恰处于上游，只要控制住这条水路，就能遏制住机木军团的活动。",
+		Answers: []AnswerOption{
+			{Handle: "6q9a_2_1", Msg: "<m/>下一步该怎么做？"},
+			{Handle: "6q9a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q10gs",
+	}: {
+		MsgHandle: "6q10d_1",
+		Message: `以我之见，目前急需造个石坝来堵住白河之水！但是眼下石块甚少，需劳驾你((去【妖之森_2】的石块采集点，采集20个石块回来))，这样我尽快好动工建造水坝。
+
+[g]=经验11000 [i=f_i_银元宝^C156C7&24@材料 消耗品&25@9999&19@双击可兑换为1000铜币&20@游戏中的货币,用于流通买卖&27@sitem_jhj&101@39.png&103@0&104@0&105@&107@&108@0]银元宝[/]x1`,
+		Answers: []AnswerOption{
+			{Handle: "6q10a_1_1", Msg: "<m/>好，我这就去。"},
+			{Handle: "6q10a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q10os",
+	}: {
+		MsgHandle: "6q10d_2",
+		Message:   "好了！万事具备，只欠东风，有了这些石块，大坝建成指日可待。",
+		Answers: []AnswerOption{
+			{Handle: "6q10a_2_1", Msg: "<m/>有劳虞莫兄了。"},
+			{Handle: "6q10a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q15os",
+	}: {
+		MsgHandle: "6q15d_2",
+		Message:   "哦？！这是军策绘制的水车图纸吗？！让我瞧瞧，哇！体型如此庞大，结构如此精巧，没想到军策还会设计这玩意，真是让我好生佩服啊……",
+		Answers: []AnswerOption{
+			{Handle: "6q15a_2_1", Msg: "<m/>希望尽快建成。"},
+			{Handle: "6q15a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q16gs",
+	}: {
+		MsgHandle: "6q16d_1",
+		Message: `（埋头苦看图纸中）……哦？这是……额，这样吧，你先去((收集30个木材))来，((可以去【妖之森_9】的木材采集点采集一些))，建造这么大的水车可少不了这些材料！
+
+[g]=经验15000 [i=f_i_银元宝^C156C7&24@材料 消耗品&25@9999&19@双击可兑换为1000铜币&20@游戏中的货币,用于流通买卖&27@sitem_jhj&101@39.png&103@0&104@0&105@&107@&108@0]银元宝[/]x2`,
+		Answers: []AnswerOption{
+			{Handle: "6q16a_1_1", Msg: "<m/>好，我这就去。"},
+			{Handle: "6q16a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q16os",
+	}: {
+		MsgHandle: "6q16d_2",
+		Message:   "呵呵，你手脚也忒利索了一点吧？！我这还没研究完呢！",
+		Answers: []AnswerOption{
+			{Handle: "6q16a_2_1", Msg: "<m/>真是有劳虞莫兄了。"},
+			{Handle: "6q16a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q17os",
+	}: {
+		MsgHandle: "6q17d_2",
+		Message:   "果然神勇啊！在下佩服，奉营长之令，特赐于你一条翡翠项链以作嘉奖！",
+		Answers: []AnswerOption{
+			{Handle: "6q17a_2_1", Msg: "<m/>嗯，多谢了。"},
+			{Handle: "6q17a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q18gs",
+	}: {
+		MsgHandle: "6q18d_1",
+		Message: `在我等的不懈努力之下，水车终于完工了！你这就去((向一旁的军策汉雄汇报))吧，我还得检查一下运转情况，让军策指示下一步行动！
+
+[g]=经验5000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q18a_1_1", Msg: "<m/>我这就去。"},
+			{Handle: "6q18a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q25gs",
+	}: {
+		MsgHandle: "6q25d_1",
+		Message: `我发现要使水车部分零件正常运转的话，还需要使用((力之玄文和术之玄文各5张，你可以分别去【妖之森_2、4】消灭机木斧兵和机木玄师获得))，这对水车的正常运转有着重要的作用。((【该任务每日一次】))
+
+[g]=[i=f_i_大瓶甘露^00ccff&24@消耗品&25@999&8@600&20@古有仙人承露,用于长生不老食后祛病延寿,恢复精力.&27@sitem_water&101@698.png&103@0&104@0&105@&107@&108@0]大瓶甘露[/]x5 [i=f_i_包子&24@消耗品&25@99&7@600&20@带馅的包子,看起来非常可口,食用后可恢复些气力.&101@212.png&103@0&104@0&105@&107@&108@0]包子[/]x5`,
+		Answers: []AnswerOption{
+			{Handle: "6q25a_1_1", Msg: "<m/>好，我这就去。"},
+			{Handle: "6q25a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q25ns",
+	}: {
+		MsgHandle: "6q25d_3",
+		Message:   "速速((去【妖之森_2、4】消灭机木斧兵和机木玄师，收集力之玄文和术之玄文各5张))。",
+		Answers: []AnswerOption{
+			{Handle: "6q25a_3_1", Msg: "<c/>我现在就去。\n"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q25os",
+	}: {
+		MsgHandle: "6q25d_2",
+		Message:   "这么快就拿来了吗，谢谢你了。",
+		Answers: []AnswerOption{
+			{Handle: "6q25a_2_1", Msg: "<m/>不必客气。"},
+			{Handle: "6q25a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q45os",
+	}: {
+		MsgHandle: "6q45d_2",
+		Message:   "好的，打造家具这么简单的事情，可是绝对难不住我的。",
+		Answers: []AnswerOption{
+			{Handle: "6q45a_2_1", Msg: "<m/>真是辛苦虞兄了。"},
+			{Handle: "6q45a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q46gs",
+	}: {
+		MsgHandle: "6q46d_1",
+		Message: `嗯，打造家具的话我还需要一些辅料，大概是((10个木材))，你((去【妖之森_9】的木材采集点采集一些))果来吧。
+
+[g]=经验15000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q46a_1_1", Msg: "<m/>好，我这就去。"},
+			{Handle: "6q46a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q46os",
+	}: {
+		MsgHandle: "6q46d_2",
+		Message:   "呵呵，速度够快啊，辛苦你啦。",
+		Answers: []AnswerOption{
+			{Handle: "6q46a_2_1", Msg: "<m/>虞兄更辛苦。"},
+			{Handle: "6q46a_2_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q47gs",
+	}: {
+		MsgHandle: "6q47d_1",
+		Message: `在我轻巧灵动的双手操作下，一件小家具已经打造好了。呵呵，请你((拿去【乌梁营地_1】给丑四品))吧，相信他肯定会满意，我对自己的每件作品都相当自信！
+
+[g]=经验8200 `,
+		Answers: []AnswerOption{
+			{Handle: "6q47a_1_1", Msg: "<m/>好的，我这就去。"},
+			{Handle: "6q47a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6370542618853300",
+		MsgHandle:    "1",
+		AnswerHandle: "6q50gs",
+	}: {
+		MsgHandle: "6q50d_1",
+		Message: `记得水车建成的那天，突然一道红光从水车底下冲出来，耀眼的光芒刺得人眼睛都睁不开，那红光瞬间跃入妖之森了。你可以((去【妖之森_5】找那里的老头问问，看到底发生了什么事))。
+
+[g]=经验13000 `,
+		Answers: []AnswerOption{
+			{Handle: "6q50a_1_1", Msg: "<m/>好的，我这就去。"},
+			{Handle: "6q50a_1_2", Msg: "<c/>关闭"},
+		},
+	},
+	{
+		Handle:       "6350542618650282",
+		MsgHandle:    "1",
+		AnswerHandle: "6q18os",
+	}: {
+		MsgHandle: "6q18d_2",
+		Message:   "很好，进展如此之顺利超出我的想象，接下来该是和魔军一诀死战的时候了。不过在这之前，你还得去办一件神圣的事情。",
+		Answers: []AnswerOption{
+			{Handle: "6q18a_2_1", Msg: "<m/>请指示。"},
+			{Handle: "6q18a_2_2", Msg: "<c/>关闭"},
 		},
 	},
 }

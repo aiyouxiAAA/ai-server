@@ -5280,7 +5280,7 @@ func clearRoleEquipmentAppearanceSourceQuery(sourceQuery string) string {
 }
 
 func roleEquipmentAppearanceSourceKeys() []string {
-	keys := []string{"w", "h", "a", "g", "c", "b", "wr", "se", "p"}
+	keys := []string{"w", "h", "a", "g", "c", "b", "wr", "se", "p", "r"}
 	for index := 1; index <= 20; index += 1 {
 		keys = append(keys, fmt.Sprintf("w%d", index))
 	}
@@ -5294,6 +5294,12 @@ type roleItemAppearanceSourceParamPair struct {
 
 func roleItemAppearanceSourceParams(item RoleItem) ([]roleItemAppearanceSourceParamPair, bool) {
 	switch item.Name {
+	case "普通礼服":
+		return []roleItemAppearanceSourceParamPair{
+			{key: "c", value: "61"},
+			{key: "p", value: "63"},
+			{key: "se", value: "49"},
+		}, true
 	case "超时空要塞":
 		return []roleItemAppearanceSourceParamPair{
 			{key: "c", value: "88"},
@@ -5333,6 +5339,70 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "w1", "62", true
 	case "央月九影":
 		return "w8", "61", true
+	case "八极法冠":
+		return "h", "26", true
+	case "八极法靴":
+		return "se", "3", true
+	case "八极法衣":
+		return "c", "6", true
+	case "八极法杖":
+		return "w10", "21", true
+	case "八极护肩":
+		return "a", "3", true
+	case "八极护腿":
+		return "p", "6", true
+	case "八极护腰":
+		return "b", "4", true
+	case "翠带护腰":
+		return "b", "32", true
+	case "刀客布衣":
+		return "c", "30", true
+	case "盗贼布衣":
+		return "c", "34", true
+	case "盗贼护腿":
+		return "p", "30", true
+	case "盗贼腰带":
+		return "b", "35", true
+	case "蛤蟆布衣":
+		return "c", "37", true
+	case "机木护腰":
+		return "b", "39", true
+	case "狼牙棒":
+		return "w8", "33", true
+	case "雷霆法杖":
+		return "w10", "51", true
+	case "雷霆冠":
+		return "h", "17", true
+	case "雷霆护肩":
+		return "a", "15", true
+	case "神风护肩":
+		return "a", "13", true
+	case "威武皮甲":
+		return "c", "14", true
+	case "威武皮靴":
+		return "se", "10", true
+	case "威武腰带":
+		return "b", "11", true
+	case "无双护肩":
+		return "a", "14", true
+	case "无双护腿":
+		return "p", "18", true
+	case "无双铁腰带":
+		return "b", "16", true
+	case "无双头盔":
+		return "h", "16", true
+	case "岩化护腿":
+		return "p", "49", true
+	case "饮血刀":
+		return "w8", "47", true
+	case "珍元护腰":
+		return "b", "45", true
+	case "L小白马":
+		return "r", "xmj", true
+	case "萌兔宝宝":
+		return "r", "mengtubaobao", true
+	case "狰狞神骑":
+		return "r", "zn", true
 	case "蓝布衣":
 		return "c", "1", true
 	case "蛮力护甲":

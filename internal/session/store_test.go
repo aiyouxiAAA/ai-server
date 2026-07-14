@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -1610,6 +1611,49 @@ func TestStoreRefineRoleEquipmentUsesTemporaryFailureRule(t *testing.T) {
 	}
 }
 
+func TestStoreCapturedWoodcutter222PreservesRefinementResult(t *testing.T) {
+	store := NewStore()
+	store.refinementRoll = func(int) int { return 0 }
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "222",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	gem, ok := store.GrantRoleItem(login.PlayerID, created.Role.RoleID, RoleItem{
+		Type:        "背包",
+		Name:        "初级精炼宝石",
+		ItemType:    "oneI",
+		Display:     "616.png",
+		Description: "f_i_初级精炼宝石&24@宝物&25@999",
+		Count:       1,
+		Index:       -1,
+	})
+	if !ok {
+		t.Fatal("expected refinement gem grant")
+	}
+
+	result := store.RefineRoleEquipment(login.PlayerID, created.Role.RoleID, gem.Type, gem.Index, "装备", 1)
+	if !result.Found || !result.Refined || !result.Succeeded || result.TargetItem.Level != 3 {
+		t.Fatalf("expected captured 222 shoulder refinement success, got %+v", result)
+	}
+	equipment, _, ok := store.GetRoleItems(login.PlayerID, created.Role.RoleID, "装备")
+	if !ok {
+		t.Fatal("expected captured 222 equipment")
+	}
+	for _, item := range equipment {
+		if item.Index == 1 {
+			if item.Name != "蚩颅王护肩" || item.Level != 3 || !strings.Contains(item.Description, "&3@18(+9)") {
+				t.Fatalf("expected refined captured shoulder to survive runtime defaults, got %+v", item)
+			}
+			return
+		}
+	}
+	t.Fatalf("expected captured shoulder in equipment %+v", equipment)
+}
+
 func TestStoreUseRoleItemLearnsCapturedWeaponFamiliarityPresentation(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -2420,9 +2464,10 @@ func TestStoreTryEquipSupportsCapturedTreasureAndMountSlots(t *testing.T) {
 	for _, spec := range []struct {
 		name          string
 		expectedIndex int
+		expectedQuery string
 	}{
 		{name: "筋斗云", expectedIndex: 14},
-		{name: "狰狞神骑", expectedIndex: 18},
+		{name: "狰狞神骑", expectedIndex: 18, expectedQuery: "r=zn"},
 	} {
 		template, ok := CapturedRoleItemTemplate(spec.name)
 		if !ok {
@@ -2435,6 +2480,9 @@ func TestStoreTryEquipSupportsCapturedTreasureAndMountSlots(t *testing.T) {
 		result := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, granted.Type, granted.Index, 1)
 		if !result.Found || !result.Equipped || result.EquippedItem.Index != spec.expectedIndex {
 			t.Fatalf("expected %s to equip to source slot %d, got %+v", spec.name, spec.expectedIndex, result)
+		}
+		if spec.expectedQuery != "" && !strings.Contains(result.Role.SourceQuery, spec.expectedQuery) {
+			t.Fatalf("expected %s to rebuild appearance with %s, got %q", spec.name, spec.expectedQuery, result.Role.SourceQuery)
 		}
 	}
 }
@@ -4229,6 +4277,38 @@ func TestStorePromotedEquipmentAppearanceMappings(t *testing.T) {
 		{name: "炎爆之靴", key: "se", value: "21"},
 		{name: "炎爆护手", key: "wr", value: "21"},
 		{name: "蛤蟆精护腕", key: "wr", value: "26"},
+		{name: "八极法冠", key: "h", value: "26"},
+		{name: "八极法靴", key: "se", value: "3"},
+		{name: "八极法衣", key: "c", value: "6"},
+		{name: "八极法杖", key: "w10", value: "21"},
+		{name: "八极护肩", key: "a", value: "3"},
+		{name: "八极护腿", key: "p", value: "6"},
+		{name: "八极护腰", key: "b", value: "4"},
+		{name: "翠带护腰", key: "b", value: "32"},
+		{name: "刀客布衣", key: "c", value: "30"},
+		{name: "盗贼布衣", key: "c", value: "34"},
+		{name: "盗贼护腿", key: "p", value: "30"},
+		{name: "盗贼腰带", key: "b", value: "35"},
+		{name: "蛤蟆布衣", key: "c", value: "37"},
+		{name: "机木护腰", key: "b", value: "39"},
+		{name: "狼牙棒", key: "w8", value: "33"},
+		{name: "雷霆法杖", key: "w10", value: "51"},
+		{name: "雷霆冠", key: "h", value: "17"},
+		{name: "雷霆护肩", key: "a", value: "15"},
+		{name: "神风护肩", key: "a", value: "13"},
+		{name: "威武皮甲", key: "c", value: "14"},
+		{name: "威武皮靴", key: "se", value: "10"},
+		{name: "威武腰带", key: "b", value: "11"},
+		{name: "无双护肩", key: "a", value: "14"},
+		{name: "无双护腿", key: "p", value: "18"},
+		{name: "无双铁腰带", key: "b", value: "16"},
+		{name: "无双头盔", key: "h", value: "16"},
+		{name: "岩化护腿", key: "p", value: "49"},
+		{name: "饮血刀", key: "w8", value: "47"},
+		{name: "珍元护腰", key: "b", value: "45"},
+		{name: "L小白马", key: "r", value: "xmj"},
+		{name: "萌兔宝宝", key: "r", value: "mengtubaobao"},
+		{name: "狰狞神骑", key: "r", value: "zn"},
 	} {
 		template, ok := CapturedRoleItemTemplate(spec.name)
 		if !ok {
@@ -4241,6 +4321,23 @@ func TestStorePromotedEquipmentAppearanceMappings(t *testing.T) {
 		query := applyRoleItemAppearanceToSourceQuery("human/human.swf?sex=1&", template)
 		if !strings.Contains(query, spec.key+"="+spec.value+"&") {
 			t.Fatalf("expected %s source query to include %s=%s, got %q", spec.name, spec.key, spec.value, query)
+		}
+	}
+}
+
+func TestStorePromotedFashionAppearanceMappings(t *testing.T) {
+	template, ok := CapturedRoleItemTemplate("普通礼服")
+	if !ok {
+		t.Fatal("expected item-table template for 普通礼服")
+	}
+	params, ok := roleItemAppearanceSourceParams(template)
+	if !ok {
+		t.Fatal("expected 普通礼服 appearance parameters")
+	}
+	query := applyRoleItemAppearanceToSourceQuery("human/human.swf?sex=1&", template)
+	for _, param := range params {
+		if !strings.Contains(query, param.key+"="+param.value+"&") {
+			t.Fatalf("expected 普通礼服 source query to include %s=%s, got %q", param.key, param.value, query)
 		}
 	}
 }
@@ -4518,6 +4615,85 @@ func TestPersistentStoreKeepsRolesAfterRestart(t *testing.T) {
 	items, capacity, ok := secondStore.GetRoleItems(loginResponse.PlayerID, createResponse.Role.RoleID, "背包")
 	if !ok || capacity != 30 || len(items) != 1 || items[0].Name != "铁斧" || items[0].Index != 19 {
 		t.Fatalf("expected persistent starter axe inventory after restart, ok=%v capacity=%d items=%+v", ok, capacity, items)
+	}
+}
+
+func TestPersistentStoreRepairsFlattenedEquipmentRefinementDescription(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store init success, got error: %v", err)
+	}
+
+	login := firstStore.Login(LoginRequest{UserName: "refineuser", Password: "magicpwd"})
+	if !login.Success {
+		t.Fatalf("expected persistent login success, got %+v", login)
+	}
+	created := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "精炼持久女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	if !created.Success {
+		t.Fatalf("expected persistent role create success, got %+v", created)
+	}
+
+	template, ok := CapturedRoleItemTemplate("狰狞神骑")
+	if !ok {
+		t.Fatal("expected captured 狰狞神骑 template")
+	}
+	flattenedDescription := strings.ReplaceAll(template.Description, "\n", "") + "&1@(+160)"
+	firstStore.rolesByPID[login.PlayerID][0].Items = []RoleItem{{
+		Type:        "装备",
+		Name:        template.Name,
+		Display:     template.Display,
+		Description: flattenedDescription,
+		Count:       1,
+		Index:       18,
+		Owner:       "持久化归属",
+		Level:       7,
+		ItemLevel:   9,
+	}}
+	if err := firstStore.persistRoleItemsLocked(login.PlayerID, created.Role.RoleID); err != nil {
+		t.Fatalf("expected flattened refinement instance persistence, got error: %v", err)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("expected first store close success, got error: %v", err)
+	}
+
+	secondStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store reopen success, got error: %v", err)
+	}
+	defer func() {
+		if closeErr := secondStore.Close(); closeErr != nil {
+			t.Fatalf("expected second store close success, got error: %v", closeErr)
+		}
+	}()
+
+	item, ok := secondStore.GetRoleItem(login.PlayerID, created.Role.RoleID, "装备", 18)
+	if !ok {
+		t.Fatal("expected repaired equipped mount")
+	}
+	if !strings.Contains(item.Description, "精炼潜质:\n[精炼+16]") || !strings.Contains(item.Description, "&1@(+160)") {
+		t.Fatalf("expected canonical refinement line breaks with dynamic field preserved, got %q", item.Description)
+	}
+	if item.Owner != "持久化归属" || item.Level != 7 || item.ItemLevel != 9 || item.ItemType != "equip" {
+		t.Fatalf("expected instance fields preserved while repairing refinement description, got %+v", item)
+	}
+
+	var persistedItemsJSON string
+	if err := secondStore.db.QueryRow(`SELECT items_json FROM roles WHERE role_id = ? AND player_id = ?`, created.Role.RoleID, login.PlayerID).Scan(&persistedItemsJSON); err != nil {
+		t.Fatalf("expected repaired items JSON query success, got error: %v", err)
+	}
+	var persistedItems []RoleItem
+	if err := json.Unmarshal([]byte(persistedItemsJSON), &persistedItems); err != nil {
+		t.Fatalf("expected repaired items JSON decode success, got error: %v", err)
+	}
+	if len(persistedItems) != 1 || !strings.Contains(persistedItems[0].Description, "精炼潜质:\n[精炼+16]") || !strings.Contains(persistedItems[0].Description, "&1@(+160)") {
+		t.Fatalf("expected repaired line breaks and dynamic field in persisted data, got %+v", persistedItems)
 	}
 }
 

@@ -1,0 +1,3 @@
+map_id,handle,display_name,source_query,sprite_name,width,height,spawn_x,spawn_y,quest_state,required_item_name,reward_item_name,quest_title,quest_description,protocol
+91,2050542611677774,黄连采集点,transp/flag2.swf,flag2,158,258,1755,452,2,普通采集手套,黄连,采集黄连,<ml>采集黄连<br/>[g]=前往【竹林_8】采集点，携带普通采集手套采集黄连。,Collection
+89,2810542613719308,金银花采集点,transp/flag2.swf,flag2,158,258,1242,451,2,普通采集手套,金银花,采集金银花,<ml>采集金银花<br/>[g]=前往【竹林_6】采集点，携带普通采集手套采集金银花。,Collection

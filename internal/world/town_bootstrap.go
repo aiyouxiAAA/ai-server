@@ -2,12 +2,12 @@ package world
 
 import (
 	_ "embed"
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
 
 	"ai-server/internal/classicactivity"
+	"ai-server/internal/classicdata"
 	"ai-server/internal/session"
 )
 
@@ -665,6 +665,8 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneSeventyOne.SourceMonsters = map171SourceMonsters
 	definitions[171] = mapOneSeventyOne
 
+	applyClassicMapNPCatalog(definitions)
+
 	for _, point := range sourceCollectionPointsByHandle {
 		mapDefinition, ok := definitions[point.MapID]
 		if !ok {
@@ -686,6 +688,7 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 		}
 		definitions[point.MapID] = mapDefinition
 	}
+	applyClassicMapCollectionCatalog(definitions)
 
 	applyCapturedSourceTransports(definitions)
 
@@ -702,6 +705,7 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 		}
 		definitions[link.FromMapID] = mapDefinition
 	}
+	applyClassicMapSceneTransportCatalog(definitions)
 
 	return definitions
 }
@@ -754,29 +758,21 @@ func upsertCapturedSourceTransport(npcs []sourceNPCEntry, captured sourceNPCEntr
 }
 
 func loadTownMapIndexDefinitions() map[int]townMapBootstrapDefinition {
-	var index townMapsIndexFile
-	if err := json.Unmarshal(townMapsIndexJSON, &index); err != nil {
-		panic("parse embedded town maps index: " + err.Error())
-	}
-	if len(index.Maps) == 0 {
-		panic("embedded town maps index is empty")
+	entries := classicdata.ClassicMaps()
+	if len(entries) == 0 {
+		panic("Classic map catalog is empty")
 	}
 
-	definitions := make(map[int]townMapBootstrapDefinition, len(index.Maps))
-	for _, entry := range index.Maps {
-		mapID, err := strconv.Atoi(entry.ID)
-		if err != nil || mapID <= 0 {
-			panic("invalid embedded town map id: " + entry.ID)
-		}
-
-		definitions[mapID] = townMapBootstrapDefinition{
-			ID:                 mapID,
+	definitions := make(map[int]townMapBootstrapDefinition, len(entries))
+	for _, entry := range entries {
+		definitions[entry.ID] = townMapBootstrapDefinition{
+			ID:                 entry.ID,
 			Name:               entry.Name,
-			XMLURL:             normalizeTownMapXMLURL(entry.SourceXML, mapID),
-			DefaultSpawn:       resolveSourceMapDefaultSpawn(entry.Name),
+			XMLURL:             entry.XMLURL,
+			DefaultSpawn:       SpawnPoint{X: entry.DefaultSpawnX, Y: entry.DefaultSpawnY},
 			SourceNPCs:         nil,
 			SourceMonsters:     nil,
-			SupportsTransferIn: true,
+			SupportsTransferIn: entry.SupportsTransferIn,
 		}
 	}
 
@@ -1147,8 +1143,7 @@ func BuildAnswerSpeak(handle string) AnswerSpeakPush {
 }
 
 func FindSourceCollectionPoint(handle string) (SourceCollectionPoint, bool) {
-	point, ok := sourceCollectionPointsByHandle[strings.TrimSpace(handle)]
-	return point, ok
+	return findClassicMapCollectionPoint(handle)
 }
 
 func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *AnswerSpeakPush {
@@ -1199,6 +1194,15 @@ func ResolveTownTransportAnswerFromMap(fromMapID int, handle string, answerHandl
 	if answerHandle != "goto" && !isCapturedTownTransportConfirmAnswer(handle, answerHandle) {
 		return TownTransportDestination{}, false
 	}
+	if fromMapID > 0 {
+		if destination, ok := resolveClassicMapSceneTransportDestination(fromMapID, handle); ok {
+			return destination, true
+		}
+	}
+	return resolveLegacyTownTransportDestinationFromMap(fromMapID, handle)
+}
+
+func resolveLegacyTownTransportDestinationFromMap(fromMapID int, handle string) (TownTransportDestination, bool) {
 	if fromMapID > 0 {
 		if destination, ok := capturedTownTransportRouteDestinations[townTransportRouteKey{FromMapID: fromMapID, Handle: handle}]; ok {
 			if !SupportsTownTransferMap(destination.MapID) {

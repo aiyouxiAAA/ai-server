@@ -304,6 +304,34 @@ func TestCatalogIncludesDateSweepBaiyuanAndSwampQuestChain(t *testing.T) {
 	}
 }
 
+func TestCatalogIncludesInstanceCaptureQuestExpansion(t *testing.T) {
+	expected := map[string]string{
+		"capture-311": "阿达奴的困扰", "capture-312": "阿达奴的孝心", "capture-313": "拜师习武",
+		"capture-314": "宝石与镶嵌", "capture-315": "被附体的巫师", "capture-316": "采伐朽木",
+		"capture-317": "查明病因", "capture-318": "愁思难断", "capture-319": "烦人的秃鹫",
+		"capture-320": "高深技艺", "capture-321": "关于采集", "capture-322": "关于状态",
+		"capture-323": "后果", "capture-324": "幻狐墨宝", "capture-325": "获得白马",
+		"capture-326": "解开心结", "capture-327": "解铃还须系铃人", "capture-328": "介象的礼物",
+		"capture-329": "可歌可泣", "capture-330": "临终道别", "capture-331": "派送兔奴",
+		"capture-332": "奇宝金铃", "capture-333": "前因", "capture-334": "驱除蜘蛛",
+		"capture-335": "取蜜止痛", "capture-336": "伤痛痊愈", "capture-337": "试试身手",
+		"capture-338": "熟悉副本", "capture-339": "熟悉组队", "capture-340": "死不悔改",
+		"capture-341": "无能为力", "capture-342": "习得密斩", "capture-343": "消灭砂狼兽",
+		"capture-344": "消灭砂岩蜘蛛", "capture-345": "消灭仙人刺球", "capture-346": "一切随缘",
+		"capture-347": "异常天象", "capture-348": "远来的信件", "capture-349": "灾难降临",
+		"capture-350": "赵马夫的行踪", "capture-351": "赵马夫的行踪【贰】", "capture-352": "足见成效",
+	}
+	for id, title := range expected {
+		info, ok := FindByID(id)
+		if !ok || info.Title != title {
+			t.Fatalf("expected instance-capture quest %s %s, got %+v", id, title, info)
+		}
+		if len(info.Routes) == 0 || (info.Reward.Experience <= 0 && len(info.Reward.Items) == 0 && len(info.Reward.Skills) == 0) {
+			t.Fatalf("expected captured route and reward for %s %s, got %+v", id, title, info)
+		}
+	}
+}
+
 func TestAllCatalogRowsHaveGrantRewardMarker(t *testing.T) {
 	for _, info := range All() {
 		if info.Reward.Experience <= 0 && len(info.Reward.Items) == 0 && len(info.Reward.Skills) == 0 {

@@ -1,4 +1,8 @@
 map_id,map_name,handle,name,display_url,level,vocation,max_hp,max_mp,speed,attack,defense,command_label,queue_index_team,queue_index_enemy,source
+210,草坝_4,capture-210-glassyx-lv38,草刺槐,monstermap/glassyx.swf,38,游侠,1530,1034,0,391,0,普通攻击,1,4,capture-backed approximate: normal attack n=114 implied median 391
+210,草坝_4,capture-210-glasszs-lv38,草须芒,monstermap/glasszs.swf,38,战士,2000,764,0,409,0,普通攻击,1,4,capture-backed approximate: normal attack n=115 implied median 409
+216,草坝_11,capture-216-glassss-lv40,草球蔓,monstermap/glassss.swf,40,术士,1357,1500,0,496,0,法术普通攻击,1,4,capture-backed approximate: magic normal attack n=138 implied median 495.5 rounded to 496
+222,草坝_16,capture-222-glassss-lv42,草球蔓,monstermap/glassss.swf,42,术士,1450,1518,0,494,0,法术普通攻击,1,4,capture-backed approximate: magic normal attack n=159 implied median 494
 4,涧庭村口,7089932810872715,山林蜘蛛,monstermap/forestspider.swf,1,新手,72,9,15,9,9,普通攻击,0,0,20260516_195530_704_conn_0002
 5,涧庭道,7069963681398983,山林狼兽,monstermap/graywolf.swf,1,新手,72,9,15,9,9,普通攻击,1,4,20260517_043413_010_conn_0005
 11,涧庭道_1,5391460605264959,蟾蜍,monstermap/toad.swf,1,新手,15,9,0,28,0,普通攻击,1,4,20260522_222531_099_conn_0002

@@ -721,6 +721,34 @@ func TestBaiyuanYaozhisenRewardCandidatesIncludeLateMapChain(t *testing.T) {
 	}
 }
 
+func TestGrasslandRewardCandidatesUseCapturedAutoMoveStatistics(t *testing.T) {
+	testCases := []struct {
+		mapID       string
+		monsterName string
+		maxHP       int
+		itemName    string
+		quantity    int
+		numerator   int
+		denominator int
+	}{
+		{mapID: "210", monsterName: "草刺槐", maxHP: 1530, itemName: "韧苇叶", quantity: 1, numerator: 38, denominator: 48},
+		{mapID: "210", monsterName: "草须芒", maxHP: 2000, itemName: "斗草叶", quantity: 1, numerator: 21, denominator: 32},
+		{mapID: "216", monsterName: "草球蔓", maxHP: 1357, itemName: "斗草叶", quantity: 1, numerator: 126, denominator: 262},
+		{mapID: "222", monsterName: "草球蔓", maxHP: 1450, itemName: "斗草叶", quantity: 1, numerator: 64, denominator: 124},
+	}
+
+	for _, testCase := range testCases {
+		config, ok := sourceBattleRewardCandidateForCell(testCase.mapID, testCase.monsterName, testCase.maxHP)
+		if !ok || config.Status != "candidate" {
+			t.Fatalf("expected grassland capture candidate %+v, got %+v", testCase, config)
+		}
+		rate := requireSourceBattleRewardDropRate(t, config.DropRates, testCase.itemName)
+		if rate.Quantity != testCase.quantity || rate.Numerator != testCase.numerator || rate.Denominator != testCase.denominator {
+			t.Fatalf("expected grassland reward candidate drop %+v, got %+v", testCase, rate)
+		}
+	}
+}
+
 func TestBuildOverUsesCaptureBackedWuliangYaozhisenCandidateRewards(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 
@@ -2155,6 +2183,52 @@ func TestNewWildBattleUsesExpandedCapturedPlainEnemyStats(t *testing.T) {
 		}
 		if enemy.Attack != testCase.attack {
 			t.Fatalf("expected captured enemy attack for map %s to be %d, got %+v", testCase.mapID, testCase.attack, enemy)
+		}
+	}
+}
+
+func TestNewWildBattleSupportsCaptureBackedGrasslandMaps(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int {
+		return maxExclusive - 1
+	})()
+
+	role := session.RoleSummary{
+		RoleID:      "player_grassland",
+		DisplayName: "测试女侠",
+		Level:       42,
+		Exp:         10000,
+	}
+	playerBase := session.PlayerBaseData{
+		PlayerID:    "player",
+		RoleID:      role.RoleID,
+		DisplayName: role.DisplayName,
+		Level:       role.Level,
+		Exp:         role.Exp,
+	}
+
+	testCases := []struct {
+		mapID      string
+		mapName    string
+		enemyName  string
+		displayURL string
+		level      int
+		maxHP      int
+		maxMP      int
+		attack     int
+	}{
+		{mapID: "210", mapName: "草坝_4", enemyName: "草刺槐", displayURL: "monstermap/glassyx.swf", level: 38, maxHP: 1530, maxMP: 1034, attack: 391},
+		{mapID: "216", mapName: "草坝_11", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 40, maxHP: 1357, maxMP: 1500, attack: 496},
+		{mapID: "222", mapName: "草坝_16", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 42, maxHP: 1450, maxMP: 1518, attack: 494},
+	}
+
+	for _, testCase := range testCases {
+		runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{MapID: testCase.mapID, MapName: testCase.mapName})
+		if !ok || runtime == nil || len(bundle.Cells) < 2 {
+			t.Fatalf("expected capture-backed grassland map %s to start battle, got ok=%v runtime=%+v bundle=%+v", testCase.mapID, ok, runtime, bundle)
+		}
+		enemy := bundle.Cells[1]
+		if enemy.Name != testCase.enemyName || enemy.DisplayURL != testCase.displayURL || enemy.Level != testCase.level || enemy.MaxHP != testCase.maxHP || enemy.HP != testCase.maxHP || enemy.MaxMP != testCase.maxMP || enemy.MP != testCase.maxMP || enemy.Attack != testCase.attack {
+			t.Fatalf("expected capture-backed grassland enemy stats for map %s, got %+v", testCase.mapID, enemy)
 		}
 	}
 }

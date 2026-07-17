@@ -1,4 +1,9 @@
 "status","confidence","icon","name","item_type","category","max_stack","asset_family","price","description","evidence_sources","notes"
+"packet_confirmed","high","821.png","韧苇叶","null","材料","99","sitem_book","","坚韧的角质草叶包含着神力.","packet:reward_markup","草坝奖励原包。"
+"packet_confirmed","high","815.png","斗草叶","null","材料","99","sitem_book","","边缘锋利的锯齿型草叶.","packet:reward_markup","草坝奖励原包。"
+"packet_confirmed","high","818.png","魂根","null","材料","99","sitem_book","","受混沌碎玉影响的植物根块.","packet:reward_markup","草坝奖励原包。"
+"packet_confirmed","high","816.png","甘兰香","null","材料","99","","","一种神奇的香料.","packet:reward_markup","草坝奖励原包。"
+"packet_confirmed","high","785.png","画皮寨通行证","null","消耗品","99","sitem_book","","可以进入画皮寨的通行证.","packet:reward_markup","草坝奖励原包。"
 "packet_confirmed","high","0.png","馒头","own","消耗品","99","","1","又白又香的馒头","packet:role_item+packet:sale",""
 "packet_confirmed","high","2.png","奥义秘诀","own","宝物","99","sitem_book","1","传说该秘诀泄漏自擎天山天宫术院，书内介绍了各职业无比强大的秘奥义技能招式。","packet:sale",""
 "packet_confirmed","high","3.png","蓝布裤","equip","护具·腿","1","sitem_ezhj","0","f_i_蓝布裤^ffffff&23@凿孔上限 9 格&24@护具·腿&25@1&21@1&3@4&27@sitem_ezhj&19@精炼潜质:

@@ -171,6 +171,14 @@ func TestClassicDataLookupsReturnDetachedRows(t *testing.T) {
 		t.Fatalf("FindMonsterByID() = %v %v, want 盗贼", ok, monster)
 	}
 
+	grasslandMonster, found, err := FindMonsterByID("wild-210-caoba-glassyx-lv38")
+	if err != nil {
+		t.Fatalf("FindMonsterByID(grassland) error = %v", err)
+	}
+	if !found || grasslandMonster["name"] != "草刺槐" || grasslandMonster["map_id"] != "210" || grasslandMonster["max_hp"] != "1530" || grasslandMonster["max_mp"] != "1034" || grasslandMonster["attack"] != "391" {
+		t.Fatalf("FindMonsterByID(grassland) = %v %v, want 草刺槐 map210 HP1530 MP1034 attack391", found, grasslandMonster)
+	}
+
 	drops, err := FindDropRowsByMapID("49")
 	if err != nil {
 		t.Fatalf("FindDropRowsByMapID() error = %v", err)

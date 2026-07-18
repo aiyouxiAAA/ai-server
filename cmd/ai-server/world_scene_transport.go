@@ -37,11 +37,12 @@ type worldSceneConnectionHub struct {
 }
 
 type worldSceneConnection struct {
-	writer  *websocketWriter
-	session *packetSession
-	mapID   int
-	spawn   world.SpawnPoint
-	visible map[string]struct{}
+	writer         *websocketWriter
+	session        *packetSession
+	mapID          int
+	spawn          world.SpawnPoint
+	visible        map[string]struct{}
+	lastReconcile  map[string]world.SpawnPoint
 }
 
 type worldScenePushAction struct {
@@ -341,6 +342,7 @@ func (hub *worldSceneConnectionHub) moveRoleActions(mapID int, actorRoleID strin
 //
 // 可见性先通过 syncMapVisibility 刷新，因此 AOI、screenRole 上限和同图队友
 // 强制可见性仍由唯一的 visible 集合裁决；不会给自己或不可见玩家推送。
+// 对观察者侧“坐标未变化”的可见玩家做 dedupe，避免 500ms 全量静止 Run 包洪水。
 func (hub *worldSceneConnectionHub) positionReconcileActions() []worldScenePushAction {
 	hub.mu.Lock()
 	mapIDSet := make(map[int]struct{}, len(hub.connections))
@@ -374,6 +376,15 @@ func (hub *worldSceneConnectionHub) positionReconcileActions() []worldScenePushA
 		if observer.writer == nil || observer.visible == nil {
 			continue
 		}
+		if observer.lastReconcile == nil {
+			observer.lastReconcile = make(map[string]world.SpawnPoint)
+		}
+		// Drop stale reconcile cache entries that are no longer visible to this observer.
+		for roleID := range observer.lastReconcile {
+			if _, ok := observer.visible[roleID]; !ok {
+				delete(observer.lastReconcile, roleID)
+			}
+		}
 		visibleRoleIDs := make([]string, 0, len(observer.visible))
 		for roleID := range observer.visible {
 			visibleRoleIDs = append(visibleRoleIDs, roleID)
@@ -387,6 +398,10 @@ func (hub *worldSceneConnectionHub) positionReconcileActions() []worldScenePushA
 			if !ok || actor.mapID != observer.mapID || !worldSceneCanBuildRolePush(actor) {
 				continue
 			}
+			if lastSpawn, ok := observer.lastReconcile[roleID]; ok && lastSpawn == actor.spawn {
+				continue
+			}
+			observer.lastReconcile[roleID] = actor.spawn
 			move := world.RoleMovePush{
 				Handle: roleID,
 				Type:   "Run",
@@ -402,6 +417,7 @@ func (hub *worldSceneConnectionHub) positionReconcileActions() []worldScenePushA
 				moveRole:    &move,
 			})
 		}
+		hub.connections[observerID] = observer
 	}
 	return actions
 }

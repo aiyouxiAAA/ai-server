@@ -157,6 +157,41 @@ func TestTeamUpsertOnlineRefreshesMemberSnapshotFields(t *testing.T) {
 	}
 }
 
+func TestTeamUpsertOnlineSkipsUnchangedTeamSnapshot(t *testing.T) {
+	manager := NewManager()
+	manager.UpsertOnline(testMember("role-a", "甲"))
+	manager.UpsertOnline(testMember("role-b", "乙"))
+	acceptInvite(t, manager, "role-a", "role-b")
+
+	// 入队后字段未变的重复 UpsertOnline 不得再广播整队快照。
+	if events := manager.UpsertOnline(testMember("role-b", "乙")); len(events) != 0 {
+		t.Fatalf("expected no events for unchanged team member upsert, got %+v", events)
+	}
+	if events := manager.UpsertOnline(testMember("role-a", "甲")); len(events) != 0 {
+		t.Fatalf("expected no events for unchanged team leader upsert, got %+v", events)
+	}
+
+	// 字段变化时仍要广播。
+	events := manager.UpsertOnline(Member{
+		RoleID:   "role-b",
+		Name:     "乙",
+		Level:    12,
+		Vocation: "刀客",
+		HP:       90,
+		MaxHP:    100,
+		MP:       40,
+		MaxMP:    50,
+		MapID:    "3",
+	})
+	if len(events) == 0 {
+		t.Fatal("expected snapshot events when team member fields change")
+	}
+	snapshot := collectMembers(events)
+	if member := snapshot["role-b"]; member.MapID != "3" || member.HP != 90 {
+		t.Fatalf("expected changed role-b fields in snapshot, got %+v", member)
+	}
+}
+
 func TestTeamNonLeaderCannotKick(t *testing.T) {
 	manager := NewManager()
 	manager.UpsertOnline(testMember("role-a", "甲"))

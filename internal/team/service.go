@@ -143,12 +143,31 @@ func (manager *Manager) UpsertOnline(member Member) []Event {
 	if member.MaxMP <= 0 {
 		member.MaxMP = member.MP
 	}
+	previous, existed := manager.members[member.RoleID]
 	manager.members[member.RoleID] = member
 	manager.onlineByName[member.Name] = member.RoleID
 	if teamID := manager.teamByRoleID[member.RoleID]; teamID != "" {
+		// main.go 在每个业务包后都会 UpsertOnline。字段未变时再广播整队快照会让客户端
+		// 反复销毁/重建队员条 SWF，移动时叠加 "The asset has been destroyed!" 与掉帧。
+		if existed && memberSnapshotEqual(previous, member) {
+			return nil
+		}
 		return manager.snapshotEventsLocked(teamID)
 	}
 	return nil
+}
+
+func memberSnapshotEqual(left Member, right Member) bool {
+	return left.RoleID == right.RoleID &&
+		left.Name == right.Name &&
+		left.Level == right.Level &&
+		left.Vocation == right.Vocation &&
+		left.HP == right.HP &&
+		left.MaxHP == right.MaxHP &&
+		left.MP == right.MP &&
+		left.MaxMP == right.MaxMP &&
+		left.MapID == right.MapID &&
+		left.Online == right.Online
 }
 
 func (manager *Manager) SetOffline(roleID string) []Event {

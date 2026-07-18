@@ -646,6 +646,38 @@ func TestWorldScenePositionReconcileUsesLatestVisiblePosition(t *testing.T) {
 	if !sawBForA {
 		t.Fatal("A should receive B's latest visible position")
 	}
+
+	// Unchanged positions must not flood another full static Run reconcile pass.
+	secondPass := hub.positionReconcileActions()
+	for _, action := range secondPass {
+		if action.moveRole != nil {
+			t.Fatalf("unchanged visible positions must not rebroadcast moveRole: recipient=%s move=%+v", action.recipientID, action.moveRole)
+		}
+	}
+
+	// Stay inside heroSpace so visibility is preserved and only coordinate
+// dedupe is exercised (A at 0,0 with radius 450).
+	if !hub.updatePosition("B", 1, stubSceneSpawn(200, 180)) {
+		t.Fatal("updatePosition(B) should accept a new spawn for the third reconcile pass")
+	}
+	// Live position changes still need one reconcile push so observers that
+	// missed the live moveRole can catch up; only identical coordinates are skipped.
+	thirdPass := hub.positionReconcileActions()
+	sawUpdatedBForA := false
+	for _, action := range thirdPass {
+		if action.moveRole == nil {
+			continue
+		}
+		if action.recipientID == "A" && action.moveRole.Handle == "B" {
+			sawUpdatedBForA = true
+			if action.moveRole.X != 200 || action.moveRole.Y != 180 || action.moveRole.TX != 200 || action.moveRole.TY != 180 {
+				t.Fatalf("changed-position reconciliation move = %+v, want static Run at 200,180", action.moveRole)
+			}
+		}
+	}
+	if !sawUpdatedBForA {
+		t.Fatal("A should receive B's updated visible position after spawn changes")
+	}
 }
 
 func TestWorldScenePositionReconcileKeepsSameMapTeammateOutsideHeroSpace(t *testing.T) {

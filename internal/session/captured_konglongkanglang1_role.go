@@ -75,6 +75,10 @@ func applyCapturedKonglongKanglang1Snapshot(role RoleSummary) RoleSummary {
 	return role
 }
 
+func capturedKonglongKanglang1SourceQuery() string {
+	return capturedKonglongKanglang1Snapshot.Role.SourceQuery
+}
+
 // MigrateCapturedKonglongKanglang1Role replaces the requested local role with
 // the final player_21424 snapshot through the Store persistence contract.
 func (store *Store) MigrateCapturedKonglongKanglang1Role(playerID string, roleID string) (RoleSummary, error) {

@@ -666,6 +666,12 @@ func TestCapturedSourceMonsterMoveReplayUsesCapturedMoveRoleTargets(t *testing.T
 			wantCount: 50,
 			want:      RoleMovePush{Handle: "5839621591159706", Type: "Move", X: 2196, Y: 493, Z: 0, TX: 2557, TY: 484, TZ: 0, MapID: "158"},
 		},
+		{
+			name:      "bainian-chongjing",
+			mapID:     171,
+			wantCount: 8,
+			want:      RoleMovePush{Handle: "7893833328746190", Type: "Move", X: 1112, Y: 516, Z: 0, TX: 942, TY: 516, TZ: 0, MapID: "171"},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -678,6 +684,37 @@ func TestCapturedSourceMonsterMoveReplayUsesCapturedMoveRoleTargets(t *testing.T
 				t.Fatalf("expected map%d replay to include captured moveRole %+v", testCase.mapID, testCase.want)
 			}
 		})
+	}
+}
+
+func TestCapturedSourceMonsterMoveReplayLoopingMap(t *testing.T) {
+	if !CapturedSourceMonsterMoveReplayLoopsForMap(171) {
+		t.Fatal("expected map171 captured event-monster routes to loop")
+	}
+	if CapturedSourceMonsterMoveReplayLoopsForMap(143) {
+		t.Fatal("expected map143 replay to preserve its captured finite sequence")
+	}
+	if !CapturedSourceMonsterMoveReplayLoopsForBootstrap(TownBootstrapSnapshot{LoadMap: LoadMapPush{MapID: "171"}}) {
+		t.Fatal("expected map171 bootstrap to preserve looping replay behavior")
+	}
+}
+
+func TestCapturedSourceMonsterMoveReplayMap171PatrolRoutes(t *testing.T) {
+	steps := CapturedSourceMonsterMoveReplayForMap(171)
+	wants := []RoleMovePush{
+		{Handle: "7893833328746190", Type: "Move", X: 1112, Y: 516, Z: 0, TX: 942, TY: 516, TZ: 0, MapID: "171"},
+		{Handle: "7893833328746190", Type: "Move", X: 1096, Y: 516, Z: 0, TX: 2027, TY: 516, TZ: 0, MapID: "171"},
+		{Handle: "7895833328747103", Type: "Move", X: 1176, Y: 467, Z: 0, TX: 1978, TY: 463, TZ: 0, MapID: "171"},
+		{Handle: "7895833328747103", Type: "Move", X: 1893, Y: 463, Z: 0, TX: 1047, TY: 467, TZ: 0, MapID: "171"},
+		{Handle: "7897833328748728", Type: "Move", X: 1863, Y: 600, Z: 0, TX: 1963, TY: 603, TZ: 0, MapID: "171"},
+		{Handle: "7897833328748728", Type: "Move", X: 1879, Y: 602, Z: 0, TX: 1115, TY: 591, TZ: 0, MapID: "171"},
+		{Handle: "7899833328749140", Type: "Move", X: 1965, Y: 533, Z: 0, TX: 1255, TY: 539, TZ: 0, MapID: "171"},
+		{Handle: "7899833328749140", Type: "Move", X: 1441, Y: 537, Z: 0, TX: 2159, TY: 531, TZ: 0, MapID: "171"},
+	}
+	for _, want := range wants {
+		if !hasMoveReplayStep(steps, want) {
+			t.Fatalf("expected map171 captured patrol route %+v, got %+v", want, steps)
+		}
 	}
 }
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill",
   "source": "internal/classicdata/source/skill-table.csv",
-  "rowCount": 30,
+  "rowCount": 40,
   "rows": [
     {
       "skill_id": "skill-normal-attack",
@@ -221,6 +221,22 @@
       "target": "enemy"
     },
     {
+      "skill_id": "skill-chi-yan-mo-zhou",
+      "kind": "skill",
+      "label": "赤焰魔咒",
+      "source_type": "oneE",
+      "action_name": "赤焰魔咒",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-lei-ji",
+      "kind": "skill",
+      "label": "雷击",
+      "source_type": "oneE",
+      "action_name": "雷击",
+      "target": "enemy"
+    },
+    {
       "skill_id": "skill-lei-bao-zhou",
       "kind": "skill",
       "label": "雷爆咒",
@@ -237,11 +253,75 @@
       "target": "enemy"
     },
     {
+      "skill_id": "skill-mo-zhang-shu",
+      "kind": "skill",
+      "label": "魔障术",
+      "source_type": "own",
+      "action_name": "魔障术",
+      "target": "self"
+    },
+    {
       "skill_id": "skill-ao-yi-hong-lei-shi",
       "kind": "skill",
       "label": "奥义.轰雷矢",
       "source_type": "oneE",
       "action_name": "奥义.轰雷矢",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-taunt",
+      "kind": "skill",
+      "label": "挑衅",
+      "source_type": "all",
+      "action_name": "挑衅",
+      "target": "self"
+    },
+    {
+      "skill_id": "skill-juan-ye-shi",
+      "kind": "skill",
+      "label": "卷叶式",
+      "source_type": "oneE",
+      "action_name": "卷叶式",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-qiang-guan-shi",
+      "kind": "skill",
+      "label": "强贯式",
+      "source_type": "oneE",
+      "action_name": "强贯式",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-ning-shen-shi",
+      "kind": "skill",
+      "label": "凝神式",
+      "source_type": "own",
+      "action_name": "凝神式",
+      "target": "self"
+    },
+    {
+      "skill_id": "skill-kuang-wu-shi",
+      "kind": "skill",
+      "label": "狂舞式",
+      "source_type": "oneE",
+      "action_name": "狂舞式",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-qi-yu-shi",
+      "kind": "skill",
+      "label": "气愈式",
+      "source_type": "own",
+      "action_name": "气愈式",
+      "target": "self"
+    },
+    {
+      "skill_id": "skill-ao-yi-piao-xue",
+      "kind": "skill",
+      "label": "奥义.飘血",
+      "source_type": "oneE",
+      "action_name": "奥义.飘血",
       "target": "enemy"
     }
   ]

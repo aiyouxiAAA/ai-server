@@ -2039,6 +2039,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	isWoodcutter222 := isCapturedWoodcutterLocalRole(role)
 	isWoodcutter333 := isCapturedWoodcutter333LocalRole(role)
 	isWarrior444 := isCapturedWarrior444LocalRole(role)
+	isKonglongKanglang1 := strings.HasPrefix(role.RoleID, "acct-66666666-role-")
 	if isWoodcutter333 {
 		role = withCapturedWoodcutter333RuntimeDefaults(role)
 	}
@@ -2096,16 +2097,20 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.Items = syncCapturedWarrior444EquipmentItems(role.Items)
 	}
 	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
-	if isWoodcutter222 {
+	if isKonglongKanglang1 {
+		role.SourceQuery = capturedKonglongKanglang1SourceQuery()
+	} else if isWoodcutter222 {
 		role.SourceQuery = capturedWoodcutterBaseSourceQuery()
 	} else if isWoodcutter333 {
 		role.SourceQuery = capturedWoodcutter40BodySourceQuery()
 	} else if isWarrior444 {
 		role.SourceQuery = capturedWarrior44BodySourceQuery()
 	}
-	role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
-	role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
-	if isWarrior444 || isWoodcutter333 || isWoodcutter222 {
+	if !isKonglongKanglang1 {
+		role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
+		role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
+	}
+	if isKonglongKanglang1 || isWarrior444 || isWoodcutter333 || isWoodcutter222 {
 		role.BattleSourceQuery = role.SourceQuery
 	}
 	return role

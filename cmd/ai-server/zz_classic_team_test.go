@@ -342,6 +342,73 @@ func TestHandlePacketClassicTeamSharedBattleStartIncludesMember(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicTeamSharedBattleStartIncludesFullTeam(t *testing.T) {
+	classicTeamManager.Reset()
+	classicTeamHub = newClassicTeamConnectionHub()
+
+	store := session.NewStore()
+	leaderSession, memberOne := seedClassicTeamPair(t, store)
+	memberTwo, _ := seedSelectedRoleSessionInStore(t, store, "队员三")
+	memberThree, _ := seedSelectedRoleSessionInStore(t, store, "队员四")
+	for _, memberSession := range []*packetSession{memberOne, memberTwo, memberThree} {
+		acceptClassicTeamInvite(t, store, leaderSession, memberSession)
+	}
+
+	teamSessions := []*packetSession{leaderSession, memberOne, memberTwo, memberThree}
+	for _, socketSession := range teamSessions {
+		moveClassicTeamSessionToMap(t, store, socketSession, 4)
+		classicTeamManager.UpsertOnline(classicTeamMemberFromSession(socketSession))
+	}
+	for _, memberSession := range teamSessions[1:] {
+		classicTeamHub.register(memberSession.selectedRole.RoleID, &websocketWriter{}, memberSession)
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 8,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, leaderSession)
+
+	if !result.handled || result.battleStart == nil || result.teamBattleStart == nil || result.battleCommand == nil {
+		t.Fatalf("expected full team shared battle start with immediate command, got %+v", result)
+	}
+	if len(result.teamBattleStart.Members) != 3 || len(result.teamBattleStart.Bundle.TeamStartCommands) != 4 {
+		t.Fatalf("expected three shared members and four start commands, got members=%+v commands=%+v", result.teamBattleStart.Members, result.teamBattleStart.Bundle.TeamStartCommands)
+	}
+
+	expectedHandles := map[string]bool{}
+	for _, socketSession := range teamSessions {
+		expectedHandles[socketSession.selectedRole.RoleID] = true
+	}
+	teamCells := 0
+	for _, cell := range result.battleCells {
+		if cell.Camp != battle.CampTeam {
+			continue
+		}
+		teamCells += 1
+		delete(expectedHandles, cell.Handle)
+	}
+	if teamCells != 4 || len(expectedHandles) != 0 {
+		t.Fatalf("expected four distinct team battle cells, got cells=%+v missing=%+v", result.battleCells, expectedHandles)
+	}
+	for _, socketSession := range teamSessions {
+		if _, ok := result.teamBattleStart.Bundle.StartCommandForActor(socketSession.selectedRole.RoleID); !ok {
+			t.Fatalf("expected start command for roleId=%s, got %+v", socketSession.selectedRole.RoleID, result.teamBattleStart.Bundle.TeamStartCommands)
+		}
+	}
+	classicTeamHub.startSharedBattle(*result.teamBattleStart)
+	for _, memberSession := range teamSessions[1:] {
+		if memberSession.battleRuntime == nil || memberSession.battleRuntime.BattleID != result.battleStart.BattleID {
+			t.Fatalf("expected member roleId=%s to join battleId=%s, got runtime=%+v", memberSession.selectedRole.RoleID, result.battleStart.BattleID, memberSession.battleRuntime)
+		}
+	}
+}
+
 func TestHandlePacketClassicTeamSharedBattleBroadcastsLoadProgress(t *testing.T) {
 	classicTeamManager.Reset()
 	classicTeamHub = newClassicTeamConnectionHub()

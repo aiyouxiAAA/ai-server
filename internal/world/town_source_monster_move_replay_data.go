@@ -1,12 +1,13 @@
 package world
 
 // capturedSourceMonsterMoveReplayByMapID is generated from Classic server-to-client c_MoveRole packets.
-// Raw packets matched: 5200; target-change replay steps: 1388.
+// Raw packets matched: 5261; target-change replay steps: 1396.
 // Source captures:
 //   - D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260531_124707_399_session_23556/connections/20260531_124713_924_conn_0002/raw/server-to-client-0001.bin: 1279 raw moveRole packets
 //   - D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260605_230911_564_session_21960/connections/20260605_230922_544_conn_0002/raw/server-to-client-0001.bin: 2880 raw moveRole packets
 //   - D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260612_211741_424_session_38832/connections/20260612_211756_199_conn_0002/raw/server-to-client-0001.bin: 61 raw moveRole packets
 //   - D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260616_215712_071_session_41212/connections/20260616_215718_725_conn_0002/raw/server-to-client-0001.bin: 980 raw moveRole packets
+//   - D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260712_120132_278_auto_move_session/conn_0002/server-to-client-0001.bin: 61 raw moveRole packets for map171's four event monsters
 var capturedSourceMonsterMoveReplayByMapID = map[int][]RoleMovePush{
 	64: {
 		{Handle: "8216674186649650", Type: "Move", X: 332, Y: 417, Z: 0, TX: 328, TY: 486, TZ: 0},
@@ -1488,4 +1489,18 @@ var capturedSourceMonsterMoveReplayByMapID = map[int][]RoleMovePush{
 		{Handle: "7546622260836700", Type: "Run", X: 2061, Y: 459, Z: 0, TX: 2010, TY: 457, TZ: 0},
 		{Handle: "7548622260837633", Type: "Run", X: 2066, Y: 453, Z: 0, TX: 2010, TY: 457, TZ: 0},
 	},
+	171: {
+		{Handle: "7893833328746190", Type: "Move", X: 1112, Y: 516, Z: 0, TX: 942, TY: 516, TZ: 0},
+		{Handle: "7893833328746190", Type: "Move", X: 1096, Y: 516, Z: 0, TX: 2027, TY: 516, TZ: 0},
+		{Handle: "7895833328747103", Type: "Move", X: 1176, Y: 467, Z: 0, TX: 1978, TY: 463, TZ: 0},
+		{Handle: "7895833328747103", Type: "Move", X: 1893, Y: 463, Z: 0, TX: 1047, TY: 467, TZ: 0},
+		{Handle: "7897833328748728", Type: "Move", X: 1863, Y: 600, Z: 0, TX: 1963, TY: 603, TZ: 0},
+		{Handle: "7897833328748728", Type: "Move", X: 1879, Y: 602, Z: 0, TX: 1115, TY: 591, TZ: 0},
+		{Handle: "7899833328749140", Type: "Move", X: 1965, Y: 533, Z: 0, TX: 1255, TY: 539, TZ: 0},
+		{Handle: "7899833328749140", Type: "Move", X: 1441, Y: 537, Z: 0, TX: 2159, TY: 531, TZ: 0},
+	},
+}
+
+var capturedSourceMonsterMoveReplayLoopingMapIDs = map[int]bool{
+	171: true,
 }

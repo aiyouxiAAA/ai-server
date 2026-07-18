@@ -66,7 +66,7 @@ func broadcastClassicBainianChongjingWarningNotice() {
 func classicBainianChongjingWarningAnnouncementMessage() classicTownChatMessagePush {
 	return classicTownChatMessagePush{
 		Channel: "system",
-		Msg:     "<w>" + classicactivity.BainianChongjingWarningNoticeText() + ",50",
+		Msg:     "<w>" + classicactivity.BainianChongjingWarningNoticeText(),
 	}
 }
 
@@ -77,14 +77,14 @@ func broadcastClassicBainianChongjingSpawnNotice() {
 func classicBainianChongjingSpawnAnnouncementMessage() classicTownChatMessagePush {
 	return classicTownChatMessagePush{
 		Channel: "system",
-		Msg:     "<w>" + classicactivity.BainianChongjingSpawnNoticeText() + ",50",
+		Msg:     "<w>" + classicactivity.BainianChongjingSpawnNoticeText(),
 	}
 }
 
 func classicBainianChongjingKillAnnouncementMessage(killerNames ...string) classicTownChatMessagePush {
 	return classicTownChatMessagePush{
 		Channel: "system",
-		Msg:     "<w>" + classicactivity.BainianChongjingKillNoticeText(killerNames...) + ",50",
+		Msg:     "<w>" + classicactivity.BainianChongjingKillNoticeText(killerNames...),
 	}
 }
 

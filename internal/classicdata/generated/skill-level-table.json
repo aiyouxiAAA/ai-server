@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill-level",
   "source": "internal/classicdata/source/skill-level-table.csv",
-  "rowCount": 45,
+  "rowCount": 55,
   "rows": [
     {
       "skill_level_id": "skill-normal-attack-lv1",
@@ -434,6 +434,28 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-chi-yan-mo-zhou-lv2",
+      "skill_id": "skill-chi-yan-mo-zhou",
+      "level": "2",
+      "source_action_label": "w10/bombFire",
+      "damage_multiplier": "0.85",
+      "mp_cost": "65",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-lei-ji-lv3",
+      "skill_id": "skill-lei-ji",
+      "level": "3",
+      "source_action_label": "w10/thunderMagicAtk",
+      "damage_multiplier": "1.2",
+      "mp_cost": "75",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
       "skill_level_id": "skill-lei-bao-zhou-lv1",
       "skill_id": "skill-lei-bao-zhou",
       "level": "1",
@@ -489,12 +511,100 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-mo-zhang-shu-lv2",
+      "skill_id": "skill-mo-zhang-shu",
+      "level": "2",
+      "source_action_label": "w10/magicObstacle",
+      "damage_multiplier": "0",
+      "mp_cost": "90",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
       "skill_level_id": "skill-ao-yi-hong-lei-shi-lv1",
       "skill_id": "skill-ao-yi-hong-lei-shi",
       "level": "1",
       "source_action_label": "w1/bombThunderShoot",
       "damage_multiplier": "2.2",
       "mp_cost": "26",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-taunt-lv1",
+      "skill_id": "skill-taunt",
+      "level": "1",
+      "source_action_label": "com/tx",
+      "damage_multiplier": "0",
+      "mp_cost": "20",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-juan-ye-shi-lv5",
+      "skill_id": "skill-juan-ye-shi",
+      "level": "5",
+      "source_action_label": "w7/jys2",
+      "damage_multiplier": "1.75",
+      "mp_cost": "16",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qiang-guan-shi-lv5",
+      "skill_id": "skill-qiang-guan-shi",
+      "level": "5",
+      "source_action_label": "w7/qgs1",
+      "damage_multiplier": "1.55",
+      "mp_cost": "20",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ning-shen-shi-lv5",
+      "skill_id": "skill-ning-shen-shi",
+      "level": "5",
+      "source_action_label": "w7/nss",
+      "damage_multiplier": "0",
+      "mp_cost": "22",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-kuang-wu-shi-lv5",
+      "skill_id": "skill-kuang-wu-shi",
+      "level": "5",
+      "source_action_label": "w7/kws",
+      "damage_multiplier": "1",
+      "mp_cost": "30",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qi-yu-shi-lv5",
+      "skill_id": "skill-qi-yu-shi",
+      "level": "5",
+      "source_action_label": "w7/qys",
+      "damage_multiplier": "0",
+      "mp_cost": "31",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ao-yi-piao-xue-lv4",
+      "skill_id": "skill-ao-yi-piao-xue",
+      "level": "4",
+      "source_action_label": "w7/aypx",
+      "damage_multiplier": "3.3",
+      "mp_cost": "38",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
       "direct_attack_bonus_multiplier": "0"

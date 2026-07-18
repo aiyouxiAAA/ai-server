@@ -67,7 +67,7 @@ func TestPersistentCapturedKonglongKanglang1MigrationKeepsFinalSnapshot(t *testi
 			{key: "p", value: "63"},
 			{key: "se", value: "49"},
 			{key: "hr", value: "12"},
-			{key: "w11", value: "60"},
+			{key: "w7", value: "59"},
 		} {
 			value, found := sourceQueryParamValue(query, expected.key)
 			if !found || value != expected.value {

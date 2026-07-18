@@ -210,6 +210,41 @@ func TestClassicTownSourceMonsterReplaySkipsCapturedRunChaseSteps(t *testing.T) 
 	}
 }
 
+func TestClassicTownSourceMonsterReplayKeepsMap171PatrolContinuousAcrossLoops(t *testing.T) {
+	writer := &websocketWriter{}
+	writer.resetClassicTownSourceMonsterState(world.TownBootstrapSnapshot{
+		CreateRoles: []world.RolePush{
+			{
+				Handle:     "7893833328746190",
+				RoleID:     "-2",
+				Kind:       "monster",
+				MapID:      "171",
+				SpawnFlash: world.SpawnPoint{X: 1560, Y: 516},
+			},
+		},
+	})
+
+	toLeft := world.RoleMovePush{Handle: "7893833328746190", Type: "Move", X: 1112, Y: 516, TX: 942, TY: 516, MapID: "171"}
+	toRight := world.RoleMovePush{Handle: "7893833328746190", Type: "Move", X: 1096, Y: 516, TX: 2027, TY: 516, MapID: "171"}
+
+	first := writer.prepareClassicTownSourceMonsterReplayMove(toLeft)
+	if first.X != 1560 || first.Y != 516 || first.TX != 942 || first.TY != 516 {
+		t.Fatalf("expected first patrol to start at bootstrap position, got %+v", first)
+	}
+	writer.setClassicTownSourceMonsterPosition(first.Handle, first.MapID, world.SpawnPoint{X: first.TX, Y: first.TY})
+
+	second := writer.prepareClassicTownSourceMonsterReplayMove(toRight)
+	if second.X != 942 || second.Y != 516 || second.TX != 2027 || second.TY != 516 {
+		t.Fatalf("expected next patrol to start at previous target, got %+v", second)
+	}
+	writer.setClassicTownSourceMonsterPosition(second.Handle, second.MapID, world.SpawnPoint{X: second.TX, Y: second.TY})
+
+	nextLoop := writer.prepareClassicTownSourceMonsterReplayMove(toLeft)
+	if nextLoop.X != 2027 || nextLoop.Y != 516 || nextLoop.TX != 942 || nextLoop.TY != 516 {
+		t.Fatalf("expected loop boundary to continue from previous target, got %+v", nextLoop)
+	}
+}
+
 func TestWebsocketWriterOutboundQueuePreservesOrderAndServerSeq(t *testing.T) {
 	releaseServer := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {

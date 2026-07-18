@@ -15,8 +15,8 @@
     "mapX": 384,
     "mapY": 547,
     "visualRoleId": 1,
-    "sourceQuery": "human/human.swf?=&c=61&e=6&sex=1&hr=12&co=5&m=0&n=0&p=63&se=49&w11=60&",
-    "battleSourceQuery": "human/human.swf?=&c=61&e=6&sex=1&hr=12&co=5&m=0&n=0&p=63&se=49&w11=60&",
+    "sourceQuery": "human/human.swf?=&c=61&e=6&sex=1&hr=12&co=5&m=0&n=0&p=63&se=49&w7=59&",
+    "battleSourceQuery": "human/human.swf?=&c=61&e=6&sex=1&hr=12&co=5&m=0&n=0&p=63&se=49&w7=59&",
     "physique": {
       "AGI": 87,
       "STR": 192,

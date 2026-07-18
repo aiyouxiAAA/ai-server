@@ -17,6 +17,10 @@ func CapturedSourceMonsterMoveReplayForMap(mapID int) []RoleMovePush {
 	return replay
 }
 
+func CapturedSourceMonsterMoveReplayLoopsForMap(mapID int) bool {
+	return capturedSourceMonsterMoveReplayLoopingMapIDs[mapID]
+}
+
 func CapturedSourceMonsterMoveReplayForBootstrap(snapshot TownBootstrapSnapshot) []RoleMovePush {
 	mapID, err := strconv.Atoi(snapshot.LoadMap.MapID)
 	if err != nil {
@@ -45,4 +49,12 @@ func CapturedSourceMonsterMoveReplayForBootstrap(snapshot TownBootstrapSnapshot)
 		}
 	}
 	return filtered
+}
+
+func CapturedSourceMonsterMoveReplayLoopsForBootstrap(snapshot TownBootstrapSnapshot) bool {
+	mapID, err := strconv.Atoi(snapshot.LoadMap.MapID)
+	if err != nil {
+		return false
+	}
+	return CapturedSourceMonsterMoveReplayLoopsForMap(mapID)
 }

@@ -238,13 +238,14 @@ func (writer *websocketWriter) startClassicTownSourceMonsterMoveReplay(snapshot 
 	if len(steps) == 0 {
 		return
 	}
+	loop := world.CapturedSourceMonsterMoveReplayLoopsForBootstrap(snapshot)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	writer.sourceMonsterReplayMu.Lock()
 	writer.sourceMonsterReplayCancel = cancel
 	writer.sourceMonsterReplayMu.Unlock()
 
-	go writer.replayClassicTownSourceMonsterMoves(ctx, steps)
+	go writer.replayClassicTownSourceMonsterMoves(ctx, steps, loop)
 }
 
 func (writer *websocketWriter) stopClassicTownSourceMonsterMoveReplay() {
@@ -257,7 +258,7 @@ func (writer *websocketWriter) stopClassicTownSourceMonsterMoveReplay() {
 	}
 }
 
-func (writer *websocketWriter) replayClassicTownSourceMonsterMoves(ctx context.Context, steps []world.RoleMovePush) {
+func (writer *websocketWriter) replayClassicTownSourceMonsterMoves(ctx context.Context, steps []world.RoleMovePush, loop bool) {
 	if !sleepWithContext(ctx, classicTownSourceMonsterReplayInitialDelay) {
 		return
 	}
@@ -273,21 +274,29 @@ func (writer *websocketWriter) replayClassicTownSourceMonsterMoves(ctx context.C
 
 	for _, handle := range handleOrder {
 		handleSteps := append([]world.RoleMovePush{}, stepsByHandle[handle]...)
-		go writer.replayClassicTownSourceMonsterHandleMoves(ctx, handleSteps)
+		go writer.replayClassicTownSourceMonsterHandleMoves(ctx, handleSteps, loop)
 	}
 }
 
-func (writer *websocketWriter) replayClassicTownSourceMonsterHandleMoves(ctx context.Context, steps []world.RoleMovePush) {
-	for _, step := range steps {
-		if !classicTownSourceMonsterReplayableStep(step) {
-			continue
+func (writer *websocketWriter) replayClassicTownSourceMonsterHandleMoves(ctx context.Context, steps []world.RoleMovePush, loop bool) {
+	for {
+		replayed := false
+		for _, step := range steps {
+			if !classicTownSourceMonsterReplayableStep(step) {
+				continue
+			}
+			replayed = true
+			replayStep := writer.prepareClassicTownSourceMonsterReplayMove(step)
+			if err := writer.writePush(cmdClassicTownMoveRolePush, encodePayload(replayStep)); err != nil {
+				log.Printf("[ai-server] write classic source monster moveRole replay failed: %v", err)
+				return
+			}
+			if !sleepWithContext(ctx, classicTownSourceMonsterReplayDelay(replayStep)) {
+				return
+			}
+			writer.setClassicTownSourceMonsterPosition(replayStep.Handle, replayStep.MapID, world.SpawnPoint{X: replayStep.TX, Y: replayStep.TY})
 		}
-		writer.setClassicTownSourceMonsterPosition(step.Handle, step.MapID, world.SpawnPoint{X: step.X, Y: step.Y})
-		if err := writer.writePush(cmdClassicTownMoveRolePush, encodePayload(step)); err != nil {
-			log.Printf("[ai-server] write classic source monster moveRole replay failed: %v", err)
-			return
-		}
-		if !sleepWithContext(ctx, classicTownSourceMonsterReplayDelay(step)) {
+		if !loop || !replayed {
 			return
 		}
 	}
@@ -355,6 +364,28 @@ func (writer *websocketWriter) setClassicTownSourceMonsterPosition(handle string
 	state.mapID = mapID
 	state.position = position
 	writer.sourceMonsterStates[handle] = state
+}
+
+func (writer *websocketWriter) prepareClassicTownSourceMonsterReplayMove(step world.RoleMovePush) world.RoleMovePush {
+	if step.Handle == "" {
+		return step
+	}
+
+	writer.sourceMonsterStateMu.Lock()
+	defer writer.sourceMonsterStateMu.Unlock()
+	if writer.sourceMonsterStates == nil {
+		writer.sourceMonsterStates = make(map[string]classicTownSourceMonsterMoveState)
+	}
+
+	state, exists := writer.sourceMonsterStates[step.Handle]
+	if exists {
+		step.X = state.position.X
+		step.Y = state.position.Y
+	}
+	state.mapID = step.MapID
+	state.position = world.SpawnPoint{X: step.X, Y: step.Y}
+	writer.sourceMonsterStates[step.Handle] = state
+	return step
 }
 
 func (writer *websocketWriter) removeClassicTownSourceMonsterStates(handles []string) {

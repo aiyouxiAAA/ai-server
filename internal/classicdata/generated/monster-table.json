@@ -7049,16 +7049,16 @@
       "max_hp": "8000",
       "max_mp": "1500",
       "speed": "180",
-      "attack": "152",
-      "attack_min": "",
-      "attack_max": "",
+      "attack": "184",
+      "attack_min": "179",
+      "attack_max": "189",
       "defense": "0",
       "command_label": "法术普通攻击",
       "damage_defense_type": "magic",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "7893833328746190;7895833328747103;7897833328748728;7899833328749140",
-      "source": "20260712_120132_155_auto_move_session/conn_0002/server-to-client-0001.bin#createRole+cell+hp-delta;instance2.staging/20260712_120132_278_auto_move_session/conn_0002#cell"
+      "source": "capture-backed approximate: 2 strict HP-delta samples after player magic defense, implied magic attack 179..189; D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260712_172043_130_auto_move_session/conn_0002/server-to-client-0001.bin"
     },
     {
       "monster_id": "visible-171-7895833328747103",
@@ -7073,16 +7073,16 @@
       "max_hp": "1800",
       "max_mp": "600",
       "speed": "180",
-      "attack": "260",
-      "attack_min": "",
-      "attack_max": "",
+      "attack": "200",
+      "attack_min": "153",
+      "attack_max": "247",
       "defense": "0",
       "command_label": "普通攻击",
       "damage_defense_type": "physical",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "7893833328746190;7895833328747103;7897833328748728;7899833328749140",
-      "source": "20260712_120132_155_auto_move_session/conn_0002#createRole;instance2.staging/20260712_120132_278_auto_move_session/conn_0002#cell+attack-approx-level-band"
+      "source": "capture-backed approximate: 12 cross-client sweepspear action windows support 30% physical defense; normal/sweepspear base-attack candidates 153..247 after separating sweepspear x1.30"
     },
     {
       "monster_id": "visible-171-7897833328748728",
@@ -7097,16 +7097,16 @@
       "max_hp": "2000",
       "max_mp": "500",
       "speed": "180",
-      "attack": "260",
-      "attack_min": "",
-      "attack_max": "",
+      "attack": "232",
+      "attack_min": "165",
+      "attack_max": "298",
       "defense": "0",
       "command_label": "普通攻击",
       "damage_defense_type": "physical",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "7893833328746190;7895833328747103;7897833328748728;7899833328749140",
-      "source": "20260712_120132_155_auto_move_session/conn_0002/server-to-client-0001.bin#createRole+cell;attack-approx-level-band"
+      "source": "capture-backed approximate: 12 cross-client sweepspear action windows support 30% physical defense; normal/sweepspear base-attack candidates 165..298 after separating sweepspear x1.30"
     },
     {
       "monster_id": "visible-171-7899833328749140",
@@ -7121,16 +7121,16 @@
       "max_hp": "2000",
       "max_mp": "500",
       "speed": "180",
-      "attack": "260",
-      "attack_min": "",
-      "attack_max": "",
+      "attack": "232",
+      "attack_min": "165",
+      "attack_max": "298",
       "defense": "0",
       "command_label": "普通攻击",
       "damage_defense_type": "physical",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "7893833328746190;7895833328747103;7897833328748728;7899833328749140",
-      "source": "20260712_120132_155_auto_move_session/conn_0002/server-to-client-0001.bin#createRole+cell;attack-approx-level-band"
+      "source": "capture-backed approximate: 12 cross-client sweepspear action windows support 30% physical defense; normal/sweepspear base-attack candidates 165..298 after separating sweepspear x1.30"
     },
     {
       "monster_id": "wild-192-yaozhisen-robotax-lv30",

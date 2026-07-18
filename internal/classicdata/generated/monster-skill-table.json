@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "monster-skill",
   "source": "internal/classicdata/source/monster-skill-table.csv",
-  "rowCount": 22,
+  "rowCount": 23,
   "rows": [
     {
       "monster_skill_id": "monster-robber-slidecut",
@@ -421,6 +421,28 @@
       "evidence_status": "partial",
       "evidence": "9 SHA-distinct battle windows: 32 混沌击 / 69 sourceMode=1 nomalAtk attacks (46.38%). Player-applied 诅咒 BuffInfo is excluded; no skills/ path / chaosskyhit.swf / MP cost.",
       "notes": "broadcast name only; same animation/damage path as 法术普通攻击; no independent skill IR; AI chance is capture-backed approximation"
+    },
+    {
+      "monster_skill_id": "monster-militia-sweepspear",
+      "command_id": "enemy-sweep-spear",
+      "monster_name": "被控制的民兵",
+      "display_url": "monstermap/militia.swf",
+      "action_name": "单枪横扫",
+      "source_type": "all",
+      "source_action_label": "sweepspear",
+      "target": "enemy",
+      "runtime_chance_percent": "28",
+      "damage_multiplier": "1",
+      "mp_cost": "30",
+      "defense_type": "physical",
+      "status_buff_id": "",
+      "status_chance_percent": "",
+      "status_rounds": "",
+      "status_tick_min_percent": "",
+      "status_tick_max_percent": "",
+      "evidence_status": "partial",
+      "evidence": "7 independent 百年虫精 windows: 23 单枪横扫 / 82 militia attacks; D:/yzhgame/WOCClient/tmp/woc-proxy-captures/20260712_172043_130_auto_move_session/conn_0002/server-to-client-0001.bin#45035 confirms all target, sweepspear, and MP 600->570.",
+      "notes": "all-target action and MP cost are captured; 28% is a capture-backed local AI approximation, not an original-server constant"
     },
     {
       "monster_skill_id": "monster-robotax-ruling-ax",

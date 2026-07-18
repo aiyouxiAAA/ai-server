@@ -299,6 +299,85 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 	}
 }
 
+func TestTeamWildBattleCreatesFourMemberCommandWindows(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+
+	actors := make([]TeamActor, 0, 4)
+	for index := 1; index <= 4; index++ {
+		roleID := fmt.Sprintf("role-%d", index)
+		actors = append(actors, TeamActor{
+			Role: session.RoleSummary{
+				RoleID:      roleID,
+				DisplayName: fmt.Sprintf("队员%d", index),
+				Level:       12,
+			},
+			PlayerBase: session.PlayerBaseData{
+				PlayerID:    fmt.Sprintf("player-%d", index),
+				DisplayName: fmt.Sprintf("队员%d", index),
+				Level:       12,
+				MapID:       4,
+				HP:          300,
+				MaxHP:       300,
+				MP:          80,
+				MaxMP:       80,
+			},
+		})
+	}
+
+	runtime, bundle, ok := NewTeamWildBattle(actors, StartRequest{
+		MapID:       "4",
+		MapName:     "云隐村口",
+		StageFocusX: 120,
+	})
+	if !ok {
+		t.Fatal("expected four-member team battle to start")
+	}
+	if len(runtime.livingCells(CampTeam)) != 4 || len(bundle.TeamStartCommands) != 4 {
+		t.Fatalf("expected four team cells and command windows, got cells=%+v commands=%+v", runtime.Cells, bundle.TeamStartCommands)
+	}
+
+	sequences := map[int]bool{}
+	for _, actor := range actors {
+		command, commandOK := bundle.StartCommandForActor(actor.Role.RoleID)
+		if !commandOK || command.ActorHandle != actor.Role.RoleID || sequences[command.Sequence] {
+			t.Fatalf("expected unique command window for %s, got %+v", actor.Role.RoleID, command)
+		}
+		sequences[command.Sequence] = true
+	}
+	for index := range runtime.Cells {
+		if runtime.Cells[index].Camp == CampEnemy {
+			runtime.Cells[index].HP = 100000
+			runtime.Cells[index].MaxHP = 100000
+		}
+	}
+	target := runtime.firstLiving(CampEnemy)
+	if target == nil {
+		t.Fatal("expected enemy target for four-member team battle")
+	}
+
+	for _, actor := range actors {
+		command, _ := bundle.StartCommandForActor(actor.Role.RoleID)
+		result := runtime.ProcessAction(ActionRequest{
+			BattleID:     bundle.Start.BattleID,
+			ActorHandle:  actor.Role.RoleID,
+			CommandID:    CommandNormalAttack,
+			TargetHandle: target.Handle,
+			Round:        command.Round,
+			Sequence:     command.Sequence,
+		})
+		if result.ErrorCode != "" {
+			t.Fatalf("expected %s normal attack to resolve, got %+v", actor.Role.RoleID, result)
+		}
+	}
+	if len(runtime.PendingTeamActions) != 4 || len(runtime.PendingStarts) != 4 {
+		t.Fatalf("expected the next round to prepare four command windows, got pending=%+v starts=%+v", runtime.PendingTeamActions, runtime.PendingStarts)
+	}
+	playOver := runtime.ProcessPlayOver(PlayOverRequest{BattleID: bundle.Start.BattleID})
+	if playOver.ErrorCode != "" || len(playOver.StartCommands) != 4 {
+		t.Fatalf("expected next round to reopen four command windows, got %+v", playOver)
+	}
+}
+
 func commandDefinitionsContain(commands []CommandDefinition, commandID string) bool {
 	for _, command := range commands {
 		if command.ID == commandID {
@@ -1020,7 +1099,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected map171 visible 百年虫精 config")
 	}
-	if bainian.Cell.Name != "百年虫精" || bainian.Cell.DisplayURL != "monstermap/wocmon.swf" || bainian.Cell.Level != 30 || bainian.Cell.MaxHP != 8000 || bainian.Cell.MaxMP != 1500 || bainian.Cell.Attack != 152 || bainian.Cell.CommandLabel != "法术普通攻击" || bainian.Cell.DamageDefenseType != "magic" {
+	if bainian.Cell.Name != "百年虫精" || bainian.Cell.DisplayURL != "monstermap/wocmon.swf" || bainian.Cell.Level != 30 || bainian.Cell.MaxHP != 8000 || bainian.Cell.MaxMP != 1500 || bainian.Cell.Attack != 184 || bainian.Cell.CommandLabel != "法术普通攻击" || bainian.Cell.DamageDefenseType != "magic" {
 		t.Fatalf("unexpected 百年虫精 config: %+v", bainian.Cell)
 	}
 	group, ok := sourceVisibleMonsterConfigsForHandle("171", "7893833328746190")
@@ -4724,6 +4803,153 @@ func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
 	}
 }
 
+func TestCapturedMageAdditionalStaffSkillProfiles(t *testing.T) {
+	cases := []struct {
+		name          string
+		level         int
+		commandID     string
+		sourceType    string
+		actionLabel   string
+		mpCost        int
+		multiplier    float64
+		hitMultiplier float64
+	}{
+		{name: "赤焰魔咒", level: 2, commandID: CommandChiYanMoZhou, sourceType: "oneE", actionLabel: "w10/bombFire", mpCost: 65, multiplier: 0.85},
+		{name: "雷击", level: 3, commandID: CommandLeiJi, sourceType: "oneE", actionLabel: "w10/thunderMagicAtk", mpCost: 75, multiplier: 1.2, hitMultiplier: 1.5},
+		{name: "魔障术", level: 2, commandID: CommandMoZhangShu, sourceType: "own", actionLabel: "w10/magicObstacle", mpCost: 90, multiplier: 0},
+	}
+
+	for _, testCase := range cases {
+		profile := sourceBattleSkillProfile(session.RoleSkill{Name: testCase.name, Level: testCase.level, Type: testCase.sourceType})
+		if sourceBattleSkillCommandIDFromConfig(testCase.name) != testCase.commandID {
+			t.Fatalf("expected %s to retain configured command id", testCase.name)
+		}
+		if profile.SourceType != testCase.sourceType || profile.SourceActionLabel != testCase.actionLabel || profile.MPCost != testCase.mpCost || profile.DamageMultiplier != testCase.multiplier || profile.HitMultiplier != testCase.hitMultiplier {
+			t.Fatalf("expected captured %s Lv%d profile, got %+v", testCase.name, testCase.level, profile)
+		}
+	}
+
+	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "赤焰魔咒", Level: 2, Type: "oneE"}); profile.StatusName != "诅咒" || profile.StatusDisplay != "780.png" || profile.StatusRounds != 2 || profile.StatusChance != 85 {
+		t.Fatalf("expected captured 赤焰魔咒 curse profile, got %+v", profile)
+	}
+	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "雷击", Level: 3, Type: "oneE"}); profile.StatusName != "迟钝" || profile.StatusRounds != 2 || profile.StatusChance != 60 || profile.StatusHitDodgePercent != 30 {
+		t.Fatalf("expected captured 雷击 slowness profile, got %+v", profile)
+	}
+}
+
+func TestCapturedMageAdditionalStaffStatuses(t *testing.T) {
+	newRuntime := func(battleID string, skill session.RoleSkill) (*Runtime, *CellInfoPush, *CellInfoPush) {
+		runtime := &Runtime{
+			BattleID:         battleID,
+			Round:            1,
+			nextSequence:     1,
+			DefendingHandles: map[string]bool{},
+			StoredPower:      map[string]int{},
+			RoleSkills:       []session.RoleSkill{skill},
+			Cells: []CellInfoPush{
+				{BattleID: battleID, Handle: "player_mage", Camp: CampTeam, HP: 600, MaxHP: 600, MP: 200, MaxMP: 200, MagicAttack: 100, Hit: 100},
+				{BattleID: battleID, Handle: "enemy_mage", Camp: CampEnemy, HP: 1000, MaxHP: 1000, MgcDefense: 20, Hit: 100, Dog: 50},
+			},
+		}
+		return runtime, runtime.cellByHandle("player_mage"), runtime.cellByHandle("enemy_mage")
+	}
+
+	var curseRuntime *Runtime
+	for index := 0; index < 200; index += 1 {
+		runtime, actor, target := newRuntime(fmt.Sprintf("battle-chi-yan-%d", index), session.RoleSkill{Name: "赤焰魔咒", Level: 2, Type: "oneE"})
+		runtime.setStoredPower(target.Handle, 2)
+		action := runtime.resolveAttack(actor, target, CommandChiYanMoZhou)
+		if len(runtime.PendingBuffInfos) != 1 {
+			continue
+		}
+		if action.SourceActionLabel != "w10/bombFire" || action.Damage != 65 || target.HP != 935 || actor.MP != 135 {
+			t.Fatalf("expected captured 赤焰魔咒 action, got %+v", action)
+		}
+		curse := runtime.PendingBuffInfos[0]
+		if curse.Name != "诅咒" || curse.Display != "780.png" || curse.Round != 2 || curse.Description != "作用时间内无法增加魂元。" {
+			t.Fatalf("expected captured curse BuffInfo, got %+v", curse)
+		}
+		curseRuntime = runtime
+		break
+	}
+	if curseRuntime == nil {
+		t.Fatal("expected to find deterministic 赤焰魔咒 curse roll")
+	}
+	curseRuntime.setStoredPower("enemy_mage", 2)
+	curseRuntime.setStoredPower("enemy_mage", 3)
+	if curseRuntime.StoredPower["enemy_mage"] != 2 {
+		t.Fatalf("expected curse to block soul gain, got %+v", curseRuntime.StoredPower)
+	}
+	curseRuntime.setStoredPower("enemy_mage", 0)
+	if curseRuntime.StoredPower["enemy_mage"] != 0 {
+		t.Fatalf("expected curse to allow soul consumption, got %+v", curseRuntime.StoredPower)
+	}
+
+	var slowRuntime *Runtime
+	for index := 0; index < 200; index += 1 {
+		runtime, actor, target := newRuntime(fmt.Sprintf("battle-lei-ji-%d", index), session.RoleSkill{Name: "雷击", Level: 3, Type: "oneE"})
+		action := runtime.resolveAttack(actor, target, CommandLeiJi)
+		if len(runtime.PendingBuffInfos) != 1 {
+			continue
+		}
+		if action.SourceActionLabel != "w10/thunderMagicAtk" || action.Damage != 100 || target.HP != 900 || actor.MP != 125 {
+			t.Fatalf("expected captured 雷击 action, got %+v", action)
+		}
+		slow := runtime.PendingBuffInfos[0]
+		if slow.Name != "迟钝" || slow.Display != "16.png" || slow.Round != 2 || slow.Description != "降低对象30点命中和15点回避" || target.Hit != 70 || target.Dog != 35 {
+			t.Fatalf("expected captured 雷击 slowness BuffInfo, got buff=%+v target=%+v", slow, target)
+		}
+		slowRuntime = runtime
+		break
+	}
+	if slowRuntime == nil {
+		t.Fatal("expected to find deterministic 雷击 slowness roll")
+	}
+}
+
+func TestMagicObstacleUsesCapturedBarrierDamageAndCountdown(t *testing.T) {
+	actor := &CellInfoPush{Handle: "player_mage", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 2000, MaxMP: 2000}
+	runtime := &Runtime{
+		BattleID:         "battle-magic-obstacle",
+		Round:            1,
+		nextSequence:     1,
+		StatusEffects:    map[string]BattleStatusEffects{},
+		StoredPower:      map[string]int{},
+		DefendingHandles: map[string]bool{},
+		Cells:            []CellInfoPush{*actor},
+	}
+	actor = runtime.cellByHandle("player_mage")
+	buff := runtime.applyMagicBarrierStatusEffect(actor)
+	if buff.Name != "法术屏障" || buff.Display != "28.png" || buff.Round != 5 || buff.Description != "作用时间内气力损失量的35%以精力来代替" {
+		t.Fatalf("expected captured magic barrier BuffInfo, got %+v", buff)
+	}
+	if damage, mpDamage := runtime.applyTargetHPDamage(actor, 132); damage != 86 || mpDamage != 46 || actor.HP != 914 || actor.MP != 1954 {
+		t.Fatalf("expected captured 132 damage split to HP86/MP46, got damage=%d mpDamage=%d actor=%+v", damage, mpDamage, actor)
+	}
+	actor.HP = 1000
+	actor.MP = 20
+	if damage, mpDamage := runtime.applyTargetHPDamage(actor, 132); damage != 112 || mpDamage != 20 || actor.HP != 888 || actor.MP != 0 {
+		t.Fatalf("expected insufficient MP remainder to stay HP damage, got damage=%d mpDamage=%d actor=%+v", damage, mpDamage, actor)
+	}
+
+	runtime.applyMagicBarrierStatusEffect(actor)
+	runtime.PendingBuffInfos = nil
+	for expectedRound := 4; expectedRound >= 0; expectedRound -= 1 {
+		actions, skipTurn := runtime.resolveStatusStartActions(actor)
+		if skipTurn || len(actions) != 1 || actions[0].ActionName != "法术屏障" || actions[0].SourceActionLabel != "battleStand" {
+			t.Fatalf("expected magic barrier battleStand countdown action, actions=%+v skip=%v", actions, skipTurn)
+		}
+		buffs := runtime.consumePendingBuffInfos()
+		if len(buffs) != 1 || buffs[0].Name != "法术屏障" || buffs[0].Round != expectedRound {
+			t.Fatalf("expected magic barrier round %d update, got %+v", expectedRound, buffs)
+		}
+	}
+	clears := runtime.consumePendingClearBuffInfos()
+	if len(clears) != 1 || clears[0].TargetHandle != actor.Handle || clears[0].Name != "法术屏障" {
+		t.Fatalf("expected magic barrier clear on round zero, got %+v", clears)
+	}
+}
+
 func TestLeiHunZhanRequiresCapturedSoulPowerAndUsesThunderSoulAtk(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-leihun",
@@ -7020,8 +7246,8 @@ func TestBattleEnemyHelixAtkUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "螺旋锤杀" || action.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected captured cracktoad helixAtk action, got %+v", action)
 	}
-	if action.Damage != 159 || action.TargetHP != 886 {
-		t.Fatalf("expected helixAtk to use captured 1.32x damage path without stored power bonus, got %+v", action)
+	if action.Damage != 270 || action.TargetHP != 775 {
+		t.Fatalf("expected helixAtk to use the unified physical defense path, got %+v", action)
 	}
 	if actor.MP != 554 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected helixAtk to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
@@ -7130,7 +7356,7 @@ func TestHuangfengIncantationShamanRockRainUsesCapturedAllTargetSkill(t *testing
 	if action.ActionName != "落石" || action.SourceActionLabel != "rockRain" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 落石 all-target action, got %+v", action)
 	}
-	if action.Damage != 162 || runtime.Cells[0].HP != 923 || runtime.Cells[1].MP != 540 {
+	if action.Damage != 190 || runtime.Cells[0].HP != 895 || runtime.Cells[1].MP != 540 {
 		t.Fatalf("expected 落石 to use captured MP cost 10 and magic damage path, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
@@ -7166,8 +7392,8 @@ func TestHuangfengSecondCastellanDarkMoonCutUsesCapturedLabel(t *testing.T) {
 	if action.ActionName != "暗月斩" || action.SourceActionLabel != "darkMoonCut" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 暗月斩 action, got %+v", action)
 	}
-	if action.Damage != 73 || action.TargetHP != 1012 || actor.MP != 554 {
-		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and physical damage path, action=%+v actor=%+v", action, actor)
+	if action.Damage != 190 || action.TargetHP != 895 || actor.MP != 554 {
+		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and unified physical defense, action=%+v actor=%+v", action, actor)
 	}
 }
 
@@ -7205,8 +7431,8 @@ func TestHuangfengFirstCastellanEarthShockUsesCapturedAllTargetSkill(t *testing.
 	if action.ActionName != "裂震击" || action.SourceActionLabel != "earthShockAtk" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 裂震击 all-target action, got %+v", action)
 	}
-	if action.Damage != 100 || runtime.Cells[0].HP != 985 || runtime.Cells[1].MP != 554 {
-		t.Fatalf("expected 裂震击 to use captured MP cost 10 and physical damage path, action=%+v cells=%+v", action, runtime.Cells)
+	if action.Damage != 212 || runtime.Cells[0].HP != 873 || runtime.Cells[1].MP != 554 {
+		t.Fatalf("expected 裂震击 to use captured MP cost 10 and unified physical defense, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
 
@@ -7672,8 +7898,8 @@ func TestFeixiandongLargerockRollAttackUsesCapturedDamage(t *testing.T) {
 	if action.ActionName != "滑行连击" || action.SourceActionLabel != "rollAttack" {
 		t.Fatalf("expected captured 滑行连击 action, got %+v", action)
 	}
-	if action.Damage != 218 || action.TargetHP != 555 || actor.MP != 544 {
-		t.Fatalf("expected 滑行连击 to use captured damage and MP cost, got action=%+v target=%+v", action, target)
+	if action.Damage != 336 || action.TargetHP != 437 || actor.MP != 544 {
+		t.Fatalf("expected 滑行连击 to use unified physical defense and MP cost, got action=%+v target=%+v", action, target)
 	}
 }
 
@@ -7695,8 +7921,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if lion.ActionName != "狮吼" || lion.SourceActionLabel != "lionroars" || lion.SourceMode != "1" {
 		t.Fatalf("expected shihuku whorllion 狮吼/lionroars action, got %+v", lion)
 	}
-	if lion.Damage != 293 {
-		t.Fatalf("expected 狮吼 to use capture-backed 1.26 damage multiplier, got %+v", lion)
+	if lion.Damage != 377 {
+		t.Fatalf("expected 狮吼 to use 1.26 damage multiplier and unified physical defense, got %+v", lion)
 	}
 	if runtime.cellByHandle("enemy_whorllion").MP != 374 {
 		t.Fatalf("expected 狮吼 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_whorllion"))
@@ -7706,8 +7932,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if piece.ActionName != "撕裂" || piece.SourceActionLabel != "pieceAttack" || piece.SourceMode != "1" {
 		t.Fatalf("expected shihuku 撕裂/pieceAttack action, got %+v", piece)
 	}
-	if piece.Damage != 359 {
-		t.Fatalf("expected shihuku 撕裂 to use capture-backed 1.4 damage multiplier, got %+v", piece)
+	if piece.Damage != 443 {
+		t.Fatalf("expected shihuku 撕裂 to use 1.4 damage multiplier and unified physical defense, got %+v", piece)
 	}
 	if runtime.cellByHandle("enemy_chiluking").MP != 590 {
 		t.Fatalf("expected shihuku 撕裂 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_chiluking"))
@@ -7728,8 +7954,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if gold.ActionName != "黄金穿刺" || gold.SourceActionLabel != "goldhit" || gold.TargetHandle != "all" || gold.SourceMode != "1" {
 		t.Fatalf("expected shihuku 蚩颅王 黄金穿刺/goldhit all-target action, got %+v", gold)
 	}
-	if gold.Damage != 468 {
-		t.Fatalf("expected shihuku 黄金穿刺 to use capture-backed 1.72 damage multiplier, got %+v", gold)
+	if gold.Damage != 552 {
+		t.Fatalf("expected shihuku 黄金穿刺 to use 1.72 damage multiplier and unified physical defense, got %+v", gold)
 	}
 	if runtime.cellByHandle("enemy_chiluking").MP != 580 {
 		t.Fatalf("expected shihuku 黄金穿刺 to use captured 10 MP cost once, got %+v", runtime.cellByHandle("enemy_chiluking"))
@@ -8113,12 +8339,24 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	if !ok || len(group) != 4 {
 		t.Fatalf("expected four-enemy 百年虫精 encounter, got %+v", group)
 	}
+	expectedAttackRanges := map[string]battleAttackRange{
+		"7893833328746190": {Min: 179, Max: 189},
+		"7895833328747103": {Min: 153, Max: 247},
+		"7897833328748728": {Min: 165, Max: 298},
+		"7899833328749140": {Min: 165, Max: 298},
+	}
+	for _, enemy := range group {
+		if actual := (battleAttackRange{Min: enemy.AttackMin, Max: enemy.AttackMax}); actual != expectedAttackRanges[enemy.Cell.Handle] {
+			t.Fatalf("expected capture-backed 百年虫精 attack range for %s, got %+v", enemy.Cell.Handle, actual)
+		}
+	}
 
 	runtime := &Runtime{
-		BattleID:         "battle-bainian-chongjing",
-		Round:            1,
-		nextSequence:     1,
-		DefendingHandles: map[string]bool{},
+		BattleID:          "battle-bainian-chongjing",
+		Round:             1,
+		nextSequence:      1,
+		DefendingHandles:  map[string]bool{},
+		EnemyAttackRanges: expectedAttackRanges,
 	}
 	actor := bainian.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
 	rampage := runtime.resolveEnemyRampageActions(&actor)
@@ -8130,8 +8368,14 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	}
 	for _, militia := range group[1:] {
 		if sourceEnemyCanRampage(&militia.Cell) || len(runtime.resolveEnemyRampageActions(&militia.Cell)) != 0 {
-			t.Fatalf("expected captured militia normal attack only, got %+v", militia.Cell)
+			t.Fatalf("expected militia to stay out of captured rampage, got %+v", militia.Cell)
 		}
+		if !sourceEnemyCanMilitiaSweepSpear(&militia.Cell) {
+			t.Fatalf("expected controlled militia sweepspear eligibility, got %+v", militia.Cell)
+		}
+	}
+	if sourceEnemyCanMilitiaSweepSpear(&CellInfoPush{Name: "点券盗贼", DisplayURL: "monstermap/militia.swf"}) {
+		t.Fatal("point-coupon thief must not inherit controlled militia sweepspear")
 	}
 	if actor.MP != bainian.Cell.MaxMP {
 		t.Fatalf("expected rampage to keep MP, actor=%+v", actor)
@@ -8155,11 +8399,86 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 		t.Fatalf("expected magic defense type for 百年虫精, got %+v", bainian.Cell)
 	}
 
+	var ranger *CellInfoPush
+	for _, militia := range group[1:] {
+		if militia.Cell.Vocation == "游侠+" {
+			cell := militia.Cell.withBattleIDAndSlot(runtime.BattleID, 1)
+			ranger = &cell
+			break
+		}
+	}
+	if ranger == nil {
+		t.Fatal("expected captured ranger militia")
+	}
+	targetOne := CellInfoPush{Handle: "player_sweep_1", Camp: CampTeam, HP: 1000, MaxHP: 1000, Defense: 290}
+	targetTwo := CellInfoPush{Handle: "player_sweep_2", Camp: CampTeam, HP: 1000, MaxHP: 1000, Defense: 299}
+	sweepSpearSelected := false
+	for index := 0; index < 100; index += 1 {
+		candidate := &Runtime{BattleID: fmt.Sprintf("battle-bainian-sweepspear-%d", index), Round: 1, nextSequence: 1}
+		if candidate.enemyBattleCommand(ranger, &targetOne) == CommandEnemySweepSpear {
+			sweepSpearSelected = true
+			break
+		}
+	}
+	if !sweepSpearSelected {
+		t.Fatal("expected capture-backed militia sweepspear to be selectable by enemy AI")
+	}
+	runtime.Cells = []CellInfoPush{targetOne, targetTwo, *ranger}
+	ranger = runtime.cellByHandle(ranger.Handle)
+	runtime.EnemyAttackRanges[ranger.Handle] = expectedAttackRanges["7895833328747103"]
+	defer useSourceBattleAttackRoll(func(int) int { return 0 })()
+	sweepActions := runtime.resolveEnemyCommandActions(ranger, runtime.cellByHandle(targetOne.Handle), CommandEnemySweepSpear)
+	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 888 || runtime.cellByHandle(targetTwo.Handle).HP != 891 {
+		t.Fatalf("expected captured militia sweepspear all-target MP and range behavior, actions=%+v cells=%+v", sweepActions, runtime.Cells)
+	}
+
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 	rewards := (&Runtime{MapID: "171", Cells: []CellInfoPush{bainian.Cell}}).buildOver(CampTeam).Result
 	wantRewards := []string{"宠物成长药剂x6", "铜钱x500", "魔匣x2", "阴阳结x1", "回魂丹x1"}
 	if !reflect.DeepEqual(rewards.Items, wantRewards) {
 		t.Fatalf("expected low-roll 百年虫精 rewards %+v, got %+v", wantRewards, rewards.Items)
+	}
+}
+
+func TestEnemyDamageUsesUnifiedPartialDefense(t *testing.T) {
+	runtime := &Runtime{EnemyAttackRanges: map[string]battleAttackRange{
+		"enemy_wocmon": {Min: 179, Max: 189},
+	}}
+	enemy := &CellInfoPush{Handle: "enemy_wocmon", Camp: CampEnemy, Attack: 184}
+	target := &CellInfoPush{Handle: "player_21499", Camp: CampTeam, MgcDefense: 300}
+	profile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "magic"}
+
+	defense := runtime.effectiveBattleDefense(enemy, target, false, profile.DefenseType)
+	if defense != 90 {
+		t.Fatalf("expected 30%% of 阿柴 magic defense to mitigate enemy magic damage, got %d", defense)
+	}
+	restoreMinimumRoll := useSourceBattleAttackRoll(func(int) int { return 0 })
+	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 89 {
+		t.Fatalf("expected 百年虫精 minimum attack 179 to deal 89 against magic defense 300, got %d", damage)
+	}
+	restoreMinimumRoll()
+	restoreMaximumRoll := useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })
+	defer restoreMaximumRoll()
+	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 99 {
+		t.Fatalf("expected 百年虫精 maximum attack 189 to deal 99 against magic defense 300, got %d", damage)
+	}
+
+	player := &CellInfoPush{Handle: "player_mage", Camp: CampTeam, Attack: 184}
+	if defense := runtime.effectiveBattleDefense(player, target, false, profile.DefenseType); defense != 300 {
+		t.Fatalf("expected player magic damage to retain full magic-defense path until separately evidenced, got %d", defense)
+	}
+
+	physicalEnemy := &CellInfoPush{Handle: "7895833328747103", Camp: CampEnemy, Name: "被控制的民兵", DisplayURL: "monstermap/militia.swf", Attack: 200}
+	runtime.EnemyAttackRanges[physicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
+	physicalTarget := &CellInfoPush{Handle: "player_21432", Camp: CampTeam, Defense: 300}
+	physicalProfile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
+	if defense := runtime.effectiveBattleDefense(physicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 90 {
+		t.Fatalf("expected capture-backed enemy physical damage to use 30%% defense, got %d", defense)
+	}
+	otherPhysicalEnemy := &CellInfoPush{Handle: "enemy_with_range_but_no_cross_target_evidence", Camp: CampEnemy, Attack: 200}
+	runtime.EnemyAttackRanges[otherPhysicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
+	if defense := runtime.effectiveBattleDefense(otherPhysicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 90 {
+		t.Fatalf("expected every enemy physical attack to use 30%% defense, got %d", defense)
 	}
 }
 
@@ -8188,6 +8507,33 @@ func TestShihukuChilukingUsesCapturedRampageDisplayAction(t *testing.T) {
 	}
 	if actor.MP != 600 || len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "暴走之力" {
 		t.Fatalf("expected shihuku chiluking rampage to keep MP and emit buff info, actor=%+v buffs=%+v", actor, runtime.PendingBuffInfos)
+	}
+}
+
+func TestZanglongtanDragonsonUsesCapturedRampageDisplayAction(t *testing.T) {
+	visibleMonster, ok := sourceVisibleMonsterConfigForHandle("186", "9611310624908840")
+	if !ok {
+		t.Fatal("expected captured map186 龙娃 visible monster config")
+	}
+	if !sourceEnemyCanRampage(&visibleMonster.Cell) {
+		t.Fatalf("expected captured 龙娃 to use shared 暴走之力 contract, cell=%+v", visibleMonster.Cell)
+	}
+	runtime := &Runtime{
+		BattleID:         "battle-zanglongtan-dragonson-rampage",
+		Round:            19,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := visibleMonster.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
+	actions := runtime.resolveEnemyRampageActions(&actor)
+	if len(actions) != 1 || actions[0].ActionName != "暴走之力" || actions[0].SourceActionLabel != "battleStand" || actions[0].TargetHandle != actor.Handle {
+		t.Fatalf("expected captured 龙娃 暴走之力 battleStand self action, got %+v", actions)
+	}
+	if actor.MP != actor.MaxMP || len(actions[0].RefreshInfos) != 1 || actions[0].RefreshInfos[0].MP != actor.MaxMP {
+		t.Fatalf("expected 龙娃 暴走之力 to keep MP unchanged, actor=%+v action=%+v", actor, actions[0])
+	}
+	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Name != "暴走之力" || runtime.PendingBuffInfos[0].Display != "1595.png" || runtime.PendingBuffInfos[0].TargetHandle != actor.Handle {
+		t.Fatalf("expected 龙娃 captured 暴走之力 BuffInfo, got %+v", runtime.PendingBuffInfos)
 	}
 }
 
@@ -8228,7 +8574,7 @@ func TestMagicpandaEnemyNormalAttackUsesCapturedBroadcastName(t *testing.T) {
 	if action.ActionName != "法术普通攻击" || action.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected magicpanda normal attack to use CSV command_label while keeping source animation, config=%+v action=%+v", visibleMonster.Cell, action)
 	}
-	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 113 || action.TargetHP != 932 {
+	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 134 || action.TargetHP != 911 {
 		t.Fatalf("expected magicpanda normal attack to use captured magic-defense damage path without stored power bonus, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
 	}
 }
@@ -8557,8 +8903,8 @@ func TestCracktoadEnemyTurnCanUseCapturedHelixAtk(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyHelixAtk || enemyAction.ActionName != "螺旋锤杀" || enemyAction.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected cracktoad enemy turn to use captured helixAtk, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 159 || enemyAction.TargetHP != 886 {
-		t.Fatalf("expected cracktoad enemy turn to apply captured helixAtk multiplier without stored power bonus, got %+v", enemyAction)
+	if enemyAction.Damage != 270 || enemyAction.TargetHP != 775 {
+		t.Fatalf("expected cracktoad enemy turn to apply unified physical defense with helixAtk multiplier, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 554 || enemyAction.RefreshInfos[0].Handle != "5176206909809579" || enemyAction.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected enemy helixAtk turn to consume MP 10, got cells=%+v action=%+v", runtime.Cells, enemyAction)
@@ -8617,10 +8963,185 @@ func TestCracktoadEnemyTurnCanUseCapturedNormalAttack(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyAttack || enemyAction.ActionName != "普通攻击" || enemyAction.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected cracktoad enemy turn to sometimes use captured normal attack, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 82 || enemyAction.TargetHP != 963 {
-		t.Fatalf("expected cracktoad normal attack to apply captured base damage without stored power bonus, got %+v", enemyAction)
+	if enemyAction.Damage != 193 || enemyAction.TargetHP != 852 {
+		t.Fatalf("expected cracktoad normal attack to apply unified physical defense, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 564 || len(enemyAction.RefreshInfos) != 1 {
 		t.Fatalf("expected cracktoad normal attack to keep MP unchanged, got cells=%+v action=%+v", runtime.Cells, enemyAction)
+	}
+}
+
+func TestCapturedSingleSwordSkillProfilesAndCommands(t *testing.T) {
+	cases := []struct {
+		name       string
+		level      int
+		sourceType string
+		label      string
+		mpCost     int
+		multiplier float64
+		target     string
+	}{
+		{name: "挑衅", level: 1, sourceType: "all", label: "com/tx", mpCost: 20, multiplier: 0, target: "self"},
+		{name: "卷叶式", level: 5, sourceType: "oneE", label: "w7/jys2", mpCost: 16, multiplier: 1.75, target: "enemy"},
+		{name: "强贯式", level: 5, sourceType: "oneE", label: "w7/qgs1", mpCost: 20, multiplier: 1.55, target: "enemy"},
+		{name: "凝神式", level: 5, sourceType: "own", label: "w7/nss", mpCost: 22, multiplier: 0, target: "self"},
+		{name: "狂舞式", level: 5, sourceType: "oneE", label: "w7/kws", mpCost: 30, multiplier: 1, target: "enemy"},
+		{name: "气愈式", level: 5, sourceType: "own", label: "w7/qys", mpCost: 31, multiplier: 0, target: "self"},
+		{name: "奥义.飘血", level: 4, sourceType: "oneE", label: "w7/aypx", mpCost: 38, multiplier: 3.3, target: "enemy"},
+	}
+	skills := make([]session.RoleSkill, 0, len(cases)+1)
+	for _, testCase := range cases {
+		skill := session.RoleSkill{Name: testCase.name, Level: testCase.level, Type: testCase.sourceType}
+		profile := sourceBattleSkillProfile(skill)
+		if profile.SourceType != testCase.sourceType || profile.SourceActionLabel != testCase.label || profile.MPCost != testCase.mpCost || profile.DamageMultiplier != testCase.multiplier {
+			t.Fatalf("expected captured %s Lv%d profile, got %+v", testCase.name, testCase.level, profile)
+		}
+		skills = append(skills, skill)
+	}
+	commands := sourceBattleCommandDefinitions(skills)
+	byLabel := map[string]CommandDefinition{}
+	for _, command := range commands {
+		byLabel[command.Label] = command
+	}
+	for _, testCase := range cases {
+		command, ok := byLabel[testCase.name]
+		if !ok || command.SourceType != testCase.sourceType || command.SourceActionLabel != testCase.label || command.MPCost != testCase.mpCost || command.DamageMultiplier != testCase.multiplier || command.Target != testCase.target {
+			t.Fatalf("expected captured %s command definition, got %+v", testCase.name, command)
+		}
+	}
+}
+
+func TestCapturedSingleSwordStrongPierceAndWildDanceStatusEffects(t *testing.T) {
+	strongRuntime := &Runtime{
+		BattleID:         "battle-single-sword-strong-pierce",
+		StatusEffects:    map[string]BattleStatusEffects{},
+		DefendingHandles: map[string]bool{},
+		RoleSkills:       []session.RoleSkill{{Name: "强贯式", Level: 5, Type: "oneE"}},
+		Cells:            []CellInfoPush{{Handle: "player_sword", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, Attack: 100}, {Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Defense: 90}},
+	}
+	if !strongRuntime.isBattleCommandAllowedForActor("player_sword", CommandQiangGuanShi) {
+		t.Fatal("expected captured 强贯式 command to be allowed for the learned role")
+	}
+	strongAction := strongRuntime.resolveAttack(strongRuntime.cellByHandle("player_sword"), strongRuntime.cellByHandle("enemy_1"), CommandQiangGuanShi)
+	strongBuffs := strongRuntime.consumePendingBuffInfos()
+	if strongAction.SourceActionLabel != "w7/qgs1" || len(strongBuffs) != 1 || strongBuffs[0].Name != "卸甲" || strongBuffs[0].Display != "10.png" || strongBuffs[0].Description != "降低对象45点物理防御力" || strongBuffs[0].Round != 3 || strongRuntime.cellByHandle("enemy_1").Defense != 45 {
+		t.Fatalf("expected captured 强贯式 armor break, action=%+v buffs=%+v enemy=%+v", strongAction, strongBuffs, strongRuntime.cellByHandle("enemy_1"))
+	}
+	for index := 0; index < qiangGuanShiArmorBreakRounds; index += 1 {
+		strongRuntime.resolveStatusStartActions(strongRuntime.cellByHandle("enemy_1"))
+	}
+	if strongRuntime.cellByHandle("enemy_1").Defense != 90 {
+		t.Fatalf("expected 强贯式 armor break to restore defense on expiry, enemy=%+v", strongRuntime.cellByHandle("enemy_1"))
+	}
+
+	var wildDanceRuntime *Runtime
+	for index := 0; index < 300; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-single-sword-wild-dance-%d", index),
+			StatusEffects:    map[string]BattleStatusEffects{},
+			DefendingHandles: map[string]bool{},
+			RoleSkills:       []session.RoleSkill{{Name: "狂舞式", Level: 5, Type: "oneE"}},
+			Cells:            []CellInfoPush{{Handle: "player_sword", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, Attack: 100}, {Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000}},
+		}
+		if candidate.hashBattleRollWithSalt(candidate.cellByHandle("player_sword"), candidate.cellByHandle("enemy_1"), CommandKuangWuShi, "status:眩晕") < kuangWuShiStunChance {
+			wildDanceRuntime = candidate
+			break
+		}
+	}
+	if wildDanceRuntime == nil {
+		t.Fatal("expected deterministic 狂舞式 stun roll")
+	}
+	wildDanceAction := wildDanceRuntime.resolveAttack(wildDanceRuntime.cellByHandle("player_sword"), wildDanceRuntime.cellByHandle("enemy_1"), CommandKuangWuShi)
+	wildDanceBuffs := wildDanceRuntime.consumePendingBuffInfos()
+	if wildDanceAction.SourceActionLabel != "w7/kws" || len(wildDanceBuffs) != 1 || wildDanceBuffs[0].Name != "眩晕" || wildDanceBuffs[0].Display != "9.png" || wildDanceBuffs[0].Round != 2 {
+		t.Fatalf("expected captured 狂舞式 stun BuffInfo, action=%+v buffs=%+v", wildDanceAction, wildDanceBuffs)
+	}
+	statusActions, skipped := wildDanceRuntime.resolveStatusStartActions(wildDanceRuntime.cellByHandle("enemy_1"))
+	if !skipped || len(statusActions) != 1 || statusActions[0].ActionName != "眩晕" || statusActions[0].SourceActionLabel != "yun" {
+		t.Fatalf("expected 狂舞式 stun to use captured yun skip action, actions=%+v skipped=%t", statusActions, skipped)
+	}
+}
+
+func TestCapturedSingleSwordStatusEffectsUseCapturedValues(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:      "battle-single-sword-status",
+		StatusEffects: map[string]BattleStatusEffects{},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-single-sword-status", Handle: "player_sword", Camp: CampTeam, HP: 1000, MaxHP: 2100, MP: 100, MaxMP: 614, Hit: 414, Fat: 342},
+			{BattleID: "battle-single-sword-status", Handle: "player_ally", Camp: CampTeam, HP: 1000, MaxHP: 1000},
+			{BattleID: "battle-single-sword-status", Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000},
+			{BattleID: "battle-single-sword-status", Handle: "enemy_2", Camp: CampEnemy, HP: 1000, MaxHP: 1000},
+			{BattleID: "battle-single-sword-status", Handle: "enemy_3", Camp: CampEnemy, HP: 1000, MaxHP: 1000},
+		},
+	}
+	actor := runtime.cellByHandle("player_sword")
+	taunt := runtime.applyTauntStatusEffect(actor)
+	if taunt.Name != "挑衅" || taunt.Display != "27.png" || taunt.Description != "敌人每次必攻击该对象" || taunt.Round != 3 {
+		t.Fatalf("expected captured taunt buff, got %+v", taunt)
+	}
+	for _, enemyHandle := range []string{"enemy_1", "enemy_2", "enemy_3"} {
+		target := runtime.resolveEnemyTeamTarget(runtime.cellByHandle(enemyHandle))
+		if target == nil || target.Handle != actor.Handle {
+			t.Fatalf("expected %s to target taunting player, got %+v", enemyHandle, target)
+		}
+	}
+	statusActions, _ := runtime.resolveStatusStartActions(actor)
+	if len(statusActions) != 1 || statusActions[0].ActionName != "挑衅" || statusActions[0].SourceActionLabel != "battleStand" {
+		t.Fatalf("expected captured taunt countdown action, got %+v", statusActions)
+	}
+
+	buffInfos := runtime.applyNingShenStatusEffects(actor)
+	if actor.Hit != 704 || actor.Fat != 684 || len(buffInfos) != 2 || buffInfos[0].Name != "集中" || buffInfos[0].Description != "提高对象290命中" || buffInfos[1].Name != "爆击提升" || buffInfos[1].Description != "提高对象342爆击" {
+		t.Fatalf("expected captured concentration and critical boosts, actor=%+v buffs=%+v", actor, buffInfos)
+	}
+	for index := 0; index < ningShenRounds; index += 1 {
+		runtime.resolveStatusStartActions(actor)
+	}
+	if actor.Hit != 414 || actor.Fat != 342 {
+		t.Fatalf("expected 凝神式 values to restore after expiry, actor=%+v", actor)
+	}
+
+	healRuntime := &Runtime{
+		BattleID:      "battle-single-sword-heal",
+		StatusEffects: map[string]BattleStatusEffects{},
+		Cells:         []CellInfoPush{{BattleID: "battle-single-sword-heal", Handle: "player_sword", Camp: CampTeam, HP: 500, MaxHP: 2100}},
+	}
+	healer := healRuntime.cellByHandle("player_sword")
+	qiLiao := healRuntime.applyQiYuStatusEffect(healer)
+	statusActions, _ = healRuntime.resolveStatusStartActions(healer)
+	if qiLiao.Name != "气疗" || qiLiao.Display != "21.png" || qiLiao.Description != "每回合对象恢复273气力" || qiLiao.Round != 3 || healer.HP != 773 || len(statusActions) != 1 || statusActions[0].ActionName != "气疗" || statusActions[0].SourceActionLabel != "battleStand" {
+		t.Fatalf("expected captured qiyu recovery status, buff=%+v actor=%+v actions=%+v", qiLiao, healer, statusActions)
+	}
+}
+
+func TestAoYiPiaoXueRequiresCapturedSoulPowerAndUsesCapturedAction(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-piao-xue",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_sword",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		RoleSkills:       []session.RoleSkill{{Name: "奥义.飘血", Level: 4, Type: "oneE"}},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-piao-xue", Handle: "player_sword", Camp: CampTeam, HP: 500, MaxHP: 500, MP: 100, MaxMP: 100, Attack: 100, Hit: 100},
+			{BattleID: "battle-piao-xue", Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000},
+		},
+	}
+	request := ActionRequest{BattleID: runtime.BattleID, ActorHandle: "player_sword", CommandID: CommandAoYiPiaoXue, TargetHandle: "enemy_1", Round: 1, Sequence: 1}
+	if result := runtime.ProcessAction(request); result.ErrorCode != "insufficient_power" {
+		t.Fatalf("expected 奥义.飘血 to require three stored power, got %+v", result)
+	}
+	runtime.StoredPower["player_sword"] = aoYiPiaoXueRequiredPower
+	result := runtime.ProcessAction(request)
+	if result.ErrorCode != "" || len(result.Actions) == 0 {
+		t.Fatalf("expected 奥义.飘血 captured action, got %+v", result)
+	}
+	action := result.Actions[0]
+	actor := runtime.cellByHandle("player_sword")
+	if action.SourceActionLabel != "w7/aypx" || action.Damage != 330 || action.TargetHP != 670 || actor.MP != 62 {
+		t.Fatalf("expected captured 奥义.飘血 action and MP cost, action=%+v actor=%+v", action, actor)
 	}
 }

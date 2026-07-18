@@ -92,6 +92,22 @@ func (hub *classicTeamConnectionHub) connectionFor(roleID string) classicTeamCon
 	return hub.connections[roleID]
 }
 
+func (hub *classicTeamConnectionHub) battleConnections(battleID string) []classicTeamConnection {
+	if battleID == "" {
+		return nil
+	}
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	connections := make([]classicTeamConnection, 0)
+	for _, connection := range hub.connections {
+		if connection.session == nil || connection.session.battleRuntime == nil || connection.session.battleRuntime.BattleID != battleID {
+			continue
+		}
+		connections = append(connections, connection)
+	}
+	return connections
+}
+
 func (hub *classicTeamConnectionHub) preflightDungeonSyncTransfer(store *session.Store, members []team.Member, targetMapID int) (string, bool) {
 	if store == nil {
 		return "队伍同步状态异常。", false

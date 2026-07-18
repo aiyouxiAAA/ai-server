@@ -44,9 +44,19 @@ $tables = @(
     RequiredColumns = @('status', 'confidence', 'icon', 'name', 'item_type', 'category')
   },
   @{
+    Name = 'fashion-appearance'
+    Source = 'fashion-appearance-table.csv'
+    RequiredColumns = @('fashion_name', 'sex', 'source_params', 'evidence_status')
+  },
+  @{
     Name = 'skill'
     Source = 'skill-table.csv'
-    RequiredColumns = @('command_id', 'kind', 'label', 'source_type', 'action_name', 'source_action_label', 'target')
+    RequiredColumns = @('skill_id', 'kind', 'label', 'source_type', 'action_name', 'target')
+  },
+  @{
+    Name = 'skill-level'
+    Source = 'skill-level-table.csv'
+    RequiredColumns = @('skill_level_id', 'skill_id', 'level', 'source_action_label', 'damage_multiplier', 'mp_cost')
   },
   @{
     Name = 'monster-skill'

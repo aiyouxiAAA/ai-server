@@ -26,6 +26,10 @@ func TestGeneratedClassicTablesContainKnownRows(t *testing.T) {
 	assertHasRow(t, itemTable, "name", "馒头")
 	assertHasRow(t, itemTable, "name", "铜钱")
 
+	fashionAppearanceTable := MustLoadTable(TableFashionAppearance)
+	assertHasRow(t, fashionAppearanceTable, "fashion_name", "超时空要塞")
+	assertHasRow(t, fashionAppearanceTable, "fashion_name", "奥特曼")
+
 	skillTable := MustLoadTable(TableSkill)
 	assertHasRow(t, skillTable, "label", "投毒")
 	assertHasRow(t, skillTable, "label", "强力飞镖")
@@ -89,6 +93,31 @@ func TestGeneratedClassicItemEquipmentRowsKeepSourceDescriptions(t *testing.T) {
 	}
 }
 
+func TestGeneratedFashionAppearanceTableKeepsCapturedSexCoverage(t *testing.T) {
+	table := MustLoadTable(TableFashionAppearance)
+	if table.RowCount != 107 {
+		t.Fatalf("fashion appearance row count = %d, want 107", table.RowCount)
+	}
+	seenNames := make(map[string]struct{})
+	for _, row := range table.Rows {
+		if row["fashion_name"] == "" || row["sex"] == "" || row["source_params"] == "" || row["evidence_status"] != "packet_confirmed" {
+			t.Fatalf("invalid captured fashion appearance row: %+v", row)
+		}
+		seenNames[row["fashion_name"]] = struct{}{}
+	}
+	if len(seenNames) != 56 {
+		t.Fatalf("fashion appearance name coverage = %d, want 56", len(seenNames))
+	}
+	for _, name := range []string{"超人", "超时空要塞", "死神套装", "兔年呈祥", "越狱兔"} {
+		if _, found, err := FindFashionAppearanceByNameAndSex(name, "0"); err != nil || found {
+			t.Fatalf("fashion %s must not invent an uncaptured male row, found=%v err=%v", name, found, err)
+		}
+		if _, found, err := FindFashionAppearanceByNameAndSex(name, "1"); err != nil || !found {
+			t.Fatalf("fashion %s must retain its captured female row, found=%v err=%v", name, found, err)
+		}
+	}
+}
+
 func TestGeneratedClassicItemTablePromotesTrialSealFromCapturedEquipment(t *testing.T) {
 	item, ok, err := FindItemByName("试炼印")
 	if err != nil {
@@ -127,8 +156,15 @@ func TestClassicDataLookupsReturnDetachedRows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindSkillByLabel() error = %v", err)
 	}
-	if !ok || skill["source_action_label"] != "w3/drugAtk" {
-		t.Fatalf("FindSkillByLabel() = %v %v, want 投毒 w3/drugAtk", ok, skill)
+	if !ok || skill["skill_id"] != "skill-tou-du" {
+		t.Fatalf("FindSkillByLabel() = %v %v, want 投毒 skill master", ok, skill)
+	}
+	skillLevels, err := FindSkillLevelRowsBySkillID(skill["skill_id"])
+	if err != nil {
+		t.Fatalf("FindSkillLevelRowsBySkillID() error = %v", err)
+	}
+	if len(skillLevels) != 1 || skillLevels[0]["level"] != "1" || skillLevels[0]["source_action_label"] != "w3/drugAtk" {
+		t.Fatalf("FindSkillLevelRowsBySkillID() = %v, want 投毒 Lv1 w3/drugAtk", skillLevels)
 	}
 
 	monsterSkill, ok, err := FindMonsterSkillByID("monster-chiluking-goldhit")

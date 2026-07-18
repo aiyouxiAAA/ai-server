@@ -1,0 +1,650 @@
+{
+  "schemaVersion": 1,
+  "name": "fashion-appearance",
+  "source": "internal/classicdata/source/fashion-appearance-table.csv",
+  "rowCount": 107,
+  "rows": [
+    {
+      "fashion_name": "奥特曼",
+      "sex": "0",
+      "source_params": "hr=10&f=6&sh=5&ha=5&bo=5&fe=6&l=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "奥特曼",
+      "sex": "1",
+      "source_params": "hr=10&f=6&sh=5&ha=5&bo=5&fe=6&l=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "巴萨队服",
+      "sex": "0",
+      "source_params": "c=70&se=58&p=72&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "巴萨队服",
+      "sex": "1",
+      "source_params": "c=70&se=58&p=72&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "蝙蝠侠",
+      "sex": "0",
+      "source_params": "h=73&c=95&se=86&p=98&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "蝙蝠侠",
+      "sex": "1",
+      "source_params": "h=73&c=95&se=86&p=98&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "波斯套装",
+      "sex": "0",
+      "source_params": "h=46&c=43&se=35&p=45&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "波斯套装",
+      "sex": "1",
+      "source_params": "h=46&c=43&se=35&p=45&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "超人",
+      "sex": "1",
+      "source_params": "sh=8&ha=9&bo=11&fe=11&l=11",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "超时空要塞",
+      "sex": "1",
+      "source_params": "c=88&se=79&p=91&hr=46",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "钢之炼金术师",
+      "sex": "0",
+      "source_params": "h=79&c=101&se=92&p=104",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "钢之炼金术师",
+      "sex": "1",
+      "source_params": "h=79&c=101&se=92&p=104",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "哥特套装",
+      "sex": "0",
+      "source_params": "h=45&c=42&se=34&p=44&hr=16",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "哥特套装",
+      "sex": "1",
+      "source_params": "h=45&a=33&c=42&wr=35&se=34&p=44&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "功夫熊猫",
+      "sex": "0",
+      "source_params": "h=78&c=100&se=91&p=103",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "功夫熊猫",
+      "sex": "1",
+      "source_params": "h=78&c=100&se=91&p=103",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "怪物猎人",
+      "sex": "0",
+      "source_params": "c=2&b=0&se=75&p=2&hr=45",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "怪物猎人",
+      "sex": "1",
+      "source_params": "c=2&b=0&se=75&p=2&hr=45",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "灌篮高手",
+      "sex": "0",
+      "source_params": "c=3&se=76&p=3",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "灌篮高手",
+      "sex": "1",
+      "source_params": "c=3&se=76&p=3",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "鬼神童子",
+      "sex": "0",
+      "source_params": "a=51&c=94&se=85&p=97&hr=51",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "鬼神童子",
+      "sex": "1",
+      "source_params": "a=51&c=94&se=85&p=97&hr=51",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "哈利波特",
+      "sex": "0",
+      "source_params": "c=54&se=43&p=56&hr=21",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "哈利波特",
+      "sex": "1",
+      "source_params": "c=54&se=43&p=56&hr=21",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "海贼王套装",
+      "sex": "0",
+      "source_params": "h=59&c=75&wr=47&se=63&p=77&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "海贼王套装",
+      "sex": "1",
+      "source_params": "h=59&c=75&wr=47&se=63&p=77&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "红色圣诞",
+      "sex": "0",
+      "source_params": "h=18&c=21&b=18&se=16&p=19&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "红色圣诞",
+      "sex": "1",
+      "source_params": "h=18&c=21&b=18&se=16&p=19&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "狐仙大人",
+      "sex": "0",
+      "source_params": "c=92&b=61&se=83&p=95&hr=49",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "狐仙大人",
+      "sex": "1",
+      "source_params": "c=92&b=61&se=83&p=95&hr=49",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "花仙子套装",
+      "sex": "0",
+      "source_params": "c=68&se=57&p=70&hr=27",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "花仙子套装",
+      "sex": "1",
+      "source_params": "c=68&se=57&p=70&hr=27",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "火影套装",
+      "sex": "0",
+      "source_params": "c=71&se=59&p=73&hr=28",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "火影套装",
+      "sex": "1",
+      "source_params": "c=71&se=59&p=73&hr=28",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "街头霸王套装",
+      "sex": "0",
+      "source_params": "c=74&wr=46&se=62&p=76&hr=34",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "街头霸王套装",
+      "sex": "1",
+      "source_params": "c=74&wr=46&se=62&p=76&hr=34",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "精灵一族",
+      "sex": "0",
+      "source_params": "a=50&c=93&se=84&p=96&hr=50",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "精灵一族",
+      "sex": "1",
+      "source_params": "a=50&c=93&se=84&p=96&hr=50",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "精致礼服",
+      "sex": "0",
+      "source_params": "c=57&se=46&p=59&hr=23",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "精致礼服",
+      "sex": "1",
+      "source_params": "c=57&se=46&p=59&hr=23",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "李洛克",
+      "sex": "0",
+      "source_params": "c=58&se=47&p=60&hr=24",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "李洛克",
+      "sex": "1",
+      "source_params": "c=58&se=47&p=60&hr=24",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "李小龙套装",
+      "sex": "0",
+      "source_params": "c=18&se=13&p=17&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "李小龙套装",
+      "sex": "1",
+      "source_params": "c=18&se=13&p=17&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "绿色圣诞",
+      "sex": "0",
+      "source_params": "h=19&c=23&b=18&se=16&p=20&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "绿色圣诞",
+      "sex": "1",
+      "source_params": "h=19&c=23&b=18&se=16&p=20&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "曼联队服",
+      "sex": "0",
+      "source_params": "c=69&se=58&p=71&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "曼联队服",
+      "sex": "1",
+      "source_params": "c=69&se=58&p=71&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "美少女战士",
+      "sex": "0",
+      "source_params": "h=80&c=102&se=93&p=105",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "美少女战士",
+      "sex": "1",
+      "source_params": "h=80&c=102&se=93&p=105",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "魔人布欧",
+      "sex": "0",
+      "source_params": "g=3&c=60&se=48&p=62&hr=23",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "魔人布欧",
+      "sex": "1",
+      "source_params": "g=3&c=60&se=48&p=62&hr=23",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "叛逆的鲁鲁修",
+      "sex": "0",
+      "source_params": "c=90&se=81&p=93&hr=47",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "叛逆的鲁鲁修",
+      "sex": "1",
+      "source_params": "c=90&se=81&p=93&hr=47",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "普通礼服",
+      "sex": "0",
+      "source_params": "c=61&se=49&p=63&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "普通礼服",
+      "sex": "1",
+      "source_params": "c=61&se=49&p=63&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "汽车人",
+      "sex": "0",
+      "source_params": "hr=10&f=7&sh=6&ha=6&bo=6&fe=7&l=6",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "汽车人",
+      "sex": "1",
+      "source_params": "hr=10&f=7&sh=6&ha=6&bo=6&fe=7&l=6",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "钱多多",
+      "sex": "0",
+      "source_params": "c=49&se=39&p=51&hr=18",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "钱多多",
+      "sex": "1",
+      "source_params": "c=49&se=39&p=51&hr=18",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "驱魔少年",
+      "sex": "0",
+      "source_params": "c=96&se=87&p=99&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "驱魔少年",
+      "sex": "1",
+      "source_params": "c=96&se=87&p=99&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "拳皇套装",
+      "sex": "0",
+      "source_params": "c=76&wr=48&se=64&p=78&hr=41",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "拳皇套装",
+      "sex": "1",
+      "source_params": "c=76&wr=48&se=64&p=78&hr=41",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "犬夜叉",
+      "sex": "0",
+      "source_params": "c=73&wr=45&se=61&p=75&hr=29",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "犬夜叉",
+      "sex": "1",
+      "source_params": "c=73&wr=45&se=61&p=75&hr=29",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "忍者神龟",
+      "sex": "0",
+      "source_params": "h=77&c=99&se=90&p=102&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "忍者神龟",
+      "sex": "1",
+      "source_params": "h=77&c=99&se=90&p=102&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "圣斗士",
+      "sex": "0",
+      "source_params": "h=81&c=103&se=94&p=106&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "圣斗士",
+      "sex": "1",
+      "source_params": "h=81&c=103&se=94&p=106&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "盛夏缤纷",
+      "sex": "0",
+      "source_params": "c=52&se=41&p=55&hr=19",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "盛夏缤纷",
+      "sex": "1",
+      "source_params": "c=52&se=41&p=55&hr=19",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "盛夏潮爆",
+      "sex": "0",
+      "source_params": "c=53&se=42&p=54&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "盛夏潮爆",
+      "sex": "1",
+      "source_params": "c=53&se=42&p=54&hr=20",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "盛夏清凉",
+      "sex": "0",
+      "source_params": "c=55&se=44&p=57&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "盛夏清凉",
+      "sex": "1",
+      "source_params": "c=55&wr=38&se=44&p=57&hr=22",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "侍魂套装",
+      "sex": "0",
+      "source_params": "c=77&wr=50&se=65&p=79&hr=42",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "侍魂套装",
+      "sex": "1",
+      "source_params": "c=77&wr=50&se=65&p=79&hr=42",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "死神套装",
+      "sex": "1",
+      "source_params": "c=41&b=34&wr=34&se=33&p=42&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "通灵王",
+      "sex": "0",
+      "source_params": "h=82&c=104&se=95&p=107",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "通灵王",
+      "sex": "1",
+      "source_params": "h=82&c=104&se=95&p=107",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "兔年呈祥",
+      "sex": "1",
+      "source_params": "h=69&c=85&b=57&se=74&p=87",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "网球王子",
+      "sex": "0",
+      "source_params": "h=58&c=72&se=60&p=74&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "网球王子",
+      "sex": "1",
+      "source_params": "h=58&c=72&se=60&p=74&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "小白兔套装",
+      "sex": "0",
+      "source_params": "hr=26&ha=8&bo=8&fe=9&l=8",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "小白兔套装",
+      "sex": "1",
+      "source_params": "hr=26&ha=8&bo=8&fe=9&l=8",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "学生装",
+      "sex": "0",
+      "source_params": "h=47&c=44&se=36&p=46&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "学生装",
+      "sex": "1",
+      "source_params": "h=47&c=44&se=36&p=46&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "妖精的尾巴",
+      "sex": "0",
+      "source_params": "c=0&wr=0&se=73&p=0&hr=44",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "妖精的尾巴",
+      "sex": "1",
+      "source_params": "c=0&wr=0&se=73&p=0&hr=44",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "银魂",
+      "sex": "0",
+      "source_params": "c=91&se=81&p=93&hr=48",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "银魂",
+      "sex": "1",
+      "source_params": "c=91&se=81&p=93&hr=48",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "越狱兔",
+      "sex": "1",
+      "source_params": "h=75&c=97&se=88&p=100&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "蜘蛛侠",
+      "sex": "0",
+      "source_params": "h=76&c=98&se=89&p=101&hr=5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "蜘蛛侠",
+      "sex": "1",
+      "source_params": "h=76&c=98&se=89&p=101&hr=12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "中国风",
+      "sex": "0",
+      "source_params": "c=45&se=37&p=47&hr=15",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "中国风",
+      "sex": "1",
+      "source_params": "c=45&se=37&p=47&hr=15",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "中秋套装",
+      "sex": "0",
+      "source_params": "c=81&wr=54&se=69&p=83&hr=43",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "中秋套装",
+      "sex": "1",
+      "source_params": "c=81&wr=54&se=69&p=83&hr=43",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "BAD",
+      "sex": "0",
+      "source_params": "c=47&b=38&se=38&p=48&hr=17",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "BAD",
+      "sex": "1",
+      "source_params": "c=47&b=38&se=38&p=48&hr=17",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "HIPHOP套装",
+      "sex": "0",
+      "source_params": "h=66&c=84&wr=57&se=72&p=86",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "HIPHOP套装",
+      "sex": "1",
+      "source_params": "h=66&c=84&wr=57&se=72&p=86",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "SMOOTH(白)",
+      "sex": "0",
+      "source_params": "h=50&c=51&se=40&p=53&hr=17",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "SMOOTH(白)",
+      "sex": "1",
+      "source_params": "h=50&c=51&se=40&p=53&hr=17",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "SMOOTH(黑)",
+      "sex": "0",
+      "source_params": "h=49&c=50&se=40&p=52&hr=17",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "fashion_name": "SMOOTH(黑)",
+      "sex": "1",
+      "source_params": "h=49&c=50&se=40&p=52&hr=17",
+      "evidence_status": "packet_confirmed"
+    }
+  ]
+}

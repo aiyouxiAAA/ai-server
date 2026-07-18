@@ -77,7 +77,7 @@ func buildClassicQuestLogResult(store *session.Store, socketSession *packetSessi
 		if !accepted[info.Title] {
 			continue
 		}
-		infos = append(infos, classicQuestInfoFromCatalog(info))
+		infos = append(infos, classicQuestInfoForRole(store, socketSession, info))
 	}
 	return packetResult{
 		questInfos: infos,
@@ -157,11 +157,11 @@ func buildClassicQuestAnswerResult(store *session.Store, socketSession *packetSe
 
 	accepted := store.AcceptedQuestTitles(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
 	if accepted[info.Title] {
-		if quest.IsCompletableState(info.State) {
+		if classicQuestCanComplete(store, socketSession, info) {
 			return buildClassicQuestCompleteResult(store, socketSession, info, info.Title), true
 		}
 		return packetResult{
-			questInfos: []classicQuestInfoPush{classicQuestInfoFromCatalog(info)},
+			questInfos: []classicQuestInfoPush{classicQuestInfoForRole(store, socketSession, info)},
 			chatMessages: []classicTownChatMessagePush{
 				classicTownSystemChatMessage("日志更新"),
 			},
@@ -182,7 +182,7 @@ func buildClassicQuestAnswerResult(store *session.Store, socketSession *packetSe
 	}
 
 	result := packetResult{
-		questInfos: []classicQuestInfoPush{classicQuestInfoFromCatalog(info)},
+		questInfos: []classicQuestInfoPush{classicQuestInfoForRole(store, socketSession, info)},
 		chatMessages: []classicTownChatMessagePush{
 			classicTownSystemChatMessage("接受了任务【" + info.Title + "】。"),
 			classicTownSystemChatMessage("日志更新"),
@@ -198,7 +198,7 @@ func buildClassicQuestCompleteResult(store *session.Store, socketSession *packet
 		log.Printf("[ai-server] classic quest CompleteQuest ignored without selected role title=%s questId=%s", title, info.ID)
 		return packetResult{handled: true}
 	}
-	if !quest.IsCompletableState(info.State) {
+	if !classicQuestCanComplete(store, socketSession, info) {
 		log.Printf("[ai-server] classic quest CompleteQuest rejected incomplete title=%s questId=%s state=%s", title, info.ID, info.State)
 		return packetResult{handled: true}
 	}
@@ -278,6 +278,75 @@ func classicQuestInfoFromCatalog(info quest.Info) classicQuestInfoPush {
 	}
 }
 
+func classicQuestInfoForRole(store *session.Store, socketSession *packetSession, info quest.Info) classicQuestInfoPush {
+	push := classicQuestInfoFromCatalog(info)
+	if info.Objective == nil {
+		return push
+	}
+	progress := 0
+	if store != nil && socketSession != nil && socketSession.selectedRole != nil && socketSession.playerBase != nil {
+		if current, ok := store.QuestProgress(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, info.Title); ok {
+			progress = current
+		}
+	}
+	push.State = info.Objective.StateForProgress(progress)
+	return push
+}
+
+func classicQuestCanComplete(store *session.Store, socketSession *packetSession, info quest.Info) bool {
+	if info.Objective == nil {
+		return quest.IsCompletableState(info.State)
+	}
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		return false
+	}
+	progress, ok := store.QuestProgress(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, info.Title)
+	return ok && progress >= info.Objective.Required
+}
+
+func advanceClassicQuestProgressForTargets(store *session.Store, socketSession *packetSession, kind quest.ObjectiveKind, targets []string) []classicQuestInfoPush {
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil || len(targets) == 0 {
+		return nil
+	}
+
+	countByTarget := map[string]int{}
+	for _, target := range targets {
+		if key := classicQuestObjectiveTargetKey(target); key != "" {
+			countByTarget[key]++
+		}
+	}
+	if len(countByTarget) == 0 {
+		return nil
+	}
+
+	accepted := store.AcceptedQuestTitles(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID)
+	pushes := []classicQuestInfoPush{}
+	for _, info := range quest.All() {
+		if !accepted[info.Title] || info.Objective == nil || info.Objective.Kind != kind {
+			continue
+		}
+		delta := countByTarget[classicQuestObjectiveTargetKey(info.Objective.Target)]
+		if delta == 0 {
+			continue
+		}
+		progress := store.AdvanceQuestProgress(
+			socketSession.playerBase.PlayerID,
+			socketSession.selectedRole.RoleID,
+			info.Title,
+			info.Objective.Required,
+			delta,
+		)
+		if progress.Found && progress.Updated {
+			pushes = append(pushes, classicQuestInfoForRole(store, socketSession, info))
+		}
+	}
+	return pushes
+}
+
+func classicQuestObjectiveTargetKey(value string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(value)), "")
+}
+
 func questNpcHandleForTitle(title string) string {
 	if strings.TrimSpace(title) == sourceMainQuestTitle {
 		return sourceMainQuestNpcHandle
@@ -289,25 +358,15 @@ func questNpcHandleForTitle(title string) string {
 }
 
 func questNpcHandleForInfo(info quest.Info) string {
-	if strings.TrimSpace(info.QuestStateHandle) != "" {
-		return strings.TrimSpace(info.QuestStateHandle)
-	}
-	if len(info.Routes) > 0 {
-		return info.Routes[0].Handle
-	}
-	return ""
+	return strings.TrimSpace(info.QuestStateHandle)
 }
 
 func appendQuestStateForInfo(result *packetResult, info quest.Info, state int) {
 	appendQuestStateForHandle(result, questNpcHandleForInfo(info), state)
 }
 
-func appendQuestStateForInfoOrRoute(result *packetResult, info quest.Info, route classicQuestAnswerRoute, state int) {
-	handle := questNpcHandleForInfo(info)
-	if handle == "" {
-		handle = strings.TrimSpace(route.handle)
-	}
-	appendQuestStateForHandle(result, handle, state)
+func appendQuestStateForInfoOrRoute(result *packetResult, info quest.Info, _ classicQuestAnswerRoute, state int) {
+	appendQuestStateForHandle(result, questNpcHandleForInfo(info), state)
 }
 
 func appendQuestStateForHandle(result *packetResult, handle string, state int) {

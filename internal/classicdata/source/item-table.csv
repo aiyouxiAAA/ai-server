@@ -155,6 +155,7 @@
 "packet_confirmed","high","217.png","金元散","null","材料","99","","","用于治疗疑难杂症的奇异粉末。","packet:reward_markup+packet:role_item",""
 "packet_confirmed","high","218.png","解毒丸","own","消耗品","99","","1","可以排除体内毒素的中草药丸","packet:sale",""
 "packet_confirmed","high","225.png","L回魂丹","null","消耗品","999","","","神秘丹药，传说有让人起死回生的功效。","packet:reward_markup+packet:role_item",""
+"packet_confirmed","high","225.png","回魂丹","own","消耗品","999","","10","f_i_回魂丹^C156C7&24@消耗品&25@999&19@死亡后与黄泉婆婆对话，可直接复活并回到绑定点。&20@神秘的丹药,传说有让人起死回生的功效。&103@0&104@0&105@&107@&108@32","packet:reward_markup+packet:mall_catalog","百年虫精奖励和商城均直接观察到回魂丹；不可映射到 L回魂丹。"
 "packet_confirmed","high","240.png","毒药","null","材料 消耗品","999","sitem_water","10","多日提炼出的毒药","packet:sale",""
 "packet_confirmed","high","241.png","飞镖","null","材料 消耗品","9999","sitem_jwep","50","铁制三刃飞镖","packet:sale",""
 "packet_confirmed","high","242.png","火之箭","null","材料 消耗品","9999","sitem_jwep","50","燃烧的钢箭","packet:sale",""

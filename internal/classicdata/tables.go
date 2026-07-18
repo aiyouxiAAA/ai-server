@@ -12,22 +12,26 @@ import (
 var generatedTables embed.FS
 
 const (
-	TableDrop         = "drop"
-	TableItem         = "item"
-	TableSkill        = "skill"
-	TableMonsterSkill = "monster-skill"
-	TableProfession   = "profession"
-	TableBuff         = "buff"
-	TableMonster      = "monster"
-	TableAttribute    = "attribute"
-	TableEffect       = "effect"
-	TableEffectSource = "effect-source"
+	TableDrop              = "drop"
+	TableItem              = "item"
+	TableFashionAppearance = "fashion-appearance"
+	TableSkill             = "skill"
+	TableSkillLevel        = "skill-level"
+	TableMonsterSkill      = "monster-skill"
+	TableProfession        = "profession"
+	TableBuff              = "buff"
+	TableMonster           = "monster"
+	TableAttribute         = "attribute"
+	TableEffect            = "effect"
+	TableEffectSource      = "effect-source"
 )
 
 var KnownTables = []string{
 	TableDrop,
 	TableItem,
+	TableFashionAppearance,
 	TableSkill,
+	TableSkillLevel,
 	TableMonsterSkill,
 	TableProfession,
 	TableBuff,

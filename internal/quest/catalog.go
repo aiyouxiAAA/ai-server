@@ -21,11 +21,25 @@ type Info struct {
 	Type             string
 	Description      string
 	State            string
+	Objective        *Objective
 	Routes           []AnswerRoute
 	QuestStateHandle string
 	Requirements     []RewardItem
 	Reward           Reward
 	RewardEntries    []RewardEntry
+}
+
+type ObjectiveKind string
+
+const (
+	ObjectiveKindKill       ObjectiveKind = "击杀"
+	ObjectiveKindCollection ObjectiveKind = "收集"
+)
+
+type Objective struct {
+	Kind     ObjectiveKind
+	Target   string
+	Required int
 }
 
 type AnswerRoute struct {
@@ -178,6 +192,9 @@ func loadCatalog() ([]Info, error) {
 			Routes:           parseAnswerRoutes(readField(record, "routes")),
 			QuestStateHandle: readField(record, "quest_state_handle"),
 		}
+		if objective, ok := ParseObjective(info.State); ok {
+			info.Objective = &objective
+		}
 		info.Requirements = ParseRequirements(info.Description)
 		info.Reward = ParseReward(info.Description)
 		info.RewardEntries = BuildRewardEntries(RewardEntrySourceQuest, info.ID, info.Reward)
@@ -205,6 +222,10 @@ func cloneInfos(infos []Info) []Info {
 }
 
 func cloneInfo(info Info) Info {
+	if info.Objective != nil {
+		objective := *info.Objective
+		info.Objective = &objective
+	}
 	info.Routes = append([]AnswerRoute(nil), info.Routes...)
 	info.Requirements = append([]RewardItem(nil), info.Requirements...)
 	info.Reward.Items = append([]RewardItem(nil), info.Reward.Items...)
@@ -354,6 +375,45 @@ func IsCurrencyRewardName(name string) bool {
 
 func IsCompletableState(state string) bool {
 	return strings.Contains(state, "<over>")
+}
+
+func ParseObjective(state string) (Objective, bool) {
+	fields := strings.Fields(strings.TrimSpace(state))
+	if len(fields) < 3 {
+		return Objective{}, false
+	}
+
+	kind := ObjectiveKind(strings.TrimPrefix(fields[0], "<over>"))
+	if kind != ObjectiveKindKill && kind != ObjectiveKindCollection {
+		return Objective{}, false
+	}
+	progress := strings.Split(fields[len(fields)-1], "/")
+	if len(progress) != 2 {
+		return Objective{}, false
+	}
+	required, err := strconv.Atoi(strings.TrimSpace(progress[1]))
+	if err != nil || required <= 0 {
+		return Objective{}, false
+	}
+	target := strings.TrimSpace(strings.Join(fields[1:len(fields)-1], " "))
+	if target == "" {
+		return Objective{}, false
+	}
+	return Objective{Kind: kind, Target: target, Required: required}, true
+}
+
+func (objective Objective) StateForProgress(current int) string {
+	if current < 0 {
+		current = 0
+	}
+	if current > objective.Required {
+		current = objective.Required
+	}
+	prefix := ""
+	if current >= objective.Required {
+		prefix = "<over>"
+	}
+	return prefix + string(objective.Kind) + "　" + objective.Target + " " + strconv.Itoa(current) + "/" + strconv.Itoa(objective.Required)
 }
 
 func sourceQuestRewardSection(description string, marker string) string {

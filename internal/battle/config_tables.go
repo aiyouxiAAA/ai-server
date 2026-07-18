@@ -13,7 +13,7 @@ import (
 	"ai-server/internal/classicdata"
 )
 
-//go:embed config/classic-wild-enemy.csv config/classic-visible-monster.csv config/classic-battle-reward.csv config/classic-battle-reward-candidate.csv
+//go:embed config/classic-wild-enemy.csv config/classic-wild-encounter.csv config/classic-visible-monster.csv config/classic-battle-reward.csv config/classic-battle-reward-candidate.csv
 var battleConfigFiles embed.FS
 
 type sourceWildEnemyConfig struct {
@@ -25,6 +25,13 @@ type sourceWildEnemyConfig struct {
 	Vocation         string
 	Source           string
 	EncounterHandles []string
+}
+
+type sourceWildEncounterConfig struct {
+	MapID            string
+	EncounterHandles []string
+	Weight           int
+	Source           string
 }
 
 type sourceBattleRewardConfig struct {
@@ -56,6 +63,7 @@ type sourceBattleRewardDropRate struct {
 var (
 	sourceWildEnemyConfigByMapID         = mustLoadSourceWildEnemyConfigs()
 	sourceWildEnemyConfigsByMapID        = mustLoadSourceWildEnemyConfigLists()
+	sourceWildEncounterConfigsByMapID    = mustLoadSourceWildEncounterConfigs()
 	sourceVisibleMonsterConfigByKey      = mustLoadSourceVisibleMonsterConfigs()
 	sourceBattleRewardConfigByKey        = mustLoadSourceBattleRewardConfigs()
 	sourceBattleRewardCandidateByCellKey = mustLoadSourceBattleRewardCandidateConfigsByCellKey()
@@ -73,6 +81,11 @@ func sourceEnemyConfigForMap(mapID string) (sourceWildEnemyConfig, bool) {
 func sourceEnemyConfigsForMap(mapID string) []sourceWildEnemyConfig {
 	configs := sourceWildEnemyConfigsByMapID[strings.TrimSpace(mapID)]
 	return append([]sourceWildEnemyConfig(nil), configs...)
+}
+
+func sourceWildEncounterConfigsForMap(mapID string) []sourceWildEncounterConfig {
+	configs := sourceWildEncounterConfigsByMapID[strings.TrimSpace(mapID)]
+	return append([]sourceWildEncounterConfig(nil), configs...)
 }
 
 func sourceVisibleMonsterConfigForHandle(mapID string, handle string) (sourceWildEnemyConfig, bool) {
@@ -199,6 +212,41 @@ func mustLoadSourceWildEnemyConfigLists() map[string][]sourceWildEnemyConfig {
 		}
 		mapID, config := sourceWildEnemyConfigFromClassicDataRow(row, rowIndex)
 		configs[mapID] = append(configs[mapID], config)
+	}
+	return configs
+}
+
+func mustLoadSourceWildEncounterConfigs() map[string][]sourceWildEncounterConfig {
+	records := mustReadBattleConfigCSV("config/classic-wild-encounter.csv")
+	header := battleConfigHeader(records[0])
+	configs := map[string][]sourceWildEncounterConfig{}
+	knownHandlesByMapID := map[string]map[string]bool{}
+	for mapID, enemies := range sourceWildEnemyConfigsByMapID {
+		knownHandles := map[string]bool{}
+		for _, enemy := range enemies {
+			knownHandles[enemy.Cell.Handle] = true
+		}
+		knownHandlesByMapID[mapID] = knownHandles
+	}
+	for rowIndex, row := range records[1:] {
+		mapID := requiredBattleConfigString(row, header, "map_id", rowIndex)
+		handles := splitBattleConfigList(requiredBattleConfigString(row, header, "encounter_handles", rowIndex))
+		weight := requiredBattleConfigInt(row, header, "weight", rowIndex)
+		if weight <= 0 {
+			panic(fmt.Sprintf("battle config row %d must have positive encounter weight", rowIndex+2))
+		}
+		knownHandles := knownHandlesByMapID[mapID]
+		for _, handle := range handles {
+			if !knownHandles[handle] {
+				panic(fmt.Sprintf("battle config row %d references unknown wild handle %s for map %s", rowIndex+2, handle, mapID))
+			}
+		}
+		configs[mapID] = append(configs[mapID], sourceWildEncounterConfig{
+			MapID:            mapID,
+			EncounterHandles: handles,
+			Weight:           weight,
+			Source:           optionalBattleConfigString(row, header, "source"),
+		})
 	}
 	return configs
 }

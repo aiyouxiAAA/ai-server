@@ -174,6 +174,16 @@ func (service *Service) FindProduct(productID string) (Product, bool) {
 	return Product{}, false
 }
 
+func (service *Service) FindProductByName(name string) (Product, bool) {
+	name = strings.TrimSpace(name)
+	for _, product := range service.products {
+		if product.Name == name {
+			return product, true
+		}
+	}
+	return Product{}, false
+}
+
 func (service *Service) PaymentDisabled(requestID string) PurchaseResult {
 	return PurchaseResult{
 		Success:      false,

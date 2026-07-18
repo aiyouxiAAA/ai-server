@@ -2072,6 +2072,98 @@ var map167SourceMonsters = []sourceMonsterEntry{
 	buildCapturedSourceMonster("7550622260838906", "蚩颅王", "monstermap/chiluking.swf", "chiluking", 30, "战士++", 2189, 451),
 }
 
+var map179SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_180", 2969, 581),
+	buildCapturedSourceTransport("transp_63", 31, 610),
+}
+
+var map180SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_179", 31, 610),
+	buildCapturedSourceTransport("transp_181", 2969, 610),
+	buildCapturedSourceTransport("transp_183", 1099, 484),
+}
+
+var map181SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_180", 31, 610),
+	buildCapturedSourceTransport("transp_182", 1927, 720),
+	buildCapturedSourceTransport("transp_185", 2929, 410),
+}
+
+var map182SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_181", 147, 460),
+}
+
+var map185SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_181", 1671, 730),
+	buildCapturedSourceTransport("transp_184", 20, 510),
+	buildCapturedSourceTransport("transp_186", 2969, 561),
+}
+
+var map186SourceNPCs = []sourceNPCEntry{
+	buildCapturedSourceTransport("transp_185", 31, 610),
+	buildCapturedSourceTransportMovieClip("transp_63", "transp/fl.swf", "fl", 139, 147, 2096, 562),
+}
+
+var map179SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7655309792053800", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "战士+", 867, 527),
+	buildCapturedSourceMonster("7657309792054436", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "战士+", 746, 633),
+	buildCapturedSourceMonster("7659309792055843", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "战士+", 1896, 523),
+	buildCapturedSourceMonster("7661309792056337", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "战士+", 1903, 626),
+	buildCapturedSourceMonster("7663309792057167", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "游侠+", 2197, 584),
+}
+
+var map180SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("7409309986903451", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "战士+", 1338, 546),
+	buildCapturedSourceMonster("7411309986904974", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "战士+", 1275, 638),
+	buildCapturedSourceMonster("7413309986905828", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 31, "游侠+", 1632, 538),
+	buildCapturedSourceMonster("7415309986906399", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 31, "游侠+", 2368, 638),
+	buildCapturedSourceMonster("7417309986907832", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 30, "游侠+", 911, 496),
+}
+
+var map181SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("6478310163655961", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 31, "游侠+", 2356, 506),
+	buildCapturedSourceMonster("6480310163656350", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 31, "游侠+", 2271, 626),
+	buildCapturedSourceMonster("6482310163657496", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 31, "战士+", 801, 530),
+	buildCapturedSourceMonster("6484310163658174", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 31, "战士+", 889, 642),
+}
+
+var map182SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("1270310232361564", "灭阎首领", "monstermap/hadesrabbi.swf", "hadesrabbi", 32, "术士+", 1700, 476),
+	buildCapturedSourceMonster("1290310232362546", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 31, "战士+", 1205, 494),
+	buildCapturedSourceMonster("1310310232363530", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 31, "战士+", 1228, 630),
+	buildCapturedSourceMonster("1330310232364948", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 31, "战士+", 391, 586),
+	buildCapturedSourceMonster("1350310232365968", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 32, "游侠+", 1569, 479),
+	buildCapturedSourceMonster("1370310232366670", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 32, "游侠+", 1723, 528),
+}
+
+var map185SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("4568310524418360", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 33, "战士+", 661, 500),
+	buildCapturedSourceMonster("4570310524419321", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 33, "战士+", 665, 630),
+	buildCapturedSourceMonster("4572310524420533", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 33, "战士+", 1061, 576),
+	buildCapturedSourceMonster("4574310524421555", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 2030, 569),
+	buildCapturedSourceMonster("4576310524422976", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 2323, 511),
+	buildCapturedSourceMonster("4578310524423798", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 2346, 634),
+	buildCapturedSourceMonster("6360311593663218", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 33, "战士+", 1394, 570),
+	buildCapturedSourceMonster("6362311593664829", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 1657, 569),
+	buildCapturedSourceMonster("6364311593665154", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 2323, 511),
+	buildCapturedSourceMonster("6366311593665864", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 2346, 634),
+}
+
+var map186SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("6371311593666684", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 1663, 519),
+	buildCapturedSourceMonster("6373311593667665", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 1663, 621),
+	buildCapturedSourceMonster("6375311593668581", "灭阎法师", "monstermap/hadesrabbi.swf", "hadesrabbi", 33, "术士+", 785, 490),
+	buildCapturedSourceMonster("6377311593669524", "灭阎法师", "monstermap/hadesrabbi.swf", "hadesrabbi", 33, "术士+", 849, 605),
+	buildCapturedSourceMonster("9611310624908840", "龙娃", "monstermap/dragonson.swf", "dragonson", 35, "战士++", 2006, 541),
+	buildCapturedSourceMonster("9613310624909569", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 33, "战士+", 2044, 634),
+	buildCapturedSourceMonster("9615310624909948", "白骨枪兵", "monstermap/bonelance.swf", "bonelance", 33, "战士+", 1887, 496),
+	buildCapturedSourceMonster("9617310624910541", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 1486, 515),
+	buildCapturedSourceMonster("9619310624911715", "骷髅妖兵", "monstermap/dhwarrior.swf", "dhwarrior", 33, "游侠+", 1485, 621),
+	buildCapturedSourceMonster("9621310624912921", "灭阎法师", "monstermap/hadesrabbi.swf", "hadesrabbi", 33, "术士+", 1935, 564),
+	buildCapturedSourceMonster("9623310624913673", "灭阎法师", "monstermap/hadesrabbi.swf", "hadesrabbi", 33, "术士+", 785, 490),
+	buildCapturedSourceMonster("9625310624914226", "灭阎法师", "monstermap/hadesrabbi.swf", "hadesrabbi", 33, "术士+", 849, 605),
+}
+
 var map171SourceMonsters = []sourceMonsterEntry{
 	buildCapturedSourceMonster("7893833328746190", "百年虫精", "monstermap/wocmon.swf", "wocmon", 30, "术士++", 1560, 516),
 	buildCapturedSourceMonster("7895833328747103", "被控制的民兵", "monstermap/militia.swf", "militia", 30, "游侠+", 1539, 552),
@@ -2565,6 +2657,21 @@ var sourceTransportLinks = []sourceTransportLink{
 	// Current Feixiandong export has captured incoming links to map70, but no map70 outgoing rows.
 	{FromMapID: 70, ToMapID: 68, Slot: 0},
 	{FromMapID: 70, ToMapID: 72, Slot: 1},
+	{FromMapID: 63, ToMapID: 179, Slot: 0},
+	{FromMapID: 179, ToMapID: 180, Slot: 0},
+	{FromMapID: 179, ToMapID: 63, Slot: 1},
+	{FromMapID: 180, ToMapID: 179, Slot: 0},
+	{FromMapID: 180, ToMapID: 181, Slot: 1},
+	{FromMapID: 180, ToMapID: 183, Slot: 2},
+	{FromMapID: 181, ToMapID: 180, Slot: 0},
+	{FromMapID: 181, ToMapID: 182, Slot: 1},
+	{FromMapID: 181, ToMapID: 185, Slot: 2},
+	{FromMapID: 182, ToMapID: 181, Slot: 0},
+	{FromMapID: 185, ToMapID: 181, Slot: 0},
+	{FromMapID: 185, ToMapID: 184, Slot: 1},
+	{FromMapID: 185, ToMapID: 186, Slot: 2},
+	{FromMapID: 186, ToMapID: 185, Slot: 0},
+	{FromMapID: 186, ToMapID: 63, Slot: 1},
 }
 
 var map1SourceNPCDialogueReplies = map[sourceNPCDialogueReplyKey]sourceNPCDialogueEntry{

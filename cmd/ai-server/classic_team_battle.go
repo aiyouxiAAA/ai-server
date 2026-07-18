@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"ai-server/internal/battle"
+	"ai-server/internal/quest"
 	"ai-server/internal/session"
 	"ai-server/internal/team"
 )
@@ -128,6 +129,12 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 			connection.session.battleLoot = buildClassicBattleLoot(connection.session, memberBattleOver.Result)
 			result.roleState = roleState
 			result.rolePhysique = rolePhysique
+			result.questInfos = advanceClassicQuestProgressForTargets(
+				store,
+				connection.session,
+				quest.ObjectiveKindKill,
+				classicBattleDefeatedEnemyNames(connection.session.battleRuntime, result.battleOver),
+			)
 			result.removeRoleHandles = markDefeatedVisibleMonsterFromBattle(store, connection.session, result.battleOver)
 			connection.session.battleRuntime = nil
 			announceClassicMapFightState(connection.session, false)
@@ -219,6 +226,12 @@ func writeClassicTeamBattleResult(writer *websocketWriter, recipientRoleID strin
 	if result.roleState != nil {
 		if err := writer.writePush(cmdClassicTownRoleStatePush, encodePayload(*result.roleState)); err != nil {
 			log.Printf("[ai-server] write classic team battle roleState failed: %v", err)
+			return
+		}
+	}
+	for _, questInfo := range result.questInfos {
+		if err := writer.writePush(cmdClassicTownQuestInfoPush, encodePayload(questInfo)); err != nil {
+			log.Printf("[ai-server] write classic team battle QuestInfo failed: %v", err)
 			return
 		}
 	}

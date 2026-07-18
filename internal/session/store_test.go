@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"ai-server/internal/classicdata"
+	"ai-server/internal/mall"
 )
 
 func TestStoreLoginAccountSuccess(t *testing.T) {
@@ -967,6 +968,20 @@ func TestStorePurchaseCapturedMallFashionProductRequiresYubi(t *testing.T) {
 	items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "商城")
 	if !ok || len(items) != 0 {
 		t.Fatalf("expected failed captured fashion purchase not to write 商城 items, ok=%v items=%+v", ok, items)
+	}
+
+	store.rolesByPID[login.PlayerID][0].Currencies["玉币"] = product.Price
+	result = store.PurchaseMallProduct(login.PlayerID, createResponse.Role.RoleID, product, 1, "captured-fashion-success")
+	if !result.Success {
+		t.Fatalf("expected captured fashion purchase success, got %+v", result)
+	}
+	items, _, ok = store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "商城")
+	if !ok || len(items) != 1 {
+		t.Fatalf("expected successful captured fashion purchase in 商城, ok=%v items=%+v", ok, items)
+	}
+	item := items[0]
+	if item.Name != "超时空要塞" || item.Type != "商城" || item.ItemType != "equip" || item.ItemLevel != 3 || item.Owner != "" {
+		t.Fatalf("expected captured fashion template semantics in 商城, got %+v", item)
 	}
 }
 
@@ -2503,6 +2518,18 @@ func TestStoreTryEquipSupportsCapturedFashionSetPreview(t *testing.T) {
 	if !equipResult.Found || !equipResult.Equipped || !strings.Contains(equipResult.Role.SourceQuery, "w8=5") {
 		t.Fatalf("expected starter axe equip before fashion TryEquip, got %+v", equipResult)
 	}
+	mountTemplate, ok := CapturedRoleItemTemplate("狰狞神骑")
+	if !ok {
+		t.Fatal("expected captured mount template before fashion TryEquip")
+	}
+	mountItem, ok := store.GrantRoleItem(login.PlayerID, createResponse.Role.RoleID, mountTemplate)
+	if !ok {
+		t.Fatal("expected to grant captured mount before fashion TryEquip")
+	}
+	mountResult := store.EquipRoleItem(login.PlayerID, createResponse.Role.RoleID, mountItem.Type, mountItem.Index, 1)
+	if !mountResult.Found || !mountResult.Equipped || !strings.Contains(mountResult.Role.SourceQuery, "r=zn") {
+		t.Fatalf("expected captured mount before fashion TryEquip, got %+v", mountResult)
+	}
 
 	preview := store.PreviewTryEquip(login.PlayerID, createResponse.Role.RoleID, "超时空要塞")
 	if !preview.Found || !preview.Previewed || preview.Item.Name != "超时空要塞" {
@@ -2513,7 +2540,7 @@ func TestStoreTryEquipSupportsCapturedFashionSetPreview(t *testing.T) {
 			t.Fatalf("expected captured fashion preview source query to include %s, got %q", part, preview.SourceQuery)
 		}
 	}
-	for _, stalePart := range []string{"c=1", "p=1", "se=1"} {
+	for _, stalePart := range []string{"c=1", "p=1", "se=1", "r=zn"} {
 		if strings.Contains(preview.SourceQuery, stalePart) {
 			t.Fatalf("expected captured fashion preview to replace stale %s, got %q", stalePart, preview.SourceQuery)
 		}
@@ -2528,15 +2555,109 @@ func TestStoreTryEquipSupportsCapturedFashionSetPreview(t *testing.T) {
 			t.Fatalf("expected captured summer fashion preview source query to include %s, got %q", part, summerPreview.SourceQuery)
 		}
 	}
-	for _, stalePart := range []string{"c=1", "p=1", "se=1", "hr=46"} {
+	for _, stalePart := range []string{"c=1", "p=1", "se=1", "hr=46", "r=zn"} {
 		if strings.Contains(summerPreview.SourceQuery, stalePart) {
 			t.Fatalf("expected captured summer fashion preview to replace stale %s, got %q", stalePart, summerPreview.SourceQuery)
 		}
 	}
 
 	role, _, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
-	if !ok || role.SourceQuery != equipResult.Role.SourceQuery {
-		t.Fatalf("TryEquip must not mutate role source query, ok=%v role=%+v before=%q", ok, role, equipResult.Role.SourceQuery)
+	if !ok || role.SourceQuery != mountResult.Role.SourceQuery {
+		t.Fatalf("TryEquip must not mutate role source query, ok=%v role=%+v before=%q", ok, role, mountResult.Role.SourceQuery)
+	}
+}
+
+func TestStoreEquipCapturedSpaceFortressAppliesAndRestoresFashionHair(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "超时空穿戴",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?e=8&sex=1&hr=12&co=6&m=3&n=11&",
+		Appearance: RoleAppearance{
+			"body": map[string]any{
+				"sex":       1,
+				"skinColor": 6,
+				"hair":      12,
+				"eyes":      8,
+				"mouth":     3,
+				"nose":      11,
+			},
+		},
+	})
+	if !created.Success {
+		t.Fatalf("expected role create success, got %+v", created)
+	}
+
+	for _, name := range []string{"蛮力面甲", "蛮力护甲", "蛮力护腿", "蛮力战靴", "狰狞神骑"} {
+		item, ok := CapturedRoleItemTemplate(name)
+		if !ok {
+			t.Fatalf("expected captured %s template", name)
+		}
+		item, ok = store.GrantRoleItem(login.PlayerID, created.Role.RoleID, item)
+		if !ok {
+			t.Fatalf("expected captured %s grant", name)
+		}
+		result := store.EquipRoleItem(login.PlayerID, created.Role.RoleID, item.Type, item.Index, 1)
+		if !result.Found || !result.Equipped {
+			t.Fatalf("expected %s equip, got %+v", name, result)
+		}
+	}
+
+	fashion, ok := CapturedRoleItemTemplate("超时空要塞")
+	if !ok {
+		t.Fatal("expected captured 超时空要塞 template")
+	}
+	fashion, ok = store.GrantRoleItem(login.PlayerID, created.Role.RoleID, fashion)
+	if !ok {
+		t.Fatal("expected captured 超时空要塞 grant")
+	}
+	equipped := store.EquipRoleItem(login.PlayerID, created.Role.RoleID, fashion.Type, fashion.Index, 1)
+	if !equipped.Found || !equipped.Equipped {
+		t.Fatalf("expected 超时空要塞 equip, got %+v", equipped)
+	}
+	for _, part := range []string{"c=88", "p=91", "se=79", "hr=46"} {
+		if !strings.Contains(equipped.Role.SourceQuery, part) {
+			t.Fatalf("expected captured fashion equip query to include %s, got %q", part, equipped.Role.SourceQuery)
+		}
+	}
+	if strings.Contains(equipped.Role.SourceQuery, "h=") {
+		t.Fatalf("captured fashion has no hat field, got %q", equipped.Role.SourceQuery)
+	}
+	if strings.Contains(equipped.Role.SourceQuery, "&r=") {
+		t.Fatalf("captured fashion has no ride field, got %q", equipped.Role.SourceQuery)
+	}
+	equippedFashion, ok := findRoleItem(equipped.Role.Items, "装备", roleFashionEquipIndex)
+	if !ok || equippedFashion.Name != "超时空要塞" {
+		t.Fatalf("expected captured fashion in standalone fashion slot %d, got %+v", roleFashionEquipIndex, equipped.Role.Items)
+	}
+	for _, name := range []string{"蛮力面甲", "蛮力护甲", "蛮力护腿", "蛮力战靴", "狰狞神骑"} {
+		found := false
+		for _, item := range equipped.Role.Items {
+			if item.Type == "装备" && item.Name == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("expected underlying %s to remain equipped, got %+v", name, equipped.Role.Items)
+		}
+	}
+
+	unequipped := store.MoveRoleItem(login.PlayerID, created.Role.RoleID, "装备", roleFashionEquipIndex, "背包", -1, 1)
+	if !unequipped.Found || !unequipped.Moved {
+		t.Fatalf("expected 超时空要塞 unequip, got %+v", unequipped)
+	}
+	if !strings.Contains(unequipped.Role.SourceQuery, "hr=12") || strings.Contains(unequipped.Role.SourceQuery, "hr=46") {
+		t.Fatalf("expected unequipped fashion to restore role hair, got %q", unequipped.Role.SourceQuery)
+	}
+	for _, part := range []string{"h=8", "c=10", "p=8", "se=4", "r=zn"} {
+		if !strings.Contains(unequipped.Role.SourceQuery, part) {
+			t.Fatalf("expected unequipped fashion to restore %s, got %q", part, unequipped.Role.SourceQuery)
+		}
 	}
 }
 
@@ -4330,7 +4451,7 @@ func TestStorePromotedFashionAppearanceMappings(t *testing.T) {
 	if !ok {
 		t.Fatal("expected item-table template for 普通礼服")
 	}
-	params, ok := roleItemAppearanceSourceParams(template)
+	params, ok := capturedFashionAppearanceSourceParams(template, "human/human.swf?sex=1&")
 	if !ok {
 		t.Fatal("expected 普通礼服 appearance parameters")
 	}
@@ -4339,6 +4460,89 @@ func TestStorePromotedFashionAppearanceMappings(t *testing.T) {
 		if !strings.Contains(query, param.key+"="+param.value+"&") {
 			t.Fatalf("expected 普通礼服 source query to include %s=%s, got %q", param.key, param.value, query)
 		}
+	}
+}
+
+func TestStoreCapturedFashionAppearanceDataCoversMallCatalog(t *testing.T) {
+	store := NewStore()
+	fashionCount := 0
+	var untemplated mall.Product
+	for offset := 0; ; offset += mall.PageSize {
+		page := store.Mall.SearchPage(mall.SearchRequest{CategoryID: "15", Offset: offset, Limit: mall.PageSize})
+		if len(page.Products) == 0 {
+			break
+		}
+		for _, product := range page.Products {
+			if !strings.Contains(product.Description, "&24@幻·时装") {
+				continue
+			}
+			fashionCount += 1
+			item := RoleItem{Name: product.Name, ItemType: "equip"}
+			if !isCapturedFashionAppearanceItem(item) {
+				t.Fatalf("expected captured appearance mapping for %s", product.Name)
+			}
+			variants, err := classicdata.FindFashionAppearanceRowsByName(product.Name)
+			if err != nil {
+				t.Fatalf("load captured appearance rows for %s: %v", product.Name, err)
+			}
+			if len(variants) == 0 {
+				t.Fatalf("expected at least one captured sex variant for %s", product.Name)
+			}
+			for _, variant := range variants {
+				sex := variant["sex"]
+				rawParams := variant["source_params"]
+				params, ok := capturedFashionAppearanceSourceParams(item, "human/human.swf?sex="+sex+"&")
+				if !ok || len(params) == 0 {
+					t.Fatalf("expected %s sex=%s appearance parameters", product.Name, sex)
+				}
+				query := applyRoleItemAppearanceToSourceQuery("human/human.swf?sex="+sex+"&h=1&r=zn&", item)
+				for _, param := range params {
+					if !strings.Contains(query, param.key+"="+param.value+"&") {
+						t.Fatalf("expected %s sex=%s source query to include %s=%s, got %q", product.Name, sex, param.key, param.value, query)
+					}
+				}
+				if rawParams == "" {
+					t.Fatalf("captured fashion %s sex=%s must not use an empty mapping", product.Name, sex)
+				}
+			}
+			if _, found := CapturedRoleItemTemplate(product.Name); !found && untemplated.Name == "" {
+				untemplated = product
+			}
+		}
+		if len(page.Products) < mall.PageSize {
+			break
+		}
+	}
+	if fashionCount != 56 {
+		t.Fatalf("expected 56 captured mall fashion products, got %d", fashionCount)
+	}
+	if untemplated.Name == "" {
+		t.Fatal("expected at least one catalog fashion without an item-table template")
+	}
+
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "商城时装校验",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !created.Success {
+		t.Fatalf("expected role creation, got %+v", created)
+	}
+	store.rolesByPID[login.PlayerID][0].Currencies[untemplated.Currency] = untemplated.Price
+	purchase := store.PurchaseMallProduct(login.PlayerID, created.Role.RoleID, untemplated, 1, "captured-fashion-untemplated")
+	if !purchase.Success {
+		t.Fatalf("expected untemplated fashion purchase, got %+v", purchase)
+	}
+	items, _, ok := store.GetRoleItems(login.PlayerID, created.Role.RoleID, "商城")
+	if !ok || len(items) != 1 || items[0].Name != untemplated.Name || items[0].ItemType != "equip" {
+		t.Fatalf("expected untemplated fashion catalog delivery as equip, ok=%v items=%+v", ok, items)
+	}
+	preview := store.PreviewTryEquip(login.PlayerID, created.Role.RoleID, untemplated.Name)
+	if !preview.Found || !preview.Previewed {
+		t.Fatalf("expected catalog fashion TryEquip preview, got %+v", preview)
 	}
 }
 
@@ -4615,6 +4819,56 @@ func TestPersistentStoreKeepsRolesAfterRestart(t *testing.T) {
 	items, capacity, ok := secondStore.GetRoleItems(loginResponse.PlayerID, createResponse.Role.RoleID, "背包")
 	if !ok || capacity != 30 || len(items) != 1 || items[0].Name != "铁斧" || items[0].Index != 19 {
 		t.Fatalf("expected persistent starter axe inventory after restart, ok=%v capacity=%d items=%+v", ok, capacity, items)
+	}
+}
+
+func TestPersistentStoreKeepsQuestProgressAfterRestart(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "quest-progress.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store init success, got error: %v", err)
+	}
+
+	login := mustLogin(t, firstStore, "mockuser", "magicpwd")
+	created := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "任务进度持久化",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	if !created.Success {
+		t.Fatalf("expected role create success, got %+v", created)
+	}
+	if !firstStore.AcceptQuest(login.PlayerID, created.Role.RoleID, "收集朽木") {
+		t.Fatal("expected 收集朽木 acceptance")
+	}
+	advanced := firstStore.AdvanceQuestProgress(login.PlayerID, created.Role.RoleID, "收集朽木", 3, 2)
+	if !advanced.Found || !advanced.Updated || advanced.Completed || advanced.Current != 2 {
+		t.Fatalf("expected persisted 2/3 quest progress, got %+v", advanced)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("expected first store close success, got error: %v", err)
+	}
+
+	secondStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store reopen success, got error: %v", err)
+	}
+	defer secondStore.Close()
+	progress, ok := secondStore.QuestProgress(login.PlayerID, created.Role.RoleID, "收集朽木")
+	if !ok || progress != 2 {
+		t.Fatalf("expected restored 收集朽木 progress 2, ok=%v progress=%d", ok, progress)
+	}
+	completed := secondStore.AdvanceQuestProgress(login.PlayerID, created.Role.RoleID, "收集朽木", 3, 2)
+	if !completed.Completed || completed.Current != 3 {
+		t.Fatalf("expected progress to clamp at captured target 3, got %+v", completed)
+	}
+	if !secondStore.MarkQuestRemoved(login.PlayerID, created.Role.RoleID, "收集朽木") {
+		t.Fatal("expected quest removal")
+	}
+	if _, ok := secondStore.QuestProgress(login.PlayerID, created.Role.RoleID, "收集朽木"); ok {
+		t.Fatal("expected removed quest progress to be unavailable")
 	}
 }
 

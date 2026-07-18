@@ -57,8 +57,30 @@ func FindItemByName(name string) (map[string]string, bool, error) {
 	return FindRow(TableItem, "name", name)
 }
 
+func FindFashionAppearanceRowsByName(name string) ([]map[string]string, error) {
+	return FindRows(TableFashionAppearance, "fashion_name", strings.TrimSpace(name))
+}
+
+func FindFashionAppearanceByNameAndSex(name string, sex string) (map[string]string, bool, error) {
+	rows, err := FindFashionAppearanceRowsByName(name)
+	if err != nil {
+		return nil, false, err
+	}
+	sex = strings.TrimSpace(sex)
+	for _, row := range rows {
+		if row["sex"] == sex {
+			return row, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
 func FindSkillByLabel(label string) (map[string]string, bool, error) {
 	return FindRow(TableSkill, "label", label)
+}
+
+func FindSkillLevelRowsBySkillID(skillID string) ([]map[string]string, error) {
+	return FindRows(TableSkillLevel, "skill_id", skillID)
 }
 
 func FindMonsterSkillByID(id string) (map[string]string, bool, error) {

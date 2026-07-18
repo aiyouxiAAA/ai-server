@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"ai-server/internal/quest"
 	"ai-server/internal/session"
 	"ai-server/internal/world"
 )
@@ -127,6 +128,12 @@ func buildClassicTownCollectionRewardResult(
 		socketSession.selectedRole = &selectedRole
 		socketSession.playerBase = &playerBase
 	}
+	questInfos := advanceClassicQuestProgressForTargets(
+		store,
+		socketSession,
+		quest.ObjectiveKindCollection,
+		[]string{point.RewardItemName},
+	)
 
 	return packetResult{
 		collectionComplete: &classicTownCollectionCompletePush{
@@ -142,12 +149,7 @@ func buildClassicTownCollectionRewardResult(
 			classicTownSystemChatMessage("获得了【" + point.RewardItemName + "】x1"),
 			classicTownSystemChatMessage("日志更新"),
 		},
-		questInfos: []classicQuestInfoPush{{
-			Title:       point.QuestTitle,
-			Level:       1,
-			Description: point.QuestDescription,
-			State:       "进行中",
-		}},
+		questInfos: questInfos,
 		questStates: []world.QuestStatePush{{
 			Handle: point.Handle,
 			State:  point.QuestState,

@@ -150,7 +150,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 61,transp_63,transp/flag2.swf,flag2,158,258,2940,602,63,135,504,CrossRole,goto
 62,transp_168,transp/flag2.swf,flag2,158,258,2940,562,168,130,504,CrossRole,goto
 62,transp_60,transp/flag2.swf,flag2,158,258,45,504,60,2855,562,CrossRole,goto
-63,transp_179,transp/fl.swf,fl,139,147,1394,510,179,1000,600,CrossRole,goto
+63,transp_179,transp/fl.swf,fl,139,147,1394,510,179,116,610,CrossRole,goto
 63,transp_61,transp/flag2.swf,flag2,158,258,50,504,61,2855,602,CrossRole,goto
 64,transp_18,transp/flag2.swf,flag2,158,258,40,431,18,580,370,CrossRole,goto
 64,transp_65,transp/flag2.swf,flag2,158,258,950,430,65,125,437,CrossRole,goto
@@ -374,3 +374,17 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 204,transp_203,transp/flag2.swf,flag2,158,258,40,530,203,1851,570,CrossRole,goto
 205,transp_202,transp/flag2.swf,flag2,158,258,2939,580,202,125,600,CrossRole,goto
 205,transp_207,transp/flag2.swf,flag2,158,258,26,550,207,1000,600,CrossRole,goto
+179,transp_180,transp/flag2.swf,flag2,158,258,2969,581,180,116,610,CrossRole,goto
+179,transp_63,transp/flag2.swf,flag2,158,258,31,610,63,1309,510,CrossRole,goto
+180,transp_179,transp/flag2.swf,flag2,158,258,31,610,179,2884,581,CrossRole,goto
+180,transp_181,transp/flag2.swf,flag2,158,258,2969,610,181,116,610,CrossRole,goto
+180,transp_183,transp/flag2.swf,flag2,158,258,1099,484,183,1000,600,CrossRole,goto
+181,transp_180,transp/flag2.swf,flag2,158,258,31,610,180,2884,610,CrossRole,goto
+181,transp_182,transp/flag2.swf,flag2,158,258,1927,720,182,232,460,CrossRole,goto
+181,transp_185,transp/flag2.swf,flag2,158,258,2929,410,185,1671,650,CrossRole,goto
+182,transp_181,transp/flag2.swf,flag2,158,258,147,460,181,1927,640,CrossRole,goto
+185,transp_181,transp/flag2.swf,flag2,158,258,1671,730,181,2844,410,CrossRole,goto
+185,transp_184,transp/flag2.swf,flag2,158,258,20,510,184,1000,600,CrossRole,goto
+185,transp_186,transp/flag2.swf,flag2,158,258,2969,561,186,116,610,CrossRole,goto
+186,transp_185,transp/flag2.swf,flag2,158,258,31,610,185,2884,561,CrossRole,goto
+186,transp_63,transp/fl.swf,fl,139,147,2096,562,63,1000,600,CrossRole,goto

@@ -48,8 +48,8 @@ func TestClassicWorldCatalogLinksSceneTransportsCollectionsAndMapPageTransfers(t
 			}
 		}
 	}
-	if sceneTransports != 375 {
-		t.Fatalf("expected 375 scene transport catalog rows, got %d", sceneTransports)
+	if sceneTransports != 389 {
+		t.Fatalf("expected 389 scene transport catalog rows, got %d", sceneTransports)
 	}
 	if collectionPoints != 2 {
 		t.Fatalf("expected 2 collection catalog rows, got %d", collectionPoints)

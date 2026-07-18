@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "item",
   "source": "internal/classicdata/source/item-table.csv",
-  "rowCount": 574,
+  "rowCount": 575,
   "rows": [
     {
       "status": "packet_confirmed",
@@ -1501,6 +1501,20 @@
       "description": "神秘丹药，传说有让人起死回生的功效。",
       "evidence_sources": "packet:reward_markup+packet:role_item",
       "notes": ""
+    },
+    {
+      "status": "packet_confirmed",
+      "confidence": "high",
+      "icon": "225.png",
+      "name": "回魂丹",
+      "item_type": "own",
+      "category": "消耗品",
+      "max_stack": "999",
+      "asset_family": "",
+      "price": "10",
+      "description": "f_i_回魂丹^C156C7&24@消耗品&25@999&19@死亡后与黄泉婆婆对话，可直接复活并回到绑定点。&20@神秘的丹药,传说有让人起死回生的功效。&103@0&104@0&105@&107@&108@32",
+      "evidence_sources": "packet:reward_markup+packet:mall_catalog",
+      "notes": "百年虫精奖励和商城均直接观察到回魂丹；不可映射到 L回魂丹。"
     },
     {
       "status": "packet_confirmed",

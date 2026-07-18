@@ -384,8 +384,8 @@ func TestHandlePacketClassicTownActiveCollectionStartsSubGameThenCollectionGrant
 	if len(rewardResult.itemInfos) != 1 || rewardResult.itemInfos[0].Type != "背包" || rewardResult.itemInfos[0].Name != "金银花" || rewardResult.itemInfos[0].Count != 1 || rewardResult.itemInfos[0].Display != "97.png" {
 		t.Fatalf("expected 金银花 item push, got %+v", rewardResult.itemInfos)
 	}
-	if len(rewardResult.questInfos) != 1 || rewardResult.questInfos[0].Title != "采集金银花" {
-		t.Fatalf("expected collection quest info, got %+v", rewardResult.questInfos)
+	if len(rewardResult.questInfos) != 0 {
+		t.Fatalf("expected no synthetic QuestInfo without an accepted matching task, got %+v", rewardResult.questInfos)
 	}
 	if len(rewardResult.questStates) != 1 || rewardResult.questStates[0].Handle != "2810542613719308" || rewardResult.questStates[0].State != 2 {
 		t.Fatalf("expected collection quest state refresh, got %+v", rewardResult.questStates)
@@ -458,8 +458,8 @@ func TestHandlePacketClassicTownCollectionGrantsHuanglianOnMap91(t *testing.T) {
 	if len(rewardResult.itemInfos) != 1 || rewardResult.itemInfos[0].Type != "背包" || rewardResult.itemInfos[0].Name != "黄连" || rewardResult.itemInfos[0].Count != 1 || rewardResult.itemInfos[0].Display != "95.png" {
 		t.Fatalf("expected 黄连 item push, got %+v", rewardResult.itemInfos)
 	}
-	if len(rewardResult.questInfos) != 1 || rewardResult.questInfos[0].Title != "采集黄连" {
-		t.Fatalf("expected collection quest info, got %+v", rewardResult.questInfos)
+	if len(rewardResult.questInfos) != 0 {
+		t.Fatalf("expected no synthetic QuestInfo without an accepted matching task, got %+v", rewardResult.questInfos)
 	}
 }
 
@@ -1683,6 +1683,44 @@ func TestClassicTownShihukuEntryRequiresTicketAndClearsActualTicketSlot(t *testi
 	if len(entry.itemClears) != 1 || entry.itemClears[0].Type != "背包" || entry.itemClears[0].Index != granted.Index {
 		t.Fatalf("expected single shihuku ticket actual slot clear, got clears=%+v granted=%+v", entry.itemClears, granted)
 	}
+}
+
+func TestClassicTownZanglongtanEntryRequiresTicketAndDoesNotChargeInternalTransfer(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 63)
+	if !ok {
+		t.Fatal("expected test role map update to zanglongtan entrance")
+	}
+	socketSession.selectedRole = &role
+	socketSession.playerBase = &playerBase
+
+	rejected := buildClassicTownTransferResult(store, socketSession, "179", world.SpawnPoint{X: 1394, Y: 510})
+	if rejected.townBootstrap != nil || len(rejected.chatMessages) != 1 || !strings.Contains(rejected.chatMessages[0].Msg, "葬龙潭通行证x1") {
+		t.Fatalf("expected zanglongtan entry without ticket to be rejected, got %+v", rejected)
+	}
+
+	granted := grantRoleItemTemplateForTest(t, store, socketSession, "葬龙潭通行证", 1)
+	entry := buildClassicTownTransferResult(store, socketSession, "179", world.SpawnPoint{X: 1394, Y: 510})
+	if entry.townBootstrap == nil || entry.dungeonInstance == nil || !entry.dungeonInstance.Active || entry.dungeonInstance.Key != session.DungeonInstanceZanglongtan || entry.dungeonInstance.DisplayName != "葬龙潭" {
+		t.Fatalf("expected ticketed zanglongtan entry, got %+v", entry)
+	}
+	if len(entry.itemClears) != 1 || entry.itemClears[0].Type != "背包" || entry.itemClears[0].Index != granted.Index {
+		t.Fatalf("expected actual zanglongtan ticket slot clear, got clears=%+v granted=%+v", entry.itemClears, granted)
+	}
+
+	internal := buildClassicTownTransferResult(store, socketSession, "186", world.SpawnPoint{X: 2006, Y: 541})
+	if internal.townBootstrap == nil || internal.dungeonInstance == nil || !internal.dungeonInstance.Active || internal.dungeonInstance.Key != session.DungeonInstanceZanglongtan {
+		t.Fatalf("expected internal zanglongtan transfer, got %+v", internal)
+	}
+	if len(internal.itemInfos) != 0 || len(internal.itemClears) != 0 {
+		t.Fatalf("expected internal zanglongtan transfer not to consume another ticket, got infos=%+v clears=%+v", internal.itemInfos, internal.itemClears)
+	}
+	for _, rolePush := range internal.townBootstrap.CreateRoles {
+		if rolePush.Handle == "9611310624908840" && rolePush.Kind == "monster" && rolePush.DisplayName == "龙娃" && rolePush.Level == 35 && rolePush.SourceQuery == "monstermap/dragonson.swf" {
+			return
+		}
+	}
+	t.Fatalf("expected map186 bootstrap to include captured 龙娃, got %+v", internal.townBootstrap.CreateRoles)
 }
 
 func TestHandlePacketClassicTownAddPointPushesSourcePhysique(t *testing.T) {
@@ -7224,8 +7262,8 @@ func TestHandlePacketClassicQuestLogAndRemove(t *testing.T) {
 	if found.Title != questTitle || found.Level != 1 || found.Type != "main" {
 		t.Fatalf("expected catalog quest %s/%s, got %+v", questID, questTitle, found)
 	}
-	if !strings.Contains(found.Description, "<ml>") || !strings.Contains(found.State, "<over>") {
-		t.Fatalf("expected source tags to remain in QuestInfo, got description=%q state=%q", found.Description, found.State)
+	if !strings.Contains(found.Description, "<ml>") || found.State != "击杀　猴蛙 0/1" {
+		t.Fatalf("expected captured initial QuestInfo state, got description=%q state=%q", found.Description, found.State)
 	}
 
 	removeResult := handlePacketWithSession(store, protocol.Packet{
@@ -7268,6 +7306,31 @@ func TestHandlePacketClassicQuestLogAndRemove(t *testing.T) {
 		if info.Title == questTitle {
 			t.Fatalf("expected removed quest to stay filtered from log, got %+v", logAfterRemove.questInfos)
 		}
+	}
+}
+
+func TestClassicQuestProgressPushesCapturedObjectiveStates(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	if !store.AcceptQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "小试牛刀") {
+		t.Fatal("expected to accept 小试牛刀")
+	}
+
+	info, ok := quest.FindByID("capture-001")
+	if !ok || info.Objective == nil {
+		t.Fatalf("expected captured 小试牛刀 objective, got %+v", info)
+	}
+	initial := classicQuestInfoForRole(store, socketSession, info)
+	if initial.State != "击杀　猴蛙 0/1" {
+		t.Fatalf("expected captured 0/1 state after acceptance, got %+v", initial)
+	}
+
+	pushes := advanceClassicQuestProgressForTargets(store, socketSession, quest.ObjectiveKindKill, []string{"猴蛙"})
+	if len(pushes) != 1 || pushes[0].Title != "小试牛刀" || pushes[0].State != "<over>击杀　猴蛙 1/1" {
+		t.Fatalf("expected captured completion QuestInfo update, got %+v", pushes)
+	}
+	progress, ok := store.QuestProgress(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "小试牛刀")
+	if !ok || progress != 1 {
+		t.Fatalf("expected completed 小试牛刀 progress to persist in store, ok=%v progress=%d", ok, progress)
 	}
 }
 
@@ -7448,6 +7511,9 @@ func TestHandlePacketClassicQuestCompleteGrantsParsedRewards(t *testing.T) {
 	if !store.AcceptQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "蟾蜍之患") {
 		t.Fatal("expected to seed accepted capture-003 quest")
 	}
+	if progress := store.AdvanceQuestProgress(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "蟾蜍之患", 3, 3); !progress.Completed {
+		t.Fatalf("expected capture-003 objective completion, got %+v", progress)
+	}
 	if !store.AcceptQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "天象异常") {
 		t.Fatal("expected to seed accepted capture-009 quest")
 	}
@@ -7521,6 +7587,9 @@ func TestHandlePacketClassicQuestCompleteConsumesRequirements(t *testing.T) {
 	if !store.AcceptQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, questTitle) {
 		t.Fatalf("expected to seed accepted %s quest", questTitle)
 	}
+	if progress := store.AdvanceQuestProgress(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, questTitle, 20, 20); !progress.Completed {
+		t.Fatalf("expected %s objective completion, got %+v", questTitle, progress)
+	}
 	beforeItems, _, ok := store.GetRoleItems(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, "背包")
 	if !ok {
 		t.Fatal("expected bag items")
@@ -7591,6 +7660,9 @@ func TestHandlePacketClassicQuestAnswerCompletesAcceptedQuest(t *testing.T) {
 	if !store.AcceptQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, questTitle) {
 		t.Fatalf("expected to seed accepted %s quest", questTitle)
 	}
+	if progress := store.AdvanceQuestProgress(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, questTitle, 20, 20); !progress.Completed {
+		t.Fatalf("expected %s objective completion, got %+v", questTitle, progress)
+	}
 	ore := session.RoleItem{
 		Type:        "背包",
 		Name:        "碎铁矿",
@@ -7633,6 +7705,9 @@ func TestHandlePacketClassicQuestCompleteRejectsMissingRequirements(t *testing.T
 	const questTitle = "全民锻造"
 	if !store.AcceptQuest(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, questTitle) {
 		t.Fatalf("expected to seed accepted %s quest", questTitle)
+	}
+	if progress := store.AdvanceQuestProgress(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, questTitle, 20, 20); !progress.Completed {
+		t.Fatalf("expected %s objective completion, got %+v", questTitle, progress)
 	}
 
 	result := handlePacketWithSession(store, protocol.Packet{

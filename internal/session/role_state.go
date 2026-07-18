@@ -159,6 +159,31 @@ func decodeRoleCurrencies(raw string) (RoleCurrencies, error) {
 	return normalizeRoleCurrencies(currencies), nil
 }
 
+func encodeRoleContainerCapacities(capacities RoleContainerCapacities) (string, error) {
+	cloned := cloneRoleContainerCapacities(capacities)
+	if len(cloned) == 0 {
+		return "", nil
+	}
+
+	data, err := json.Marshal(cloned)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func decodeRoleContainerCapacities(raw string) (RoleContainerCapacities, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+
+	var capacities RoleContainerCapacities
+	if err := json.Unmarshal([]byte(raw), &capacities); err != nil {
+		return nil, err
+	}
+	return cloneRoleContainerCapacities(capacities), nil
+}
+
 func decodeRoleItems(raw string) ([]RoleItem, error) {
 	if strings.TrimSpace(raw) == "" {
 		return nil, nil
@@ -310,6 +335,15 @@ func cloneRoleTownBuffs(buffs []RoleTownBuff) []RoleTownBuff {
 	return result
 }
 
+func cloneRoleQuestObjectiveProgress(objectives []RoleQuestObjectiveProgress) []RoleQuestObjectiveProgress {
+	if len(objectives) == 0 {
+		return []RoleQuestObjectiveProgress{}
+	}
+	result := make([]RoleQuestObjectiveProgress, len(objectives))
+	copy(result, objectives)
+	return result
+}
+
 func cloneRoleCurrencies(currencies RoleCurrencies) RoleCurrencies {
 	if len(currencies) == 0 {
 		return RoleCurrencies{}
@@ -318,6 +352,20 @@ func cloneRoleCurrencies(currencies RoleCurrencies) RoleCurrencies {
 	result := make(RoleCurrencies, len(currencies))
 	for name, count := range currencies {
 		result[name] = count
+	}
+	return result
+}
+
+func cloneRoleContainerCapacities(capacities RoleContainerCapacities) RoleContainerCapacities {
+	if len(capacities) == 0 {
+		return RoleContainerCapacities{}
+	}
+
+	result := make(RoleContainerCapacities, len(capacities))
+	for containerType, capacity := range capacities {
+		if strings.TrimSpace(containerType) != "" && capacity > 0 {
+			result[containerType] = capacity
+		}
 	}
 	return result
 }
@@ -2021,6 +2069,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.FastPanel = normalizeRoleFastPanel(role.FastPanel)
 	}
 	role.TownBuffs = normalizeRoleTownBuffs(role.TownBuffs)
+	role.ContainerCapacities = cloneRoleContainerCapacities(role.ContainerCapacities)
 	if len(role.Currencies) == 0 {
 		role.Currencies = defaultRoleCurrencies()
 	} else {

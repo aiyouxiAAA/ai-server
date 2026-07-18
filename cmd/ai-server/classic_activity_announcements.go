@@ -34,6 +34,9 @@ func startClassicActivityAnnouncementLoop() {
 			}
 			if phase == classicactivity.BainianChongjingPhaseSpawned && lastBainianPhase != classicactivity.BainianChongjingPhaseSpawned {
 				lastBainianPhase = phase
+				if classicactivity.BainianChongjingIsForcedForDev(now) {
+					continue
+				}
 				if classicactivity.BainianChongjingIsAlive(now) {
 					broadcastClassicBainianChongjingSpawnNotice()
 					broadcastClassicBainianChongjingLiveSpawn()

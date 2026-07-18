@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
+	"ai-server/internal/classicactivity"
 	"ai-server/internal/session"
 )
 
@@ -84,6 +86,12 @@ type devSetLevelResponse struct {
 	Role         *devItemRole `json:"role,omitempty"`
 }
 
+type devBainianChongjingRefreshResponse struct {
+	Success bool     `json:"success"`
+	MapID   int      `json:"mapId"`
+	Handles []string `json:"handles"`
+}
+
 func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 	mux.HandleFunc("/dev/items", devItemsPageHandler)
 	mux.Handle("/dev/classic-icons/", http.StripPrefix("/dev/classic-icons/", http.FileServer(http.Dir(resolveDevClassicIconDir()))))
@@ -115,6 +123,13 @@ func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 		}
 		handleDevSetLevel(writer, request, store)
 	})
+	mux.HandleFunc("/dev/items/refresh-bainian-chongjing", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodPost {
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		handleDevRefreshBainianChongjing(writer, time.Now())
+	})
 }
 
 func resolveDevClassicIconDir() string {
@@ -132,6 +147,18 @@ func devItemsPageHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = devItemsPageTemplate.Execute(writer, nil)
+}
+
+func handleDevRefreshBainianChongjing(writer http.ResponseWriter, now time.Time) {
+	classicactivity.ForceBainianChongjingRefreshForDev(now)
+	broadcastClassicBainianChongjingLiveRemove()
+	broadcastClassicBainianChongjingSpawnNotice()
+	broadcastClassicBainianChongjingLiveSpawn()
+	writeDevJSON(writer, devBainianChongjingRefreshResponse{
+		Success: true,
+		MapID:   classicactivity.BainianChongjingMapID,
+		Handles: classicactivity.BainianChongjingEncounterHandles(),
+	})
 }
 
 func handleDevAddItem(writer http.ResponseWriter, request *http.Request, store *session.Store) {
@@ -532,6 +559,9 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
       </label>
       <button id="addSilverButton">增加银元宝</button>
       <hr>
+      <h2>世界活动</h2>
+      <button id="refreshBainianButton">刷新百年虫精（测试）</button>
+      <hr>
       <h2>添加道具</h2>
       <label>道具 ID / 图标 ID / 名字
         <input id="itemId" list="templateList" placeholder="例如 9、70、70.png、肉">
@@ -577,6 +607,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
     const addSilverButton = document.getElementById('addSilverButton');
     const setLevelButton = document.getElementById('setLevelButton');
     const refreshButton = document.getElementById('refreshButton');
+    const refreshBainianButton = document.getElementById('refreshBainianButton');
     let state = { roles: [], templates: [] };
 
     function setStatus(text, isError) {
@@ -772,11 +803,25 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
       }
     }
 
+    function refreshBainianChongjing() {
+      refreshBainianButton.disabled = true;
+      setStatus('正在刷新百年虫精...', false);
+      fetch('/dev/items/refresh-bainian-chongjing', { method: 'POST' })
+        .then(response => response.json())
+        .then(result => {
+          if (!result.success) throw new Error(result.errorMessage || '刷新失败。');
+          setStatus('百年虫精已刷新至沼泽_9，并已发送全服通知。', false);
+        })
+        .catch(error => setStatus(String(error), true))
+        .finally(() => { refreshBainianButton.disabled = false; });
+    }
+
     roleSelect.addEventListener('change', renderItems);
     refreshButton.addEventListener('click', refresh);
     addButton.addEventListener('click', addItem);
     addSilverButton.addEventListener('click', addSilver);
     setLevelButton.addEventListener('click', setLevel);
+    refreshBainianButton.addEventListener('click', refreshBainianChongjing);
     refresh().catch(error => setStatus(String(error), true));
   </script>
 </body>

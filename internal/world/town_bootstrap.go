@@ -649,6 +649,36 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneSixtySeven.SourceMonsters = map167SourceMonsters
 	definitions[167] = mapOneSixtySeven
 
+	mapOneSeventyNine := definitions[179]
+	mapOneSeventyNine.SourceNPCs = map179SourceNPCs
+	mapOneSeventyNine.SourceMonsters = map179SourceMonsters
+	definitions[179] = mapOneSeventyNine
+
+	mapOneEighty := definitions[180]
+	mapOneEighty.SourceNPCs = map180SourceNPCs
+	mapOneEighty.SourceMonsters = map180SourceMonsters
+	definitions[180] = mapOneEighty
+
+	mapOneEightyOne := definitions[181]
+	mapOneEightyOne.SourceNPCs = map181SourceNPCs
+	mapOneEightyOne.SourceMonsters = map181SourceMonsters
+	definitions[181] = mapOneEightyOne
+
+	mapOneEightyTwo := definitions[182]
+	mapOneEightyTwo.SourceNPCs = map182SourceNPCs
+	mapOneEightyTwo.SourceMonsters = map182SourceMonsters
+	definitions[182] = mapOneEightyTwo
+
+	mapOneEightyFive := definitions[185]
+	mapOneEightyFive.SourceNPCs = map185SourceNPCs
+	mapOneEightyFive.SourceMonsters = map185SourceMonsters
+	definitions[185] = mapOneEightyFive
+
+	mapOneEightySix := definitions[186]
+	mapOneEightySix.SourceNPCs = map186SourceNPCs
+	mapOneEightySix.SourceMonsters = map186SourceMonsters
+	definitions[186] = mapOneEightySix
+
 	mapOneSixtyEight := definitions[168]
 	mapOneSixtyEight.SourceNPCs = map168SourceNPCs
 	definitions[168] = mapOneSixtyEight
@@ -828,7 +858,11 @@ func BuildTownBootstrap(role session.RoleSummary, playerBase session.PlayerBaseD
 	}
 
 	mapDefinition := resolveTownMapBootstrapDefinition(mapID)
-	return buildTownBootstrap(role, playerBase, mapDefinition, mapDefinition.DefaultSpawn)
+	spawn := mapDefinition.DefaultSpawn
+	if role.MapX != 0 && role.MapY != 0 {
+		spawn = SpawnPoint{X: role.MapX, Y: role.MapY}
+	}
+	return buildTownBootstrap(role, playerBase, mapDefinition, spawn)
 }
 
 func BuildTownTransferBootstrap(role session.RoleSummary, playerBase session.PlayerBaseData, mapID int, spawn SpawnPoint) (TownBootstrapSnapshot, bool) {
@@ -913,6 +947,11 @@ func IsShihukuMapID(mapID int) bool {
 	return ok && strings.HasPrefix(mapDefinition.Name, "狮虎窟_")
 }
 
+func IsZanglongtanMapID(mapID int) bool {
+	mapDefinition, ok := townMapBootstrapDefinitions[mapID]
+	return ok && strings.HasPrefix(mapDefinition.Name, "葬龙潭_")
+}
+
 func DungeonInstanceKeyForMapID(mapID int) (string, bool) {
 	switch {
 	case IsShuiliandongMapID(mapID):
@@ -923,6 +962,8 @@ func DungeonInstanceKeyForMapID(mapID int) (string, bool) {
 		return session.DungeonInstanceFeixiandong, true
 	case IsShihukuMapID(mapID):
 		return session.DungeonInstanceShihuku, true
+	case IsZanglongtanMapID(mapID):
+		return session.DungeonInstanceZanglongtan, true
 	default:
 		return "", false
 	}

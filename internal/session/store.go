@@ -41,6 +41,7 @@ const (
 	DungeonInstanceHuangfengzhai = "huangfengzhai"
 	DungeonInstanceFeixiandong   = "feixiandong"
 	DungeonInstanceShihuku       = "shihuku"
+	DungeonInstanceZanglongtan   = "zanglongtan"
 )
 
 const dungeonInstanceTTL = time.Hour
@@ -93,6 +94,8 @@ func DungeonInstanceExpiresAtUnix(state DungeonInstanceState) int64 {
 type RoleAppearance map[string]any
 
 type RoleCurrencies map[string]int
+
+type RoleContainerCapacities map[string]int
 
 type RoleSkill struct {
 	Name        string `json:"name"`
@@ -160,30 +163,33 @@ type LoginResponse struct {
 }
 
 type RoleSummary struct {
-	RoleID            string                          `json:"roleId"`
-	DisplayName       string                          `json:"displayName"`
-	Level             int                             `json:"level"`
-	Exp               int                             `json:"exp"`
-	Voc               string                          `json:"voc,omitempty"`
-	AGI               int                             `json:"AGI,omitempty"`
-	STR               int                             `json:"STR,omitempty"`
-	INT               int                             `json:"INT,omitempty"`
-	CON               int                             `json:"CON,omitempty"`
-	LCK               int                             `json:"LCK,omitempty"`
-	MapID             int                             `json:"mapId"`
-	VisualRoleID      int                             `json:"visualRoleId"`
-	PresetID          int                             `json:"presetId,omitempty"`
-	SourceQuery       string                          `json:"sourceQuery,omitempty"`
-	BattleSourceQuery string                          `json:"battleSourceQuery,omitempty"`
-	Appearance        RoleAppearance                  `json:"appearance,omitempty"`
-	Skills            []RoleSkill                     `json:"skills,omitempty"`
-	FastPanel         []RoleFastPanelEntry            `json:"fastPanel,omitempty"`
-	TownBuffs         []RoleTownBuff                  `json:"townBuffs,omitempty"`
-	Currencies        RoleCurrencies                  `json:"currencies,omitempty"`
-	Items             []RoleItem                      `json:"items,omitempty"`
-	RoleState         *RoleState                      `json:"-"`
-	RolePhysique      *RolePhysique                   `json:"-"`
-	DungeonInstances  map[string]DungeonInstanceState `json:"-"`
+	RoleID              string                          `json:"roleId"`
+	DisplayName         string                          `json:"displayName"`
+	Level               int                             `json:"level"`
+	Exp                 int                             `json:"exp"`
+	Voc                 string                          `json:"voc,omitempty"`
+	AGI                 int                             `json:"AGI,omitempty"`
+	STR                 int                             `json:"STR,omitempty"`
+	INT                 int                             `json:"INT,omitempty"`
+	CON                 int                             `json:"CON,omitempty"`
+	LCK                 int                             `json:"LCK,omitempty"`
+	MapID               int                             `json:"mapId"`
+	MapX                int                             `json:"mapX,omitempty"`
+	MapY                int                             `json:"mapY,omitempty"`
+	VisualRoleID        int                             `json:"visualRoleId"`
+	PresetID            int                             `json:"presetId,omitempty"`
+	SourceQuery         string                          `json:"sourceQuery,omitempty"`
+	BattleSourceQuery   string                          `json:"battleSourceQuery,omitempty"`
+	Appearance          RoleAppearance                  `json:"appearance,omitempty"`
+	Skills              []RoleSkill                     `json:"skills,omitempty"`
+	FastPanel           []RoleFastPanelEntry            `json:"fastPanel,omitempty"`
+	TownBuffs           []RoleTownBuff                  `json:"townBuffs,omitempty"`
+	Currencies          RoleCurrencies                  `json:"currencies,omitempty"`
+	ContainerCapacities RoleContainerCapacities         `json:"containerCapacities,omitempty"`
+	Items               []RoleItem                      `json:"items,omitempty"`
+	RoleState           *RoleState                      `json:"-"`
+	RolePhysique        *RolePhysique                   `json:"-"`
+	DungeonInstances    map[string]DungeonInstanceState `json:"-"`
 }
 
 type DungeonInstanceState struct {
@@ -369,6 +375,21 @@ type RoleQuestCompleteResult struct {
 	Completed    bool
 	ErrorCode    string
 	ErrorMessage string
+}
+
+type RoleQuestProgressResult struct {
+	Current   int
+	Found     bool
+	Updated   bool
+	Completed bool
+}
+
+// RoleQuestObjectiveProgress retains every captured objective for quests that
+// cannot be represented by the legacy single current/target counter.
+type RoleQuestObjectiveProgress struct {
+	Name    string `json:"name"`
+	Current int    `json:"current"`
+	Target  int    `json:"target"`
 }
 
 type RoleItemClear struct {
@@ -564,6 +585,8 @@ type Store struct {
 	accountsByName       map[string]AccountRecord
 	acceptedQuests       map[string]map[string]bool
 	removedQuests        map[string]map[string]bool
+	questProgress        map[string]map[string]int
+	questObjectives      map[string]map[string][]RoleQuestObjectiveProgress
 	rolePersistenceLocks map[string]*sync.Mutex
 	db                   *sql.DB
 	now                  func() time.Time
@@ -608,6 +631,8 @@ func NewStore() *Store {
 		refinementRoll:       defaultEquipmentRefinementRoll,
 		acceptedQuests:       make(map[string]map[string]bool),
 		removedQuests:        make(map[string]map[string]bool),
+		questProgress:        make(map[string]map[string]int),
+		questObjectives:      make(map[string]map[string][]RoleQuestObjectiveProgress),
 		rolePersistenceLocks: make(map[string]*sync.Mutex),
 	}
 }
@@ -910,6 +935,8 @@ func (store *Store) UpdateRoleMap(playerID string, roleID string, mapID int) (Ro
 		}
 
 		roles[index].MapID = mapID
+		roles[index].MapX = 0
+		roles[index].MapY = 0
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist role map failed: %v", err)
@@ -1476,7 +1503,7 @@ func (store *Store) GetRoleContainerCapacity(playerID string, roleID string, con
 	for index := range roles {
 		if roles[index].RoleID == roleID {
 			roles[index] = withRoleRuntimeDefaults(roles[index])
-			return effectiveRoleContainerCapacity(roles[index].Items, containerType, baseCapacity), true
+			return roleContainerCapacityForRole(roles[index], containerType, baseCapacity), true
 		}
 	}
 
@@ -1515,7 +1542,7 @@ func (store *Store) GetRoleItems(playerID string, roleID string, containerType s
 				items = append(items, item)
 			}
 		}
-		capacity := effectiveRoleContainerCapacity(roles[index].Items, containerType, baseCapacity)
+		capacity := roleContainerCapacityForRole(roles[index], containerType, baseCapacity)
 		return cloneRoleItems(items), capacity, true
 	}
 
@@ -1631,6 +1658,84 @@ func (store *Store) AcceptedQuestTitles(playerID string, roleID string) map[stri
 	return cloneBoolMap(store.acceptedQuests[roleID])
 }
 
+func (store *Store) QuestProgress(playerID string, roleID string, title string) (int, bool) {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return 0, false
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if !store.hasRoleLocked(playerID, roleID) || !store.acceptedQuests[roleID][title] {
+		return 0, false
+	}
+	return store.questProgress[roleID][title], true
+}
+
+func (store *Store) QuestObjectiveProgress(playerID string, roleID string, title string) ([]RoleQuestObjectiveProgress, bool) {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return nil, false
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if !store.hasRoleLocked(playerID, roleID) || !store.acceptedQuests[roleID][title] {
+		return nil, false
+	}
+	objectives, ok := store.questObjectives[roleID][title]
+	if !ok {
+		return nil, false
+	}
+	return cloneRoleQuestObjectiveProgress(objectives), true
+}
+
+func (store *Store) AdvanceQuestProgress(playerID string, roleID string, title string, target int, delta int) RoleQuestProgressResult {
+	title = strings.TrimSpace(title)
+	if title == "" || target <= 0 || delta <= 0 {
+		return RoleQuestProgressResult{}
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	if !store.hasRoleLocked(playerID, roleID) || !store.acceptedQuests[roleID][title] {
+		return RoleQuestProgressResult{}
+	}
+	current := store.questProgress[roleID][title]
+	if current < 0 {
+		current = 0
+	}
+	next := current + delta
+	if next > target {
+		next = target
+	}
+	if store.questProgress[roleID] == nil {
+		store.questProgress[roleID] = make(map[string]int)
+	}
+	updated := next != store.questProgress[roleID][title]
+	store.questProgress[roleID][title] = next
+	if updated {
+		if err := store.persistQuestProgressLocked(playerID, roleID, title, next); err != nil {
+			log.Printf("[session.Store] persist quest progress failed roleId=%s title=%s: %v", roleID, title, err)
+		}
+		if objectives := store.questObjectives[roleID][title]; len(objectives) == 1 {
+			objectives[0].Current = next
+			store.questObjectives[roleID][title] = objectives
+			if err := store.persistQuestObjectivesLocked(playerID, roleID, title, objectives); err != nil {
+				log.Printf("[session.Store] persist quest objectives failed roleId=%s title=%s: %v", roleID, title, err)
+			}
+		}
+	}
+	return RoleQuestProgressResult{
+		Current:   next,
+		Found:     true,
+		Updated:   updated,
+		Completed: next >= target,
+	}
+}
+
 func (store *Store) AcceptQuest(playerID string, roleID string, title string) bool {
 	title = strings.TrimSpace(title)
 	if title == "" {
@@ -1659,6 +1764,18 @@ func (store *Store) AcceptQuest(playerID string, roleID string, title string) bo
 	if err := store.deleteRemovedQuestLocked(roleID, title); err != nil {
 		log.Printf("[session.Store] delete removed accepted quest failed roleId=%s title=%s: %v", roleID, title, err)
 	}
+	if store.questProgress[roleID] != nil {
+		delete(store.questProgress[roleID], title)
+	}
+	if store.questObjectives[roleID] != nil {
+		delete(store.questObjectives[roleID], title)
+	}
+	if err := store.deleteQuestProgressLocked(roleID, title); err != nil {
+		log.Printf("[session.Store] delete accepted quest progress failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	if err := store.deleteQuestObjectivesLocked(roleID, title); err != nil {
+		log.Printf("[session.Store] delete accepted quest objectives failed roleId=%s title=%s: %v", roleID, title, err)
+	}
 	return true
 }
 
@@ -1680,6 +1797,12 @@ func (store *Store) MarkQuestRemoved(playerID string, roleID string, title strin
 	if store.acceptedQuests[roleID] != nil {
 		delete(store.acceptedQuests[roleID], title)
 	}
+	if store.questProgress[roleID] != nil {
+		delete(store.questProgress[roleID], title)
+	}
+	if store.questObjectives[roleID] != nil {
+		delete(store.questObjectives[roleID], title)
+	}
 	if store.removedQuests[roleID][title] {
 		return false
 	}
@@ -1689,6 +1812,12 @@ func (store *Store) MarkQuestRemoved(playerID string, roleID string, title strin
 	}
 	if err := store.persistRemovedQuestLocked(playerID, roleID, title); err != nil {
 		log.Printf("[session.Store] persist removed quest failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	if err := store.deleteQuestProgressLocked(roleID, title); err != nil {
+		log.Printf("[session.Store] delete removed quest progress failed roleId=%s title=%s: %v", roleID, title, err)
+	}
+	if err := store.deleteQuestObjectivesLocked(roleID, title); err != nil {
+		log.Printf("[session.Store] delete removed quest objectives failed roleId=%s title=%s: %v", roleID, title, err)
 	}
 	return true
 }
@@ -1807,6 +1936,12 @@ func (store *Store) CompleteQuest(playerID string, roleID string, title string, 
 		}
 
 		delete(store.acceptedQuests[roleID], title)
+		if store.questProgress[roleID] != nil {
+			delete(store.questProgress[roleID], title)
+		}
+		if store.questObjectives[roleID] != nil {
+			delete(store.questObjectives[roleID], title)
+		}
 		if store.removedQuests[roleID] == nil {
 			store.removedQuests[roleID] = make(map[string]bool)
 		}
@@ -1825,6 +1960,12 @@ func (store *Store) CompleteQuest(playerID string, roleID string, title string, 
 		}
 		if err := store.persistRemovedQuestLocked(playerID, roleID, title); err != nil {
 			log.Printf("[session.Store] persist completed quest failed roleId=%s title=%s: %v", roleID, title, err)
+		}
+		if err := store.deleteQuestProgressLocked(roleID, title); err != nil {
+			log.Printf("[session.Store] delete completed quest progress failed roleId=%s title=%s: %v", roleID, title, err)
+		}
+		if err := store.deleteQuestObjectivesLocked(roleID, title); err != nil {
+			log.Printf("[session.Store] delete completed quest objectives failed roleId=%s title=%s: %v", roleID, title, err)
 		}
 
 		completedRole := withRoleRuntimeDefaults(roles[index])
@@ -1904,7 +2045,7 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 		}
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
-		capacity := effectiveRoleContainerCapacity(roles[index].Items, item.Type, baseCapacity)
+		capacity := roleContainerCapacityForRole(roles[index], item.Type, baseCapacity)
 		updatedItems, grantedItem, ok := grantRoleItemToItems(roles[index].Items, capacity, item)
 		if !ok {
 			return RoleItem{}, false
@@ -1969,7 +2110,7 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 		}
 
 		currentRole := withRoleRuntimeDefaults(roles[index])
-		capacity := effectiveRoleContainerCapacity(currentRole.Items, item.Type, baseCapacity)
+		capacity := roleContainerCapacityForRole(currentRole, item.Type, baseCapacity)
 		currentBase := playerBaseDataFromRole(playerID, currentRole)
 		currentCurrencies := cloneRoleCurrencies(currentRole.Currencies)
 		originalCurrencies := cloneRoleCurrencies(currentCurrencies)
@@ -3133,7 +3274,7 @@ func (store *Store) useBagCapacityPatchLocked(playerID string, roles []RoleSumma
 		}
 	}
 
-	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	capacity := roleContainerCapacityForRole(roles[roleIndex], sourceItem.Type, baseCapacity)
 	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
 	updatedResults := []RoleItem{}
 	if updatedSource != nil {
@@ -3187,7 +3328,7 @@ func (store *Store) useLevel1GiftBoxLocked(playerID string, roles []RoleSummary,
 		}
 	}
 
-	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	capacity := roleContainerCapacityForRole(roles[roleIndex], sourceItem.Type, baseCapacity)
 	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
 	updatedResults := []RoleItem{}
 	if updatedSource != nil {
@@ -3281,7 +3422,7 @@ func (store *Store) useLevel5GiftBoxLocked(playerID string, roles []RoleSummary,
 		}
 	}
 
-	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	capacity := roleContainerCapacityForRole(roles[roleIndex], sourceItem.Type, baseCapacity)
 	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
 	updatedResults := []RoleItem{}
 	if updatedSource != nil {
@@ -3375,7 +3516,7 @@ func (store *Store) useLevel10GiftBoxLocked(playerID string, roles []RoleSummary
 		}
 	}
 
-	capacity := effectiveRoleContainerCapacity(roles[roleIndex].Items, sourceItem.Type, baseCapacity)
+	capacity := roleContainerCapacityForRole(roles[roleIndex], sourceItem.Type, baseCapacity)
 	updatedItems, updatedSource, clearedItems := consumeRoleItemBySlot(roles[roleIndex].Items, sourceItem.Type, sourceItem.Index, 1)
 	updatedResults := []RoleItem{}
 	if updatedSource != nil {
@@ -4074,8 +4215,7 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 				itemCount = productItem.Count * quantity
 			}
 		}
-		roles[index].Currencies[payCurrency] -= totalPrice
-		roles[index].Items = normalizeRoleItems(append(roles[index].Items, RoleItem{
+		purchasedItem := RoleItem{
 			Type:        "商城",
 			Name:        itemName,
 			ItemType:    "mall",
@@ -4087,7 +4227,20 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 			EndTime:     0,
 			Owner:       roles[index].DisplayName,
 			ItemLevel:   1,
-		}))
+		}
+		if strings.Contains(itemDescription, "&24@幻·时装") {
+			purchasedItem.ItemType = "equip"
+			purchasedItem.ItemLevel = 2
+		}
+		if template, found := CapturedRoleItemTemplate(itemName); found && template.ItemType == "equip" {
+			purchasedItem.ItemType = template.ItemType
+			purchasedItem.Level = template.Level
+			purchasedItem.EndTime = template.EndTime
+			purchasedItem.Owner = template.Owner
+			purchasedItem.ItemLevel = template.ItemLevel
+		}
+		roles[index].Currencies[payCurrency] -= totalPrice
+		roles[index].Items = normalizeRoleItems(append(roles[index].Items, purchasedItem))
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
 			log.Printf("[session.Store] persist mall purchase failed: %v", err)
@@ -4239,6 +4392,31 @@ func (store *Store) PreviewTryEquip(playerID string, roleID string, itemName str
 			sourceItem, ok = CapturedRoleItemTemplate(itemName)
 		}
 		if !ok {
+			product, found := store.Mall.FindProductByName(itemName)
+			if found && isCapturedFashionAppearanceItem(RoleItem{Name: product.Name}) {
+				display := product.Icon
+				description := product.Description
+				if len(product.Items) > 0 {
+					if product.Items[0].Display != "" {
+						display = product.Items[0].Display
+					}
+					if product.Items[0].Description != "" {
+						description = product.Items[0].Description
+					}
+				}
+				sourceItem = RoleItem{
+					Type:        "商城",
+					Name:        product.Name,
+					ItemType:    "equip",
+					Display:     display,
+					Description: description,
+					Count:       1,
+					ItemLevel:   2,
+				}
+				ok = true
+			}
+		}
+		if !ok {
 			return RoleTryEquipPreviewResult{
 				Role:         role,
 				PlayerBase:   playerBaseDataFromRole(playerID, role),
@@ -4320,7 +4498,7 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
 		baseCapacity, supported := roleContainerCapacity(targetType)
-		capacity := effectiveRoleContainerCapacity(roles[index].Items, targetType, baseCapacity)
+		capacity := roleContainerCapacityForRole(roles[index], targetType, baseCapacity)
 		if supported && targetIndex < 0 {
 			if nextIndex, ok := nextRoleItemIndex(roles[index].Items, targetType, capacity); ok {
 				targetIndex = nextIndex
@@ -4663,6 +4841,18 @@ func effectiveRoleContainerCapacity(items []RoleItem, containerType string, base
 		}
 	}
 	return capacity
+}
+
+func roleContainerCapacityForRole(role RoleSummary, containerType string, baseCapacity int) int {
+	if capacity, ok := role.ContainerCapacities[containerType]; ok && capacity > 0 {
+		for _, item := range role.Items {
+			if item.Type == containerType && item.Index >= capacity {
+				return effectiveRoleContainerCapacity(role.Items, containerType, baseCapacity)
+			}
+		}
+		return capacity
+	}
+	return effectiveRoleContainerCapacity(role.Items, containerType, baseCapacity)
 }
 
 func roundUpBagCapacity(required int) int {
@@ -5131,8 +5321,8 @@ func roleEquipTargetIndex(item RoleItem) (int, bool) {
 	if item.ItemType != "equip" {
 		return 0, false
 	}
-	if _, ok := roleItemAppearanceSourceParams(item); ok {
-		return roleFashionClothIndex, true
+	if isCapturedFashionAppearanceItem(item) {
+		return roleFashionEquipIndex, true
 	}
 	switch item.Name {
 	case "铁斧":
@@ -5187,8 +5377,8 @@ func roleEquipTargetIndex(item RoleItem) (int, bool) {
 }
 
 func roleTryEquipReplacementIndices(item RoleItem, targetIndex int) []int {
-	if _, ok := roleItemAppearanceSourceParams(item); ok {
-		return []int{roleFashionClothIndex, roleFashionPantsIndex, roleFashionShoesIndex}
+	if isCapturedFashionAppearanceItem(item) {
+		return []int{0, roleFashionEquipIndex, roleFashionClothIndex, roleFashionPantsIndex, roleFashionShoesIndex, roleMountEquipIndex}
 	}
 	return []int{targetIndex}
 }
@@ -5203,7 +5393,12 @@ func roleItemIndexMatches(index int, candidates []int) bool {
 }
 
 func applyRoleItemAppearanceToSourceQuery(sourceQuery string, item RoleItem) string {
-	if params, ok := roleItemAppearanceSourceParams(item); ok {
+	if params, ok := capturedFashionAppearanceSourceParams(item, sourceQuery); ok {
+		// Captured full-fashion URLs do not retain ordinary head, shoulder,
+		// wrist, waist, clothing, pants, shoes, or mount source parameters.
+		for _, key := range []string{"h", "a", "wr", "b", "c", "p", "se", "r"} {
+			sourceQuery = removeSourceQueryParam(sourceQuery, key)
+		}
 		for _, param := range params {
 			sourceQuery = setSourceQueryParam(sourceQuery, param.key, param.value)
 		}
@@ -5264,6 +5459,11 @@ func rebuildRoleEquipmentAppearanceSourceQuery(sourceQuery string, items []RoleI
 		}
 	}
 	sort.SliceStable(equipment, func(left int, right int) bool {
+		leftFashion := isCapturedFashionAppearanceItem(equipment[left])
+		rightFashion := isCapturedFashionAppearanceItem(equipment[right])
+		if leftFashion != rightFashion {
+			return !leftFashion
+		}
 		return equipment[left].Index < equipment[right].Index
 	})
 	for _, item := range equipment {
@@ -5280,7 +5480,7 @@ func clearRoleEquipmentAppearanceSourceQuery(sourceQuery string) string {
 }
 
 func roleEquipmentAppearanceSourceKeys() []string {
-	keys := []string{"w", "h", "a", "g", "c", "b", "wr", "se", "p", "r"}
+	keys := []string{"w", "h", "a", "g", "c", "b", "wr", "se", "p", "r", "f", "sh", "ha", "bo", "fe", "l"}
 	for index := 1; index <= 20; index += 1 {
 		keys = append(keys, fmt.Sprintf("w%d", index))
 	}
@@ -5290,31 +5490,6 @@ func roleEquipmentAppearanceSourceKeys() []string {
 type roleItemAppearanceSourceParamPair struct {
 	key   string
 	value string
-}
-
-func roleItemAppearanceSourceParams(item RoleItem) ([]roleItemAppearanceSourceParamPair, bool) {
-	switch item.Name {
-	case "普通礼服":
-		return []roleItemAppearanceSourceParamPair{
-			{key: "c", value: "61"},
-			{key: "p", value: "63"},
-			{key: "se", value: "49"},
-		}, true
-	case "超时空要塞":
-		return []roleItemAppearanceSourceParamPair{
-			{key: "c", value: "88"},
-			{key: "p", value: "91"},
-			{key: "se", value: "79"},
-		}, true
-	case "盛夏缤纷":
-		return []roleItemAppearanceSourceParamPair{
-			{key: "c", value: "52"},
-			{key: "p", value: "55"},
-			{key: "se", value: "41"},
-			{key: "hr", value: "19"},
-		}, true
-	}
-	return nil, false
 }
 
 func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
@@ -5335,6 +5510,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "w1", "55", true
 	case "伏魔棍":
 		return "w11", "53", true
+	case "朽木断浪":
+		return "w11", "60", true
 	case "天魁":
 		return "w1", "62", true
 	case "央月九影":
@@ -5347,6 +5524,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "c", "6", true
 	case "八极法杖":
 		return "w10", "21", true
+	case "流云法杖":
+		return "w10", "58", true
 	case "八极护肩":
 		return "a", "3", true
 	case "八极护腿":
@@ -5453,6 +5632,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "h", "8", true
 	case "威武面甲":
 		return "h", "12", true
+	case "珍元面甲":
+		return "h", "57", true
 	case "黄风围巾":
 		return "h", "30", true
 	case "蛮力护腰":
@@ -5469,6 +5650,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "a", "4", true
 	case "威武护肩":
 		return "a", "10", true
+	case "流云护肩":
+		return "a", "16", true
 	case "蓝晶护肩":
 		return "a", "34", true
 	case "蚩颅王护肩":
@@ -5823,12 +6006,20 @@ func (store *Store) RemoveRole(request RoleRemoveRequest) RoleRemoveResponse {
 	if removed {
 		delete(store.removedQuests, request.RoleID)
 		delete(store.acceptedQuests, request.RoleID)
+		delete(store.questProgress, request.RoleID)
+		delete(store.questObjectives, request.RoleID)
 		if store.db != nil {
 			if _, err := store.db.Exec(`DELETE FROM role_accepted_quests WHERE role_id = ?`, request.RoleID); err != nil {
 				log.Printf("[session.Store] delete removed role accepted quest state failed roleId=%s: %v", request.RoleID, err)
 			}
 			if _, err := store.db.Exec(`DELETE FROM role_removed_quests WHERE role_id = ?`, request.RoleID); err != nil {
 				log.Printf("[session.Store] delete removed role quest state failed roleId=%s: %v", request.RoleID, err)
+			}
+			if _, err := store.db.Exec(`DELETE FROM role_quest_progress WHERE role_id = ?`, request.RoleID); err != nil {
+				log.Printf("[session.Store] delete removed role quest progress failed roleId=%s: %v", request.RoleID, err)
+			}
+			if _, err := store.db.Exec(`DELETE FROM role_quest_objectives WHERE role_id = ?`, request.RoleID); err != nil {
+				log.Printf("[session.Store] delete removed role quest objectives failed roleId=%s: %v", request.RoleID, err)
 			}
 		}
 		store.rolesByPID[request.PlayerID] = updatedRoles

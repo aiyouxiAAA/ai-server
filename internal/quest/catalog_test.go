@@ -2,6 +2,27 @@ package quest
 
 import "testing"
 
+func TestCatalogParsesCapturedQuestObjectives(t *testing.T) {
+	kill, ok := FindByID("capture-001")
+	if !ok || kill.Objective == nil {
+		t.Fatalf("expected captured kill objective, got %+v", kill)
+	}
+	if kill.Objective.Kind != ObjectiveKindKill || kill.Objective.Target != "猴蛙" || kill.Objective.Required != 1 {
+		t.Fatalf("expected 猴蛙 kill objective, got %+v", kill.Objective)
+	}
+	if state := kill.Objective.StateForProgress(0); state != "击杀　猴蛙 0/1" {
+		t.Fatalf("expected captured initial objective state, got %q", state)
+	}
+	if state := kill.Objective.StateForProgress(1); state != "<over>击杀　猴蛙 1/1" {
+		t.Fatalf("expected captured completion objective state, got %q", state)
+	}
+
+	collection, ok := FindByID("capture-008")
+	if !ok || collection.Objective == nil || collection.Objective.Kind != ObjectiveKindCollection || collection.Objective.Target != "朽木" || collection.Objective.Required != 3 {
+		t.Fatalf("expected captured wood collection objective, got %+v", collection)
+	}
+}
+
 func TestCatalogParsesCapturedQuestRewards(t *testing.T) {
 	info, ok := FindByID("capture-003")
 	if !ok {
@@ -231,8 +252,8 @@ func TestCatalogIncludesExtendedBaiyuanQuestChain(t *testing.T) {
 	}
 
 	redArtifact, _ := FindByID("capture-211")
-	if len(redArtifact.Routes) != 0 || redArtifact.QuestStateHandle != "" {
-		t.Fatalf("expected red artifact to stay QuestInfo-only until c_Speak evidence appears, got %+v", redArtifact)
+	if len(redArtifact.Routes) != 2 || redArtifact.Routes[0].MsgHandle != "5q26d_1" || redArtifact.Routes[1].AnswerHandle != "5q26a_2_1" || redArtifact.QuestStateHandle != "" {
+		t.Fatalf("expected captured red-artifact dialogue routes without QuestState mapping, got %+v", redArtifact)
 	}
 	rescue, _ := FindByID("capture-218")
 	if len(rescue.Routes) != 2 || rescue.Routes[0].AnswerHandle != "6q34gs" || rescue.Routes[1].MsgHandle != "6q34d_2" {
@@ -320,6 +341,7 @@ func TestCatalogIncludesInstanceCaptureQuestExpansion(t *testing.T) {
 		"capture-344": "消灭砂岩蜘蛛", "capture-345": "消灭仙人刺球", "capture-346": "一切随缘",
 		"capture-347": "异常天象", "capture-348": "远来的信件", "capture-349": "灾难降临",
 		"capture-350": "赵马夫的行踪", "capture-351": "赵马夫的行踪【贰】", "capture-352": "足见成效",
+		"capture-353": "幻化龙娃",
 	}
 	for id, title := range expected {
 		info, ok := FindByID(id)
@@ -334,6 +356,9 @@ func TestCatalogIncludesInstanceCaptureQuestExpansion(t *testing.T) {
 
 func TestAllCatalogRowsHaveGrantRewardMarker(t *testing.T) {
 	for _, info := range All() {
+		if len(info.Routes) == 0 {
+			t.Fatalf("expected captured NPC route for %s %s", info.ID, info.Title)
+		}
 		if info.Reward.Experience <= 0 && len(info.Reward.Items) == 0 && len(info.Reward.Skills) == 0 {
 			t.Fatalf("expected parsed grant reward for %s %s, got %+v", info.ID, info.Title, info.Reward)
 		}

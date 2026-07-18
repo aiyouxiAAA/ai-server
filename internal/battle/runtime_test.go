@@ -278,6 +278,7 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 		t.Fatal("expected final target")
 	}
 	finalTarget.HP = 1
+	finalTarget.Dog = 0
 	finalResult := finalRuntime.ProcessAction(ActionRequest{
 		BattleID:     finalBundle.Start.BattleID,
 		ActorHandle:  leader.Role.RoleID,
@@ -993,7 +994,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 		{mapID: "63", names: []string{"金斑鳄", "金斑鳄"}, maxHPs: []int{980, 1020}, attacks: []int{270, 278}},
 		{mapID: "172", names: []string{"玄龟兽", "玄龟兽"}, maxHPs: []int{1221, 1260}, attacks: []int{273, 273}},
 		{mapID: "173", names: []string{"玄龟兽"}, maxHPs: []int{1221}, attacks: []int{273}},
-		{mapID: "174", names: []string{"玄龟兽"}, maxHPs: []int{1260}, attacks: []int{273}},
+		{mapID: "174", names: []string{"玄龟兽", "毒蜂"}, maxHPs: []int{1260, 850}, attacks: []int{273, 278}},
 		{mapID: "175", names: []string{"赤蛰子", "毒蜂", "玄龟兽"}, maxHPs: []int{3100, 850, 1260}, attacks: []int{330, 278, 313}},
 		{mapID: "177", names: []string{"赤蛰子", "毒蜂"}, maxHPs: []int{3100, 850}, attacks: []int{304, 281}},
 		{mapID: "178", names: []string{"毒蜂"}, maxHPs: []int{850}, attacks: []int{282}},
@@ -1034,7 +1035,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok || reward.ExpDelta != 0 {
 		t.Fatalf("expected 百年虫精 reward exp 0, got %+v", reward)
 	}
-	wantItems := []string{"宠物成长药剂x5", "铜钱x500", "魔匣x2", "阴阳结x1"}
+	wantItems := []string{"宠物成长药剂x6", "铜钱x500", "魔匣x2", "阴阳结x1", "回魂丹x1"}
 	if len(reward.Items) != len(wantItems) {
 		t.Fatalf("expected 百年虫精 reward items %+v, got %+v", wantItems, reward.Items)
 	}
@@ -1058,6 +1059,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 
 func TestCaptureBackedYaozhisenNormalAttackUsesConfiguredRange(t *testing.T) {
 	defer useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
+	defer useSourceEncounterRoll(func(int) int { return 227 })()
 
 	enemy, ok := sourceEnemyConfigForMap("201")
 	if !ok || enemy.AttackMin != 218 || enemy.AttackMax != 420 {
@@ -1978,18 +1980,21 @@ func TestNewWildBattleSupportsCapturedBambooMaps(t *testing.T) {
 		displayURL string
 		queueTeam  int
 		queueEnemy int
+		roll       int
 	}{
 		{mapID: "84", mapName: "竹林_1", enemyName: "绿甲螳螂", displayURL: "monstermap/greenmantis.swf", queueTeam: 1, queueEnemy: 4},
 		{mapID: "85", mapName: "竹林_2", enemyName: "绿甲螳螂", displayURL: "monstermap/greenmantis.swf", queueTeam: 1, queueEnemy: 4},
 		{mapID: "86", mapName: "竹林_3", enemyName: "小竹妖", displayURL: "monstermap/bambooboy.swf", queueTeam: 1, queueEnemy: 4},
 		{mapID: "87", mapName: "竹林_4", enemyName: "跳跳竹", displayURL: "monstermap/jumpboo.swf", queueTeam: 1, queueEnemy: 4},
 		{mapID: "88", mapName: "竹林_5", enemyName: "刀手螳螂", displayURL: "monstermap/kinfemantis.swf", queueTeam: 1, queueEnemy: 4},
-		{mapID: "90", mapName: "竹林_7", enemyName: "竹炮", displayURL: "monstermap/boobomb.swf", queueTeam: 1, queueEnemy: 4},
-		{mapID: "97", mapName: "竹林_10", enemyName: "小竹妖", displayURL: "monstermap/bambooboy.swf", queueTeam: 1, queueEnemy: 4},
+		{mapID: "90", mapName: "竹林_7", enemyName: "小竹妖", displayURL: "monstermap/bambooboy.swf", queueTeam: 1, queueEnemy: 4},
+		{mapID: "97", mapName: "竹林_10", enemyName: "小竹妖", displayURL: "monstermap/bambooboy.swf", queueTeam: 1, queueEnemy: 4, roll: 5},
 	}
 
 	for _, testCase := range cases {
+		restore := useSourceEncounterRoll(func(int) int { return testCase.roll })
 		runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{MapID: testCase.mapID, MapName: testCase.mapName})
+		restore()
 		if !ok || runtime == nil {
 			t.Fatalf("expected captured bamboo map %s to start battle, got ok=%v runtime=%+v", testCase.mapID, ok, runtime)
 		}
@@ -2022,31 +2027,32 @@ func TestNewWildBattleSupportsCaptureBackedYaozhisenMaps(t *testing.T) {
 	}
 
 	cases := []struct {
-		mapID       string
-		mapName     string
-		enemyName   string
-		displayURL  string
-		cellCount   int
-		stageFocusX float64
+		mapID      string
+		mapName    string
+		enemyName  string
+		displayURL string
+		cellCount  int
+		roll       int
 	}{
-		{mapID: "192", mapName: "妖之森_1", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2},
-		{mapID: "193", mapName: "妖之森_2", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2},
-		{mapID: "196", mapName: "妖之森_5", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2},
-		{mapID: "198", mapName: "妖之森_7", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 2},
-		{mapID: "199", mapName: "妖之森_8", enemyName: "机木玄师", displayURL: "monstermap/robothyun.swf", cellCount: 3},
-		{mapID: "200", mapName: "妖之森_9", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 2},
-		{mapID: "201", mapName: "妖之森_10", enemyName: "机木玄师", displayURL: "monstermap/robothyun.swf", cellCount: 2},
-		{mapID: "202", mapName: "妖之森_11", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 3},
-		{mapID: "204", mapName: "妖之森_13", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 3},
-		{mapID: "205", mapName: "妖之森_14", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 4},
+		{mapID: "192", mapName: "妖之森_1", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2, roll: 0},
+		{mapID: "193", mapName: "妖之森_2", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2, roll: 0},
+		{mapID: "196", mapName: "妖之森_5", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 2, roll: 0},
+		{mapID: "198", mapName: "妖之森_7", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 2, roll: 0},
+		{mapID: "199", mapName: "妖之森_8", enemyName: "机木玄师", displayURL: "monstermap/robothyun.swf", cellCount: 3, roll: 0},
+		{mapID: "200", mapName: "妖之森_9", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 2, roll: 6},
+		{mapID: "201", mapName: "妖之森_10", enemyName: "机木玄师", displayURL: "monstermap/robothyun.swf", cellCount: 2, roll: 227},
+		{mapID: "202", mapName: "妖之森_11", enemyName: "机木锥兵", displayURL: "monstermap/robotawl.swf", cellCount: 3, roll: 0},
+		{mapID: "204", mapName: "妖之森_13", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 3, roll: 0},
+		{mapID: "205", mapName: "妖之森_14", enemyName: "机木斧兵", displayURL: "monstermap/robotax.swf", cellCount: 4, roll: 0},
 	}
 
 	for _, testCase := range cases {
+		restore := useSourceEncounterRoll(func(int) int { return testCase.roll })
 		runtime, bundle, ok := NewWildBattle(role, playerBase, StartRequest{
-			MapID:       testCase.mapID,
-			MapName:     testCase.mapName,
-			StageFocusX: testCase.stageFocusX,
+			MapID:   testCase.mapID,
+			MapName: testCase.mapName,
 		})
+		restore()
 		if !ok || runtime == nil || len(bundle.Cells) != testCase.cellCount {
 			t.Fatalf("expected capture-backed map %s to start with %d cells, ok=%v runtime=%+v bundle=%+v", testCase.mapID, testCase.cellCount, ok, runtime, bundle)
 		}
@@ -2056,25 +2062,35 @@ func TestNewWildBattleSupportsCaptureBackedYaozhisenMaps(t *testing.T) {
 		}
 	}
 
-	_, map196BossBundle, map196BossOK := NewWildBattle(role, playerBase, StartRequest{MapID: "196", MapName: "妖之森_5", StageFocusX: 800})
-	if !map196BossOK || len(map196BossBundle.Cells) != 5 || map196BossBundle.Cells[1].Name != "机木妖帅" || map196BossBundle.Cells[2].Name != "机木玄师" || map196BossBundle.Cells[4].Name != "机木锥兵" {
+	restore := useSourceEncounterRoll(func(int) int { return 6 })
+	_, map196BossBundle, map196BossOK := NewWildBattle(role, playerBase, StartRequest{MapID: "196", MapName: "妖之森_5"})
+	restore()
+	if !map196BossOK || len(map196BossBundle.Cells) != 5 || map196BossBundle.Cells[1].Name != "机木玄师" || map196BossBundle.Cells[3].Name != "机木妖帅" || map196BossBundle.Cells[4].Name != "机木锥兵" {
 		t.Fatalf("expected captured map196 boss composition, got %+v", map196BossBundle.Cells)
 	}
 
-	_, map200MixedBundle, map200MixedOK := NewWildBattle(role, playerBase, StartRequest{MapID: "200", MapName: "妖之森_9", StageFocusX: 800})
-	if !map200MixedOK || len(map200MixedBundle.Cells) != 3 || map200MixedBundle.Cells[1].Name != "机木锥兵" || map200MixedBundle.Cells[2].Name != "机木斧兵" {
+	restore = useSourceEncounterRoll(func(int) int { return 0 })
+	_, map200MixedBundle, map200MixedOK := NewWildBattle(role, playerBase, StartRequest{MapID: "200", MapName: "妖之森_9"})
+	restore()
+	if !map200MixedOK || len(map200MixedBundle.Cells) != 3 || map200MixedBundle.Cells[1].Name != "机木斧兵" || map200MixedBundle.Cells[2].Name != "机木锥兵" {
 		t.Fatalf("expected captured map200 mixed composition, got %+v", map200MixedBundle.Cells)
 	}
 
-	_, map201DoubleBundle, map201DoubleOK := NewWildBattle(role, playerBase, StartRequest{MapID: "201", MapName: "妖之森_10", StageFocusX: 800})
+	restore = useSourceEncounterRoll(func(int) int { return 0 })
+	_, map201DoubleBundle, map201DoubleOK := NewWildBattle(role, playerBase, StartRequest{MapID: "201", MapName: "妖之森_10"})
+	restore()
 	if !map201DoubleOK || len(map201DoubleBundle.Cells) != 3 {
 		t.Fatalf("expected captured map201 double mystic candidate, got %+v", map201DoubleBundle.Cells)
 	}
 }
 
 func TestNewWildBattleUsesCapturedPlainEnemyStats(t *testing.T) {
-	defer useSourceEncounterRoll(func(maxExclusive int) int {
-		return maxExclusive - 1
+	rolls := []int{0, 0, 31, 426}
+	rollIndex := 0
+	defer useSourceEncounterRoll(func(int) int {
+		roll := rolls[rollIndex]
+		rollIndex++
+		return roll
 	})()
 
 	role := session.RoleSummary{
@@ -2127,9 +2143,7 @@ func TestNewWildBattleUsesCapturedPlainEnemyStats(t *testing.T) {
 }
 
 func TestNewWildBattleUsesExpandedCapturedPlainEnemyStats(t *testing.T) {
-	defer useSourceEncounterRoll(func(maxExclusive int) int {
-		return maxExclusive - 1
-	})()
+	defer useSourceEncounterRoll(func(int) int { return 0 })()
 
 	role := session.RoleSummary{
 		RoleID:      "player_21424",
@@ -2158,15 +2172,15 @@ func TestNewWildBattleUsesExpandedCapturedPlainEnemyStats(t *testing.T) {
 	}{
 		{mapID: "34", mapName: "平原_3", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 12, maxHP: 260, maxMP: 155, attack: 193, cellCount: 2},
 		{mapID: "35", mapName: "平原_4", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 13, maxHP: 295, maxMP: 162, attack: 211, cellCount: 2},
-		{mapID: "36", mapName: "平原_5", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 13, maxHP: 280, maxMP: 145, attack: 164, cellCount: 3},
+		{mapID: "36", mapName: "平原_5", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 13, maxHP: 280, maxMP: 145, attack: 164, cellCount: 2},
 		{mapID: "39", mapName: "平原_8", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 280, maxMP: 130, attack: 200, cellCount: 2},
 		{mapID: "40", mapName: "平原_9", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 280, maxMP: 130, attack: 200, cellCount: 2},
 		{mapID: "41", mapName: "平原_10", enemyName: "牙菇", displayURL: "monstermap/yagu.swf", level: 10, maxHP: 250, maxMP: 190, attack: 229, cellCount: 2},
 		{mapID: "43", mapName: "平原_12", enemyName: "刺鸟", displayURL: "monstermap/swordbird.swf", level: 11, maxHP: 230, maxMP: 160, attack: 175, cellCount: 2},
 		{mapID: "44", mapName: "平原_13", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 250, maxMP: 130, attack: 187, cellCount: 2},
 		{mapID: "48", mapName: "平原_14", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 14, maxHP: 330, maxMP: 210, attack: 171, cellCount: 2},
-		{mapID: "50", mapName: "平原_16", enemyName: "巡路小鬼", displayURL: "monstermap/lilghost.swf", level: 16, maxHP: 520, maxMP: 160, attack: 203, cellCount: 3},
-		{mapID: "51", mapName: "平原_17", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 18, maxHP: 470, maxMP: 220, attack: 202, cellCount: 3},
+		{mapID: "50", mapName: "平原_16", enemyName: "巡路小鬼", displayURL: "monstermap/lilghost.swf", level: 17, maxHP: 545, maxMP: 184, attack: 216, cellCount: 2},
+		{mapID: "51", mapName: "平原_17", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 18, maxHP: 470, maxMP: 220, attack: 202, cellCount: 2},
 	}
 
 	for _, testCase := range cases {
@@ -2188,9 +2202,7 @@ func TestNewWildBattleUsesExpandedCapturedPlainEnemyStats(t *testing.T) {
 }
 
 func TestNewWildBattleSupportsCaptureBackedGrasslandMaps(t *testing.T) {
-	defer useSourceEncounterRoll(func(maxExclusive int) int {
-		return maxExclusive - 1
-	})()
+	defer useSourceEncounterRoll(func(int) int { return 0 })()
 
 	role := session.RoleSummary{
 		RoleID:      "player_grassland",
@@ -2233,11 +2245,7 @@ func TestNewWildBattleSupportsCaptureBackedGrasslandMaps(t *testing.T) {
 	}
 }
 
-func TestNewWildBattleSelectsCapturedMapCandidatesByStageFocusX(t *testing.T) {
-	defer useSourceEncounterRoll(func(maxExclusive int) int {
-		return maxExclusive - 1
-	})()
-
+func TestNewWildBattleSelectsCapturedEncounterWeightBoundaries(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:      "player_21424",
 		DisplayName: "恐龙抗狼1",
@@ -2255,7 +2263,7 @@ func TestNewWildBattleSelectsCapturedMapCandidatesByStageFocusX(t *testing.T) {
 	cases := []struct {
 		mapID          string
 		mapName        string
-		stageFocusX    float64
+		roll           int
 		handle         string
 		enemyName      string
 		level          int
@@ -2265,34 +2273,36 @@ func TestNewWildBattleSelectsCapturedMapCandidatesByStageFocusX(t *testing.T) {
 		encounterLabel string
 		enemyCount     int
 	}{
-		{mapID: "50", mapName: "平原_16", stageFocusX: 0, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, attack: 203, encounterLabel: "平原_16 暗雷", enemyCount: 2},
-		{mapID: "50", mapName: "平原_16", stageFocusX: 800, enemyName: "巡路小鬼", level: 17, maxHP: 545, maxMP: 184, attack: 216, encounterLabel: "平原_16 暗雷", enemyCount: 2},
-		{mapID: "50", mapName: "平原_16", stageFocusX: 1600, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, attack: 203, encounterLabel: "平原_16 暗雷", enemyCount: 2},
-		{mapID: "40", mapName: "平原_9", stageFocusX: 800, handle: "6132760366794317", enemyName: "刺鸟", level: 11, maxHP: 230, maxMP: 160, attack: 175, encounterLabel: "平原_9 暗雷", enemyCount: 1},
-		{mapID: "52", mapName: "平原_18", stageFocusX: 800, handle: "7014979944725157", enemyName: "巡路小鬼", level: 18, maxHP: 545, maxMP: 184, attack: 216, encounterLabel: "平原_18 暗雷", enemyCount: 1},
-		{mapID: "52", mapName: "平原_18", stageFocusX: 1600, handle: "1478600550966619", enemyName: "单刀狼人", level: 21, maxHP: 2500, maxMP: 334, attack: 260, encounterLabel: "平原_18 首领", enemyCount: 4},
+		{mapID: "36", mapName: "平原_5", roll: 123, handle: "6093598288385864", enemyName: "爆骨猪", level: 13, maxHP: 265, maxMP: 162, attack: 210, encounterLabel: "平原_5 暗雷", enemyCount: 1},
+		{mapID: "40", mapName: "平原_9", roll: 4392, handle: "6132760366794317", enemyName: "刺鸟", level: 11, maxHP: 230, maxMP: 160, attack: 175, encounterLabel: "平原_9 暗雷", enemyCount: 1},
+		{mapID: "50", mapName: "平原_16", roll: 50, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, attack: 203, encounterLabel: "平原_16 暗雷", enemyCount: 2},
+		{mapID: "52", mapName: "平原_18", roll: 0, handle: "7014979944725157", enemyName: "巡路小鬼", level: 18, maxHP: 545, maxMP: 184, attack: 216, encounterLabel: "平原_18 暗雷", enemyCount: 1},
+		{mapID: "52", mapName: "平原_18", roll: 836, handle: "1478600550966619", enemyName: "单刀狼人", level: 21, maxHP: 2500, maxMP: 334, attack: 260, encounterLabel: "平原_18 首领", enemyCount: 4},
+		{mapID: "173", mapName: "沼泽_11", roll: 304, handle: "2500770180184588", enemyName: "玄龟兽", level: 28, maxHP: 1221, maxMP: 200, attack: 273, encounterLabel: "沼泽_11 暗雷", enemyCount: 3},
+		{mapID: "201", mapName: "妖之森_10", roll: 227, handle: "capture-201-robothyun-lv34", enemyName: "机木玄师", level: 34, maxHP: 1189, maxMP: 910, attack: 239, encounterLabel: "妖之森_10 暗雷", enemyCount: 1},
 	}
 
 	for _, testCase := range cases {
+		restore := useSourceEncounterRoll(func(int) int { return testCase.roll })
 		_, bundle, ok := NewWildBattle(role, playerBase, StartRequest{
-			MapID:       testCase.mapID,
-			MapName:     testCase.mapName,
-			StageFocusX: testCase.stageFocusX,
+			MapID:   testCase.mapID,
+			MapName: testCase.mapName,
 		})
+		restore()
 		if !ok || len(bundle.Cells) != testCase.enemyCount+1 {
-			t.Fatalf("expected captured candidate for map %s at %.0f, got ok=%v bundle=%+v", testCase.mapID, testCase.stageFocusX, ok, bundle)
+			t.Fatalf("expected weighted captured candidate for map %s roll %d, got ok=%v bundle=%+v", testCase.mapID, testCase.roll, ok, bundle)
 		}
 		if bundle.Start.EncounterLabel != testCase.encounterLabel {
 			t.Fatalf("expected encounter label %s, got %+v", testCase.encounterLabel, bundle.Start)
 		}
 		enemy := bundle.Cells[1]
 		if enemy.Name != testCase.enemyName || enemy.Level != testCase.level || enemy.MaxHP != testCase.maxHP || enemy.MaxMP != testCase.maxMP || enemy.Attack != testCase.attack {
-			t.Fatalf("expected candidate enemy for map %s at %.0f, got %+v", testCase.mapID, testCase.stageFocusX, enemy)
+			t.Fatalf("expected weighted candidate enemy for map %s roll %d, got %+v", testCase.mapID, testCase.roll, enemy)
 		}
 		if testCase.handle != "" && enemy.Handle != testCase.handle {
-			t.Fatalf("expected source handle %s for map %s at %.0f, got %+v", testCase.handle, testCase.mapID, testCase.stageFocusX, enemy)
+			t.Fatalf("expected source handle %s for map %s roll %d, got %+v", testCase.handle, testCase.mapID, testCase.roll, enemy)
 		}
-		if testCase.mapID == "52" && testCase.stageFocusX == 1600 {
+		if testCase.mapID == "52" && testCase.roll == 836 {
 			names := []string{bundle.Cells[1].Name, bundle.Cells[2].Name, bundle.Cells[3].Name, bundle.Cells[4].Name}
 			if names[0] != "单刀狼人" || names[1] != "盗贼" || names[2] != "盗贼" || names[3] != "盗贼" {
 				t.Fatalf("expected captured 平原_18 boss encounter 单刀狼人 + 3 盗贼, got %+v", names)
@@ -2335,7 +2345,7 @@ func TestNewWildBattleRandomizesCapturedNormalEnemyCountButKeepsBossFixed(t *tes
 	}
 
 	restore = useSourceEncounterRoll(func(maxExclusive int) int {
-		return 0
+		return maxExclusive - 1
 	})
 	_, bossBundle, bossOK := NewWildBattle(role, playerBase, StartRequest{MapID: "52", MapName: "平原_18", StageFocusX: 1600})
 	restore()
@@ -3480,21 +3490,28 @@ func TestSourceBattleSkillProfileUsesClassicDataSkillTable(t *testing.T) {
 	if !ok {
 		t.Fatal("expected classicdata skill row for 投毒")
 	}
-	if commandID := sourceBattleSkillCommandID("投毒"); commandID != row["command_id"] {
-		t.Fatalf("expected 投毒 command id from classicdata %q, got %q", row["command_id"], commandID)
+	levelRows, err := classicdata.FindSkillLevelRowsBySkillID(row["skill_id"])
+	if err != nil {
+		t.Fatalf("FindSkillLevelRowsBySkillID error = %v", err)
+	}
+	if len(levelRows) != 1 || levelRows[0]["level"] != "1" || levelRows[0]["source_action_label"] != "w3/drugAtk" {
+		t.Fatalf("expected 投毒 Lv1 skill-level row, got %+v", levelRows)
+	}
+	if commandID := sourceBattleSkillCommandID("投毒"); commandID != row["skill_id"] {
+		t.Fatalf("expected 投毒 command id from skill master %q, got %q", row["skill_id"], commandID)
 	}
 	profile := sourceBattleSkillProfile(session.RoleSkill{
 		Name:  "投毒",
 		Level: 1,
 		Type:  "oneE",
 	})
-	if profile.ActionName != row["action_name"] || profile.SourceType != row["source_type"] || profile.SourceActionLabel != row["source_action_label"] {
-		t.Fatalf("expected 投毒 profile to use classicdata row %+v, got %+v", row, profile)
+	if profile.ActionName != row["action_name"] || profile.SourceType != row["source_type"] || profile.SourceActionLabel != levelRows[0]["source_action_label"] {
+		t.Fatalf("expected 投毒 profile to link classicdata skill and level rows master=%+v levels=%+v got=%+v", row, levelRows, profile)
 	}
 	commands := sourceBattleCommandDefinitions([]session.RoleSkill{{Name: "投毒", Level: 1, Type: "oneE"}})
 	var touDu CommandDefinition
 	for _, command := range commands {
-		if command.ID == row["command_id"] {
+		if command.ID == row["skill_id"] {
 			touDu = command
 			break
 		}
@@ -4546,6 +4563,164 @@ func TestLiShiGunShuAppliesCapturedFightingSpirit(t *testing.T) {
 	}
 	if len(runtime.PendingClearBuffInfos) != 1 || runtime.PendingClearBuffInfos[0].Name != "斗志" || runtime.PendingClearBuffInfos[0].TargetHandle != "player_21424" {
 		t.Fatalf("expected 斗志 clear buff info, got %+v", runtime.PendingClearBuffInfos)
+	}
+}
+
+func TestCapturedMageSkillProfilesAndLevelGates(t *testing.T) {
+	cases := []struct {
+		name          string
+		level         int
+		sourceType    string
+		label         string
+		mpCost        int
+		multiplier    float64
+		hitMultiplier float64
+	}{
+		{name: "炎狩术", level: 5, sourceType: "oneE", label: "w10/fire2", mpCost: 80, multiplier: 1.75},
+		{name: "雷爆咒", level: 1, sourceType: "all", label: "w10/thunderBombs", mpCost: 70, multiplier: 1.82, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 2, sourceType: "all", label: "w10/thunderBombs", mpCost: 80, multiplier: 1.84, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 3, sourceType: "all", label: "w10/thunderBombs", mpCost: 90, multiplier: 1.86, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 4, sourceType: "all", label: "w10/thunderBombs", mpCost: 100, multiplier: 1.88, hitMultiplier: 1.5},
+		{name: "雷龙强袭", level: 1, sourceType: "oneE", label: "w10/thunderDrongAtk", mpCost: 125, multiplier: 2.8, hitMultiplier: 2},
+	}
+
+	for _, testCase := range cases {
+		profile := sourceBattleSkillProfile(session.RoleSkill{
+			Name:  testCase.name,
+			Level: testCase.level,
+			Type:  testCase.sourceType,
+		})
+		multiplierMatches := profile.DamageMultiplier >= testCase.multiplier-0.000001 && profile.DamageMultiplier <= testCase.multiplier+0.000001
+		if profile.SourceType != testCase.sourceType || profile.SourceActionLabel != testCase.label || profile.MPCost != testCase.mpCost || !multiplierMatches {
+			t.Fatalf("expected captured %s Lv%d profile, got %+v", testCase.name, testCase.level, profile)
+		}
+		if profile.DefenseType != "magic" || !profile.UseMagicAttack || profile.HitMultiplier != testCase.hitMultiplier {
+			t.Fatalf("expected captured %s Lv%d magic/hit profile, got %+v", testCase.name, testCase.level, profile)
+		}
+		if testCase.name == "雷爆咒" && profile.StatusName != "" {
+			t.Fatalf("expected 雷爆咒 to omit uncaptured palsy state behavior, got %+v", profile)
+		}
+	}
+
+	for _, skill := range []session.RoleSkill{
+		{Name: "炎狩术", Level: 4, Type: "oneE"},
+		{Name: "雷爆咒", Level: 5, Type: "all"},
+		{Name: "雷龙强袭", Level: 2, Type: "oneE"},
+	} {
+		if isSourceBattleSkillLevelCaptured(skill.Name, skill.Level) {
+			t.Fatalf("expected uncaptured %s Lv%d to stay unavailable", skill.Name, skill.Level)
+		}
+		for _, command := range sourceBattleCommandDefinitions([]session.RoleSkill{skill}) {
+			if command.Label == skill.Name {
+				t.Fatalf("expected uncaptured %s Lv%d to be omitted from commands, got %+v", skill.Name, skill.Level, command)
+			}
+		}
+	}
+}
+
+func TestSkillLevelTableLinksMasterSkillToCapturedMageLevel(t *testing.T) {
+	profile, ok := sourceBattleSkillProfileFromConfig("雷爆咒", 4)
+	if !ok {
+		t.Fatal("expected 雷爆咒 master skill row")
+	}
+	if sourceBattleSkillCommandIDFromConfig("雷爆咒") != CommandLeiBaoZhou {
+		t.Fatalf("expected 雷爆咒 to keep its command skill id")
+	}
+	if profile.SourceType != "all" || profile.SourceActionLabel != "w10/thunderBombs" || profile.MPCost != 100 || profile.DamageMultiplier != 1.88 {
+		t.Fatalf("expected 雷爆咒 Lv4 to resolve linked skill-level values, got %+v", profile)
+	}
+	if !sourceBattleSkillLevelExists("雷爆咒", 4) {
+		t.Fatal("expected 雷爆咒 Lv4 skill-level row")
+	}
+	if sourceBattleSkillLevelExists("雷爆咒", 5) {
+		t.Fatal("unexpected unconfirmed 雷爆咒 Lv5 skill-level row")
+	}
+}
+
+func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
+	newRuntime := func(skill session.RoleSkill, enemies ...CellInfoPush) *Runtime {
+		cells := []CellInfoPush{
+			{
+				BattleID:    "battle-mage-" + skill.Name,
+				Handle:      "player_mage",
+				Camp:        CampTeam,
+				HP:          600,
+				MaxHP:       600,
+				MP:          200,
+				MaxMP:       200,
+				Attack:      10,
+				MagicAttack: 100,
+				Hit:         100,
+			},
+		}
+		cells = append(cells, enemies...)
+		return &Runtime{
+			BattleID:         "battle-mage-" + skill.Name,
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_mage",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StoredPower:      map[string]int{},
+			RoleSkills:       []session.RoleSkill{skill},
+			Cells:            cells,
+		}
+	}
+	newEnemy := func(handle string, magicDefense int) CellInfoPush {
+		return CellInfoPush{
+			BattleID:   "battle-mage",
+			Handle:     handle,
+			Camp:       CampEnemy,
+			HP:         1000,
+			MaxHP:      1000,
+			Attack:     1,
+			MgcDefense: magicDefense,
+		}
+	}
+
+	flame := newRuntime(session.RoleSkill{Name: "炎狩术", Level: 5, Type: "oneE"}, newEnemy("enemy_fire", 20))
+	flameResult := flame.ProcessAction(ActionRequest{BattleID: flame.BattleID, ActorHandle: "player_mage", CommandID: CommandYanShouShu, TargetHandle: "enemy_fire", Round: 1, Sequence: 1})
+	if flameResult.ErrorCode != "" || len(flameResult.Actions) == 0 {
+		t.Fatalf("expected 炎狩术 action, got %+v", flameResult)
+	}
+	flameAction := flameResult.Actions[0]
+	if flameAction.SourceActionLabel != "w10/fire2" || flameAction.Damage != 155 || flameAction.TargetHP != 845 || flame.cellByHandle("player_mage").MP != 120 {
+		t.Fatalf("expected captured 炎狩术 magic action, got %+v", flameAction)
+	}
+
+	thunder := newRuntime(session.RoleSkill{Name: "雷爆咒", Level: 2, Type: "all"}, newEnemy("enemy_thunder_1", 20), newEnemy("enemy_thunder_2", 30))
+	thunderResult := thunder.ProcessAction(ActionRequest{BattleID: thunder.BattleID, ActorHandle: "player_mage", CommandID: CommandLeiBaoZhou, TargetHandle: "enemy_thunder_1", Round: 1, Sequence: 1})
+	if thunderResult.ErrorCode != "" || len(thunderResult.Actions) == 0 {
+		t.Fatalf("expected 雷爆咒 action, got %+v", thunderResult)
+	}
+	thunderAction := thunderResult.Actions[0]
+	if thunderAction.TargetHandle != "all" || thunderAction.SourceActionLabel != "w10/thunderBombs" || len(thunderAction.TargetActionResults) != 2 || thunderAction.Damage != 164 || thunder.cellByHandle("enemy_thunder_1").HP != 836 || thunder.cellByHandle("enemy_thunder_2").HP != 846 || thunder.cellByHandle("player_mage").MP != 120 {
+		t.Fatalf("expected captured 雷爆咒 all-target action and one MP deduction, got %+v", thunderAction)
+	}
+	if len(thunderResult.BuffInfos) != 0 || len(thunderResult.ClearBuffInfos) != 0 {
+		t.Fatalf("expected 雷爆咒 to omit uncaptured palsy pushes, got %+v", thunderResult)
+	}
+
+	dragon := newRuntime(session.RoleSkill{Name: "雷龙强袭", Level: 1, Type: "oneE"}, newEnemy("enemy_dragon", 20))
+	insufficient := dragon.ProcessAction(ActionRequest{BattleID: dragon.BattleID, ActorHandle: "player_mage", CommandID: CommandLeiLongQiangXi, TargetHandle: "enemy_dragon", Round: 1, Sequence: 1})
+	if insufficient.ErrorCode != "insufficient_power" {
+		t.Fatalf("expected 雷龙强袭 to require 2 soul power, got %+v", insufficient)
+	}
+	dragon.StoredPower["player_mage"] = 2
+	dragonResult := dragon.ProcessAction(ActionRequest{BattleID: dragon.BattleID, ActorHandle: "player_mage", CommandID: CommandLeiLongQiangXi, TargetHandle: "enemy_dragon", Round: 1, Sequence: 1})
+	if dragonResult.ErrorCode != "" || len(dragonResult.Actions) == 0 {
+		t.Fatalf("expected 雷龙强袭 action, got %+v", dragonResult)
+	}
+	dragonAction := dragonResult.Actions[0]
+	if dragonAction.SourceActionLabel != "w10/thunderDrongAtk" || dragonAction.Damage != 260 || dragonAction.TargetHP != 740 || dragon.cellByHandle("player_mage").MP != 75 {
+		t.Fatalf("expected captured 雷龙强袭 magic action, got %+v", dragonAction)
+	}
+
+	unsupported := newRuntime(session.RoleSkill{Name: "炎狩术", Level: 4, Type: "oneE"}, newEnemy("enemy_invalid", 20))
+	unsupportedResult := unsupported.ProcessAction(ActionRequest{BattleID: unsupported.BattleID, ActorHandle: "player_mage", CommandID: CommandYanShouShu, TargetHandle: "enemy_invalid", Round: 1, Sequence: 1})
+	if unsupportedResult.ErrorCode != "unsupported_command" {
+		t.Fatalf("expected uncaptured 炎狩术 Lv4 to be rejected, got %+v", unsupportedResult)
 	}
 }
 
@@ -7913,6 +8088,27 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	if !sourceEnemyCanChaosHit(&bainian.Cell) {
 		t.Fatalf("expected 百年虫精 to use captured 混沌击, cell=%+v", bainian.Cell)
 	}
+	if enemyChaosHitChance != 46 {
+		t.Fatalf("expected capture-backed 百年虫精混沌击 chance 46, got %d", enemyChaosHitChance)
+	}
+	candidate, ok := sourceBattleRewardCandidateForCell("171", "百年虫精", 8000)
+	if !ok || candidate.ExpDelta != 0 {
+		t.Fatalf("expected zero-exp 百年虫精 reward candidate, got %+v", candidate)
+	}
+	for _, expected := range []sourceBattleRewardDropRate{
+		{ItemName: "宠物成长药剂", Quantity: 6, Numerator: 4, Denominator: 4},
+		{ItemName: "铜钱", Quantity: 500, Numerator: 4, Denominator: 4},
+		{ItemName: "魔匣", Quantity: 2, Numerator: 3, Denominator: 4},
+		{ItemName: "阴阳结", Quantity: 1, Numerator: 3, Denominator: 4},
+		{ItemName: "回魂丹", Quantity: 1, Numerator: 3, Denominator: 4},
+	} {
+		if actual := requireSourceBattleRewardDropRate(t, candidate.DropRates, expected.ItemName); actual != expected {
+			t.Fatalf("expected 百年虫精 %s rate %+v, got %+v", expected.ItemName, expected, actual)
+		}
+	}
+	if huihun, ok := session.CapturedRoleItemTemplate("回魂丹"); !ok || huihun.Display != "225.png" || !strings.Contains(huihun.Description, "f_i_回魂丹") {
+		t.Fatalf("expected captured 回魂丹 item template, got %+v, found=%t", huihun, ok)
+	}
 	group, ok := sourceVisibleMonsterConfigsForHandle("171", "7893833328746190")
 	if !ok || len(group) != 4 {
 		t.Fatalf("expected four-enemy 百年虫精 encounter, got %+v", group)
@@ -7957,6 +8153,13 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	}
 	if bainian.Cell.DamageDefenseType != "magic" {
 		t.Fatalf("expected magic defense type for 百年虫精, got %+v", bainian.Cell)
+	}
+
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+	rewards := (&Runtime{MapID: "171", Cells: []CellInfoPush{bainian.Cell}}).buildOver(CampTeam).Result
+	wantRewards := []string{"宠物成长药剂x6", "铜钱x500", "魔匣x2", "阴阳结x1", "回魂丹x1"}
+	if !reflect.DeepEqual(rewards.Items, wantRewards) {
+		t.Fatalf("expected low-roll 百年虫精 rewards %+v, got %+v", wantRewards, rewards.Items)
 	}
 }
 

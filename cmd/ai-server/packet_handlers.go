@@ -11,6 +11,7 @@ import (
 	"ai-server/internal/guild"
 	"ai-server/internal/mall"
 	"ai-server/internal/protocol"
+	"ai-server/internal/quest"
 	"ai-server/internal/session"
 	"ai-server/internal/team"
 	"ai-server/internal/world"
@@ -102,6 +103,8 @@ type packetResult struct {
 	battleOver             *battle.OverPush
 	battleLoadProgress     *classicBattleLoadProgressPush
 	battleRelive           *classicBattleRelivePush
+	battleSpectatorStart   *classicBattleSpectatorStart
+	battleSpectatorStop    *classicBattleSpectatorStop
 	removeRoleHandles      []string
 	moveRole               *world.RoleMovePush
 	// sceneTransferFromMapID 标记本次结果是由"传送/切图"触发的,值为玩家传送前的旧 mapId。
@@ -886,6 +889,18 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicBattleDoReliveResult(store, socketSession, request)
+	case cmdClassicBattleSpectateReq:
+		var request classicBattleSpectateRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicBattleSpectateResult(socketSession, request)
+	case cmdClassicBattleStopSpectate:
+		var request classicBattleStopSpectateRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{}
+		}
+		return buildClassicBattleStopSpectateResult(socketSession, request)
 	default:
 		return packetResult{}
 	}
@@ -1096,11 +1111,18 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
 	var chatMessages []classicTownChatMessagePush
+	var questInfos []classicQuestInfoPush
 	stepStartedAt = time.Now()
 	if result.Over != nil {
 		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
+		questInfos = advanceClassicQuestProgressForTargets(
+			store,
+			socketSession,
+			quest.ObjectiveKindKill,
+			classicBattleDefeatedEnemyNames(socketSession.battleRuntime, result.Over),
+		)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 		// Clear map overhead fightIcon after battle ends.
@@ -1122,6 +1144,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 		rolePhysique:      rolePhysique,
 		chatMessages:      chatMessages,
 		removeRoleHandles: removeRoleHandles,
+		questInfos:        questInfos,
 		itemInfos:         make([]classicTownItemInfoPush, 0, 1),
 		itemClears:        make([]classicTownItemInfoClearPush, 0, 1),
 		handled:           true,
@@ -1281,10 +1304,17 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
 	var chatMessages []classicTownChatMessagePush
+	var questInfos []classicQuestInfoPush
 	if result.Over != nil {
 		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
+		questInfos = advanceClassicQuestProgressForTargets(
+			store,
+			socketSession,
+			quest.ObjectiveKindKill,
+			classicBattleDefeatedEnemyNames(socketSession.battleRuntime, result.Over),
+		)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 		// Clear map overhead fightIcon after battle ends.
@@ -1305,6 +1335,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 		rolePhysique:      rolePhysique,
 		chatMessages:      chatMessages,
 		removeRoleHandles: removeRoleHandles,
+		questInfos:        questInfos,
 		itemInfos:         make([]classicTownItemInfoPush, 0, 1),
 		itemClears:        make([]classicTownItemInfoClearPush, 0, len(useResult.ClearedItems)),
 		handled:           true,
@@ -1356,10 +1387,17 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 	var rolePhysique *session.RolePhysique
 	var removeRoleHandles []string
 	var chatMessages []classicTownChatMessagePush
+	var questInfos []classicQuestInfoPush
 	if result.Over != nil {
 		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
 		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
+		questInfos = advanceClassicQuestProgressForTargets(
+			store,
+			socketSession,
+			quest.ObjectiveKindKill,
+			classicBattleDefeatedEnemyNames(socketSession.battleRuntime, result.Over),
+		)
 		removeRoleHandles = append(removeRoleHandles, markDefeatedVisibleMonsterFromBattle(store, socketSession, result.Over)...)
 		socketSession.battleRuntime = nil
 		// Clear map overhead fightIcon after battle ends.
@@ -1376,6 +1414,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 		rolePhysique:      rolePhysique,
 		chatMessages:      chatMessages,
 		removeRoleHandles: removeRoleHandles,
+		questInfos:        questInfos,
 		handled:           true,
 	}
 	if sharedBattle {
@@ -1564,6 +1603,20 @@ func visibleMonsterRemoveHandles(runtime *battle.Runtime, over *battle.OverPush)
 		return []string{strings.TrimSpace(runtime.SourceMonsterHandle)}
 	}
 	return handles
+}
+
+func classicBattleDefeatedEnemyNames(runtime *battle.Runtime, over *battle.OverPush) []string {
+	if runtime == nil || over == nil || over.Result.Winner != battle.CampTeam || over.Result.Escaped {
+		return nil
+	}
+	names := make([]string, 0, len(runtime.Cells))
+	for _, cell := range runtime.Cells {
+		if cell.Camp != battle.CampEnemy || strings.TrimSpace(cell.Name) == "" {
+			continue
+		}
+		names = append(names, cell.Name)
+	}
+	return names
 }
 
 func markDefeatedVisibleMonsterFromBattle(store *session.Store, socketSession *packetSession, over *battle.OverPush) []string {
@@ -3508,6 +3561,13 @@ func dungeonEntryRuleForInstance(instanceKey string) (dungeonEntryRule, bool) {
 			TicketCount:   1,
 			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
 		}, true
+	case session.DungeonInstanceZanglongtan:
+		return dungeonEntryRule{
+			InstanceKey:   instanceKey,
+			TicketName:    "葬龙潭通行证",
+			TicketCount:   1,
+			ConsumePolicy: dungeonEntryConsumeOnNewInstance,
+		}, true
 	default:
 		return dungeonEntryRule{}, false
 	}
@@ -3656,6 +3716,8 @@ func dungeonInstanceDisplayName(key string) string {
 		return "飞仙洞"
 	case session.DungeonInstanceShihuku:
 		return "狮虎窟"
+	case session.DungeonInstanceZanglongtan:
+		return "葬龙潭"
 	default:
 		return "副本"
 	}

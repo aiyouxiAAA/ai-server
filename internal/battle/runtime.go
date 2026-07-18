@@ -48,6 +48,9 @@ const (
 	CommandMoLiSuShe       = "skill-mo-li-su-she"
 	CommandAnYingJian      = "skill-an-ying-jian"
 	CommandDuShi           = "skill-du-shi"
+	CommandYanShouShu      = "skill-yan-shou-shu"
+	CommandLeiBaoZhou      = "skill-lei-bao-zhou"
+	CommandLeiLongQiangXi  = "skill-lei-long-qiang-xi"
 	CommandLeiHunZhan      = "skill-lei-hun-zhan"
 	CommandAoYiHongLeiShi  = "skill-ao-yi-hong-lei-shi"
 	CommandAoYiAnShaZhe    = "skill-ao-yi-an-sha-zhe"
@@ -81,6 +84,7 @@ const (
 
 	maxStoredPower                     = 5
 	leiHunZhanRequiredPower            = 3
+	leiLongQiangXiRequiredPower        = 2
 	aoYiHongLeiShiRequiredPower        = 2
 	aoYiAnShaZheRequiredPower          = 3
 	aoYiLiuHeGunFaRequiredPower        = 3
@@ -92,7 +96,7 @@ const (
 	enemyHelixAtkChance                = 23
 	enemyHelixAtkDamageMultiplier      = 1.32
 	enemyPalsyAtkChance                = 40
-	enemyChaosHitChance                = 30
+	enemyChaosHitChance                = 46
 	enemyPalsyAtkStatusChance          = 100
 	enemyStunOnHitChance               = 5
 	enemyRampageMaxRounds              = 50
@@ -215,6 +219,7 @@ type StartPush struct {
 	StageFocusX     float64             `json:"stageFocusX"`
 	ReturnRoute     string              `json:"returnRoute,omitempty"`
 	Commands        []CommandDefinition `json:"commands,omitempty"`
+	Spectator       bool                `json:"spectator,omitempty"`
 }
 
 type CellInfoPush struct {
@@ -366,6 +371,13 @@ type Runtime struct {
 	BattleID              string
 	RoleID                string
 	MapID                 string
+	LastMapName           string
+	EncounterID           string
+	EncounterLabel        string
+	StageFocusX           float64
+	ReturnRoute           string
+	QueueIndexTeam        int
+	QueueIndexEnemy       int
 	SourceMonsterHandle   string
 	RoleSkills            []session.RoleSkill
 	RoleSkillsByHandle    map[string][]session.RoleSkill
@@ -585,6 +597,13 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		BattleID:            battleID,
 		RoleID:              role.RoleID,
 		MapID:               mapID,
+		LastMapName:         mapName,
+		EncounterID:         "classic-wild-" + mapID,
+		EncounterLabel:      mapName + " " + encounterKind,
+		StageFocusX:         request.StageFocusX,
+		ReturnRoute:         defaultString(request.ReturnRoute, "town-placeholder"),
+		QueueIndexTeam:      firstEnemyConfig.QueueIndexTeam,
+		QueueIndexEnemy:     firstEnemyConfig.QueueIndexEnemy,
 		SourceMonsterHandle: sourceMonsterHandle,
 		RoleSkills:          cloneBattleRoleSkills(role.Skills),
 		RoleSkillsByHandle:  map[string][]session.RoleSkill{role.RoleID: cloneBattleRoleSkills(role.Skills)},
@@ -629,6 +648,32 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			Commands:    runtime.commandDefinitionsForActor(role.RoleID),
 		},
 	}, true
+}
+
+// SpectatorSnapshot returns a read-only battle entry payload from the current
+// authoritative cells. Spectators never receive a command window.
+func (runtime *Runtime) SpectatorSnapshot() (StartPush, []CellInfoPush, bool) {
+	if runtime == nil {
+		return StartPush{}, nil, false
+	}
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
+	if runtime.Phase == PhaseFinished || runtime.BattleID == "" || len(runtime.Cells) == 0 {
+		return StartPush{}, nil, false
+	}
+	return StartPush{
+		BattleID:        runtime.BattleID,
+		QueueIndexTeam:  runtime.QueueIndexTeam,
+		QueueIndexEnemy: runtime.QueueIndexEnemy,
+		LastMapName:     runtime.LastMapName,
+		SelfHandle:      "",
+		MapID:           runtime.MapID,
+		EncounterID:     runtime.EncounterID,
+		EncounterLabel:  runtime.EncounterLabel,
+		StageFocusX:     runtime.StageFocusX,
+		ReturnRoute:     runtime.ReturnRoute,
+		Spectator:       true,
+	}, append([]CellInfoPush(nil), runtime.Cells...), true
 }
 
 func NewTeamWildBattle(actors []TeamActor, request StartRequest) (*Runtime, StartBundle, bool) {
@@ -889,7 +934,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return ActionResult{ErrorCode: "unsupported_command"}
 	}
 
-	if normalizeBattleCommandID(commandID) == CommandHongYueZhan || normalizeBattleCommandID(commandID) == CommandPanLongGunFa {
+	if runtime.battleCommandProfile(actor, commandID).SourceType == "all" {
 		targets := runtime.livingCells(CampEnemy)
 		if len(targets) == 0 {
 			return ActionResult{ErrorCode: "invalid_target"}
@@ -900,6 +945,9 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{action})
 	}
 	if normalizeBattleCommandID(commandID) == CommandLeiHunZhan && runtime.powerFor(actor.Handle) < leiHunZhanRequiredPower {
+		return ActionResult{ErrorCode: "insufficient_power"}
+	}
+	if normalizeBattleCommandID(commandID) == CommandLeiLongQiangXi && runtime.powerFor(actor.Handle) < leiLongQiangXiRequiredPower {
 		return ActionResult{ErrorCode: "insufficient_power"}
 	}
 	if normalizeBattleCommandID(commandID) == CommandAoYiHongLeiShi && runtime.powerFor(actor.Handle) < aoYiHongLeiShiRequiredPower {
@@ -1486,6 +1534,12 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "暗影箭", 1)
 	case CommandDuShi:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "毒矢", 1)
+	case CommandYanShouShu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "炎狩术", 5)
+	case CommandLeiBaoZhou:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "雷爆咒", 1)
+	case CommandLeiLongQiangXi:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "雷龙强袭", 1)
 	case CommandLeiHunZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
 	case CommandAoYiHongLeiShi:
@@ -2229,6 +2283,12 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasRoleSkillForActor(handle, "暗影箭")
 	case CommandDuShi:
 		return runtime.hasRoleSkillForActor(handle, "毒矢")
+	case CommandYanShouShu:
+		return runtime.hasCapturedRoleSkillForActor(handle, "炎狩术")
+	case CommandLeiBaoZhou:
+		return runtime.hasCapturedRoleSkillForActor(handle, "雷爆咒")
+	case CommandLeiLongQiangXi:
+		return runtime.hasCapturedRoleSkillForActor(handle, "雷龙强袭")
 	case CommandLeiHunZhan:
 		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
 	case CommandAoYiHongLeiShi:
@@ -2271,6 +2331,20 @@ func (runtime *Runtime) hasRoleSkill(name string) bool {
 func (runtime *Runtime) hasRoleSkillForActor(handle string, name string) bool {
 	_, ok := runtime.roleSkillByNameForActor(handle, name)
 	return ok
+}
+
+func (runtime *Runtime) hasCapturedRoleSkillForActor(handle string, name string) bool {
+	skill, ok := runtime.roleSkillByNameForActor(handle, name)
+	return ok && isSourceBattleSkillLevelCaptured(name, skill.Level)
+}
+
+func isSourceBattleSkillLevelCaptured(name string, level int) bool {
+	switch strings.TrimSpace(name) {
+	case "炎狩术", "雷爆咒", "雷龙强袭":
+		return sourceBattleSkillLevelExists(name, level)
+	default:
+		return true
+	}
 }
 
 func (runtime *Runtime) roleSkillByName(name string) (session.RoleSkill, bool) {
@@ -2327,8 +2401,7 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		level = 1
 	}
 	description := sourceBattleSkillProfileDescription(name, level, skill.Description)
-	hasCapturedFallback := strings.TrimSpace(fallbackSourceBattleSkill(name, level).Name) != ""
-	tableProfile, hasTableProfile := sourceBattleSkillProfileFromConfig(name)
+	tableProfile, hasTableProfile := sourceBattleSkillProfileFromConfig(name, level)
 	sourceType := sourceBattleSkillSourceType(name, skill.Type)
 	if hasTableProfile && strings.TrimSpace(tableProfile.SourceType) != "" {
 		sourceType = strings.TrimSpace(tableProfile.SourceType)
@@ -2337,9 +2410,12 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 	if hasTableProfile && strings.TrimSpace(tableProfile.ActionName) != "" {
 		actionName = strings.TrimSpace(tableProfile.ActionName)
 	}
-	actionLabel := sourceBattleSkillActionLabel(name, level)
-	if actionLabel == "" && hasTableProfile {
+	actionLabel := ""
+	if hasTableProfile {
 		actionLabel = strings.TrimSpace(tableProfile.SourceActionLabel)
+	}
+	if actionLabel == "" {
+		actionLabel = sourceBattleSkillActionLabel(name, level)
 	}
 	profile := commandProfile{
 		ActionName:        actionName,
@@ -2353,38 +2429,28 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 	if hasTableProfile {
 		profile.DirectAttackBonus = tableProfile.DirectAttackBonus
 	}
-	if directAttackBonus := sourceBattleSkillDirectAttackBonus(description); directAttackBonus > 0 {
+	if directAttackBonus := sourceBattleSkillDirectAttackBonus(description); directAttackBonus > 0 && profile.DirectAttackBonus <= 0 {
 		profile.DirectAttackBonus = directAttackBonus
 	}
-	if profile.DamageMultiplier <= 0 && hasCapturedFallback {
-		profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
+	if hasTableProfile && tableProfile.DamageMultiplier > 0 {
+		profile.DamageMultiplier = tableProfile.DamageMultiplier
 	}
 	if profile.DamageMultiplier <= 0 {
-		if hasTableProfile {
-			profile.DamageMultiplier = tableProfile.DamageMultiplier
-		}
-		if profile.DamageMultiplier <= 0 {
-			profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
-		}
+		profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
 	}
-	if profile.MPCost <= 0 && hasCapturedFallback {
-		profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
+	if hasTableProfile && tableProfile.MPCost > 0 {
+		profile.MPCost = tableProfile.MPCost
 	}
 	if profile.MPCost <= 0 {
-		if hasTableProfile {
-			profile.MPCost = tableProfile.MPCost
-		}
-		if profile.MPCost <= 0 {
-			profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
-		}
+		profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
 	}
 	if name == "嗜血斩" {
 		profile.LifeStealChance = sourceBattleSkillLifeStealChance(description)
 		profile.LifeStealRatio = sourceBattleSkillLifeStealRatio(description)
-		if profile.LifeStealChance <= 0 && hasTableProfile {
+		if hasTableProfile && tableProfile.LifeStealChance > 0 {
 			profile.LifeStealChance = tableProfile.LifeStealChance
 		}
-		if profile.LifeStealRatio <= 0 && hasTableProfile {
+		if hasTableProfile && tableProfile.LifeStealRatio > 0 {
 			profile.LifeStealRatio = tableProfile.LifeStealRatio
 		}
 		if profile.LifeStealChance <= 0 {
@@ -2471,6 +2537,16 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusTickMax = 30
 		profile.SkipTurn = true
 	}
+	if name == "炎狩术" || name == "雷爆咒" || name == "雷龙强袭" {
+		profile.DefenseType = "magic"
+		profile.UseMagicAttack = true
+	}
+	if name == "雷爆咒" {
+		profile.HitMultiplier = 1.5
+	}
+	if name == "雷龙强袭" {
+		profile.HitMultiplier = 2
+	}
 	if name == "力释棍术" {
 		profile.CanDodge = false
 		profile.CanFat = false
@@ -2503,6 +2579,9 @@ func sourceBattleCommandDefinitions(skills []session.RoleSkill) []CommandDefinit
 	for _, skill := range skills {
 		normalizedName := strings.TrimSpace(skill.Name)
 		if seen[normalizedName] {
+			continue
+		}
+		if !isSourceBattleSkillLevelCaptured(normalizedName, skill.Level) {
 			continue
 		}
 		commandID := sourceBattleSkillCommandID(normalizedName)
@@ -2620,6 +2699,12 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandAnYingJian
 	case "毒矢":
 		return CommandDuShi
+	case "炎狩术":
+		return CommandYanShouShu
+	case "雷爆咒":
+		return CommandLeiBaoZhou
+	case "雷龙强袭":
+		return CommandLeiLongQiangXi
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	case "奥义.轰雷矢":
@@ -2638,11 +2723,11 @@ func sourceBattleSkillSourceType(name string, fallbackType string) string {
 		return sourceType
 	}
 	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "劈山棍法", "夜叉棍法", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "强射", "贯甲连矢", "冰箭速射", "魔力速射", "暗影箭", "毒矢", "奥义.雷魂斩", "奥义.轰雷矢", "奥义.暗杀者", "奥义.六合棍法":
+	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "劈山棍法", "夜叉棍法", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "强射", "贯甲连矢", "冰箭速射", "魔力速射", "暗影箭", "毒矢", "炎狩术", "雷龙强袭", "奥义.雷魂斩", "奥义.轰雷矢", "奥义.暗杀者", "奥义.六合棍法":
 		return "oneE"
 	case "狂爆", "解毒术", "力释棍术":
 		return "own"
-	case "红月斩", "盘龙棍法":
+	case "红月斩", "盘龙棍法", "雷爆咒":
 		return "all"
 	default:
 		return defaultString(strings.TrimSpace(fallbackType), "oneE")
@@ -2726,6 +2811,12 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandAnYingJian
 	case "毒矢":
 		return CommandDuShi
+	case "炎狩术":
+		return CommandYanShouShu
+	case "雷爆咒":
+		return CommandLeiBaoZhou
+	case "雷龙强袭":
+		return CommandLeiLongQiangXi
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	case "奥义.轰雷矢":
@@ -2928,6 +3019,39 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Type:        "oneE",
 			Icon:        "237.png",
 			Description: fallbackDuShiDescription(level),
+		}
+	case "炎狩术":
+		if level != 5 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "炎狩术",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "702.png",
+			Description: "f_s_炎狩术^ffffff&9@单体·攻击&8@术士 &10@法杖&22@战斗&2@80&4@提升75%的魔法伤害",
+		}
+	case "雷爆咒":
+		if level < 1 || level > 4 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "雷爆咒",
+			Level:       level,
+			Type:        "all",
+			Icon:        "706.png",
+			Description: fallbackLeiBaoZhouDescription(level),
+		}
+	case "雷龙强袭":
+		if level != 1 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "雷龙强袭",
+			Level:       1,
+			Type:        "oneE",
+			Icon:        "707.png",
+			Description: "f_s_雷龙强袭^00ccff&9@单体·攻击&8@术士 &10@法杖&22@战斗&2@125&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升180%的魔法伤害&0;进攻时候增加100%的命中",
 		}
 	case "奥义.雷魂斩":
 		return session.RoleSkill{
@@ -3166,6 +3290,21 @@ func fallbackAoYiAnShaZheDescription(level int) string {
 	}
 }
 
+func fallbackLeiBaoZhouDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@70&4@提升82%的魔法伤害&0;击中敌人时有12%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的5%~7%)"
+	case 2:
+		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@80&4@提升84%的魔法伤害&0;击中敌人时有14%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的7%~9%)"
+	case 3:
+		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@90&4@提升86%的魔法伤害&0;击中敌人时有16%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的9%~11%)"
+	case 4:
+		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@100&4@提升88%的魔法伤害&0;击中敌人时有18%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的11%~13%)"
+	default:
+		return ""
+	}
+}
+
 func sourceBattleSkillActionLabel(name string, level int) string {
 	switch strings.TrimSpace(name) {
 	case "密斩":
@@ -3218,6 +3357,12 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w1/darkShoot"
 	case "毒矢":
 		return "w1/drugShoot"
+	case "炎狩术":
+		return "w10/fire2"
+	case "雷爆咒":
+		return "w10/thunderBombs"
+	case "雷龙强袭":
+		return "w10/thunderDrongAtk"
 	case "奥义.雷魂斩":
 		return "w8/thunderSoulAtk"
 	case "奥义.轰雷矢":
@@ -3229,7 +3374,7 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 	case "普通攻击":
 		return "nomalAtk"
 	default:
-		return sourceBattleSkillActionLabelFromConfig(name)
+		return sourceBattleSkillActionLabelFromConfig(name, level)
 	}
 }
 
@@ -3395,6 +3540,29 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 			return 0.9
 		}
 		return 1
+	case "炎狩术":
+		if level == 5 {
+			return 1.75
+		}
+		return 0
+	case "雷爆咒":
+		switch level {
+		case 1:
+			return 1.82
+		case 2:
+			return 1.84
+		case 3:
+			return 1.86
+		case 4:
+			return 1.88
+		default:
+			return 0
+		}
+	case "雷龙强袭":
+		if level == 1 {
+			return 2.8
+		}
+		return 0
 	case "奥义.雷魂斩":
 		return 3.4
 	case "奥义.轰雷矢":
@@ -3526,6 +3694,29 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 	case "毒矢":
 		if level == 1 {
 			return 15
+		}
+		return 0
+	case "炎狩术":
+		if level == 5 {
+			return 80
+		}
+		return 0
+	case "雷爆咒":
+		switch level {
+		case 1:
+			return 70
+		case 2:
+			return 80
+		case 3:
+			return 90
+		case 4:
+			return 100
+		default:
+			return 0
+		}
+	case "雷龙强袭":
+		if level == 1 {
+			return 125
 		}
 		return 0
 	case "奥义.雷魂斩":
@@ -5191,59 +5382,37 @@ func sourceEnemyConfigForEncounter(mapID string, stageFocusX float64) (sourceWil
 	return configs[0], true
 }
 
-func sourceEnemyConfigsForEncounter(mapID string, stageFocusX float64) []sourceWildEnemyConfig {
-	configs := sourceEnemyConfigsForMap(mapID)
-	if len(configs) <= 0 {
+func sourceEnemyConfigsForEncounter(mapID string, _ float64) []sourceWildEnemyConfig {
+	encounters := sourceWildEncounterConfigsForMap(mapID)
+	if len(encounters) <= 0 {
 		return nil
 	}
-	selectedIndex := sourceEnemyCandidateIndex(stageFocusX, len(configs))
-	selected := configs[selectedIndex]
-
-	if strings.TrimSpace(mapID) == "52" && isSourceBossEnemyConfig(selected) {
-		normal := selected
-		for _, config := range configs {
-			if !isSourceBossEnemyConfig(config) {
-				normal = config
-				break
-			}
+	totalWeight := 0
+	for _, encounter := range encounters {
+		totalWeight += encounter.Weight
+	}
+	roll := sourceEncounterRoll(totalWeight)
+	selected := encounters[len(encounters)-1]
+	for _, encounter := range encounters {
+		if roll < encounter.Weight {
+			selected = encounter
+			break
 		}
-		return []sourceWildEnemyConfig{selected, normal, normal, normal}
+		roll -= encounter.Weight
 	}
-	// Capture-backed encounter compositions use stage focus only as a deterministic local selector.
-	if strings.TrimSpace(mapID) == "196" && len(configs) == 4 {
-		if sourceEnemyCandidateIndex(stageFocusX, 2) == 0 {
-			return []sourceWildEnemyConfig{configs[0]}
+	configsByHandle := map[string]sourceWildEnemyConfig{}
+	for _, config := range sourceEnemyConfigsForMap(mapID) {
+		configsByHandle[config.Cell.Handle] = config
+	}
+	configs := make([]sourceWildEnemyConfig, 0, len(selected.EncounterHandles))
+	for _, handle := range selected.EncounterHandles {
+		config, ok := configsByHandle[handle]
+		if !ok {
+			return nil
 		}
-		return []sourceWildEnemyConfig{configs[1], configs[2], configs[2], configs[3]}
+		configs = append(configs, config)
 	}
-	if strings.TrimSpace(mapID) == "200" && len(configs) == 2 {
-		switch sourceEnemyCandidateIndex(stageFocusX, 3) {
-		case 0:
-			return []sourceWildEnemyConfig{configs[0]}
-		case 1:
-			return []sourceWildEnemyConfig{configs[0], configs[1]}
-		default:
-			return []sourceWildEnemyConfig{configs[1], configs[1]}
-		}
-	}
-
-	count := capturedSourceEncounterEnemyCount(mapID, stageFocusX)
-	if count <= 1 {
-		return []sourceWildEnemyConfig{selected}
-	}
-	result := make([]sourceWildEnemyConfig, 0, count)
-	for offset := 0; offset < count; offset++ {
-		result = append(result, configs[(selectedIndex+offset)%len(configs)])
-	}
-	return result
-}
-
-func sourceEnemyCandidateIndex(stageFocusX float64, candidateCount int) int {
-	if candidateCount <= 1 {
-		return 0
-	}
-	sourceZone := int(math.Floor(math.Abs(math.Round(stageFocusX)) / 800))
-	return sourceZone % candidateCount
+	return configs
 }
 
 func isSourceBossEnemyConfig(config sourceWildEnemyConfig) bool {
@@ -5257,28 +5426,6 @@ func sourceEncounterHasBoss(configs []sourceWildEnemyConfig) bool {
 		}
 	}
 	return false
-}
-
-func capturedSourceEncounterEnemyCount(mapID string, stageFocusX float64) int {
-	switch strings.TrimSpace(mapID) {
-	case "36", "49", "50", "51":
-		return 1 + sourceEncounterRoll(2)
-	case "193", "198":
-		return 1 + sourceEnemyCandidateIndex(stageFocusX, 2)
-	case "199", "202":
-		return 2 + sourceEnemyCandidateIndex(stageFocusX, 2)
-	case "201":
-		if sourceEnemyCandidateIndex(stageFocusX, 10) == 0 {
-			return 1
-		}
-		return 2
-	case "204":
-		return 2
-	case "205":
-		return 3
-	default:
-		return 1
-	}
 }
 
 func (cell CellInfoPush) withBattleID(battleID string) CellInfoPush {

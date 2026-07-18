@@ -102,6 +102,38 @@ func TestBainianChongjingKillHidesUntilNextCycle(t *testing.T) {
 	}
 }
 
+func TestForceBainianChongjingRefreshForDevOverridesWarningOnlyForCurrentCycle(t *testing.T) {
+	ResetBainianChongjingKillStateForTest()
+	t.Cleanup(ResetBainianChongjingKillStateForTest)
+
+	start := testBainianCycleStart(t)
+	warning := start.Add(time.Minute)
+	if BainianChongjingIsAlive(warning) {
+		t.Fatal("boss should not be alive during the normal warning window")
+	}
+
+	ForceBainianChongjingRefreshForDev(warning)
+	if !BainianChongjingIsForcedForDev(warning) || !BainianChongjingIsAlive(warning) {
+		t.Fatal("dev refresh should make the boss alive during the warning window")
+	}
+	if _, ok := BainianChongjingSpawnForMap(BainianChongjingMapID, warning); !ok {
+		t.Fatal("dev refresh should restore the map171 encounter spawn")
+	}
+
+	MarkBainianChongjingKilled(warning)
+	if BainianChongjingIsAlive(warning) {
+		t.Fatal("killing a dev-refreshed boss should remove it")
+	}
+
+	nextWarning := start.Add(BainianChongjingCycle + time.Minute)
+	if BainianChongjingIsForcedForDev(nextWarning) {
+		t.Fatal("dev refresh must not cross a natural cycle boundary")
+	}
+	if BainianChongjingIsAlive(nextWarning) {
+		t.Fatal("next cycle should return to its normal warning phase")
+	}
+}
+
 func TestBainianChongjingCycleMatchesCaptureMedianInterval(t *testing.T) {
 	// Capture inlier consecutive warn intervals median ≈ 7269s; warning lead stays 10 minutes.
 	if BainianChongjingCycle != 7269*time.Second {

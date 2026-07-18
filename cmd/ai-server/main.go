@@ -181,6 +181,7 @@ const (
 	cmdClassicBattleOverPush      = 3006
 	cmdClassicBattleBuffInfoPush  = 3008
 	cmdClassicBattleClearBuffInfo = 3009
+	cmdClassicBattleLookCountPush = 3010
 	cmdClassicBattleActiveItemReq = 3011
 	cmdClassicBattlePlayOverReq   = 3012
 	cmdClassicBattleRelivePush    = 3013
@@ -191,6 +192,8 @@ const (
 	cmdClassicBattleCellCountPush = 3018
 	cmdClassicBattleStopCommand   = 3019
 	cmdClassicBattleClearCellInfo = 3020
+	cmdClassicBattleSpectateReq   = 3021
+	cmdClassicBattleStopSpectate  = 3022
 )
 
 const cmdClassicTownFinishingContainerReq = 1187
@@ -262,6 +265,9 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 	registeredSceneMapID := 0
 	defer func() {
 		socketWriter.stopClassicTownSourceMonsterMoveReplay()
+		if battleID := classicBattleSpectators.remove(registeredTeamRoleID); battleID != "" {
+			classicBattleSpectators.broadcastLookCount(battleID)
+		}
 		// world scene:断开连接时给原 mapId 邻居推 removeRole,避免对端留僵尸节点。
 		if registeredSceneRoleID != "" {
 			if oldMapID, ok := worldSceneHub.unregister(registeredSceneRoleID); ok {
@@ -784,6 +790,24 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		if result.battleSpectatorStart != nil {
+			if err := writeClassicBattleSpectatorStart(socketWriter, *result.battleSpectatorStart); err != nil {
+				log.Printf("[ai-server] write classic battle spectator start failed: %v", err)
+				return
+			}
+			if classicBattleSpectators.activate(result.battleSpectatorStart.ObserverRoleID, result.battleSpectatorStart.Start.BattleID) {
+				classicBattleSpectators.broadcastLookCount(result.battleSpectatorStart.Start.BattleID)
+			}
+		}
+		if result.battleSpectatorStop != nil {
+			if battleID := classicBattleSpectators.remove(result.battleSpectatorStop.ObserverRoleID); battleID != "" {
+				if err := writeClassicBattleSpectatorStop(socketWriter, *result.battleSpectatorStop); err != nil {
+					log.Printf("[ai-server] write classic battle spectator stop failed: %v", err)
+					return
+				}
+				classicBattleSpectators.broadcastLookCount(battleID)
+			}
+		}
 		for _, handle := range result.removeRoleHandles {
 			if err := socketWriter.writePush(cmdClassicTownRemoveRolePush, encodePayload(handle)); err != nil {
 				log.Printf("[ai-server] write classic town removeRole push failed: %v", err)
@@ -823,6 +847,9 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		}
 		if result.teamBattleSync != nil {
 			classicTeamHub.syncSharedBattle(store, *result.teamBattleSync)
+			classicBattleSpectators.broadcastResult(result.teamBattleSync.Result)
+		} else {
+			classicBattleSpectators.broadcastResult(result)
 		}
 		if socketSession.selectedRole != nil && socketSession.playerBase != nil && registeredTeamRoleID != socketSession.selectedRole.RoleID {
 			if registeredTeamRoleID != "" {

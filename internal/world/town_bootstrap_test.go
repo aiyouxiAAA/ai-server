@@ -1970,6 +1970,101 @@ func TestShihukuDungeonInstanceKeyAndTransportRoutes(t *testing.T) {
 	}
 }
 
+func TestZanglongtanDungeonMapsUseCapturedTransportsAndVisibleMonsters(t *testing.T) {
+	cases := []struct {
+		mapID           int
+		mapName         string
+		monsterCount    int
+		handle          string
+		name            string
+		sourceQuery     string
+		spawn           SpawnPoint
+		requiredHandles []string
+	}{
+		{mapID: 179, mapName: "葬龙潭_1", monsterCount: 5, handle: "7655309792053800", name: "骷髅妖兵", sourceQuery: "monstermap/dhwarrior.swf", spawn: SpawnPoint{X: 867, Y: 527}},
+		{mapID: 180, mapName: "葬龙潭_2", monsterCount: 5, handle: "7413309986905828", name: "骷髅妖兵", sourceQuery: "monstermap/dhwarrior.swf", spawn: SpawnPoint{X: 1632, Y: 538}},
+		{mapID: 181, mapName: "葬龙潭_3", monsterCount: 4, handle: "6482310163657496", name: "白骨枪兵", sourceQuery: "monstermap/bonelance.swf", spawn: SpawnPoint{X: 801, Y: 530}},
+		{mapID: 182, mapName: "葬龙潭_4", monsterCount: 6, handle: "1270310232361564", name: "灭阎首领", sourceQuery: "monstermap/hadesrabbi.swf", spawn: SpawnPoint{X: 1700, Y: 476}},
+		{mapID: 185, mapName: "葬龙潭_7", monsterCount: 10, handle: "4568310524418360", name: "白骨枪兵", sourceQuery: "monstermap/bonelance.swf", spawn: SpawnPoint{X: 661, Y: 500}, requiredHandles: []string{"6360311593663218", "6362311593664829", "6364311593665154", "6366311593665864"}},
+		{mapID: 186, mapName: "葬龙潭_8", monsterCount: 12, handle: "9611310624908840", name: "龙娃", sourceQuery: "monstermap/dragonson.swf", spawn: SpawnPoint{X: 2006, Y: 541}, requiredHandles: []string{"9623310624913673", "9625310624914226"}},
+	}
+
+	for _, testCase := range cases {
+		role := session.RoleSummary{RoleID: "acct-test-role-zanglongtan", DisplayName: "测试女侠", Level: 35, MapID: testCase.mapID, VisualRoleID: 1}
+		playerBase := session.PlayerBaseData{PlayerID: "acct-test", RoleID: role.RoleID, DisplayName: role.DisplayName, Level: role.Level, MapID: testCase.mapID, VisualRoleID: role.VisualRoleID}
+		snapshot := BuildTownBootstrap(role, playerBase)
+		if snapshot.LoadMap.MapID != itoa(testCase.mapID) || snapshot.LoadMap.MapName != testCase.mapName || snapshot.LoadMap.EnemyShow {
+			t.Fatalf("expected captured zanglongtan map%d load state, got %+v", testCase.mapID, snapshot.LoadMap)
+		}
+
+		monsters := map[string]RolePush{}
+		for _, rolePush := range snapshot.CreateRoles {
+			if rolePush.Kind == "monster" {
+				monsters[rolePush.Handle] = rolePush
+			}
+		}
+		if len(monsters) != testCase.monsterCount {
+			t.Fatalf("expected map%d to contain %d captured visible monsters, got %+v", testCase.mapID, testCase.monsterCount, monsters)
+		}
+		actual, ok := monsters[testCase.handle]
+		if !ok || actual.DisplayName != testCase.name || actual.SourceQuery != testCase.sourceQuery || actual.SpawnFlash != testCase.spawn {
+			t.Fatalf("expected map%d captured monster %s, got %+v", testCase.mapID, testCase.handle, actual)
+		}
+		for _, handle := range testCase.requiredHandles {
+			if _, ok := monsters[handle]; !ok {
+				t.Fatalf("expected map%d to contain captured monster %s, got %+v", testCase.mapID, handle, monsters)
+			}
+		}
+		if actual.SourceNPCVisual == nil || actual.SourceNPCVisual.MovieClipIRPath != "runtime/classic-monstermap/"+strings.TrimSuffix(strings.TrimPrefix(testCase.sourceQuery, "monstermap/"), ".swf")+"/"+strings.TrimSuffix(strings.TrimPrefix(testCase.sourceQuery, "monstermap/"), ".swf")+"-movieclip-ir" {
+			t.Fatalf("expected map%d source visual for %s, got %+v", testCase.mapID, testCase.handle, actual.SourceNPCVisual)
+		}
+	}
+
+	for _, mapID := range []int{183, 184} {
+		role := session.RoleSummary{RoleID: "acct-test-role-zanglongtan-empty", DisplayName: "测试女侠", Level: 35, MapID: mapID, VisualRoleID: 1}
+		playerBase := session.PlayerBaseData{PlayerID: "acct-test", RoleID: role.RoleID, DisplayName: role.DisplayName, Level: role.Level, MapID: mapID, VisualRoleID: role.VisualRoleID}
+		for _, rolePush := range BuildTownBootstrap(role, playerBase).CreateRoles {
+			if rolePush.Kind == "monster" {
+				t.Fatalf("map%d must not invent a visible monster without capture evidence, got %+v", mapID, rolePush)
+			}
+		}
+	}
+
+	for _, mapID := range []int{179, 180, 181, 182, 183, 184, 185, 186} {
+		if key, ok := DungeonInstanceKeyForMapID(mapID); !ok || key != session.DungeonInstanceZanglongtan {
+			t.Fatalf("expected map%d zanglongtan dungeon key, got key=%s ok=%v", mapID, key, ok)
+		}
+	}
+
+	routes := []struct {
+		fromMapID int
+		handle    string
+		mapID     int
+	}{
+		{fromMapID: 63, handle: "transp_179", mapID: 179},
+		{fromMapID: 179, handle: "transp_180", mapID: 180},
+		{fromMapID: 179, handle: "transp_63", mapID: 63},
+		{fromMapID: 180, handle: "transp_179", mapID: 179},
+		{fromMapID: 180, handle: "transp_181", mapID: 181},
+		{fromMapID: 180, handle: "transp_183", mapID: 183},
+		{fromMapID: 181, handle: "transp_180", mapID: 180},
+		{fromMapID: 181, handle: "transp_182", mapID: 182},
+		{fromMapID: 181, handle: "transp_185", mapID: 185},
+		{fromMapID: 182, handle: "transp_181", mapID: 181},
+		{fromMapID: 185, handle: "transp_181", mapID: 181},
+		{fromMapID: 185, handle: "transp_184", mapID: 184},
+		{fromMapID: 185, handle: "transp_186", mapID: 186},
+		{fromMapID: 186, handle: "transp_185", mapID: 185},
+		{fromMapID: 186, handle: "transp_63", mapID: 63},
+	}
+	for _, route := range routes {
+		destination, ok := ResolveTownTransportAnswerFromMap(route.fromMapID, route.handle, "goto")
+		if !ok || destination.MapID != route.mapID {
+			t.Fatalf("expected zanglongtan transport %+v to resolve, got destination=%+v ok=%v", route, destination, ok)
+		}
+	}
+}
+
 func TestBuildTownBootstrapUsesCapturedHuangfengzhaiMap147Roles(t *testing.T) {
 	role := session.RoleSummary{
 		RoleID:       "acct-test-role-huangfengzhai-147",

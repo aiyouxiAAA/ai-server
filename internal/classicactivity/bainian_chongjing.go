@@ -57,6 +57,8 @@ var (
 	bainianChongjingMu           sync.Mutex
 	bainianChongjingKilledBucket int64
 	bainianChongjingKilled       bool
+	bainianChongjingForcedBucket int64
+	bainianChongjingForced       bool
 )
 
 func bainianChongjingCycleSeconds() int64 {
@@ -95,15 +97,37 @@ func BainianChongjingIsWarning(now time.Time) bool {
 }
 
 func BainianChongjingIsAlive(now time.Time) bool {
+	bainianChongjingMu.Lock()
+	defer bainianChongjingMu.Unlock()
+	if bainianChongjingIsForcedLocked(now) {
+		return true
+	}
 	if !BainianChongjingIsActive(now) {
 		return false
 	}
-	bainianChongjingMu.Lock()
-	defer bainianChongjingMu.Unlock()
 	if !bainianChongjingKilled {
 		return true
 	}
 	return BainianChongjingCycleBucket(now) != bainianChongjingKilledBucket
+}
+
+// ForceBainianChongjingRefreshForDev makes the current natural-cycle boss visible for local dev tools.
+// It does not change the captured production cycle or persist across a server restart.
+func ForceBainianChongjingRefreshForDev(now time.Time) {
+	bainianChongjingMu.Lock()
+	defer bainianChongjingMu.Unlock()
+	bainianChongjingKilled = false
+	bainianChongjingKilledBucket = 0
+	bainianChongjingForcedBucket = BainianChongjingCycleBucket(now)
+	bainianChongjingForced = true
+}
+
+// BainianChongjingIsForcedForDev reports whether the active cycle has already been force-refreshed.
+// The announcement loop uses it to avoid repeating a natural spawn notification after a manual refresh.
+func BainianChongjingIsForcedForDev(now time.Time) bool {
+	bainianChongjingMu.Lock()
+	defer bainianChongjingMu.Unlock()
+	return bainianChongjingIsForcedLocked(now)
 }
 
 func MarkBainianChongjingKilled(now time.Time) {
@@ -111,6 +135,8 @@ func MarkBainianChongjingKilled(now time.Time) {
 	defer bainianChongjingMu.Unlock()
 	bainianChongjingKilled = true
 	bainianChongjingKilledBucket = BainianChongjingCycleBucket(now)
+	bainianChongjingForced = false
+	bainianChongjingForcedBucket = 0
 }
 
 func ResetBainianChongjingKillStateForTest() {
@@ -118,6 +144,20 @@ func ResetBainianChongjingKillStateForTest() {
 	defer bainianChongjingMu.Unlock()
 	bainianChongjingKilled = false
 	bainianChongjingKilledBucket = 0
+	bainianChongjingForced = false
+	bainianChongjingForcedBucket = 0
+}
+
+func bainianChongjingIsForcedLocked(now time.Time) bool {
+	if !bainianChongjingForced {
+		return false
+	}
+	if bainianChongjingForcedBucket == BainianChongjingCycleBucket(now) {
+		return true
+	}
+	bainianChongjingForced = false
+	bainianChongjingForcedBucket = 0
+	return false
 }
 
 func BainianChongjingSpawnForMap(mapID int, now time.Time) (BainianChongjingSpawn, bool) {

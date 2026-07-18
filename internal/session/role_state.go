@@ -1193,16 +1193,18 @@ func isCapturedWoodcutter333LocalRole(role RoleSummary) bool {
 func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 	role.Voc = "游侠"
 	role.DisplayName = "333"
-	if role.Level < 44 || role.Exp <= 0 {
-		role.Level = 44
-		role.Exp = 5768622
+	if role.Level < 50 || role.Exp < 8338018 {
+		role.Level = 50
+		role.Exp = 8338018
 	}
-	if role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0 {
-		role.AGI = 175
-		role.STR = 73
-		role.INT = 19
-		role.CON = 0
-		role.LCK = 19
+	if role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0 ||
+		role.AGI == 162 && role.STR == 66 && role.INT == 19 && role.CON == 0 && role.LCK == 19 ||
+		role.AGI == 175 && role.STR == 73 && role.INT == 19 && role.CON == 0 && role.LCK == 19 {
+		role.AGI = 183
+		role.STR = 102
+		role.INT = 16
+		role.CON = 2
+		role.LCK = 10
 	}
 	if role.MapID <= 1 {
 		role.MapID = 15
@@ -1210,49 +1212,51 @@ func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 	if role.VisualRoleID <= 0 {
 		role.VisualRoleID = 1
 	}
-	if role.RoleState == nil || role.RoleState.Lv < 44 || role.RoleState.Exp <= 0 {
-		roleState := capturedWoodcutter40RoleState(role.RoleID)
+	if role.RoleState == nil || role.RoleState.Lv < 50 || role.RoleState.Exp < 8338018 {
+		roleState := capturedWoodcutter333Level50RoleState(role.RoleID)
 		role.RoleState = &roleState
 	}
 	if role.RolePhysique == nil || role.RolePhysique.MaxHP <= 0 || role.RolePhysique.MaxMP <= 0 ||
-		role.RolePhysique.MgcAtk != role.RolePhysique.PhyAtk {
-		rolePhysique := capturedWoodcutter40RolePhysique(role.RoleID)
+		role.RolePhysique.MgcAtk != role.RolePhysique.PhyAtk ||
+		role.RolePhysique.AGI == 175 && role.RolePhysique.STR == 73 && role.RolePhysique.INT == 19 &&
+			role.RolePhysique.CON == 0 && role.RolePhysique.LCK == 19 && role.RolePhysique.PhyAtk == 297 {
+		rolePhysique := capturedWoodcutter333Level50RolePhysique(role.RoleID)
 		role.RolePhysique = &rolePhysique
 	}
 	return role
 }
 
-func capturedWoodcutter40RoleState(roleID string) RoleState {
+func capturedWoodcutter333Level50RoleState(roleID string) RoleState {
 	return RoleState{
 		Handle: roleID,
-		HP:     1337,
-		MP:     557,
-		Exp:    5768622,
-		Lv:     44,
-		Speed:  140,
+		HP:     1463,
+		MP:     603,
+		Exp:    8338018,
+		Lv:     50,
+		Speed:  150,
 		OutG:   0,
 		InG:    0,
 	}
 }
 
-func capturedWoodcutter40RolePhysique(roleID string) RolePhysique {
+func capturedWoodcutter333Level50RolePhysique(roleID string) RolePhysique {
 	return RolePhysique{
 		Handle:    roleID,
-		ResPros:   []string{"冰冻|8", "眩晕|15", "封印|10", "混乱|10", "麻痹|5"},
-		AGI:       175,
-		STR:       73,
-		INT:       19,
-		CON:       0,
-		LCK:       19,
-		MaxHP:     1365,
-		MaxMP:     709,
-		PhyAtk:    297,
-		MgcAtk:    297,
-		PhyDef:    267,
-		MgcDef:    87,
-		Hit:       517,
-		Dog:       268,
-		Fat:       577,
+		ResPros:   []string{"冰冻|8", "眩晕|15", "封印|10", "外伤|12", "混乱|10", "迟钝|10", "麻痹|5"},
+		AGI:       183,
+		STR:       102,
+		INT:       16,
+		CON:       2,
+		LCK:       10,
+		MaxHP:     1535,
+		MaxMP:     739,
+		PhyAtk:    357,
+		MgcAtk:    357,
+		PhyDef:    299,
+		MgcDef:    77,
+		Hit:       565,
+		Dog:       265,
+		Fat:       597,
 		LastPoint: 0,
 	}
 }

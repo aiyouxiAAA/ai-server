@@ -391,21 +391,21 @@ func TestStoreCapturedWoodcutter333UsesCapturedLatestRuntime(t *testing.T) {
 	if role.DisplayName != "333" || playerBase.DisplayName != "333" {
 		t.Fatalf("expected 333 account to keep local role name 333, role=%q base=%q", role.DisplayName, playerBase.DisplayName)
 	}
-	if role.Level != 44 || role.Exp != 5768622 || role.Voc != "游侠" ||
-		role.AGI != 175 || role.STR != 73 || role.INT != 19 || role.CON != 0 || role.LCK != 19 {
+	if role.Level != 50 || role.Exp != 8338018 || role.Voc != "游侠" ||
+		role.AGI != 183 || role.STR != 102 || role.INT != 16 || role.CON != 2 || role.LCK != 10 {
 		t.Fatalf("expected captured latest woodcutter summary, got %+v", role)
 	}
 	if role.MapID != 15 || playerBase.MapID != 15 {
 		t.Fatalf("expected captured final map 15, role=%d base=%d", role.MapID, playerBase.MapID)
 	}
-	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1337 || playerBase.RoleState.MP != 557 ||
-		playerBase.RoleState.Lv != 44 || playerBase.RoleState.Exp != 5768622 || playerBase.RoleState.Speed != 140 {
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1463 || playerBase.RoleState.MP != 603 ||
+		playerBase.RoleState.Lv != 50 || playerBase.RoleState.Exp != 8338018 || playerBase.RoleState.Speed != 150 {
 		t.Fatalf("expected captured latest role state, got %+v", playerBase.RoleState)
 	}
-	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1365 || playerBase.RolePhysique.MaxMP != 709 ||
-		playerBase.RolePhysique.PhyAtk != 297 || playerBase.RolePhysique.MgcAtk != 297 ||
-		playerBase.RolePhysique.PhyDef != 267 || playerBase.RolePhysique.MgcDef != 87 ||
-		playerBase.RolePhysique.Hit != 517 || playerBase.RolePhysique.Dog != 268 || playerBase.RolePhysique.Fat != 577 {
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1535 || playerBase.RolePhysique.MaxMP != 739 ||
+		playerBase.RolePhysique.PhyAtk != 357 || playerBase.RolePhysique.MgcAtk != 357 ||
+		playerBase.RolePhysique.PhyDef != 299 || playerBase.RolePhysique.MgcDef != 77 ||
+		playerBase.RolePhysique.Hit != 565 || playerBase.RolePhysique.Dog != 265 || playerBase.RolePhysique.Fat != 597 {
 		t.Fatalf("expected captured latest role physique, got %+v", playerBase.RolePhysique)
 	}
 	for _, part := range []string{"a=29", "b=22", "c=26", "p=64", "se=19", "wr=39", "w1=55"} {
@@ -527,7 +527,7 @@ func TestCapturedWoodcutter333RuntimeDefaultsBackfillBowMaterialsAndEquipment(t 
 	if _, ok := testRoleItemByName(role.Items, "飞镖"); !ok {
 		t.Fatalf("expected existing 333 bag items to be preserved, got %+v", role.Items)
 	}
-	if role.RolePhysique == nil || role.RolePhysique.PhyAtk != 297 || role.RolePhysique.MgcAtk != role.RolePhysique.PhyAtk {
+	if role.RolePhysique == nil || role.RolePhysique.PhyAtk != 357 || role.RolePhysique.MgcAtk != role.RolePhysique.PhyAtk {
 		t.Fatalf("expected 333 runtime defaults to mirror magic attack to physical attack, got %+v", role.RolePhysique)
 	}
 	piercingArrow, ok := testRoleItemByName(role.Items, "穿甲箭")
@@ -831,14 +831,14 @@ func TestStorePersistentCapturedWoodcutter333KeepsLatestSnapshot(t *testing.T) {
 	if !ok {
 		t.Fatal("expected reopened 333 captured role")
 	}
-	if role.DisplayName != "333" || role.Level != 44 || role.Exp != 5768622 || role.Voc != "游侠" {
+	if role.DisplayName != "333" || role.Level != 50 || role.Exp != 8338018 || role.Voc != "游侠" {
 		t.Fatalf("expected reopened 333 to keep captured latest role, got %+v", role)
 	}
-	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1337 || playerBase.RoleState.MP != 557 || playerBase.RoleState.Lv != 44 {
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1463 || playerBase.RoleState.MP != 603 || playerBase.RoleState.Lv != 50 {
 		t.Fatalf("expected reopened 333 to keep captured role state, got %+v", playerBase.RoleState)
 	}
-	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1365 || playerBase.RolePhysique.MaxMP != 709 ||
-		playerBase.RolePhysique.PhyAtk != 297 || playerBase.RolePhysique.MgcAtk != 297 {
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.MaxHP != 1535 || playerBase.RolePhysique.MaxMP != 739 ||
+		playerBase.RolePhysique.PhyAtk != 357 || playerBase.RolePhysique.MgcAtk != 357 {
 		t.Fatalf("expected reopened 333 to keep captured role physique, got %+v", playerBase.RolePhysique)
 	}
 	if !strings.Contains(role.SourceQuery, "p=64") || !strings.Contains(role.SourceQuery, "w1=55") || strings.Contains(role.SourceQuery, "w3=49") || role.BattleSourceQuery != role.SourceQuery {

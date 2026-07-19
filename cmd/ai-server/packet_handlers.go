@@ -978,6 +978,11 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 	if mapID, ok := battle.ParseMapID(request.MapID); ok {
 		_ = syncDungeonInstanceState(store, socketSession, mapID)
 	}
+	if classicactivity.IsPointCouponThiefHandle(request.MapID, request.SourceMonsterHandle) &&
+		!classicactivity.IsCurrentPointCouponThiefHandle(request.MapID, request.SourceMonsterHandle, time.Now()) {
+		log.Printf("[ai-server] classic battle StartBattle ignored inactive point coupon thief mapId=%s handle=%s", request.MapID, request.SourceMonsterHandle)
+		return packetResult{handled: true}
+	}
 	if isDefeatedVisibleMonster(socketSession, request.SourceMonsterHandle) {
 		log.Printf("[ai-server] classic battle StartBattle ignored defeated visible monster mapId=%s handle=%s", request.MapID, request.SourceMonsterHandle)
 		return packetResult{handled: true}

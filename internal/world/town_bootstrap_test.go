@@ -2566,8 +2566,15 @@ func TestBuildTownBootstrapUsesCapturedBaiyuanTownNPCs(t *testing.T) {
 	}
 }
 
-func TestBuildTownBootstrapIncludesPointCouponThiefOnlyOnActivityMaps(t *testing.T) {
-	for _, mapID := range []int{84, 114, 115} {
+func TestBuildTownBootstrapIncludesPointCouponThiefOnSelectedActivityMaps(t *testing.T) {
+	classicactivity.ResetPointCouponThiefRefreshStateForTest()
+	t.Cleanup(classicactivity.ResetPointCouponThiefRefreshStateForTest)
+	refresh := classicactivity.ForcePointCouponThiefRefreshForDev(time.Now())
+	if len(refresh.Current) != 3 {
+		t.Fatalf("expected three active point coupon thieves, got %+v", refresh.Current)
+	}
+	for _, spawn := range refresh.Current {
+		mapID := spawn.MapID
 		role := session.RoleSummary{
 			RoleID:      "role-point-coupon-thief",
 			DisplayName: "测试角色",
@@ -2601,6 +2608,9 @@ func TestBuildTownBootstrapIncludesPointCouponThiefOnlyOnActivityMaps(t *testing
 		if thief.SourceNPCVisual == nil || thief.SourceNPCVisual.MovieClipIRPath != "runtime/classic-monstermap/militia/militia-movieclip-ir" {
 			t.Fatalf("expected militia monstermap visual on map%d, got %+v", mapID, thief.SourceNPCVisual)
 		}
+		if thief.SpawnFlash.X != spawn.Source.X || thief.SpawnFlash.Y != spawn.Source.Y {
+			t.Fatalf("expected captured point coupon thief source on map%d, got %+v", mapID, thief)
+		}
 	}
 
 	role := session.RoleSummary{RoleID: "role-novice", DisplayName: "测试角色", Level: 1, MapID: 1}
@@ -2609,6 +2619,31 @@ func TestBuildTownBootstrapIncludesPointCouponThiefOnlyOnActivityMaps(t *testing
 	for _, rolePush := range snapshot.CreateRoles {
 		if rolePush.DisplayName == classicactivity.PointCouponThiefName {
 			t.Fatalf("point coupon thief must not spawn in novice village, got %+v", rolePush)
+		}
+	}
+}
+
+func TestPointCouponThiefLiveRolePushesReuseBootstrapMonsterContract(t *testing.T) {
+	classicactivity.ResetPointCouponThiefRefreshStateForTest()
+	t.Cleanup(classicactivity.ResetPointCouponThiefRefreshStateForTest)
+	refresh := classicactivity.ForcePointCouponThiefRefreshForDev(time.Date(2026, 6, 19, 18, 37, 0, 0, time.Local))
+	roles := PointCouponThiefLiveRolePushes(refresh.Current)
+	if len(roles) != 3 {
+		t.Fatalf("expected one live point coupon thief per activity map, got %+v", roles)
+	}
+	for _, spawn := range refresh.Current {
+		var role *RolePush
+		for index := range roles {
+			if roles[index].Handle == spawn.Handle {
+				role = &roles[index]
+				break
+			}
+		}
+		if role == nil {
+			t.Fatalf("expected live role for %+v, got %+v", spawn, roles)
+		}
+		if role.RoleID != "-2" || role.Kind != "monster" || role.MapID != itoa(spawn.MapID) || role.DisplayName != classicactivity.PointCouponThiefName || role.SourceQuery != classicactivity.PointCouponThiefSourceQuery {
+			t.Fatalf("expected bootstrap-equivalent role for %+v, got %+v", spawn, role)
 		}
 	}
 }

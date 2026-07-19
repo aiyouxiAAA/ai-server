@@ -19,7 +19,7 @@ func startClassicActivityAnnouncementLoop() {
 			currentHour := now.Truncate(time.Hour)
 			if currentHour.After(lastAnnouncedHour) {
 				lastAnnouncedHour = currentHour
-				broadcastClassicPointCouponThiefSpawnNotice()
+				broadcastClassicPointCouponThiefRefresh(classicactivity.AdvancePointCouponThiefRefresh(now))
 			}
 
 			phase := classicactivity.BainianChongjingPhaseAt(now)
@@ -56,6 +56,16 @@ func classicPointCouponThiefSpawnAnnouncementMessage() classicTownChatMessagePus
 	return classicTownChatMessagePush{
 		Channel: "system",
 		Msg:     "<w>" + classicPointCouponThiefSpawnNoticeText,
+	}
+}
+
+func broadcastClassicPointCouponThiefRefresh(refresh classicactivity.PointCouponThiefRefresh) {
+	for _, spawn := range refresh.Previous {
+		worldSceneHub.broadcastStaticRemoveHandlesToMap(spawn.MapID, []string{spawn.Handle})
+	}
+	broadcastClassicPointCouponThiefSpawnNotice()
+	for _, spawn := range refresh.Current {
+		worldSceneHub.broadcastStaticCreateRolesToMap(spawn.MapID, []world.RolePush{world.PointCouponThiefRolePush(spawn)})
 	}
 }
 

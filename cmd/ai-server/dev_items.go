@@ -92,6 +92,16 @@ type devBainianChongjingRefreshResponse struct {
 	Handles []string `json:"handles"`
 }
 
+type devPointCouponThiefRefreshSpawn struct {
+	MapID  int    `json:"mapId"`
+	Handle string `json:"handle"`
+}
+
+type devPointCouponThiefRefreshResponse struct {
+	Success bool                              `json:"success"`
+	Spawns  []devPointCouponThiefRefreshSpawn `json:"spawns"`
+}
+
 func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 	mux.HandleFunc("/dev/items", devItemsPageHandler)
 	mux.Handle("/dev/classic-icons/", http.StripPrefix("/dev/classic-icons/", http.FileServer(http.Dir(resolveDevClassicIconDir()))))
@@ -130,6 +140,13 @@ func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 		}
 		handleDevRefreshBainianChongjing(writer, time.Now())
 	})
+	mux.HandleFunc("/dev/items/refresh-point-coupon-thief", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodPost {
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		handleDevRefreshPointCouponThief(writer, time.Now())
+	})
 }
 
 func resolveDevClassicIconDir() string {
@@ -159,6 +176,19 @@ func handleDevRefreshBainianChongjing(writer http.ResponseWriter, now time.Time)
 		MapID:   classicactivity.BainianChongjingMapID,
 		Handles: classicactivity.BainianChongjingEncounterHandles(),
 	})
+}
+
+func handleDevRefreshPointCouponThief(writer http.ResponseWriter, now time.Time) {
+	refresh := classicactivity.ForcePointCouponThiefRefreshForDev(now)
+	broadcastClassicPointCouponThiefRefresh(refresh)
+	spawns := make([]devPointCouponThiefRefreshSpawn, 0, len(refresh.Current))
+	for _, spawn := range refresh.Current {
+		spawns = append(spawns, devPointCouponThiefRefreshSpawn{
+			MapID:  spawn.MapID,
+			Handle: spawn.Handle,
+		})
+	}
+	writeDevJSON(writer, devPointCouponThiefRefreshResponse{Success: true, Spawns: spawns})
 }
 
 func handleDevAddItem(writer http.ResponseWriter, request *http.Request, store *session.Store) {
@@ -561,6 +591,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
       <hr>
       <h2>世界活动</h2>
       <button id="refreshBainianButton">刷新百年虫精（测试）</button>
+      <button id="refreshPointCouponThiefButton">刷新点券盗贼（测试）</button>
       <hr>
       <h2>添加道具</h2>
       <label>道具 ID / 图标 ID / 名字
@@ -608,6 +639,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
     const setLevelButton = document.getElementById('setLevelButton');
     const refreshButton = document.getElementById('refreshButton');
     const refreshBainianButton = document.getElementById('refreshBainianButton');
+    const refreshPointCouponThiefButton = document.getElementById('refreshPointCouponThiefButton');
     let state = { roles: [], templates: [] };
 
     function setStatus(text, isError) {
@@ -816,12 +848,27 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
         .finally(() => { refreshBainianButton.disabled = false; });
     }
 
+    function refreshPointCouponThief() {
+      refreshPointCouponThiefButton.disabled = true;
+      setStatus('正在刷新点券盗贼...', false);
+      fetch('/dev/items/refresh-point-coupon-thief', { method: 'POST' })
+        .then(response => response.json())
+        .then(result => {
+          if (!result.success) throw new Error(result.errorMessage || '刷新失败。');
+          const maps = (result.spawns || []).map(spawn => '地图' + spawn.mapId).join('、');
+          setStatus('点券盗贼已刷新至' + (maps || '活动地图') + '，并已发送全服通知。', false);
+        })
+        .catch(error => setStatus(String(error), true))
+        .finally(() => { refreshPointCouponThiefButton.disabled = false; });
+    }
+
     roleSelect.addEventListener('change', renderItems);
     refreshButton.addEventListener('click', refresh);
     addButton.addEventListener('click', addItem);
     addSilverButton.addEventListener('click', addSilver);
     setLevelButton.addEventListener('click', setLevel);
     refreshBainianButton.addEventListener('click', refreshBainianChongjing);
+    refreshPointCouponThiefButton.addEventListener('click', refreshPointCouponThief);
     refresh().catch(error => setStatus(String(error), true));
   </script>
 </body>

@@ -1095,6 +1095,20 @@ func BainianChongjingLiveHandles() []string {
 	return classicactivity.BainianChongjingEncounterHandles()
 }
 
+// PointCouponThiefRolePush maps an activity spawn to the same source-monster
+// contract used by town bootstrap and live world refreshes.
+func PointCouponThiefRolePush(spawn classicactivity.PointCouponThiefSpawn) RolePush {
+	return BuildSourceMonsterRolePush(spawn.MapID, pointCouponThiefSourceMonster(spawn))
+}
+
+func PointCouponThiefLiveRolePushes(spawns []classicactivity.PointCouponThiefSpawn) []RolePush {
+	roles := make([]RolePush, 0, len(spawns))
+	for _, spawn := range spawns {
+		roles = append(roles, PointCouponThiefRolePush(spawn))
+	}
+	return roles
+}
+
 func filterBainianChongjingSourceMonsters(monsters []sourceMonsterEntry, mapID int, now time.Time) []sourceMonsterEntry {
 	if mapID != classicactivity.BainianChongjingMapID {
 		return monsters
@@ -1117,6 +1131,10 @@ func appendPointCouponThiefSourceMonster(monsters []sourceMonsterEntry, mapID in
 	if !ok {
 		return monsters
 	}
+	return append(monsters, pointCouponThiefSourceMonster(spawn))
+}
+
+func pointCouponThiefSourceMonster(spawn classicactivity.PointCouponThiefSpawn) sourceMonsterEntry {
 	monster := buildCapturedSourceMonster(
 		spawn.Handle,
 		classicactivity.PointCouponThiefName,
@@ -1134,7 +1152,7 @@ func appendPointCouponThiefSourceMonster(monsters []sourceMonsterEntry, mapID in
 			Mode:  spawn.MoveMode,
 		}
 	}
-	return append(monsters, monster)
+	return monster
 }
 
 func isSourceWildBattleMap(mapID int) bool {

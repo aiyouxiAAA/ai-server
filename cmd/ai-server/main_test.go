@@ -1968,18 +1968,39 @@ func TestBuildClassicBattleLootUsesHuangfengCandidateRewardMetadata(t *testing.T
 }
 
 func TestPointCouponThiefBattleOverPushesWorldNotice(t *testing.T) {
+	classicactivity.ResetPointCouponThiefRefreshStateForTest()
+	t.Cleanup(classicactivity.ResetPointCouponThiefRefreshStateForTest)
+	refresh := classicactivity.ForcePointCouponThiefRefreshForDev(time.Now())
+	if len(refresh.Current) != 3 {
+		t.Fatalf("expected three active point coupon thieves, got %+v", refresh.Current)
+	}
+	spawn := refresh.Current[0]
+	mapID := strconv.Itoa(spawn.MapID)
 	store := session.NewStore()
 	socketSession, role := seedSelectedRoleSessionInStore(t, store, "恐龙抗狼1")
-	handle := classicactivity.PointCouponThiefHandle(114, 1718193600, 0)
+	staleHandle := classicactivity.PointCouponThiefHandle(spawn.MapID, 1718193600, 0)
+	staleStart := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 1,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:               mapID,
+			MapName:             "m_" + mapID,
+			ReturnRoute:         "town-placeholder",
+			SourceMonsterHandle: staleHandle,
+		}),
+	}, socketSession)
+	if staleStart.battleStart != nil || socketSession.battleRuntime != nil {
+		t.Fatalf("expected inactive point coupon thief handle to be rejected, got %+v", staleStart)
+	}
+
 	startResult := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicBattleStartReq,
 		Seq: 2,
 		Payload: mustJSON(t, battle.StartRequest{
-			MapID:               "114",
-			MapName:             "卧佛谷_10",
-			StageFocusX:         2329,
+			MapID:               mapID,
+			MapName:             "m_" + mapID,
 			ReturnRoute:         "town-placeholder",
-			SourceMonsterHandle: handle,
+			SourceMonsterHandle: spawn.Handle,
 		}),
 	}, socketSession)
 	if startResult.battleStart == nil || socketSession.battleRuntime == nil {

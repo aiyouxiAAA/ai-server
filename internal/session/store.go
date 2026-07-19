@@ -2304,6 +2304,54 @@ func (store *Store) UpdateRoleState(playerID string, roleID string, roleState Ro
 	return RoleSummary{}, emptyPlayerBaseData(playerID), false
 }
 
+// UpdateRoleCombatSnapshot persists captured HP/MP/MaxHP/MaxMP together.
+// Ordinary UpdateRoleState clamps against the existing physique first, so packet
+// fixtures with oversized MaxHP/MaxMP need an atomic physique+state write.
+func (store *Store) UpdateRoleCombatSnapshot(playerID string, roleID string, roleState RoleState, rolePhysique RolePhysique) (RoleSummary, PlayerBaseData, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+
+		role := withRoleRuntimeDefaults(roles[index])
+		role.Level = ClassicRoleLevelForExp(role.Exp, role.Level)
+		if rolePhysique.Handle == "" {
+			rolePhysique.Handle = role.RoleID
+		}
+		if rolePhysique.MaxHP <= 0 {
+			rolePhysique.MaxHP = defaultRolePhysique(role).MaxHP
+		}
+		if rolePhysique.MaxMP <= 0 {
+			rolePhysique.MaxMP = defaultRolePhysique(role).MaxMP
+		}
+		if roleState.Handle == "" {
+			roleState.Handle = role.RoleID
+		}
+		roleState.HP = clampRoleRuntimeValue(roleState.HP, 0, rolePhysique.MaxHP)
+		roleState.MP = clampRoleRuntimeValue(roleState.MP, 0, rolePhysique.MaxMP)
+		roleState.Exp = role.Exp
+		roleState.Lv = role.Level
+		if roleState.Speed <= 0 {
+			roleState.Speed = ClassicRoleSpeed(role.Level)
+		}
+		role.RoleState = &roleState
+		role.RolePhysique = &rolePhysique
+		roles[index] = role
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			log.Printf("[session.Store] persist role combat snapshot failed: %v", err)
+		}
+
+		role = withRoleRuntimeDefaults(roles[index])
+		return role, playerBaseDataFromRole(playerID, role), true
+	}
+	return RoleSummary{}, emptyPlayerBaseData(playerID), false
+}
+
 func (store *Store) SetRoleLevel(playerID string, roleID string, level int) RoleExpGrantResult {
 	store.mu.Lock()
 	defer store.mu.Unlock()

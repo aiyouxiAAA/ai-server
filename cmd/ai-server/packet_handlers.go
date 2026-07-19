@@ -967,6 +967,14 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 		)
 		return packetResult{handled: true}
 	}
+	// Refresh appearance/state/physique from store so battle cells match the latest
+	// town equipment and attributes even if the socket session snapshot is stale.
+	if store != nil {
+		if selectedRole, playerBase, ok := store.GetRoleRuntimeData(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID); ok {
+			socketSession.selectedRole = &selectedRole
+			socketSession.playerBase = &playerBase
+		}
+	}
 	if mapID, ok := battle.ParseMapID(request.MapID); ok {
 		_ = syncDungeonInstanceState(store, socketSession, mapID)
 	}
@@ -976,7 +984,7 @@ func buildClassicBattleStartResult(store *session.Store, socketSession *packetSe
 	}
 
 	teamPlan := classicTeamManager.BuildBattleMemberPlan(socketSession.selectedRole.RoleID, request.MapID)
-	actors, sharedMembers := classicTeamHub.buildBattleActors(battle.TeamActor{
+	actors, sharedMembers := classicTeamHub.buildBattleActors(store, battle.TeamActor{
 		Role:       *socketSession.selectedRole,
 		PlayerBase: *socketSession.playerBase,
 	}, teamPlan.Members, request.MapID)

@@ -540,11 +540,19 @@ func TestHandlePacketClassicTeamCapturedSecondAccountSharesBattleAppearance(t *t
 
 	moveClassicTeamSessionToMap(t, store, leaderSession, 4)
 	moveClassicTeamSessionToMap(t, store, memberSession, 4)
+	// StartBattle refreshes every teammate from store. Session-only fixture patches
+	// would be discarded, so persist the captured combat snapshot first.
+	persistCapturedClassicTeamRoleFixture(t, store, memberSession, capturedClassicTeamRoleBridgeWoodcutter)
 	applyCapturedClassicTeamRoleFixture(memberSession, capturedClassicTeamRoleBridgeWoodcutter)
 	classicTeamManager.UpsertOnline(classicTeamMemberFromSession(leaderSession))
 	replayEvents := classicTeamManager.UpsertOnline(classicTeamMemberFromSession(memberSession))
 	assertClassicCapturedTeamMemberSnapshot(t, packetResult{teamEvents: replayEvents}, memberSession.selectedRole.RoleID, capturedClassicTeamRoleBridgeWoodcutter, "4")
 	classicTeamHub.register(memberSession.selectedRole.RoleID, &websocketWriter{}, memberSession)
+
+	storeRole, storePlayerBase, ok := store.GetRoleRuntimeData(memberSession.playerBase.PlayerID, memberSession.selectedRole.RoleID)
+	if !ok {
+		t.Fatalf("expected captured member runtime data in store")
+	}
 
 	result := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicBattleStartReq,
@@ -566,18 +574,25 @@ func TestHandlePacketClassicTeamCapturedSecondAccountSharesBattleAppearance(t *t
 			continue
 		}
 		capturedCellFound = true
-		if cell.DisplayURL != capturedClassicTeamRoleBridgeWoodcutter.BattleSourceQuery ||
+		if cell.DisplayURL != storePlayerBase.BattleSourceQuery ||
+			cell.DisplayURL != storeRole.BattleSourceQuery ||
 			!strings.Contains(cell.DisplayURL, "w3=49") ||
 			strings.Contains(cell.DisplayURL, "w3=43") {
-			t.Fatalf("expected captured battle source query on team cell, got %q", cell.DisplayURL)
+			t.Fatalf("expected store-backed battle source query on team cell, got %q store=%q", cell.DisplayURL, storePlayerBase.BattleSourceQuery)
+		}
+		if cell.Level != storePlayerBase.Level ||
+			cell.Vocation != storePlayerBase.Voc ||
+			cell.HP != storePlayerBase.HP ||
+			cell.MaxHP != storePlayerBase.MaxHP ||
+			cell.MP != storePlayerBase.MP ||
+			cell.MaxMP != storePlayerBase.MaxMP {
+			t.Fatalf("expected store-backed battle cell stats after StartBattle refresh, got %+v store=%+v", cell, storePlayerBase)
 		}
 		if cell.Level != capturedClassicTeamRoleBridgeWoodcutter.Level ||
 			cell.Vocation != capturedClassicTeamRoleBridgeWoodcutter.Vocation ||
-			cell.HP != capturedClassicTeamRoleBridgeWoodcutter.HP ||
 			cell.MaxHP != capturedClassicTeamRoleBridgeWoodcutter.MaxHP ||
-			cell.MP != capturedClassicTeamRoleBridgeWoodcutter.MP ||
 			cell.MaxMP != capturedClassicTeamRoleBridgeWoodcutter.MaxMP {
-			t.Fatalf("expected captured battle cell stats from packet fixture, got %+v", cell)
+			t.Fatalf("expected persisted captured combat snapshot to survive store refresh, got %+v", cell)
 		}
 	}
 	if !capturedCellFound {
@@ -1011,6 +1026,66 @@ func applyCapturedClassicTeamRoleFixture(socketSession *packetSession, fixture c
 	}
 	socketSession.playerBase.RolePhysique.MaxHP = fixture.MaxHP
 	socketSession.playerBase.RolePhysique.MaxMP = fixture.MaxMP
+}
+
+// persistCapturedClassicTeamRoleFixture writes the captured combat snapshot into
+// store so StartBattle's store refresh keeps level/HP/MP/physique aligned with the
+// packet fixture instead of falling back to a fresh Lv1 role.
+func persistCapturedClassicTeamRoleFixture(t *testing.T, store *session.Store, socketSession *packetSession, fixture classicCapturedTeamRoleFixture) {
+	t.Helper()
+	if store == nil || socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
+		t.Fatal("expected store and selected role session for captured team fixture persist")
+	}
+	playerID := socketSession.playerBase.PlayerID
+	roleID := socketSession.selectedRole.RoleID
+
+	levelResult := store.SetRoleLevel(playerID, roleID, fixture.Level)
+	if !levelResult.Found || !levelResult.Granted {
+		t.Fatalf("expected set captured fixture level, got %+v", levelResult)
+	}
+	vocResult := store.SetRoleVocation(playerID, roleID, fixture.Vocation)
+	if !vocResult.Found {
+		t.Fatalf("expected set captured fixture vocation, got %+v", vocResult)
+	}
+	// SetRoleLevel recomputes default physique. Overlay the captured MaxHP/MaxMP and
+	// current HP/MP so battle cells keep the packet fixture combat numbers.
+	role, playerBase, ok := store.GetRoleRuntimeData(playerID, roleID)
+	if !ok || playerBase.RolePhysique == nil {
+		t.Fatalf("expected runtime data after captured fixture level/vocation persist")
+	}
+	rolePhysique := *playerBase.RolePhysique
+	rolePhysique.Handle = roleID
+	rolePhysique.MaxHP = fixture.MaxHP
+	rolePhysique.MaxMP = fixture.MaxMP
+	role.RolePhysique = &rolePhysique
+	roleState := session.RoleState{
+		Handle: roleID,
+		HP:     fixture.HP,
+		MP:     fixture.MP,
+		Exp:    role.Exp,
+		Lv:     fixture.Level,
+		Speed:  145,
+	}
+	// UpdateRoleState clamps HP/MP against the role's current physique. Seed the
+	// oversized captured MaxHP/MaxMP first by writing state after temporarily
+	// stashing physique through a second update path: rewrite via level grant's
+	// stored role by using UpdateRoleState only after physique is attached.
+	// Direct store write helper keeps the captured snapshot durable.
+	if _, _, ok := store.UpdateRoleCombatSnapshot(playerID, roleID, roleState, rolePhysique); !ok {
+		t.Fatalf("expected update captured fixture combat snapshot for role %s", roleID)
+	}
+	role, playerBase, ok = store.GetRoleRuntimeData(playerID, roleID)
+	if !ok {
+		t.Fatalf("expected runtime data after captured combat snapshot persist")
+	}
+	if playerBase.Level != fixture.Level || playerBase.Voc != fixture.Vocation ||
+		playerBase.MaxHP != fixture.MaxHP || playerBase.MaxMP != fixture.MaxMP ||
+		playerBase.HP != fixture.HP || playerBase.MP != fixture.MP {
+		t.Fatalf("expected store to keep captured combat snapshot, got playerBase=%+v role=%+v", playerBase, role)
+	}
+	if !strings.Contains(playerBase.BattleSourceQuery, "w3=49") {
+		t.Fatalf("expected captured equipment appearance on store battle query, got %q", playerBase.BattleSourceQuery)
+	}
 }
 
 func firstEnemyCellForTest(t *testing.T, runtime *battle.Runtime) battle.CellInfoPush {

@@ -6283,6 +6283,143 @@ func TestHandlePacketClassicBattleStartPushesServerOwnedBattle(t *testing.T) {
 	}
 }
 
+func TestHandlePacketClassicBattleStartRefreshesStaleAppearanceAndPhysique(t *testing.T) {
+	// Fashion table rows are sex-keyed; 超时空要塞 only maps for male sex=1.
+	// seedSelectedRoleSession defaults to female, so this regression fixture must
+	// create a male role the same way ordinary account 111 does.
+	store := session.NewStore()
+	login := store.Login(session.LoginRequest{
+		UserName: "mockuser",
+		Password: "magicpwd",
+	})
+	create := store.CreateRole(session.RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "111外观同步",
+		Gender:         "male",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?e=14&sex=1&hr=12&co=5&m=5&n=0&",
+		Appearance: session.RoleAppearance{
+			"body": map[string]any{
+				"sex":       1,
+				"skinColor": 5,
+				"hair":      12,
+				"eyes":      14,
+				"mouth":     5,
+				"nose":      0,
+			},
+		},
+	})
+	if !create.Success {
+		t.Fatalf("expected male role create success, got %+v", create)
+	}
+	socketSession := &packetSession{}
+	selectResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 1,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     login.PlayerID,
+			SessionToken: login.SessionToken,
+			RoleID:       create.Role.RoleID,
+		}),
+	}, socketSession)
+	if !selectResult.handled || selectResult.townBootstrap == nil || socketSession.selectedRole == nil {
+		t.Fatalf("expected role select to seed town bootstrap, got %+v", selectResult)
+	}
+	roleID := socketSession.selectedRole.RoleID
+	playerID := socketSession.playerBase.PlayerID
+
+	for _, name := range []string{"刎刀", "蛮力面甲", "蛮力肩甲", "蛮力护腕", "蛮力护腿", "蛮力护腰", "蛮力战靴"} {
+		item, ok := session.CapturedRoleItemTemplate(name)
+		if !ok {
+			t.Fatalf("expected captured %s template", name)
+		}
+		item, ok = store.GrantRoleItem(playerID, roleID, item)
+		if !ok {
+			t.Fatalf("expected grant %s", name)
+		}
+		equipResult := store.EquipRoleItem(playerID, roleID, item.Type, item.Index, 1)
+		if !equipResult.Found || !equipResult.Equipped {
+			t.Fatalf("expected equip %s, got %+v", name, equipResult)
+		}
+	}
+	fashion, ok := session.CapturedRoleItemTemplate("超时空要塞")
+	if !ok {
+		t.Fatal("expected captured 超时空要塞 template")
+	}
+	fashion, ok = store.GrantRoleItem(playerID, roleID, fashion)
+	if !ok {
+		t.Fatal("expected grant 超时空要塞")
+	}
+	fashionResult := store.EquipRoleItem(playerID, roleID, fashion.Type, fashion.Index, 1)
+	if !fashionResult.Found || !fashionResult.Equipped {
+		t.Fatalf("expected fashion equip, got %+v", fashionResult)
+	}
+	for _, part := range []string{"w8=42", "c=88", "p=91", "se=79", "hr=46"} {
+		if !strings.Contains(fashionResult.Role.SourceQuery, part) {
+			t.Fatalf("expected fashion source query to include %s, got %q", part, fashionResult.Role.SourceQuery)
+		}
+	}
+
+	// Leave the socket snapshot intentionally stale, matching the 111 regression:
+	// town already shows fashion/current gear, but StartBattle previously used the
+	// old session BattleSourceQuery / RolePhysique without reloading from store.
+	socketSession.selectedRole.BattleSourceQuery = "human/human.swf?=&a=14&w8=47&b=16&c=39&e=6&sex=1&h=30&hr=12&co=5&m=0&n=0&p=18&se=29&wr=15&"
+	socketSession.playerBase.BattleSourceQuery = socketSession.selectedRole.BattleSourceQuery
+	socketSession.playerBase.SourceQuery = "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&"
+	socketSession.selectedRole.SourceQuery = socketSession.playerBase.SourceQuery
+	socketSession.playerBase.RolePhysique = &session.RolePhysique{
+		Handle: roleID,
+		AGI:    1,
+		STR:    1,
+		MaxHP:  100,
+		MaxMP:  50,
+		PhyAtk: 11,
+		PhyDef: 10,
+		Hit:    101,
+		Dog:    50,
+		Fat:    5,
+	}
+	socketSession.playerBase.MaxHP = 100
+	socketSession.playerBase.MaxMP = 50
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "5",
+			MapName:     "云隐村口_1",
+			StageFocusX: 320,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, socketSession)
+
+	if !result.handled || len(result.battleCells) == 0 {
+		t.Fatalf("expected battle start cells, handled=%v cells=%+v", result.handled, result.battleCells)
+	}
+	playerCell := result.battleCells[0]
+	for _, cell := range result.battleCells {
+		if cell.Handle == roleID {
+			playerCell = cell
+			break
+		}
+	}
+	for _, part := range []string{"w8=42", "c=88", "p=91", "se=79", "hr=46"} {
+		if !strings.Contains(playerCell.DisplayURL, part) {
+			t.Fatalf("expected refreshed battle display url to include %s, got %q", part, playerCell.DisplayURL)
+		}
+	}
+	if strings.Contains(playerCell.DisplayURL, "w8=47") || strings.Contains(playerCell.DisplayURL, "c=39") {
+		t.Fatalf("expected stale battle display url to be discarded, got %q", playerCell.DisplayURL)
+	}
+	if playerCell.Attack <= 11 || playerCell.MaxHP <= 100 {
+		t.Fatalf("expected refreshed battle physique from current gear, got attack=%d maxHP=%d cell=%+v", playerCell.Attack, playerCell.MaxHP, playerCell)
+	}
+	if socketSession.playerBase == nil || socketSession.playerBase.BattleSourceQuery != fashionResult.Role.SourceQuery {
+		t.Fatalf("expected socket player base battle source query to refresh, got %+v", socketSession.playerBase)
+	}
+}
+
 func TestHandlePacketClassicBattleStartSupportsCapturedBambooMaps(t *testing.T) {
 	cases := []struct {
 		mapID      string

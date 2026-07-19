@@ -2624,6 +2624,9 @@ func TestStoreEquipCapturedSpaceFortressAppliesAndRestoresFashionHair(t *testing
 			t.Fatalf("expected captured fashion equip query to include %s, got %q", part, equipped.Role.SourceQuery)
 		}
 	}
+	if equipped.Role.BattleSourceQuery != equipped.Role.SourceQuery || equipped.PlayerBase.BattleSourceQuery != equipped.Role.SourceQuery {
+		t.Fatalf("expected fashion battle source query to follow source query, source=%q roleBattle=%q baseBattle=%q", equipped.Role.SourceQuery, equipped.Role.BattleSourceQuery, equipped.PlayerBase.BattleSourceQuery)
+	}
 	if strings.Contains(equipped.Role.SourceQuery, "h=") {
 		t.Fatalf("captured fashion has no hat field, got %q", equipped.Role.SourceQuery)
 	}
@@ -3309,10 +3312,16 @@ func TestStorePersistsCapturedBattleSourceQuery(t *testing.T) {
 		RoleTemplateID: 1,
 		SourceQuery:    "human/human.swf?e=6&sex=1&hr=12&co=5&m=0&n=0&",
 	})
+	if !createResponse.Success {
+		t.Fatalf("expected role create success, got %+v", createResponse)
+	}
 
-	capturedBattleSourceQuery := "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&"
+	// Stale battle_source_query must not win over the rebuilt town SourceQuery.
+	// Account 111 regressed this way: town used fashion/current gear while battle
+	// still preferred an older BattleSourceQuery snapshot.
+	staleBattleSourceQuery := "human/human.swf?a=34&b=31&c=35&e=6&sex=1&h=12&hr=12&co=5&m=0&n=0&p=13&se=27&wr=11&w3=43&"
 	store.mu.Lock()
-	store.rolesByPID[login.PlayerID][0].BattleSourceQuery = capturedBattleSourceQuery
+	store.rolesByPID[login.PlayerID][0].BattleSourceQuery = staleBattleSourceQuery
 	if err := store.persistPlayerStateLocked(login.PlayerID); err != nil {
 		store.mu.Unlock()
 		t.Fatalf("persist battle source query: %v", err)
@@ -3331,11 +3340,79 @@ func TestStorePersistsCapturedBattleSourceQuery(t *testing.T) {
 	if !ok {
 		t.Fatal("expected role runtime data")
 	}
-	if role.BattleSourceQuery != capturedBattleSourceQuery || playerBase.BattleSourceQuery != capturedBattleSourceQuery {
-		t.Fatalf("expected captured battle source query after reopen, role=%q base=%q", role.BattleSourceQuery, playerBase.BattleSourceQuery)
+	if role.BattleSourceQuery != role.SourceQuery {
+		t.Fatalf("expected runtime battle source query to follow rebuilt source query, role=%q battle=%q", role.SourceQuery, role.BattleSourceQuery)
 	}
-	if !strings.Contains(playerBase.BattleSourceQuery, "w3=43") {
-		t.Fatalf("expected captured battle source query to keep w3=43, got %q", playerBase.BattleSourceQuery)
+	if playerBase.BattleSourceQuery != playerBase.SourceQuery || playerBase.SourceQuery != role.SourceQuery {
+		t.Fatalf("expected player base battle/source query to match rebuilt role, role=%q baseSource=%q baseBattle=%q", role.SourceQuery, playerBase.SourceQuery, playerBase.BattleSourceQuery)
+	}
+	if strings.Contains(playerBase.BattleSourceQuery, "w3=43") {
+		t.Fatalf("expected stale battle source query w3=43 to be discarded, got %q", playerBase.BattleSourceQuery)
+	}
+}
+
+func TestStoreOrdinaryRoleBattleSourceQueryFollowsFashionEquip(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "111外观同步",
+		Gender:         "male",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?e=14&sex=1&hr=12&co=5&m=5&n=0&",
+		Appearance: RoleAppearance{
+			"body": map[string]any{
+				"sex":       1,
+				"skinColor": 5,
+				"hair":      12,
+				"eyes":      14,
+				"mouth":     5,
+				"nose":      0,
+			},
+		},
+	})
+	if !created.Success {
+		t.Fatalf("expected role create success, got %+v", created)
+	}
+
+	for _, name := range []string{"刎刀", "蛮力面甲", "蛮力肩甲", "蛮力护腕", "蛮力护腿", "蛮力护腰", "蛮力战靴", "狰狞神骑"} {
+		item, ok := CapturedRoleItemTemplate(name)
+		if !ok {
+			t.Fatalf("expected captured %s template", name)
+		}
+		item, ok = store.GrantRoleItem(login.PlayerID, created.Role.RoleID, item)
+		if !ok {
+			t.Fatalf("expected grant %s", name)
+		}
+		result := store.EquipRoleItem(login.PlayerID, created.Role.RoleID, item.Type, item.Index, 1)
+		if !result.Found || !result.Equipped {
+			t.Fatalf("expected equip %s, got %+v", name, result)
+		}
+	}
+
+	fashion, ok := CapturedRoleItemTemplate("超时空要塞")
+	if !ok {
+		t.Fatal("expected captured 超时空要塞 template")
+	}
+	fashion, ok = store.GrantRoleItem(login.PlayerID, created.Role.RoleID, fashion)
+	if !ok {
+		t.Fatal("expected grant 超时空要塞")
+	}
+	equipped := store.EquipRoleItem(login.PlayerID, created.Role.RoleID, fashion.Type, fashion.Index, 1)
+	if !equipped.Found || !equipped.Equipped {
+		t.Fatalf("expected fashion equip, got %+v", equipped)
+	}
+	for _, part := range []string{"w8=42", "c=88", "p=91", "se=79", "hr=46"} {
+		if !strings.Contains(equipped.Role.SourceQuery, part) {
+			t.Fatalf("expected fashion source query to include %s, got %q", part, equipped.Role.SourceQuery)
+		}
+	}
+	if equipped.Role.BattleSourceQuery != equipped.Role.SourceQuery {
+		t.Fatalf("expected battle source query to follow fashion equip, source=%q battle=%q", equipped.Role.SourceQuery, equipped.Role.BattleSourceQuery)
+	}
+	if equipped.PlayerBase.BattleSourceQuery != equipped.Role.SourceQuery {
+		t.Fatalf("expected player base battle source query to follow fashion equip, source=%q battle=%q", equipped.Role.SourceQuery, equipped.PlayerBase.BattleSourceQuery)
 	}
 }
 

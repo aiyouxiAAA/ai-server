@@ -2114,9 +2114,10 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
 		role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
 	}
-	if isKonglongKanglang1 || isWarrior444 || isWoodcutter333 || isWoodcutter222 {
-		role.BattleSourceQuery = role.SourceQuery
-	}
+	// Battle cell DisplayURL prefers BattleSourceQuery. Keep it identical to the
+	// current rebuilt SourceQuery for every role, otherwise town/createPlayer and
+	// battle actors diverge after equip, fashion, or body appearance changes.
+	role.BattleSourceQuery = role.SourceQuery
 	return role
 }
 

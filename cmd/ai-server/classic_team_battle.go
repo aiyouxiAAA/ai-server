@@ -11,13 +11,19 @@ import (
 	"ai-server/internal/team"
 )
 
-func (hub *classicTeamConnectionHub) buildBattleActors(actor battle.TeamActor, members []team.Member, mapID string) ([]battle.TeamActor, []team.Member) {
+func (hub *classicTeamConnectionHub) buildBattleActors(store *session.Store, actor battle.TeamActor, members []team.Member, mapID string) ([]battle.TeamActor, []team.Member) {
 	actors := []battle.TeamActor{actor}
 	sharedMembers := make([]team.Member, 0, len(members))
 	for _, member := range members {
 		connection := hub.connectionFor(member.RoleID)
 		if connection.writer == nil || connection.session == nil || connection.session.selectedRole == nil || connection.session.playerBase == nil {
 			continue
+		}
+		if store != nil {
+			if selectedRole, playerBase, ok := store.GetRoleRuntimeData(connection.session.playerBase.PlayerID, connection.session.selectedRole.RoleID); ok {
+				connection.session.selectedRole = &selectedRole
+				connection.session.playerBase = &playerBase
+			}
 		}
 		memberMapID := connection.session.playerBase.MapID
 		if memberMapID <= 0 {

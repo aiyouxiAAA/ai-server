@@ -432,7 +432,6 @@ type Runtime struct {
 	PendingBuffInfos      []BuffInfoPush
 	PendingClearBuffInfos []ClearBuffInfoPush
 	PendingSkillSeal      map[string]bool
-	PendingStart          *StartCommandPush
 	PendingStarts         []StartCommandPush
 	PendingOver           *OverPush
 	nextSequence          int
@@ -674,17 +673,18 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		ReturnRoute:     defaultString(request.ReturnRoute, "town-placeholder"),
 		Commands:        sourceBattleCommandDefinitions(role.Skills),
 	}
+	// Solo is concurrent N=1: same PendingTeamActions machine as multi-member teams.
+	runtime.resetPendingTeamActionsExcluding(nil)
+	teamStarts := runtime.pendingTeamStartCommands()
+	startCommand := StartCommandPush{}
+	if len(teamStarts) > 0 {
+		startCommand = teamStarts[0]
+	}
 	return runtime, StartBundle{
-		Start: start,
-		Cells: cells,
-		StartCommand: StartCommandPush{
-			BattleID:    battleID,
-			ActorHandle: role.RoleID,
-			Round:       runtime.Round,
-			Sequence:    runtime.nextSequence,
-			Power:       runtime.powerFor(role.RoleID),
-			Commands:    runtime.commandDefinitionsForActor(role.RoleID),
-		},
+		Start:             start,
+		Cells:             cells,
+		StartCommand:      startCommand,
+		TeamStartCommands: teamStarts,
 	}, true
 }
 
@@ -722,6 +722,12 @@ func NewTeamWildBattle(actors []TeamActor, request StartRequest) (*Runtime, Star
 	if !ok {
 		return nil, StartBundle{}, false
 	}
+	// NewWildBattle opens an N=1 window for standalone battles. A team is still
+	// being constructed here, so discard that unpublished window before assigning
+	// the real concurrent team windows from sequence 1.
+	runtime.PendingTeamActions = nil
+	runtime.PendingTeamSequences = nil
+	runtime.nextSequence = 1
 	if runtime.RoleSkillsByHandle == nil {
 		runtime.RoleSkillsByHandle = map[string][]session.RoleSkill{}
 	}
@@ -880,7 +886,6 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		runtime.ConsumedSequence[request.Sequence] = true
 		runtime.setStoredPower(actor.Handle, 0)
 		runtime.Phase = PhasePlaying
-		runtime.PendingStart = nil
 		runtime.PendingOver = runtime.buildOver(CampEnemy, true)
 		return ActionResult{
 			Actions: []ActionPush{
@@ -1157,7 +1162,6 @@ func (runtime *Runtime) ProcessPlayOver(request PlayOverRequest) ActionResult {
 	if runtime.PendingOver != nil {
 		over := runtime.PendingOver
 		runtime.PendingOver = nil
-		runtime.PendingStart = nil
 		runtime.PendingStarts = nil
 		return ActionResult{Over: over}
 	}
@@ -1165,13 +1169,9 @@ func (runtime *Runtime) ProcessPlayOver(request PlayOverRequest) ActionResult {
 		starts := append([]StartCommandPush(nil), runtime.PendingStarts...)
 		runtime.PendingStarts = nil
 		runtime.Phase = PhaseCommand
+		// Always deliver via StartCommands only. Writers must filter by recipient
+		// and must not also push a mirrored StartCommand (that doubles N=1 windows).
 		return ActionResult{StartCommands: starts}
-	}
-	if runtime.PendingStart != nil {
-		start := *runtime.PendingStart
-		runtime.PendingStart = nil
-		runtime.Phase = PhaseCommand
-		return ActionResult{StartCommand: &start}
 	}
 	return ActionResult{ErrorCode: "battle_play_over_empty"}
 }
@@ -1216,7 +1216,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		runtime.prunePendingTeamActions()
 		if winner := runtime.resolveWinner(); winner != "" {
 			runtime.Phase = PhaseFinished
-			runtime.PendingStart = nil
 			runtime.PendingStarts = nil
 			runtime.PendingOver = runtime.buildOver(winner)
 			return ActionResult{
@@ -1227,7 +1226,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		}
 		if len(runtime.PendingTeamActions) > 0 {
 			runtime.Phase = PhaseCommand
-			runtime.PendingStart = nil
 			runtime.PendingStarts = nil
 			runtime.PendingOver = nil
 			return ActionResult{
@@ -1249,7 +1247,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 	for {
 		if winner := runtime.resolveWinner(); winner != "" {
 			runtime.Phase = PhaseFinished
-			runtime.PendingStart = nil
 			runtime.PendingOver = runtime.buildOver(winner)
 			return ActionResult{
 				Actions:        actions,
@@ -1303,7 +1300,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		}
 		if winner := runtime.resolveWinner(); winner != "" {
 			runtime.Phase = PhaseFinished
-			runtime.PendingStart = nil
 			runtime.PendingOver = runtime.buildOver(winner)
 			return ActionResult{
 				Actions:        actions,
@@ -1315,7 +1311,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		nextActor := runtime.nextLivingTeamActorAfter(actor.Handle)
 		if nextActor == nil {
 			runtime.Phase = PhaseFinished
-			runtime.PendingStart = nil
 			runtime.PendingOver = runtime.buildOver(CampEnemy)
 			return ActionResult{
 				Actions:        actions,
@@ -1323,11 +1318,19 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
 			}
 		}
-		statusActions, skipTurn := runtime.resolveStatusStartActions(nextActor)
+		// Solo and team share one machine. After the enemy phase, settle every
+		// living teammate, then reopen windows only for free actors. Solo is N=1.
+		if !teamCommandRound {
+			// Any battle that reached an enemy phase without concurrent windows
+			// is lifted onto the same machine before reopening.
+			runtime.resetPendingTeamActionsExcluding(nil)
+			teamCommandRound = runtime.PendingTeamActions != nil
+		}
+		statusActions, _, excludeWindows := runtime.resolveConcurrentTeamRoundStart(nextActor, teamHPBeforeEnemyTurn)
 		actions = append(actions, statusActions...)
 		if winner := runtime.resolveWinner(); winner != "" {
 			runtime.Phase = PhaseFinished
-			runtime.PendingStart = nil
+			runtime.PendingStarts = nil
 			runtime.PendingOver = runtime.buildOver(winner)
 			return ActionResult{
 				Actions:        actions,
@@ -1337,60 +1340,31 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		}
 
 		runtime.Round += 1
-		if !teamCommandRound {
-			runtime.nextSequence += 1
-		}
-		runtime.ActiveHandle = nextActor.Handle
+		// Sequence is allocated only inside resetPendingTeamActionsExcluding
+		// (one nextSequence per free-actor window). Do not pre-increment here —
+		// that produced 1,3,5 windows and shifted combat roll seeds.
 		runtime.Phase = PhasePlaying
-		runtime.advanceKuangBaoRound(nextActor.Handle)
-		if nextActor.HP <= 0 {
-			actor = nextActor
-			continue
-		}
-		if skipTurn && runtime.hasActiveAutoContinueSkipStatus(nextActor.Handle) {
-			continue
-		}
-		if !skipTurn && runtime.consumePendingConfusion(nextActor.Handle) {
-			if action := runtime.resolveConfusionNormalAttackAction(nextActor); action != nil {
-				actions = append(actions, *action)
-			}
-			runtime.setStoredPower(nextActor.Handle, 0)
-			actor = nextActor
-			if runtime.resolveWinner() != "" {
-				continue
+		freeActors := runtime.livingTeamActorsExcluding(excludeWindows)
+		if len(freeActors) == 0 {
+			// Everyone stunned/confused-auto-resolved: continue without clicks.
+			if living := runtime.firstLiving(CampTeam); living != nil {
+				actor = living
+			} else {
+				actor = nextActor
 			}
 			continue
 		}
-		if !skipTurn {
-			hpBefore, ok := teamHPBeforeEnemyTurn[nextActor.Handle]
-			if !ok {
-				hpBefore = nextActor.HP
+		runtime.resetPendingTeamActionsExcluding(excludeWindows)
+		if len(runtime.PendingTeamActions) == 0 {
+			if living := runtime.firstLiving(CampTeam); living != nil {
+				actor = living
+			} else {
+				actor = nextActor
 			}
-			runtime.setStoredPower(nextActor.Handle, maxInt(
-				runtime.powerFor(nextActor.Handle),
-				storedPowerFromSingleHPLoss(maxInt(0, hpBefore-nextActor.HP), nextActor.MaxHP),
-			))
+			continue
 		}
-		if teamCommandRound && len(runtime.livingCells(CampTeam)) >= 2 {
-			runtime.resetPendingTeamActions()
-			runtime.PendingStarts = runtime.pendingTeamStartCommands()
-			runtime.PendingStart = nil
-			runtime.PendingOver = nil
-			return ActionResult{
-				Actions:        actions,
-				BuffInfos:      runtime.consumePendingBuffInfos(),
-				ClearBuffInfos: runtime.consumePendingClearBuffInfos(),
-			}
-		}
-		start := StartCommandPush{
-			BattleID:    runtime.BattleID,
-			ActorHandle: nextActor.Handle,
-			Round:       runtime.Round,
-			Sequence:    runtime.nextSequence,
-			Power:       runtime.powerFor(nextActor.Handle),
-			Commands:    runtime.commandDefinitionsForActor(nextActor.Handle),
-		}
-		runtime.PendingStart = &start
+		runtime.ActiveHandle = freeActors[0].Handle
+		runtime.PendingStarts = runtime.pendingTeamStartCommands()
 		runtime.PendingOver = nil
 		return ActionResult{
 			Actions:        actions,
@@ -1399,7 +1373,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 		}
 	}
 }
-
 func (runtime *Runtime) resolveAttack(actor *CellInfoPush, target *CellInfoPush, commandID string) ActionPush {
 	return runtime.resolveAttackWithMPCost(actor, target, commandID, true)
 }
@@ -4581,6 +4554,67 @@ func (runtime *Runtime) applyCapturedStunOnHit(actor *CellInfoPush, target *Cell
 	return true
 }
 
+func (runtime *Runtime) resolveConcurrentTeamRoundStart(nextActor *CellInfoPush, teamHPBeforeEnemyTurn map[string]int) ([]ActionPush, bool, map[string]bool) {
+	excludeWindows := map[string]bool{}
+	if runtime == nil {
+		return nil, false, excludeWindows
+	}
+
+	actions := make([]ActionPush, 0)
+	nextActorSkip := false
+	for _, member := range runtime.livingCells(CampTeam) {
+		if member == nil || member.HP <= 0 {
+			continue
+		}
+		memberActions, memberSkip := runtime.resolveStatusStartActions(member)
+		actions = append(actions, memberActions...)
+		runtime.advanceKuangBaoRound(member.Handle)
+		if nextActor != nil && member.Handle == nextActor.Handle {
+			nextActorSkip = memberSkip
+		}
+		if member.HP <= 0 {
+			excludeWindows[member.Handle] = true
+			if runtime.resolveWinner() != "" {
+				break
+			}
+			continue
+		}
+		if memberSkip && runtime.hasActiveAutoContinueSkipStatus(member.Handle) {
+			// 眩晕 still active after the status tick: no command window, auto-continue.
+			excludeWindows[member.Handle] = true
+			if runtime.resolveWinner() != "" {
+				break
+			}
+			continue
+		}
+
+		hpBefore, ok := teamHPBeforeEnemyTurn[member.Handle]
+		if !ok {
+			hpBefore = member.HP
+		}
+		if !memberSkip {
+			runtime.setStoredPower(member.Handle, maxInt(
+				runtime.powerFor(member.Handle),
+				storedPowerFromSingleHPLoss(maxInt(0, hpBefore-member.HP), member.MaxHP),
+			))
+		}
+
+		// Confusion resolves at round-start for concurrent teams too, instead of
+		// waiting until the confused member clicks a command window.
+		if !memberSkip && runtime.consumePendingConfusion(member.Handle) {
+			if action := runtime.resolveConfusionNormalAttackAction(member); action != nil {
+				actions = append(actions, *action)
+			}
+			runtime.setStoredPower(member.Handle, 0)
+			excludeWindows[member.Handle] = true
+		}
+		if runtime.resolveWinner() != "" {
+			break
+		}
+	}
+	return actions, nextActorSkip, excludeWindows
+}
+
 func (runtime *Runtime) resolveStatusStartActions(actor *CellInfoPush) ([]ActionPush, bool) {
 	if runtime == nil || actor == nil || actor.HP <= 0 || runtime.StatusEffects == nil {
 		return nil, false
@@ -5178,7 +5212,11 @@ func (runtime *Runtime) hashBattleRoll(actor *CellInfoPush, target *CellInfoPush
 
 func (runtime *Runtime) hashBattleRollWithSalt(actor *CellInfoPush, target *CellInfoPush, commandID string, salt string) int {
 	score := 0
-	seed := fmt.Sprintf("%s:%d:%d:%s:%s:%s:%s", runtime.BattleID, runtime.Round, runtime.nextSequence, actor.Handle, target.Handle, commandID, salt)
+	// Seed with the active command-window sequence (request.Sequence via actionSequence),
+	// not the allocator cursor nextSequence. Opening a window advances nextSequence so the
+	// next free slot can be assigned; using that cursor would shift first-turn rolls from
+	// seed 1 to seed 2 after NewWildBattle/N=1 concurrent open.
+	seed := fmt.Sprintf("%s:%d:%d:%s:%s:%s:%s", runtime.BattleID, runtime.Round, runtime.currentActionSequence(), actor.Handle, target.Handle, commandID, salt)
 	for _, char := range seed {
 		score = (score*31 + int(char)) % 100
 	}
@@ -5570,6 +5608,23 @@ func (runtime *Runtime) livingCells(camp Camp) []*CellInfoPush {
 	return cells
 }
 
+func (runtime *Runtime) livingTeamActorsExcluding(exclude map[string]bool) []*CellInfoPush {
+	if runtime == nil {
+		return nil
+	}
+	actors := make([]*CellInfoPush, 0)
+	for _, cell := range runtime.livingCells(CampTeam) {
+		if cell == nil || cell.HP <= 0 {
+			continue
+		}
+		if exclude != nil && exclude[cell.Handle] {
+			continue
+		}
+		actors = append(actors, cell)
+	}
+	return actors
+}
+
 func (runtime *Runtime) nextLivingTeamActorAfter(handle string) *CellInfoPush {
 	if runtime == nil {
 		return nil
@@ -5602,10 +5657,16 @@ func (runtime *Runtime) nextLivingTeamActorAfter(handle string) *CellInfoPush {
 }
 
 func (runtime *Runtime) resetPendingTeamActions() {
+	runtime.resetPendingTeamActionsExcluding(nil)
+}
+
+// resetPendingTeamActionsExcluding opens concurrent windows for every living free
+// teammate. Solo is just N=1 on the same machine.
+func (runtime *Runtime) resetPendingTeamActionsExcluding(exclude map[string]bool) {
 	if runtime == nil {
 		return
 	}
-	if len(runtime.livingCells(CampTeam)) < 2 {
+	if len(runtime.livingCells(CampTeam)) < 1 {
 		runtime.PendingTeamActions = nil
 		runtime.PendingTeamSequences = nil
 		return
@@ -5613,9 +5674,19 @@ func (runtime *Runtime) resetPendingTeamActions() {
 	runtime.PendingTeamActions = map[string]bool{}
 	runtime.PendingTeamSequences = map[string]int{}
 	for _, cell := range runtime.livingCells(CampTeam) {
+		if exclude != nil && exclude[cell.Handle] {
+			continue
+		}
+		for runtime.ConsumedSequence != nil && runtime.ConsumedSequence[runtime.nextSequence] {
+			runtime.nextSequence += 1
+		}
 		runtime.PendingTeamActions[cell.Handle] = true
 		runtime.PendingTeamSequences[cell.Handle] = runtime.nextSequence
 		runtime.nextSequence += 1
+	}
+	if len(runtime.PendingTeamActions) == 0 {
+		runtime.PendingTeamActions = nil
+		runtime.PendingTeamSequences = nil
 	}
 }
 
@@ -5655,37 +5726,42 @@ func (runtime *Runtime) prunePendingTeamActions() {
 	}
 }
 
+func (runtime *Runtime) ensureConcurrentCommandWindows() {
+	if runtime == nil || runtime.PendingTeamActions != nil || runtime.Phase != PhaseCommand {
+		return
+	}
+	// Hand-built runtimes/tests may only set ActiveHandle. Lift them onto concurrent windows.
+	active := strings.TrimSpace(runtime.ActiveHandle)
+	if active != "" {
+		actor := runtime.cellByHandle(active)
+		if actor != nil && actor.Camp == CampTeam && actor.HP > 0 {
+			runtime.PendingTeamActions = map[string]bool{active: true}
+			runtime.PendingTeamSequences = map[string]int{active: runtime.nextSequence}
+			return
+		}
+	}
+	runtime.resetPendingTeamActionsExcluding(nil)
+}
+
 func (runtime *Runtime) commandWindowForActor(handle string) (StartCommandPush, bool) {
 	if runtime == nil {
 		return StartCommandPush{}, false
 	}
+	runtime.ensureConcurrentCommandWindows()
 	handle = strings.TrimSpace(handle)
 	actor := runtime.cellByHandle(handle)
 	if actor == nil || actor.Camp != CampTeam || actor.HP <= 0 {
 		return StartCommandPush{}, false
 	}
-	if runtime.PendingTeamActions != nil {
-		sequence, ok := runtime.PendingTeamSequences[handle]
-		if !ok || !runtime.PendingTeamActions[handle] {
-			return StartCommandPush{}, false
-		}
-		return StartCommandPush{
-			BattleID:    runtime.BattleID,
-			ActorHandle: handle,
-			Round:       runtime.Round,
-			Sequence:    sequence,
-			Power:       runtime.powerFor(handle),
-			Commands:    runtime.commandDefinitionsForActor(handle),
-		}, true
-	}
-	if handle != runtime.ActiveHandle {
+	sequence, ok := runtime.PendingTeamSequences[handle]
+	if !ok || runtime.PendingTeamActions == nil || !runtime.PendingTeamActions[handle] {
 		return StartCommandPush{}, false
 	}
 	return StartCommandPush{
 		BattleID:    runtime.BattleID,
 		ActorHandle: handle,
 		Round:       runtime.Round,
-		Sequence:    runtime.nextSequence,
+		Sequence:    sequence,
 		Power:       runtime.powerFor(handle),
 		Commands:    runtime.commandDefinitionsForActor(handle),
 	}, true

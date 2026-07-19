@@ -824,13 +824,10 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				}
 			}
 		}
-		if result.battleStart == nil && result.battleCommand != nil {
-			if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
-				log.Printf("[ai-server] write classic battle startCommand failed: %v", err)
-				return
-			}
-		}
+		// Prefer battleCommands (concurrent windows). When the array is non-empty,
+		// never also push battleCommand — that doubles N=1 startCommand delivery.
 		if result.battleStart == nil && socketSession.selectedRole != nil {
+			sentPersonalized := false
 			for _, command := range result.battleCommands {
 				if command.ActorHandle != socketSession.selectedRole.RoleID {
 					continue
@@ -839,7 +836,14 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 					log.Printf("[ai-server] write classic battle personalized startCommand failed: %v", err)
 					return
 				}
+				sentPersonalized = true
 				break
+			}
+			if !sentPersonalized && len(result.battleCommands) == 0 && result.battleCommand != nil {
+				if err := socketWriter.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
+					log.Printf("[ai-server] write classic battle startCommand failed: %v", err)
+					return
+				}
 			}
 		}
 		if result.teamBattleStart != nil {

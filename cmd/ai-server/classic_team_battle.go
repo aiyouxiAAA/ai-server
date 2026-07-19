@@ -247,19 +247,26 @@ func writeClassicTeamBattleResult(writer *websocketWriter, recipientRoleID strin
 			return
 		}
 	}
+	// Shared battles only deliver command windows from battleCommands filtered by
+	// recipient. Never broadcast battleCommand to every member — that hands the
+	// survivor window to non-actors when only one free teammate remains.
+	if len(result.battleCommands) > 0 {
+		for _, command := range result.battleCommands {
+			if command.ActorHandle != recipientRoleID {
+				continue
+			}
+			if err := writer.writePush(cmdClassicBattleStartCommand, encodePayload(command)); err != nil {
+				log.Printf("[ai-server] write classic team battle personalized startCommand failed roleId=%s: %v", recipientRoleID, err)
+			}
+			return
+		}
+		return
+	}
 	if result.battleCommand != nil {
+		// Legacy single-command path only when no concurrent array is present.
 		if err := writer.writePush(cmdClassicBattleStartCommand, encodePayload(*result.battleCommand)); err != nil {
 			log.Printf("[ai-server] write classic team battle startCommand failed: %v", err)
 			return
 		}
-	}
-	for _, command := range result.battleCommands {
-		if command.ActorHandle != recipientRoleID {
-			continue
-		}
-		if err := writer.writePush(cmdClassicBattleStartCommand, encodePayload(command)); err != nil {
-			log.Printf("[ai-server] write classic team battle personalized startCommand failed roleId=%s: %v", recipientRoleID, err)
-		}
-		return
 	}
 }

@@ -6516,7 +6516,7 @@ func TestHandlePacketClassicBattleActionResolvesAndRejectsConsumedSequence(t *te
 	if !playOver.handled {
 		t.Fatal("expected BattlePlayOver to be handled")
 	}
-	if playOver.battleOver == nil && playOver.battleCommand == nil {
+	if playOver.battleOver == nil && playOver.battleCommand == nil && len(playOver.battleCommands) == 0 {
 		t.Fatalf("expected over or next startCommand after BattlePlayOver, got %+v", playOver)
 	}
 
@@ -6909,8 +6909,18 @@ func TestHandlePacketClassicBattleUtilityCommands(t *testing.T) {
 				BattleID: startResult.battleStart.BattleID,
 			}),
 		}, socketSession)
-		if playOver.battleCommand == nil || playOver.battleCommand.Power != 2 {
-			t.Fatalf("expected next startCommand power 2 after BattlePlayOver, got %+v", playOver.battleCommand)
+		var nextCommand *battle.StartCommandPush
+		if playOver.battleCommand != nil {
+			nextCommand = playOver.battleCommand
+		}
+		for index := range playOver.battleCommands {
+			if playOver.battleCommands[index].ActorHandle == socketSession.selectedRole.RoleID {
+				nextCommand = &playOver.battleCommands[index]
+				break
+			}
+		}
+		if nextCommand == nil || nextCommand.Power != 2 {
+			t.Fatalf("expected next startCommand power 2 after BattlePlayOver, got command=%+v commands=%+v", nextCommand, playOver.battleCommands)
 		}
 	})
 

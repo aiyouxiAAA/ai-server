@@ -15,6 +15,28 @@ import (
 	"ai-server/internal/session"
 )
 
+
+func pendingStartActor(runtime *Runtime) *StartCommandPush {
+	if runtime == nil || len(runtime.PendingStarts) == 0 {
+		return nil
+	}
+	start := runtime.PendingStarts[0]
+	return &start
+}
+
+func pendingStartFor(runtime *Runtime, handle string) *StartCommandPush {
+	if runtime == nil {
+		return nil
+	}
+	for index := range runtime.PendingStarts {
+		if runtime.PendingStarts[index].ActorHandle == handle {
+			start := runtime.PendingStarts[index]
+			return &start
+		}
+	}
+	return nil
+}
+
 func useSourceEncounterRoll(roll func(int) int) func() {
 	previous := sourceEncounterRoll
 	sourceEncounterRoll = roll
@@ -226,8 +248,8 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 	if memberResult.ErrorCode != "" || len(memberResult.Actions) == 0 {
 		t.Fatalf("expected first received member action to resolve immediately, got %+v", memberResult)
 	}
-	if runtime.Phase != PhaseCommand || !runtime.HasPendingTeamAction(leader.Role.RoleID) || runtime.PendingStart != nil || len(runtime.PendingStarts) != 0 {
-		t.Fatalf("expected leader command window to remain open after member action, got phase=%s pending=%+v start=%+v starts=%+v", runtime.Phase, runtime.PendingTeamActions, runtime.PendingStart, runtime.PendingStarts)
+	if runtime.Phase != PhaseCommand || !runtime.HasPendingTeamAction(leader.Role.RoleID) || len(runtime.PendingStarts) != 0 {
+		t.Fatalf("expected leader command window to remain open after member action, got phase=%s pending=%+v starts=%+v", runtime.Phase, runtime.PendingTeamActions, runtime.PendingStarts)
 	}
 	if replay := runtime.ProcessPlayOver(PlayOverRequest{BattleID: bundle.Start.BattleID}); replay.ErrorCode != "battle_play_over_empty" {
 		t.Fatalf("expected first action playback acknowledgement not to advance the remaining team command, got %+v", replay)
@@ -290,8 +312,8 @@ func TestTeamWildBattleAdvancesToNextPlayerActor(t *testing.T) {
 	if finalResult.ErrorCode != "" {
 		t.Fatalf("expected final target action to succeed, got %s", finalResult.ErrorCode)
 	}
-	if finalRuntime.PendingStart != nil || len(finalRuntime.PendingStarts) != 0 || finalRuntime.PendingOver == nil {
-		t.Fatalf("expected final target kill to finish before the remaining team command, got start=%+v starts=%+v over=%+v", finalRuntime.PendingStart, finalRuntime.PendingStarts, finalRuntime.PendingOver)
+	if len(finalRuntime.PendingStarts) != 0 || finalRuntime.PendingOver == nil {
+		t.Fatalf("expected final target kill to finish before the remaining team command, got starts=%+v over=%+v", finalRuntime.PendingStarts, finalRuntime.PendingOver)
 	}
 	finalPlayOver := finalRuntime.ProcessPlayOver(PlayOverRequest{BattleID: finalBundle.Start.BattleID})
 	if finalPlayOver.Over == nil || finalPlayOver.StartCommand != nil {
@@ -1806,8 +1828,9 @@ func TestEnemyHitSetsStoredPowerFromSingleHPLossPercent(t *testing.T) {
 	if result.ErrorCode != "" {
 		t.Fatalf("expected normal attack to resolve, got %+v", result)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.Power != 2 || runtime.powerFor("player_21424") != 2 {
-		t.Fatalf("expected 250/1000 HP loss to set stored power 2 without damage bonus, pending=%+v stored=%d", runtime.PendingStart, runtime.powerFor("player_21424"))
+	start := pendingStartFor(runtime, "player_21424")
+	if start == nil || start.Power != 2 || runtime.powerFor("player_21424") != 2 {
+		t.Fatalf("expected 250/1000 HP loss to set stored power 2 without damage bonus, pending=%+v stored=%d", start, runtime.powerFor("player_21424"))
 	}
 }
 
@@ -1910,8 +1933,9 @@ func TestStorePowerSurvivesLighterEnemyHit(t *testing.T) {
 	if result.ErrorCode != "" {
 		t.Fatalf("expected store to resolve, got %+v", result)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.Power != 2 || runtime.powerFor("player_21424") != 2 {
-		t.Fatalf("expected stored power 2 to survive lighter enemy hit, pending=%+v stored=%d", runtime.PendingStart, runtime.powerFor("player_21424"))
+	start := pendingStartFor(runtime, "player_21424")
+	if start == nil || start.Power != 2 || runtime.powerFor("player_21424") != 2 {
+		t.Fatalf("expected stored power 2 to survive lighter enemy hit, pending=%+v stored=%d", start, runtime.powerFor("player_21424"))
 	}
 }
 
@@ -6231,8 +6255,9 @@ func TestPoisonTickDeathDoesNotQueueStartCommandForDeadActor(t *testing.T) {
 	if poisonDeath == nil || !poisonDeath.TargetDead || poisonDeath.TargetHP != 0 {
 		t.Fatalf("expected player_next poison tick death action, got action=%+v actions=%+v", poisonDeath, result.Actions)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_leader" {
-		t.Fatalf("expected next startCommand to skip dead poison actor, pending=%+v", runtime.PendingStart)
+	start := pendingStartFor(runtime, "player_leader")
+	if start == nil || pendingStartFor(runtime, "player_next") != nil {
+		t.Fatalf("expected next startCommand to skip dead poison actor, pendingStarts=%+v", runtime.PendingStarts)
 	}
 }
 
@@ -6289,8 +6314,8 @@ func TestPoisonTickDeathEndsBattleWhenLastEnemyDies(t *testing.T) {
 	if runtime.Phase != PhaseFinished || runtime.PendingOver == nil || runtime.PendingOver.Winner != CampTeam {
 		t.Fatalf("expected poison death of last enemy to finish battle with team win, phase=%s pendingOver=%+v", runtime.Phase, runtime.PendingOver)
 	}
-	if runtime.PendingStart != nil {
-		t.Fatalf("expected no next startCommand after last enemy poison death, got %+v", runtime.PendingStart)
+	if pendingStartActor(runtime) != nil {
+		t.Fatalf("expected no next startCommand after last enemy poison death, got starts=%+v", runtime.PendingStarts)
 	}
 }
 
@@ -6871,8 +6896,9 @@ func TestEnemyPalsyAtkSkipsPlayerNextCommand(t *testing.T) {
 	if effect.Rounds != 1 || !effect.SkipTurn {
 		t.Fatalf("expected first skipped command to consume one 麻痹 round, got %+v", runtime.StatusEffects)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_21424" || runtime.PendingStart.Round != 2 || runtime.PendingStart.Sequence != 2 {
-		t.Fatalf("expected skipped turn to queue the next player startCommand, got %+v", runtime.PendingStart)
+	start := pendingStartFor(runtime, "player_21424")
+	if start == nil || start.Round != 2 || start.Sequence != 2 {
+		t.Fatalf("expected skipped turn to queue the next player startCommand, got %+v starts=%+v", start, runtime.PendingStarts)
 	}
 }
 
@@ -7046,8 +7072,10 @@ func TestCapturedStunOnHitSkipsPlayerWithYunAction(t *testing.T) {
 	if runtime.hasActiveAutoContinueSkipStatus("player_21424") {
 		t.Fatalf("expected chained 眩晕 skips to consume stun before next command, got %+v", runtime.StatusEffects)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle != "player_21424" || runtime.PendingStart.Round != 3 || runtime.PendingStart.Sequence != 3 {
-		t.Fatalf("expected 眩晕 skip chain to queue player startCommand after monster continuation, got %+v", runtime.PendingStart)
+	start := pendingStartFor(runtime, "player_21424")
+	// Round advances twice through auto-continue; sequence only advances when a free window opens.
+	if start == nil || start.Round != 3 || start.Sequence != 2 {
+		t.Fatalf("expected 眩晕 skip chain to queue player startCommand after monster continuation, got %+v starts=%+v", start, runtime.PendingStarts)
 	}
 }
 
@@ -7688,8 +7716,8 @@ func TestConfusionAutoExecutesPlayerNormalAttackBeforeStartCommand(t *testing.T)
 	if runtime.PendingConfusion["player_21424"] {
 		t.Fatalf("expected auto confused attack to consume pending confusion, got %+v", runtime.PendingConfusion)
 	}
-	if runtime.PendingStart == nil || runtime.PendingStart.ActorHandle == "player_21424" {
-		t.Fatalf("expected no startCommand to be queued for confused actor, pendingStart=%+v", runtime.PendingStart)
+	if pendingStartFor(runtime, "player_21424") != nil {
+		t.Fatalf("expected no startCommand to be queued for confused actor, pendingStarts=%+v", runtime.PendingStarts)
 	}
 	if len(result.ClearBuffInfos) != 1 || result.ClearBuffInfos[0].TargetHandle != "player_21424" || result.ClearBuffInfos[0].Name != "混乱" {
 		t.Fatalf("expected expired 混乱 to clear during auto flow, got %+v", result.ClearBuffInfos)

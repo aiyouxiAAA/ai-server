@@ -9046,6 +9046,33 @@ func TestCracktoadEnemyTurnCanUseCapturedNormalAttack(t *testing.T) {
 
 func TestCapturedSingleSwordSkillProfilesAndCommands(t *testing.T) {
 	cases := []struct {
+		name          string
+		level         int
+		sourceType    string
+		label         string
+		mpCost        int
+		multiplier    float64
+		target        string
+		armorBreakPct int
+		stunChance    int
+		hitMultiplier float64
+	}{
+		{name: "挑衅", level: 1, sourceType: "all", label: "com/tx", mpCost: 20, multiplier: 0, target: "self"},
+		{name: "卷叶式", level: 1, sourceType: "oneE", label: "w7/jys2", mpCost: 8, multiplier: 1.55, target: "enemy"},
+		{name: "卷叶式", level: 5, sourceType: "oneE", label: "w7/jys2", mpCost: 16, multiplier: 1.75, target: "enemy"},
+		{name: "强贯式", level: 1, sourceType: "oneE", label: "w7/qgs1", mpCost: 12, multiplier: 1.51, target: "enemy", armorBreakPct: 30},
+		{name: "强贯式", level: 3, sourceType: "oneE", label: "w7/qgs1", mpCost: 15, multiplier: 1.53, target: "enemy", armorBreakPct: 40},
+		{name: "强贯式", level: 5, sourceType: "oneE", label: "w7/qgs1", mpCost: 20, multiplier: 1.55, target: "enemy", armorBreakPct: 50},
+		{name: "凝神式", level: 1, sourceType: "own", label: "w7/nss", mpCost: 12, multiplier: 0, target: "self"},
+		{name: "凝神式", level: 5, sourceType: "own", label: "w7/nss", mpCost: 22, multiplier: 0, target: "self"},
+		{name: "狂舞式", level: 1, sourceType: "oneE", label: "w7/kws", mpCost: 22, multiplier: 0.8, target: "enemy", stunChance: 21},
+		{name: "狂舞式", level: 5, sourceType: "oneE", label: "w7/kws", mpCost: 30, multiplier: 1, target: "enemy", stunChance: 25},
+		{name: "气愈式", level: 1, sourceType: "own", label: "w7/qys", mpCost: 15, multiplier: 0, target: "self"},
+		{name: "气愈式", level: 5, sourceType: "own", label: "w7/qys", mpCost: 31, multiplier: 0, target: "self"},
+		{name: "奥义.飘血", level: 1, sourceType: "oneE", label: "w7/aypx", mpCost: 26, multiplier: 3, target: "enemy", hitMultiplier: 1.70},
+		{name: "奥义.飘血", level: 4, sourceType: "oneE", label: "w7/aypx", mpCost: 38, multiplier: 3.3, target: "enemy", hitMultiplier: 1.85},
+	}
+	commandCases := []struct {
 		name       string
 		level      int
 		sourceType string
@@ -9062,25 +9089,94 @@ func TestCapturedSingleSwordSkillProfilesAndCommands(t *testing.T) {
 		{name: "气愈式", level: 5, sourceType: "own", label: "w7/qys", mpCost: 31, multiplier: 0, target: "self"},
 		{name: "奥义.飘血", level: 4, sourceType: "oneE", label: "w7/aypx", mpCost: 38, multiplier: 3.3, target: "enemy"},
 	}
-	skills := make([]session.RoleSkill, 0, len(cases)+1)
 	for _, testCase := range cases {
 		skill := session.RoleSkill{Name: testCase.name, Level: testCase.level, Type: testCase.sourceType}
 		profile := sourceBattleSkillProfile(skill)
 		if profile.SourceType != testCase.sourceType || profile.SourceActionLabel != testCase.label || profile.MPCost != testCase.mpCost || profile.DamageMultiplier != testCase.multiplier {
 			t.Fatalf("expected captured %s Lv%d profile, got %+v", testCase.name, testCase.level, profile)
 		}
-		skills = append(skills, skill)
+		if testCase.armorBreakPct > 0 && (profile.StatusName != "卸甲" || profile.StatusDefensePercent != testCase.armorBreakPct || profile.StatusRounds != qiangGuanShiArmorBreakRounds || profile.StatusChance != 100) {
+			t.Fatalf("expected captured %s Lv%d armor break %d%%, got %+v", testCase.name, testCase.level, testCase.armorBreakPct, profile)
+		}
+		if testCase.stunChance > 0 && (profile.StatusName != "眩晕" || profile.StatusChance != testCase.stunChance || profile.StatusRounds != kuangWuShiStunRounds || !profile.SkipTurn) {
+			t.Fatalf("expected captured %s Lv%d stun chance %d, got %+v", testCase.name, testCase.level, testCase.stunChance, profile)
+		}
+		if testCase.hitMultiplier > 0 && profile.HitMultiplier != testCase.hitMultiplier {
+			t.Fatalf("expected captured %s Lv%d hit multiplier %.2f, got %+v", testCase.name, testCase.level, testCase.hitMultiplier, profile)
+		}
+	}
+	skills := make([]session.RoleSkill, 0, len(commandCases))
+	for _, testCase := range commandCases {
+		skills = append(skills, session.RoleSkill{Name: testCase.name, Level: testCase.level, Type: testCase.sourceType})
 	}
 	commands := sourceBattleCommandDefinitions(skills)
 	byLabel := map[string]CommandDefinition{}
 	for _, command := range commands {
 		byLabel[command.Label] = command
 	}
-	for _, testCase := range cases {
+	for _, testCase := range commandCases {
 		command, ok := byLabel[testCase.name]
 		if !ok || command.SourceType != testCase.sourceType || command.SourceActionLabel != testCase.label || command.MPCost != testCase.mpCost || command.DamageMultiplier != testCase.multiplier || command.Target != testCase.target {
 			t.Fatalf("expected captured %s command definition, got %+v", testCase.name, command)
 		}
+	}
+}
+
+func TestCapturedSingleSwordLowerLevelStatusAndHeal(t *testing.T) {
+	if got := sourceQiangGuanShiArmorBreakPercent(1); got != 30 {
+		t.Fatalf("expected 强贯式 Lv1 armor break 30, got %d", got)
+	}
+	if got := sourceKuangWuShiStunChance(1); got != 21 {
+		t.Fatalf("expected 狂舞式 Lv1 stun chance 21, got %d", got)
+	}
+	if got := sourceNingShenHitPercent(1); got != 50 {
+		t.Fatalf("expected 凝神式 Lv1 hit percent 50, got %d", got)
+	}
+	if got := sourceQiYuHealPercent(1); got != 9 {
+		t.Fatalf("expected 气愈式 Lv1 heal percent 9, got %d", got)
+	}
+	if got := sourceAoYiPiaoXueHitMultiplier(1); got != 1.70 {
+		t.Fatalf("expected 奥义.飘血 Lv1 hit multiplier 1.70, got %v", got)
+	}
+
+	strongRuntime := &Runtime{
+		BattleID:         "battle-single-sword-strong-pierce-lv1",
+		StatusEffects:    map[string]BattleStatusEffects{},
+		DefendingHandles: map[string]bool{},
+		RoleSkills:       []session.RoleSkill{{Name: "强贯式", Level: 1, Type: "oneE"}},
+		Cells:            []CellInfoPush{{Handle: "player_sword", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, Attack: 100}, {Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Defense: 100}},
+	}
+	strongAction := strongRuntime.resolveAttack(strongRuntime.cellByHandle("player_sword"), strongRuntime.cellByHandle("enemy_1"), CommandQiangGuanShi)
+	strongBuffs := strongRuntime.consumePendingBuffInfos()
+	if strongAction.SourceActionLabel != "w7/qgs1" || len(strongBuffs) != 1 || strongBuffs[0].Name != "卸甲" || strongRuntime.cellByHandle("enemy_1").Defense != 70 {
+		t.Fatalf("expected 强贯式 Lv1 30%% armor break, action=%+v buffs=%+v enemy=%+v", strongAction, strongBuffs, strongRuntime.cellByHandle("enemy_1"))
+	}
+
+	ningRuntime := &Runtime{
+		BattleID:      "battle-single-sword-ning-lv1",
+		StatusEffects: map[string]BattleStatusEffects{},
+		RoleSkills:    []session.RoleSkill{{Name: "凝神式", Level: 1, Type: "own"}},
+		Cells:         []CellInfoPush{{Handle: "player_sword", Camp: CampTeam, HP: 1000, MaxHP: 1000, Hit: 400, Fat: 200}},
+	}
+	actor := ningRuntime.cellByHandle("player_sword")
+	buffInfos := ningRuntime.applyNingShenStatusEffects(actor)
+	// 50% of 400 hit = 200
+	if actor.Hit != 600 || actor.Fat != 400 || len(buffInfos) != 2 || buffInfos[0].Description != "提高对象200命中" {
+		t.Fatalf("expected 凝神式 Lv1 hit boost, actor=%+v buffs=%+v", actor, buffInfos)
+	}
+
+	healRuntime := &Runtime{
+		BattleID:      "battle-single-sword-heal-lv1",
+		StatusEffects: map[string]BattleStatusEffects{},
+		RoleSkills:    []session.RoleSkill{{Name: "气愈式", Level: 1, Type: "own"}},
+		Cells:         []CellInfoPush{{Handle: "player_sword", Camp: CampTeam, HP: 500, MaxHP: 2100}},
+	}
+	healer := healRuntime.cellByHandle("player_sword")
+	qiLiao := healRuntime.applyQiYuStatusEffect(healer)
+	statusActions, _ := healRuntime.resolveStatusStartActions(healer)
+	// 9% of 2100 = 189
+	if qiLiao.Name != "气疗" || qiLiao.Description != "每回合对象恢复189气力" || healer.HP != 689 || len(statusActions) != 1 || statusActions[0].ActionName != "气疗" {
+		t.Fatalf("expected 气愈式 Lv1 heal, buff=%+v actor=%+v actions=%+v", qiLiao, healer, statusActions)
 	}
 }
 

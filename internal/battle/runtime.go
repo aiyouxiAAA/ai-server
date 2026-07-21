@@ -2643,18 +2643,20 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.HitMultiplier = 1.5
 	}
 	if name == "强贯式" {
+		armorBreakPercent := sourceQiangGuanShiArmorBreakPercent(level)
 		profile.StatusName = "卸甲"
 		profile.StatusDisplay = "10.png"
 		profile.StatusRounds = qiangGuanShiArmorBreakRounds
 		profile.StatusChance = 100
-		profile.StatusDescription = "降低对象50%物理防御力"
-		profile.StatusDefensePercent = qiangGuanShiArmorBreakPercent
+		profile.StatusDescription = fmt.Sprintf("降低对象%d%%物理防御力", armorBreakPercent)
+		profile.StatusDefensePercent = armorBreakPercent
 	}
 	if name == "狂舞式" {
+		stunChance := sourceKuangWuShiStunChance(level)
 		profile.StatusName = "眩晕"
 		profile.StatusDisplay = "9.png"
 		profile.StatusRounds = kuangWuShiStunRounds
-		profile.StatusChance = kuangWuShiStunChance
+		profile.StatusChance = stunChance
 		profile.StatusDescription = "眩晕无法行动"
 		profile.SkipTurn = true
 	}
@@ -2741,7 +2743,7 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.HitMultiplier = 4
 	}
 	if name == "奥义.飘血" {
-		profile.HitMultiplier = 1.85
+		profile.HitMultiplier = sourceAoYiPiaoXueHitMultiplier(level)
 	}
 	if name == "强力飞镖" {
 		profile.DefenseType = "direct"
@@ -3277,8 +3279,239 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Icon:        "190.png",
 			Description: "f_s_奥义.六合棍法^00ccff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时候增加300%的命中",
 		}
+
+	case "挑衅":
+		return session.RoleSkill{
+			Name:        "挑衅",
+			Level:       1,
+			Type:        "all",
+			Icon:        "168.png",
+			Description: "f_s_挑衅^5BC46D&9@群体·状态&8@战士 &10@通用&22@战斗&2@20&4@技能发动后&0;3回合内使自己成为敌人攻击的首要目标.",
+		}
+	case "卷叶式":
+		return session.RoleSkill{
+			Name:        "卷叶式",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "170.png",
+			Description: fallbackJuanYeShiDescription(level),
+		}
+	case "强贯式":
+		return session.RoleSkill{
+			Name:        "强贯式",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "171.png",
+			Description: fallbackQiangGuanShiDescription(level),
+		}
+	case "凝神式":
+		return session.RoleSkill{
+			Name:        "凝神式",
+			Level:       level,
+			Type:        "own",
+			Icon:        "172.png",
+			Description: fallbackNingShenShiDescription(level),
+		}
+	case "狂舞式":
+		return session.RoleSkill{
+			Name:        "狂舞式",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "174.png",
+			Description: fallbackKuangWuShiDescription(level),
+		}
+	case "气愈式":
+		return session.RoleSkill{
+			Name:        "气愈式",
+			Level:       level,
+			Type:        "own",
+			Icon:        "173.png",
+			Description: fallbackQiYuShiDescription(level),
+		}
+	case "奥义.飘血":
+		return session.RoleSkill{
+			Name:        "奥义.飘血",
+			Level:       level,
+			Type:        "oneE",
+			Icon:        "175.png",
+			Description: fallbackAoYiPiaoXueDescription(level),
+		}
 	default:
 		return session.RoleSkill{}
+	}
+}
+
+
+func (runtime *Runtime) roleSkillLevelForActor(handle string, name string, fallbackLevel int) int {
+	skill, ok := runtime.roleSkillByNameForActor(handle, name)
+	if !ok || skill.Level <= 0 {
+		if fallbackLevel <= 0 {
+			return 1
+		}
+		return fallbackLevel
+	}
+	return skill.Level
+}
+
+func sourceQiangGuanShiArmorBreakPercent(level int) int {
+	switch level {
+	case 1:
+		return 30
+	case 2:
+		return 35
+	case 3:
+		return 40
+	case 4:
+		return 45
+	default:
+		return qiangGuanShiArmorBreakPercent
+	}
+}
+
+func sourceKuangWuShiStunChance(level int) int {
+	switch level {
+	case 1:
+		return 21
+	case 2:
+		return 22
+	case 3:
+		return 23
+	case 4:
+		return 24
+	default:
+		return kuangWuShiStunChance
+	}
+}
+
+func sourceNingShenHitPercent(level int) int {
+	switch level {
+	case 1:
+		return 50
+	case 2:
+		return 55
+	case 3:
+		return 60
+	case 4:
+		return 65
+	default:
+		return ningShenHitPercent
+	}
+}
+
+func sourceQiYuHealPercent(level int) int {
+	switch level {
+	case 1:
+		return 9
+	case 2:
+		return 10
+	case 3:
+		return 11
+	case 4:
+		return 12
+	default:
+		return qiYuHealPercent
+	}
+}
+
+func sourceAoYiPiaoXueHitMultiplier(level int) float64 {
+	switch level {
+	case 1:
+		return 1.70
+	case 2:
+		return 1.75
+	case 3:
+		return 1.80
+	default:
+		return 1.85
+	}
+}
+
+
+func fallbackJuanYeShiDescription(level int) string {
+	switch level {
+	case 2:
+		return "f_s_卷叶式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@10&4@提升60%的物理伤害"
+	case 3:
+		return "f_s_卷叶式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@12&4@提升65%的物理伤害"
+	case 4:
+		return "f_s_卷叶式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@14&4@提升70%的物理伤害"
+	case 5:
+		return "f_s_卷叶式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@16&4@提升75%的物理伤害"
+	default:
+		return "f_s_卷叶式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@8&4@提升55%的物理伤害"
+	}
+}
+
+func fallbackQiangGuanShiDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_强贯式^5BC46D&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@12&4@对敌人造成151%的物理伤害&0;并在3回合内使敌人进入卸甲状态(降低其30%的物理防御)<br><font color='#00cc00'>叠加施放将削弱其造成卸甲的功效</font>"
+	case 2:
+		return "f_s_强贯式^5BC46D&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@13&4@对敌人造成152%的物理伤害&0;并在3回合内使敌人进入卸甲状态(降低其35%的物理防御)<br><font color='#00cc00'>叠加施放将削弱其造成卸甲的功效</font>"
+	case 3:
+		return "f_s_强贯式^5BC46D&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@15&4@对敌人造成153%的物理伤害&0;并在3回合内使敌人进入卸甲状态(降低其40%的物理防御)<br><font color='#00cc00'>叠加施放将削弱其造成卸甲的功效</font>"
+	case 4:
+		return "f_s_强贯式^5BC46D&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@17&4@对敌人造成154%的物理伤害&0;并在3回合内使敌人进入卸甲状态(降低其45%的物理防御)<br><font color='#00cc00'>叠加施放将削弱其造成卸甲的功效</font>"
+	default:
+		return "f_s_强贯式^5BC46D&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@20&4@对敌人造成155%的物理伤害&0;并在3回合内使敌人进入卸甲状态(降低其50%的物理防御)<br><font color='#00cc00'>叠加施放将削弱其造成卸甲的功效</font>"
+	}
+}
+
+func fallbackNingShenShiDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_凝神式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@12&4@4回合内命中提升50%&0;爆击翻倍"
+	case 2:
+		return "f_s_凝神式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@14&4@4回合内命中提升55%&0;爆击翻倍"
+	case 3:
+		return "f_s_凝神式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@16&4@4回合内命中提升60%&0;爆击翻倍"
+	case 4:
+		return "f_s_凝神式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@18&4@4回合内命中提升65%&0;爆击翻倍"
+	default:
+		return "f_s_凝神式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@22&4@4回合内命中提升70%&0;爆击翻倍"
+	}
+}
+
+func fallbackKuangWuShiDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_狂舞式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@22&4@造成80%的物理伤害&0;击中敌人时有21%的机率使敌人眩晕2回合"
+	case 2:
+		return "f_s_狂舞式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@24&4@造成85%的物理伤害&0;击中敌人时有22%的机率使敌人眩晕2回合"
+	case 3:
+		return "f_s_狂舞式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@26&4@造成90%的物理伤害&0;击中敌人时有23%的机率使敌人眩晕2回合"
+	case 4:
+		return "f_s_狂舞式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@28&4@造成95%的物理伤害&0;击中敌人时有24%的机率使敌人眩晕2回合"
+	default:
+		return "f_s_狂舞式^ffffff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@30&4@造成100%的物理伤害&0;击中敌人时有25%的机率使敌人眩晕2回合"
+	}
+}
+
+func fallbackQiYuShiDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_气愈式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@15&4@每回合提升9%的气力&0;持续3回合"
+	case 2:
+		return "f_s_气愈式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@19&4@每回合提升10%的气力&0;持续3回合"
+	case 3:
+		return "f_s_气愈式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@23&4@每回合提升11%的气力&0;持续3回合"
+	case 4:
+		return "f_s_气愈式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@27&4@每回合提升12%的气力&0;持续3回合"
+	default:
+		return "f_s_气愈式^5BC46D&9@单体·状态&8@战士 &10@单剑&22@战斗&2@31&4@每回合提升13%的气力&0;持续3回合"
+	}
+}
+
+func fallbackAoYiPiaoXueDescription(level int) string {
+	switch level {
+	case 1:
+		return "f_s_奥义.飘血^00ccff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升200%的物理伤害&0;进攻时增加70%的命中"
+	case 2:
+		return "f_s_奥义.飘血^00ccff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@30&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时增加75%的命中"
+	case 3:
+		return "f_s_奥义.飘血^00ccff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@34&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升220%的物理伤害&0;进攻时增加80%的命中"
+	default:
+		return "f_s_奥义.飘血^00ccff&9@单体·攻击&8@战士 &10@单剑&22@战斗&2@38&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升230%的物理伤害&0;进攻时增加85%的命中"
 	}
 }
 
@@ -3766,6 +3999,59 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 			return 3.1
 		}
 		return 0
+
+	case "卷叶式":
+		switch level {
+		case 2:
+			return 1.6
+		case 3:
+			return 1.65
+		case 4:
+			return 1.7
+		case 5:
+			return 1.75
+		default:
+			return 1.55
+		}
+	case "强贯式":
+		switch level {
+		case 1:
+			return 1.51
+		case 2:
+			return 1.52
+		case 3:
+			return 1.53
+		case 4:
+			return 1.54
+		default:
+			return 1.55
+		}
+	case "狂舞式":
+		switch level {
+		case 1:
+			return 0.8
+		case 2:
+			return 0.85
+		case 3:
+			return 0.9
+		case 4:
+			return 0.95
+		default:
+			return 1
+		}
+	case "奥义.飘血":
+		switch level {
+		case 1:
+			return 3
+		case 2:
+			return 3.1
+		case 3:
+			return 3.2
+		default:
+			return 3.3
+		}
+	case "挑衅", "凝神式", "气愈式":
+		return 0
 	default:
 		return 1
 	}
@@ -3922,6 +4208,85 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 			return 24
 		}
 		return 0
+
+	case "挑衅":
+		return 20
+	case "卷叶式":
+		switch level {
+		case 2:
+			return 10
+		case 3:
+			return 12
+		case 4:
+			return 14
+		case 5:
+			return 16
+		default:
+			return 8
+		}
+	case "强贯式":
+		switch level {
+		case 1:
+			return 12
+		case 2:
+			return 13
+		case 3:
+			return 15
+		case 4:
+			return 17
+		default:
+			return 20
+		}
+	case "凝神式":
+		switch level {
+		case 1:
+			return 12
+		case 2:
+			return 14
+		case 3:
+			return 16
+		case 4:
+			return 18
+		default:
+			return 22
+		}
+	case "狂舞式":
+		switch level {
+		case 1:
+			return 22
+		case 2:
+			return 24
+		case 3:
+			return 26
+		case 4:
+			return 28
+		default:
+			return 30
+		}
+	case "气愈式":
+		switch level {
+		case 1:
+			return 15
+		case 2:
+			return 19
+		case 3:
+			return 23
+		case 4:
+			return 27
+		default:
+			return 31
+		}
+	case "奥义.飘血":
+		switch level {
+		case 1:
+			return 26
+		case 2:
+			return 30
+		case 3:
+			return 34
+		default:
+			return 38
+		}
 	default:
 		return 0
 	}
@@ -5011,7 +5376,8 @@ func (runtime *Runtime) applyNingShenStatusEffects(actor *CellInfoPush) []BuffIn
 	}
 	runtime.restoreExistingStatusEffect(actor.Handle, "集中")
 	runtime.restoreExistingStatusEffect(actor.Handle, "爆击提升")
-	hitIncrease := int(math.Round(float64(actor.Hit) * float64(ningShenHitPercent) / 100))
+	hitPercent := sourceNingShenHitPercent(runtime.roleSkillLevelForActor(actor.Handle, "凝神式", 5))
+	hitIncrease := int(math.Round(float64(actor.Hit) * float64(hitPercent) / 100))
 	fatIncrease := actor.Fat
 	actor.Hit += hitIncrease
 	actor.Fat += fatIncrease
@@ -5048,7 +5414,8 @@ func (runtime *Runtime) applyQiYuStatusEffect(actor *CellInfoPush) BuffInfoPush 
 		return BuffInfoPush{}
 	}
 	runtime.restoreExistingStatusEffect(actor.Handle, "气疗")
-	healAmount := int(math.Round(float64(actor.MaxHP) * float64(qiYuHealPercent) / 100))
+	healPercent := sourceQiYuHealPercent(runtime.roleSkillLevelForActor(actor.Handle, "气愈式", 5))
+	healAmount := int(math.Round(float64(actor.MaxHP) * float64(healPercent) / 100))
 	effect := BattleStatusEffect{
 		Name:          "气疗",
 		Display:       "21.png",
@@ -5057,7 +5424,7 @@ func (runtime *Runtime) applyQiYuStatusEffect(actor *CellInfoPush) BuffInfoPush 
 		SourceHandle:  actor.Handle,
 		SourceSkill:   "气愈式",
 		AppliedAction: "w7/qys",
-		HealPercent:   qiYuHealPercent,
+		HealPercent:   healPercent,
 	}
 	runtime.applyStatusEffect(actor.Handle, effect)
 	return runtime.resolveStatusBuffInfo(actor, actor, effect)

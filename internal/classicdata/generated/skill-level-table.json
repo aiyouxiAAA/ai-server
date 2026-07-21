@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill-level",
   "source": "internal/classicdata/source/skill-level-table.csv",
-  "rowCount": 55,
+  "rowCount": 78,
   "rows": [
     {
       "skill_level_id": "skill-normal-attack-lv1",
@@ -544,12 +544,100 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-juan-ye-shi-lv1",
+      "skill_id": "skill-juan-ye-shi",
+      "level": "1",
+      "source_action_label": "w7/jys2",
+      "damage_multiplier": "1.55",
+      "mp_cost": "8",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-juan-ye-shi-lv2",
+      "skill_id": "skill-juan-ye-shi",
+      "level": "2",
+      "source_action_label": "w7/jys2",
+      "damage_multiplier": "1.6",
+      "mp_cost": "10",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-juan-ye-shi-lv3",
+      "skill_id": "skill-juan-ye-shi",
+      "level": "3",
+      "source_action_label": "w7/jys2",
+      "damage_multiplier": "1.65",
+      "mp_cost": "12",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-juan-ye-shi-lv4",
+      "skill_id": "skill-juan-ye-shi",
+      "level": "4",
+      "source_action_label": "w7/jys2",
+      "damage_multiplier": "1.7",
+      "mp_cost": "14",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
       "skill_level_id": "skill-juan-ye-shi-lv5",
       "skill_id": "skill-juan-ye-shi",
       "level": "5",
       "source_action_label": "w7/jys2",
       "damage_multiplier": "1.75",
       "mp_cost": "16",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qiang-guan-shi-lv1",
+      "skill_id": "skill-qiang-guan-shi",
+      "level": "1",
+      "source_action_label": "w7/qgs1",
+      "damage_multiplier": "1.51",
+      "mp_cost": "12",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qiang-guan-shi-lv2",
+      "skill_id": "skill-qiang-guan-shi",
+      "level": "2",
+      "source_action_label": "w7/qgs1",
+      "damage_multiplier": "1.52",
+      "mp_cost": "13",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qiang-guan-shi-lv3",
+      "skill_id": "skill-qiang-guan-shi",
+      "level": "3",
+      "source_action_label": "w7/qgs1",
+      "damage_multiplier": "1.53",
+      "mp_cost": "15",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qiang-guan-shi-lv4",
+      "skill_id": "skill-qiang-guan-shi",
+      "level": "4",
+      "source_action_label": "w7/qgs1",
+      "damage_multiplier": "1.54",
+      "mp_cost": "17",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
       "direct_attack_bonus_multiplier": "0"
@@ -566,12 +654,100 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-ning-shen-shi-lv1",
+      "skill_id": "skill-ning-shen-shi",
+      "level": "1",
+      "source_action_label": "w7/nss",
+      "damage_multiplier": "0",
+      "mp_cost": "12",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ning-shen-shi-lv2",
+      "skill_id": "skill-ning-shen-shi",
+      "level": "2",
+      "source_action_label": "w7/nss",
+      "damage_multiplier": "0",
+      "mp_cost": "14",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ning-shen-shi-lv3",
+      "skill_id": "skill-ning-shen-shi",
+      "level": "3",
+      "source_action_label": "w7/nss",
+      "damage_multiplier": "0",
+      "mp_cost": "16",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ning-shen-shi-lv4",
+      "skill_id": "skill-ning-shen-shi",
+      "level": "4",
+      "source_action_label": "w7/nss",
+      "damage_multiplier": "0",
+      "mp_cost": "18",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
       "skill_level_id": "skill-ning-shen-shi-lv5",
       "skill_id": "skill-ning-shen-shi",
       "level": "5",
       "source_action_label": "w7/nss",
       "damage_multiplier": "0",
       "mp_cost": "22",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-kuang-wu-shi-lv1",
+      "skill_id": "skill-kuang-wu-shi",
+      "level": "1",
+      "source_action_label": "w7/kws",
+      "damage_multiplier": "0.8",
+      "mp_cost": "22",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-kuang-wu-shi-lv2",
+      "skill_id": "skill-kuang-wu-shi",
+      "level": "2",
+      "source_action_label": "w7/kws",
+      "damage_multiplier": "0.85",
+      "mp_cost": "24",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-kuang-wu-shi-lv3",
+      "skill_id": "skill-kuang-wu-shi",
+      "level": "3",
+      "source_action_label": "w7/kws",
+      "damage_multiplier": "0.9",
+      "mp_cost": "26",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-kuang-wu-shi-lv4",
+      "skill_id": "skill-kuang-wu-shi",
+      "level": "4",
+      "source_action_label": "w7/kws",
+      "damage_multiplier": "0.95",
+      "mp_cost": "28",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
       "direct_attack_bonus_multiplier": "0"
@@ -588,12 +764,89 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-qi-yu-shi-lv1",
+      "skill_id": "skill-qi-yu-shi",
+      "level": "1",
+      "source_action_label": "w7/qys",
+      "damage_multiplier": "0",
+      "mp_cost": "15",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qi-yu-shi-lv2",
+      "skill_id": "skill-qi-yu-shi",
+      "level": "2",
+      "source_action_label": "w7/qys",
+      "damage_multiplier": "0",
+      "mp_cost": "19",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qi-yu-shi-lv3",
+      "skill_id": "skill-qi-yu-shi",
+      "level": "3",
+      "source_action_label": "w7/qys",
+      "damage_multiplier": "0",
+      "mp_cost": "23",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-qi-yu-shi-lv4",
+      "skill_id": "skill-qi-yu-shi",
+      "level": "4",
+      "source_action_label": "w7/qys",
+      "damage_multiplier": "0",
+      "mp_cost": "27",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
       "skill_level_id": "skill-qi-yu-shi-lv5",
       "skill_id": "skill-qi-yu-shi",
       "level": "5",
       "source_action_label": "w7/qys",
       "damage_multiplier": "0",
       "mp_cost": "31",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ao-yi-piao-xue-lv1",
+      "skill_id": "skill-ao-yi-piao-xue",
+      "level": "1",
+      "source_action_label": "w7/aypx",
+      "damage_multiplier": "3",
+      "mp_cost": "26",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ao-yi-piao-xue-lv2",
+      "skill_id": "skill-ao-yi-piao-xue",
+      "level": "2",
+      "source_action_label": "w7/aypx",
+      "damage_multiplier": "3.1",
+      "mp_cost": "30",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-ao-yi-piao-xue-lv3",
+      "skill_id": "skill-ao-yi-piao-xue",
+      "level": "3",
+      "source_action_label": "w7/aypx",
+      "damage_multiplier": "3.2",
+      "mp_cost": "34",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
       "direct_attack_bonus_multiplier": "0"

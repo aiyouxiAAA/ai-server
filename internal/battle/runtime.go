@@ -112,10 +112,13 @@ const (
 	enemyPalsyAtkChance           = 40
 	enemyChaosHitChance           = 46
 	// 20260720_225539_439: thunderstorm/anglecurse AI approx; MP cost PARTIAL.
-	enemyThunderstormMPCost       = 10
-	enemyThunderstormChance       = 25
-	enemyAngleCurseMPCost         = 10
-	enemyAngleCurseChance         = 10
+	// Thunderstorm damage: same-target HP-delta vs 法术普通攻击 ≈ 2.0x
+	// (恐龙抗狼1 649/320, 桥头的樵夫 662/336). Anglecurse stays ~1.0x.
+	enemyThunderstormMPCost           = 10
+	enemyThunderstormChance           = 25
+	enemyThunderstormDamageMultiplier = 2
+	enemyAngleCurseMPCost             = 10
+	enemyAngleCurseChance             = 10
 	enemySweepSpearMPCost         = 30
 	enemySweepSpearChance         = 28
 	enemyPalsyAtkStatusChance     = 100
@@ -992,7 +995,7 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		}
 		buffInfo := runtime.applyTauntStatusEffect(actor)
 		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveProfileSelfAction(actor, commandID, profile),
+			runtime.resolveCapturedTauntAction(actor, commandID, profile),
 		})
 		result.BuffInfos = append(result.BuffInfos, buffInfo)
 		return result
@@ -1894,7 +1897,7 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			ActionName:        "雷鸣怒吼",
 			SourceType:        "all",
 			SourceActionLabel: "thunderstorm",
-			DamageMultiplier:  1,
+			DamageMultiplier:  enemyThunderstormDamageMultiplier,
 			MPCost:            enemyThunderstormMPCost,
 			CanDodge:          true,
 			CanFat:            true,
@@ -5671,6 +5674,20 @@ func (runtime *Runtime) resolveSelfAction(
 func (runtime *Runtime) resolveProfileSelfAction(actor *CellInfoPush, commandID string, profile commandProfile) ActionPush {
 	action := runtime.resolveSelfAction(actor, commandID, profile.ActionName, profile.SourceActionLabel)
 	action.SourceMode = sourceBattleActionMode(profile.SourceType)
+	return action
+}
+
+// resolveCapturedTauntAction matches capture shape:
+// 挑衅,<actionId>,<actor>,all,1,com/tx
+// sourceMode=1 drives the original Attack() approach to stage center; target=all is protocol
+// field only and does not mean multi-hit damage.
+func (runtime *Runtime) resolveCapturedTauntAction(actor *CellInfoPush, commandID string, profile commandProfile) ActionPush {
+	action := runtime.resolveSelfAction(actor, commandID, profile.ActionName, profile.SourceActionLabel)
+	action.TargetHandle = "all"
+	action.SourceMode = "1"
+	if strings.TrimSpace(action.SourceActionLabel) == "" {
+		action.SourceActionLabel = "com/tx"
+	}
 	return action
 }
 

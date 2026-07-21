@@ -8535,6 +8535,26 @@ func TestXiongluBeardeerUsesCapturedRampageAndSkills(t *testing.T) {
 	if storm.ActionName != "雷鸣怒吼" || storm.SourceActionLabel != "thunderstorm" {
 		t.Fatalf("expected 雷鸣怒吼 thunderstorm action, got %+v", storm)
 	}
+	profileStorm := runtime.battleCommandProfile(&actor, CommandEnemyThunderstorm)
+	profileNormal := runtime.battleCommandProfile(&actor, CommandEnemyAttack)
+	profileCurse := runtime.battleCommandProfile(&actor, CommandEnemyAngleCurse)
+	if profileStorm.DamageMultiplier != enemyThunderstormDamageMultiplier {
+		t.Fatalf("expected thunderstorm damage multiplier %v, got %v", enemyThunderstormDamageMultiplier, profileStorm.DamageMultiplier)
+	}
+	if profileNormal.DamageMultiplier != 1 || profileCurse.DamageMultiplier != 1 {
+		t.Fatalf("expected nomalAtk/anglecurse multiplier 1, got normal=%v curse=%v", profileNormal.DamageMultiplier, profileCurse.DamageMultiplier)
+	}
+	defense := runtime.effectiveBattleDefense(&actor, target, false, profileStorm.DefenseType)
+	stormDamage := runtime.baseBattleDamage(&actor, profileStorm, defense)
+	normalDamage := runtime.baseBattleDamage(&actor, profileNormal, defense)
+	expectedStorm := maxInt(1, int(float64(actor.Attack)*enemyThunderstormDamageMultiplier+0.5)-defense)
+	expectedNormal := maxInt(1, int(float64(actor.Attack)*1+0.5)-defense)
+	if stormDamage != expectedStorm || normalDamage != expectedNormal {
+		t.Fatalf("expected thunderstorm %d and normal %d under defense %d attack %d, got storm=%d normal=%d", expectedStorm, expectedNormal, defense, actor.Attack, stormDamage, normalDamage)
+	}
+	if stormDamage < normalDamage*2-1 {
+		t.Fatalf("expected capture-backed thunderstorm ~2x normal damage, storm=%d normal=%d", stormDamage, normalDamage)
+	}
 	curse := runtime.resolveAttack(&actor, target, CommandEnemyAngleCurse)
 	if curse.ActionName != "角念" || curse.SourceActionLabel != "anglecurse" {
 		t.Fatalf("expected 角念 anglecurse action, got %+v", curse)
@@ -9367,6 +9387,45 @@ func TestCapturedSingleSwordStrongPierceAndWildDanceStatusEffects(t *testing.T) 
 	statusActions, skipped := wildDanceRuntime.resolveStatusStartActions(wildDanceRuntime.cellByHandle("enemy_1"))
 	if !skipped || len(statusActions) != 1 || statusActions[0].ActionName != "眩晕" || statusActions[0].SourceActionLabel != "yun" {
 		t.Fatalf("expected 狂舞式 stun to use captured yun skip action, actions=%+v skipped=%t", statusActions, skipped)
+	}
+}
+
+func TestCapturedTauntCastUsesAllTargetAndApproachSourceMode(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-single-sword-taunt-cast",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_sword",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		RoleSkills:       []session.RoleSkill{{Name: "挑衅", Level: 1, Type: "all"}},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-single-sword-taunt-cast", Handle: "player_sword", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, MaxMP: 100},
+			{BattleID: "battle-single-sword-taunt-cast", Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000},
+		},
+	}
+	result := runtime.ProcessAction(ActionRequest{
+		BattleID:     runtime.BattleID,
+		ActorHandle:  "player_sword",
+		CommandID:    CommandTaunt,
+		TargetHandle: "player_sword",
+		Round:        1,
+		Sequence:     1,
+	})
+	if result.ErrorCode != "" || len(result.Actions) == 0 {
+		t.Fatalf("expected captured 挑衅 cast action, got %+v", result)
+	}
+	action := result.Actions[0]
+	if action.ActionName != "挑衅" || action.SourceActionLabel != "com/tx" || action.TargetHandle != "all" || action.SourceMode != "1" || action.Damage != 0 {
+		t.Fatalf("expected captured 挑衅 action shape all/1/com/tx, got %+v", action)
+	}
+	if len(result.BuffInfos) != 1 || result.BuffInfos[0].Name != "挑衅" || result.BuffInfos[0].TargetHandle != "player_sword" {
+		t.Fatalf("expected self 挑衅 BuffInfo alongside cast action, got %+v", result.BuffInfos)
+	}
+	if runtime.cellByHandle("player_sword").MP != 80 {
+		t.Fatalf("expected 挑衅 MP cost 20, actor=%+v", runtime.cellByHandle("player_sword"))
 	}
 }
 

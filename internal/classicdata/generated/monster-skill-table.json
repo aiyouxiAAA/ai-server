@@ -520,7 +520,7 @@
       "source_action_label": "thunderstorm",
       "target": "enemy",
       "runtime_chance_percent": "25",
-      "damage_multiplier": "1",
+      "damage_multiplier": "2",
       "mp_cost": "10",
       "defense_type": "magic",
       "status_buff_id": "",
@@ -529,8 +529,8 @@
       "status_tick_min_percent": "",
       "status_tick_max_percent": "",
       "evidence_status": "partial",
-      "evidence": "20260720_225539_439: 5 thunderstorm / ~22 combat actions (exclude rampage/curse); MP cost unconfirmed placeholder 10; AI approx",
-      "notes": "all-target label capture-backed; damage formula PARTIAL"
+      "evidence": "20260720_225539_439: HP-delta same-target vs 法术普攻 ≈2.0x (恐龙抗狼1 649/320, 桥头的樵夫 662/336); 5 thunderstorm / ~22 combat actions; MP cost placeholder 10; AI approx",
+      "notes": "all-target label+damage multiplier capture-backed; MP/AI PARTIAL"
     },
     {
       "monster_skill_id": "monster-beardeer-anglecurse",

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "monster-skill",
   "source": "internal/classicdata/source/monster-skill-table.csv",
-  "rowCount": 23,
+  "rowCount": 25,
   "rows": [
     {
       "monster_skill_id": "monster-robber-slidecut",
@@ -359,8 +359,8 @@
     {
       "monster_skill_id": "monster-rampage-power",
       "command_id": "enemy-rampage-power",
-      "monster_name": "Boss/点券盗贼/百年虫精",
-      "display_url": "monstermap/largerock.swf|monstermap/magicrockman.swf|monstermap/hfscastellan.swf|monstermap/hfcastellan.swf|monstermap/hflady.swf|monstermap/chiluking.swf|monstermap/militia.swf|monstermap/wocmon.swf",
+      "monster_name": "Boss/点券盗贼/百年虫精/熊鹿",
+      "display_url": "monstermap/largerock.swf|monstermap/magicrockman.swf|monstermap/hfscastellan.swf|monstermap/hfcastellan.swf|monstermap/hflady.swf|monstermap/chiluking.swf|monstermap/militia.swf|monstermap/wocmon.swf|monstermap/beardeer.swf",
       "action_name": "暴走之力",
       "source_type": "own",
       "source_action_label": "battleStand",
@@ -509,6 +509,50 @@
       "evidence_status": "partial",
       "evidence": "tmp/wuliang-yaozhisen-robotup-formula-audit-20260713.json + D:/yzhgame/WOCClient/tmp/woc-proxy-captures",
       "notes": "516 complete target refreshes capture MP=-60 and healing 263..338 before max-HP clipping; lowest living robothyun target is selected in 515/516 samples; local AI chance is approximate"
+    },
+    {
+      "monster_skill_id": "monster-beardeer-thunderstorm",
+      "command_id": "enemy-thunderstorm",
+      "monster_name": "熊鹿",
+      "display_url": "monstermap/beardeer.swf",
+      "action_name": "雷鸣怒吼",
+      "source_type": "all",
+      "source_action_label": "thunderstorm",
+      "target": "enemy",
+      "runtime_chance_percent": "25",
+      "damage_multiplier": "1",
+      "mp_cost": "10",
+      "defense_type": "magic",
+      "status_buff_id": "",
+      "status_chance_percent": "",
+      "status_rounds": "",
+      "status_tick_min_percent": "",
+      "status_tick_max_percent": "",
+      "evidence_status": "partial",
+      "evidence": "20260720_225539_439: 5 thunderstorm / ~22 combat actions (exclude rampage/curse); MP cost unconfirmed placeholder 10; AI approx",
+      "notes": "all-target label capture-backed; damage formula PARTIAL"
+    },
+    {
+      "monster_skill_id": "monster-beardeer-anglecurse",
+      "command_id": "enemy-angle-curse",
+      "monster_name": "熊鹿",
+      "display_url": "monstermap/beardeer.swf",
+      "action_name": "角念",
+      "source_type": "oneE",
+      "source_action_label": "anglecurse",
+      "target": "enemy",
+      "runtime_chance_percent": "10",
+      "damage_multiplier": "1",
+      "mp_cost": "10",
+      "defense_type": "magic",
+      "status_buff_id": "",
+      "status_chance_percent": "",
+      "status_rounds": "",
+      "status_tick_min_percent": "",
+      "status_tick_max_percent": "",
+      "evidence_status": "partial",
+      "evidence": "20260720_225539_439: 2 anglecurse actions; MP/cost PARTIAL placeholder",
+      "notes": "single-target label capture-backed; AI approx"
     }
   ]
 }

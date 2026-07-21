@@ -92,6 +92,12 @@ type devBainianChongjingRefreshResponse struct {
 	Handles []string `json:"handles"`
 }
 
+type devXiongluBeardeerRefreshResponse struct {
+	Success bool     `json:"success"`
+	MapID   int      `json:"mapId"`
+	Handles []string `json:"handles"`
+}
+
 type devPointCouponThiefRefreshSpawn struct {
 	MapID  int    `json:"mapId"`
 	Handle string `json:"handle"`
@@ -140,6 +146,13 @@ func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 		}
 		handleDevRefreshBainianChongjing(writer, time.Now())
 	})
+	mux.HandleFunc("/dev/items/refresh-xionglu-beardeer", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodPost {
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		handleDevRefreshXiongluBeardeer(writer, time.Now())
+	})
 	mux.HandleFunc("/dev/items/refresh-point-coupon-thief", func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodPost {
 			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
@@ -175,6 +188,18 @@ func handleDevRefreshBainianChongjing(writer http.ResponseWriter, now time.Time)
 		Success: true,
 		MapID:   classicactivity.BainianChongjingMapID,
 		Handles: classicactivity.BainianChongjingEncounterHandles(),
+	})
+}
+
+func handleDevRefreshXiongluBeardeer(writer http.ResponseWriter, now time.Time) {
+	classicactivity.ForceXiongluBeardeerRefreshForDev(now)
+	broadcastClassicXiongluBeardeerLiveRemove()
+	broadcastClassicXiongluBeardeerSpawnNotice()
+	broadcastClassicXiongluBeardeerLiveSpawn()
+	writeDevJSON(writer, devXiongluBeardeerRefreshResponse{
+		Success: true,
+		MapID:   classicactivity.XiongluBeardeerMapID,
+		Handles: classicactivity.XiongluBeardeerEncounterHandles(),
 	})
 }
 
@@ -591,6 +616,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
       <hr>
       <h2>世界活动</h2>
       <button id="refreshBainianButton">刷新百年虫精（测试）</button>
+      <button id="refreshXiongluButton">刷新熊鹿（测试）</button>
       <button id="refreshPointCouponThiefButton">刷新点券盗贼（测试）</button>
       <hr>
       <h2>添加道具</h2>
@@ -639,6 +665,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
     const setLevelButton = document.getElementById('setLevelButton');
     const refreshButton = document.getElementById('refreshButton');
     const refreshBainianButton = document.getElementById('refreshBainianButton');
+    const refreshXiongluButton = document.getElementById('refreshXiongluButton');
     const refreshPointCouponThiefButton = document.getElementById('refreshPointCouponThiefButton');
     let state = { roles: [], templates: [] };
 
@@ -848,6 +875,19 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
         .finally(() => { refreshBainianButton.disabled = false; });
     }
 
+    function refreshXiongluBeardeer() {
+      refreshXiongluButton.disabled = true;
+      setStatus('正在刷新熊鹿...', false);
+      fetch('/dev/items/refresh-xionglu-beardeer', { method: 'POST' })
+        .then(response => response.json())
+        .then(result => {
+          if (!result.success) throw new Error(result.errorMessage || '刷新失败。');
+          setStatus('熊鹿已刷新至雷兽神坛，并已发送全服通知。', false);
+        })
+        .catch(error => setStatus(String(error), true))
+        .finally(() => { refreshXiongluButton.disabled = false; });
+    }
+
     function refreshPointCouponThief() {
       refreshPointCouponThiefButton.disabled = true;
       setStatus('正在刷新点券盗贼...', false);
@@ -868,6 +908,7 @@ var devItemsPageTemplate = template.Must(template.New("dev-items").Parse(`<!doct
     addSilverButton.addEventListener('click', addSilver);
     setLevelButton.addEventListener('click', setLevel);
     refreshBainianButton.addEventListener('click', refreshBainianChongjing);
+    refreshXiongluButton.addEventListener('click', refreshXiongluBeardeer);
     refreshPointCouponThiefButton.addEventListener('click', refreshPointCouponThief);
     refresh().catch(error => setStatus(String(error), true));
   </script>

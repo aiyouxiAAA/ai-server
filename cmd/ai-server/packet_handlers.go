@@ -1546,6 +1546,11 @@ func classicBattleOverChatMessages(socketSession *packetSession, over *battle.Ov
 		killerNames := classicBattleKillerDisplayNames(socketSession, over)
 		return []classicTownChatMessagePush{classicBainianChongjingKillAnnouncementMessage(killerNames...)}
 	}
+	if classicactivity.IsXiongluBeardeerHandleAnyMap(socketSession.battleRuntime.SourceMonsterHandle) ||
+		classicactivity.IsXiongluBeardeerEncounterHandle(socketSession.battleRuntime.SourceMonsterHandle) {
+		killerNames := classicBattleKillerDisplayNames(socketSession, over)
+		return []classicTownChatMessagePush{classicXiongluBeardeerKillAnnouncementMessage(killerNames...)}
+	}
 	return nil
 }
 
@@ -1646,6 +1651,13 @@ func markDefeatedVisibleMonsterFromBattle(store *session.Store, socketSession *p
 		classicactivity.MarkBainianChongjingKilled(time.Now())
 		handles = classicactivity.BainianChongjingEncounterHandles()
 		worldSceneHub.broadcastStaticRemoveHandlesToMap(classicactivity.BainianChongjingMapID, handles)
+	}
+	if classicactivity.IsXiongluBeardeerHandleAnyMap(socketSession.battleRuntime.SourceMonsterHandle) ||
+		classicactivity.IsXiongluBeardeerEncounterHandle(socketSession.battleRuntime.SourceMonsterHandle) {
+		// World-event kill: hide for the rest of this cycle for everyone currently on map203.
+		classicactivity.MarkXiongluBeardeerKilled(time.Now())
+		handles = classicactivity.XiongluBeardeerEncounterHandles()
+		worldSceneHub.broadcastStaticRemoveHandlesToMap(classicactivity.XiongluBeardeerMapID, handles)
 	}
 	mapID, ok := battle.ParseMapID(socketSession.battleRuntime.MapID)
 	instanceKey := ""

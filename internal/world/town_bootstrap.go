@@ -695,6 +695,10 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneSeventyOne.SourceMonsters = map171SourceMonsters
 	definitions[171] = mapOneSeventyOne
 
+	mapTwoZeroThree := definitions[203]
+	mapTwoZeroThree.SourceMonsters = map203SourceMonsters
+	definitions[203] = mapTwoZeroThree
+
 	applyClassicMapNPCatalog(definitions)
 
 	for _, point := range sourceCollectionPointsByHandle {
@@ -979,6 +983,7 @@ func buildTownBootstrap(
 	sourceMonsters := append([]sourceMonsterEntry{}, mapDefinition.SourceMonsters...)
 	now := bootstrapNow()
 	sourceMonsters = filterBainianChongjingSourceMonsters(sourceMonsters, mapDefinition.ID, now)
+	sourceMonsters = filterXiongluBeardeerSourceMonsters(sourceMonsters, mapDefinition.ID, now)
 	sourceMonsters = appendPointCouponThiefSourceMonster(sourceMonsters, mapDefinition.ID, now)
 	createRoles := make([]RolePush, 0, len(mapDefinition.SourceNPCs)+len(sourceMonsters))
 	questStates := make([]QuestStatePush, 0, len(mapDefinition.SourceNPCs))
@@ -1095,6 +1100,21 @@ func BainianChongjingLiveHandles() []string {
 	return classicactivity.BainianChongjingEncounterHandles()
 }
 
+func XiongluBeardeerLiveRolePushes() []RolePush {
+	roles := make([]RolePush, 0, len(map203SourceMonsters))
+	for _, monster := range map203SourceMonsters {
+		if !classicactivity.IsXiongluBeardeerEncounterHandle(monster.Handle) {
+			continue
+		}
+		roles = append(roles, BuildSourceMonsterRolePush(classicactivity.XiongluBeardeerMapID, monster))
+	}
+	return roles
+}
+
+func XiongluBeardeerLiveHandles() []string {
+	return classicactivity.XiongluBeardeerEncounterHandles()
+}
+
 // PointCouponThiefRolePush maps an activity spawn to the same source-monster
 // contract used by town bootstrap and live world refreshes.
 func PointCouponThiefRolePush(spawn classicactivity.PointCouponThiefSpawn) RolePush {
@@ -1119,6 +1139,23 @@ func filterBainianChongjingSourceMonsters(monsters []sourceMonsterEntry, mapID i
 	filtered := make([]sourceMonsterEntry, 0, len(monsters))
 	for _, monster := range monsters {
 		if classicactivity.IsBainianChongjingEncounterHandle(monster.Handle) {
+			continue
+		}
+		filtered = append(filtered, monster)
+	}
+	return filtered
+}
+
+func filterXiongluBeardeerSourceMonsters(monsters []sourceMonsterEntry, mapID int, now time.Time) []sourceMonsterEntry {
+	if mapID != classicactivity.XiongluBeardeerMapID {
+		return monsters
+	}
+	if classicactivity.XiongluBeardeerIsAlive(now) {
+		return monsters
+	}
+	filtered := make([]sourceMonsterEntry, 0, len(monsters))
+	for _, monster := range monsters {
+		if classicactivity.IsXiongluBeardeerEncounterHandle(monster.Handle) {
 			continue
 		}
 		filtered = append(filtered, monster)

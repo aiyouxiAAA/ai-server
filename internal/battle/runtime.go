@@ -86,8 +86,10 @@ const (
 	CommandEnemyRulingAx   = "enemy-ruling-ax"
 	CommandEnemyVacuumKill = "enemy-vacuum-killed"
 	CommandEnemyRobotUp    = "enemy-robot-up"
-	CommandEnemyChaosHit   = "enemy-chaos-hit"
-	CommandEnemySweepSpear = "enemy-sweep-spear"
+	CommandEnemyChaosHit     = "enemy-chaos-hit"
+	CommandEnemyThunderstorm = "enemy-thunderstorm"
+	CommandEnemyAngleCurse   = "enemy-angle-curse"
+	CommandEnemySweepSpear   = "enemy-sweep-spear"
 	CommandDefense         = "defense"
 	CommandStore           = "battle-store"
 	CommandEscape          = "battle-escape"
@@ -109,6 +111,11 @@ const (
 	enemyHelixAtkDamageMultiplier = 1.32
 	enemyPalsyAtkChance           = 40
 	enemyChaosHitChance           = 46
+	// 20260720_225539_439: thunderstorm/anglecurse AI approx; MP cost PARTIAL.
+	enemyThunderstormMPCost       = 10
+	enemyThunderstormChance       = 25
+	enemyAngleCurseMPCost         = 10
+	enemyAngleCurseChance         = 10
 	enemySweepSpearMPCost         = 30
 	enemySweepSpearChance         = 28
 	enemyPalsyAtkStatusChance     = 100
@@ -1882,6 +1889,28 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		} else {
 			profile.DefenseType = "magic"
 		}
+	case CommandEnemyThunderstorm:
+		return commandProfile{
+			ActionName:        "雷鸣怒吼",
+			SourceType:        "all",
+			SourceActionLabel: "thunderstorm",
+			DamageMultiplier:  1,
+			MPCost:            enemyThunderstormMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+			DefenseType:       "magic",
+		}
+	case CommandEnemyAngleCurse:
+		return commandProfile{
+			ActionName:        "角念",
+			SourceType:        "oneE",
+			SourceActionLabel: "anglecurse",
+			DamageMultiplier:  1,
+			MPCost:            enemyAngleCurseMPCost,
+			CanDodge:          true,
+			CanFat:            true,
+			DefenseType:       "magic",
+		}
 	case CommandEnemySweepSpear:
 		return commandProfile{
 			ActionName:        "单枪横扫",
@@ -1967,6 +1996,12 @@ func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfo
 	if sourceEnemyCanChaosHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyChaosHit, enemyChaosHitChance) {
 		return CommandEnemyChaosHit
 	}
+	if sourceEnemyCanThunderstorm(enemy) && enemy.MP >= enemyThunderstormMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyThunderstorm, enemyThunderstormChance) {
+		return CommandEnemyThunderstorm
+	}
+	if sourceEnemyCanAngleCurse(enemy) && enemy.MP >= enemyAngleCurseMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyAngleCurse, enemyAngleCurseChance) {
+		return CommandEnemyAngleCurse
+	}
 	if sourceEnemyCanMilitiaSweepSpear(enemy) && enemy.MP >= enemySweepSpearMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemySweepSpear, enemySweepSpearChance) {
 		return CommandEnemySweepSpear
 	}
@@ -2033,6 +2068,18 @@ func sourceEnemyCanChaosHit(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	return strings.TrimSpace(enemy.Name) == "百年虫精" || strings.Contains(normalizedDisplay, "monstermap/wocmon.swf")
+}
+
+func sourceEnemyCanThunderstorm(enemy *CellInfoPush) bool {
+	if enemy == nil {
+		return false
+	}
+	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	return strings.TrimSpace(enemy.Name) == "熊鹿" || strings.Contains(normalizedDisplay, "monstermap/beardeer.swf")
+}
+
+func sourceEnemyCanAngleCurse(enemy *CellInfoPush) bool {
+	return sourceEnemyCanThunderstorm(enemy)
 }
 
 func sourceEnemyCanMilitiaSweepSpear(enemy *CellInfoPush) bool {
@@ -2292,7 +2339,7 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 	}
 	normalizedDisplay := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
 	switch strings.TrimSpace(enemy.Name) {
-	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人", "蚩颅王", "点券盗贼", "百年虫精", "龙娃":
+	case "巨岩魔", "岩化魔人", "黄风二寨主", "黄风大寨主", "黄风寨夫人", "蚩颅王", "点券盗贼", "百年虫精", "熊鹿", "龙娃":
 		return true
 	default:
 		return strings.Contains(normalizedDisplay, "monstermap/largerock.swf") ||
@@ -2302,12 +2349,19 @@ func sourceEnemyCanRampage(enemy *CellInfoPush) bool {
 			strings.Contains(normalizedDisplay, "monstermap/hflady.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/chiluking.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/wocmon.swf") ||
+			strings.Contains(normalizedDisplay, "monstermap/beardeer.swf") ||
 			strings.Contains(normalizedDisplay, "monstermap/dragonson.swf")
 	}
 }
 
 func sourceEnemyRampageMaxRounds(enemy *CellInfoPush) int {
-	if enemy != nil && (strings.TrimSpace(enemy.Name) == "百年虫精" || strings.Contains(strings.ToLower(strings.TrimSpace(enemy.DisplayURL)), "monstermap/wocmon.swf")) {
+	if enemy == nil {
+		return enemyRampageMaxRounds
+	}
+	name := strings.TrimSpace(enemy.Name)
+	display := strings.ToLower(strings.TrimSpace(enemy.DisplayURL))
+	if name == "百年虫精" || strings.Contains(display, "monstermap/wocmon.swf") ||
+		name == "熊鹿" || strings.Contains(display, "monstermap/beardeer.swf") {
 		return enemyBainianRampageMaxRounds
 	}
 	return enemyRampageMaxRounds
@@ -4327,6 +4381,7 @@ func (runtime *Runtime) effectiveBattleDefense(actor *CellInfoPush, target *Cell
 	if normalizedDefenseType == "magic" {
 		baseDefense = target.MgcDefense
 	}
+	baseDefense = int(math.Round(float64(baseDefense) * 0.5))
 	if targetInDef {
 		return baseDefense * 2
 	}
@@ -4450,6 +4505,9 @@ func (runtime *Runtime) resolveStatusApply(actor *CellInfoPush, target *CellInfo
 
 func (runtime *Runtime) resolveDodge(actor *CellInfoPush, target *CellInfoPush, commandID string, profile commandProfile) bool {
 	if !profile.CanDodge || actor == nil || target == nil || target.Dog <= 0 {
+		return false
+	}
+	if runtime.DefendingHandles[target.Handle] || runtime.StoredPower[target.Handle] > 0 {
 		return false
 	}
 	if actor.Hit <= 0 {

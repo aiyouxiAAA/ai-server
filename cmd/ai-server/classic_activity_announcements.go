@@ -13,6 +13,8 @@ func startClassicActivityAnnouncementLoop() {
 	lastAnnouncedHour := time.Now().Truncate(time.Hour)
 	lastBainianBucket := classicactivity.BainianChongjingCycleBucket(time.Now())
 	lastBainianPhase := classicactivity.BainianChongjingPhaseAt(time.Now())
+	lastXiongluBucket := classicactivity.XiongluBeardeerCycleBucket(time.Now())
+	lastXiongluPhase := classicactivity.XiongluBeardeerPhaseAt(time.Now())
 	ticker := time.NewTicker(time.Second)
 	go func() {
 		for now := range ticker.C {
@@ -30,20 +32,37 @@ func startClassicActivityAnnouncementLoop() {
 				lastBainianPhase = classicactivity.BainianChongjingPhaseWarning
 				broadcastClassicBainianChongjingLiveRemove()
 				broadcastClassicBainianChongjingWarningNotice()
-				continue
-			}
-			if phase == classicactivity.BainianChongjingPhaseSpawned && lastBainianPhase != classicactivity.BainianChongjingPhaseSpawned {
+			} else if phase == classicactivity.BainianChongjingPhaseSpawned && lastBainianPhase != classicactivity.BainianChongjingPhaseSpawned {
 				lastBainianPhase = phase
-				if classicactivity.BainianChongjingIsForcedForDev(now) {
-					continue
-				}
-				if classicactivity.BainianChongjingIsAlive(now) {
+				if !classicactivity.BainianChongjingIsForcedForDev(now) && classicactivity.BainianChongjingIsAlive(now) {
 					broadcastClassicBainianChongjingSpawnNotice()
 					broadcastClassicBainianChongjingLiveSpawn()
 				}
+			} else {
+				lastBainianPhase = phase
+			}
+
+			xiongluPhase := classicactivity.XiongluBeardeerPhaseAt(now)
+			xiongluBucket := classicactivity.XiongluBeardeerCycleBucket(now)
+			if xiongluBucket != lastXiongluBucket {
+				lastXiongluBucket = xiongluBucket
+				lastXiongluPhase = classicactivity.XiongluBeardeerPhaseWarning
+				broadcastClassicXiongluBeardeerLiveRemove()
+				broadcastClassicXiongluBeardeerWarningNotice()
 				continue
 			}
-			lastBainianPhase = phase
+			if xiongluPhase == classicactivity.XiongluBeardeerPhaseSpawned && lastXiongluPhase != classicactivity.XiongluBeardeerPhaseSpawned {
+				lastXiongluPhase = xiongluPhase
+				if classicactivity.XiongluBeardeerIsForcedForDev(now) {
+					continue
+				}
+				if classicactivity.XiongluBeardeerIsAlive(now) {
+					broadcastClassicXiongluBeardeerSpawnNotice()
+					broadcastClassicXiongluBeardeerLiveSpawn()
+				}
+				continue
+			}
+			lastXiongluPhase = xiongluPhase
 		}
 	}()
 }
@@ -112,4 +131,49 @@ func broadcastClassicBainianChongjingLiveRemove() {
 		return
 	}
 	worldSceneHub.broadcastStaticRemoveHandlesToMap(classicactivity.BainianChongjingMapID, handles)
+}
+
+func broadcastClassicXiongluBeardeerWarningNotice() {
+	worldSceneHub.broadcastChatToAll(classicXiongluBeardeerWarningAnnouncementMessage())
+}
+
+func classicXiongluBeardeerWarningAnnouncementMessage() classicTownChatMessagePush {
+	return classicTownChatMessagePush{
+		Channel: "system",
+		Msg:     "<w>" + classicactivity.XiongluBeardeerWarningNoticeText(),
+	}
+}
+
+func broadcastClassicXiongluBeardeerSpawnNotice() {
+	worldSceneHub.broadcastChatToAll(classicXiongluBeardeerSpawnAnnouncementMessage())
+}
+
+func classicXiongluBeardeerSpawnAnnouncementMessage() classicTownChatMessagePush {
+	return classicTownChatMessagePush{
+		Channel: "system",
+		Msg:     "<w>" + classicactivity.XiongluBeardeerSpawnNoticeText(),
+	}
+}
+
+func classicXiongluBeardeerKillAnnouncementMessage(killerNames ...string) classicTownChatMessagePush {
+	return classicTownChatMessagePush{
+		Channel: "system",
+		Msg:     "<w>" + classicactivity.XiongluBeardeerKillNoticeText(killerNames...),
+	}
+}
+
+func broadcastClassicXiongluBeardeerLiveSpawn() {
+	roles := world.XiongluBeardeerLiveRolePushes()
+	if len(roles) == 0 {
+		return
+	}
+	worldSceneHub.broadcastStaticCreateRolesToMap(classicactivity.XiongluBeardeerMapID, roles)
+}
+
+func broadcastClassicXiongluBeardeerLiveRemove() {
+	handles := world.XiongluBeardeerLiveHandles()
+	if len(handles) == 0 {
+		return
+	}
+	worldSceneHub.broadcastStaticRemoveHandlesToMap(classicactivity.XiongluBeardeerMapID, handles)
 }

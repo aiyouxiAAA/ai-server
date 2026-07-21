@@ -2171,6 +2171,16 @@ var map171SourceMonsters = []sourceMonsterEntry{
 	buildCapturedSourceMonster("7899833328749140", "被控制的民兵", "monstermap/militia.swf", "militia", 30, "战士+", 1992, 533),
 }
 
+// Capture-backed map203 熊鹿 event from 20260720_225539_439_auto_move_session.
+// All four entities have c_AddRole on the map (not battle-only companions).
+var map203SourceMonsters = []sourceMonsterEntry{
+	buildCapturedSourceMonster("4264636384163425", "熊鹿", "monstermap/beardeer.swf", "beardeer", 40, "术士++", 1058, 569),
+	buildCapturedSourceMonster("4266636384163669", "机木玄师", "monstermap/robothyun.swf", "robothyun", 35, "术士+", 348, 632),
+	buildCapturedSourceMonster("4268636384164547", "机木玄师", "monstermap/robothyun.swf", "robothyun", 35, "术士+", 334, 492),
+	buildCapturedSourceMonster("4270636384165790", "机木玄师", "monstermap/robothyun.swf", "robothyun", 35, "术士+", 1046, 568),
+}
+
+
 func buildCapturedSourceTransport(handle string, x int, y int) sourceNPCEntry {
 	return buildCapturedSourceTransportMovieClip(handle, "transp/flag2.swf", "flag2", 158, 258, x, y)
 }

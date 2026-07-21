@@ -1499,8 +1499,20 @@ var capturedSourceMonsterMoveReplayByMapID = map[int][]RoleMovePush{
 		{Handle: "7899833328749140", Type: "Move", X: 1965, Y: 533, Z: 0, TX: 1255, TY: 539, TZ: 0},
 		{Handle: "7899833328749140", Type: "Move", X: 1441, Y: 537, Z: 0, TX: 2159, TY: 531, TZ: 0},
 	},
+	// map203 熊鹿: target-change condensed moves from 20260720_225539_439_auto_move_session pre-battle chase.
+	203: {
+		{Handle: "4264636384163425", Type: "Move", X: 980, Y: 569, Z: 0, TX: 251, TY: 574, TZ: 0},
+		{Handle: "4264636384163425", Type: "Move", X: 365, Y: 572, Z: 0, TX: 1058, TY: 569, TZ: 0},
+		{Handle: "4266636384163669", Type: "Move", X: 250, Y: 633, Z: 0, TX: 161, TY: 635, TZ: 0},
+		{Handle: "4266636384163669", Type: "Move", X: 254, Y: 634, Z: 0, TX: 905, TY: 630, TZ: 0},
+		{Handle: "4268636384164547", Type: "Move", X: 432, Y: 492, Z: 0, TX: 1174, TY: 492, TZ: 0},
+		{Handle: "4268636384164547", Type: "Move", X: 1091, Y: 556, Z: 0, TX: 334, TY: 492, TZ: 0},
+		{Handle: "4270636384165790", Type: "Move", X: 1144, Y: 566, Z: 0, TX: 1130, TY: 566, TZ: 0},
+		{Handle: "4270636384165790", Type: "Move", X: 1055, Y: 566, Z: 0, TX: 176, TY: 574, TZ: 0},
+	},
 }
 
 var capturedSourceMonsterMoveReplayLoopingMapIDs = map[int]bool{
 	171: true,
+	203: true,
 }

@@ -2975,7 +2975,7 @@ func TestProcessActionAllowsCapturedDaggerSkills(t *testing.T) {
 			description:    "f_s_多段刺^ffffff&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@18&4@提升45%的物理伤害",
 			commandID:      CommandDuoDuanCi,
 			label:          "w3/ddCut",
-			expectedDamage: 105,
+			expectedDamage: 125,
 			expectedMP:     82,
 		},
 		{
@@ -3011,7 +3011,7 @@ func TestProcessActionAllowsCapturedDaggerSkills(t *testing.T) {
 			description:    "f_s_魔力突刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@造成敌人100%的物理伤害&0;并追加80%的魔法伤害",
 			commandID:      CommandMoLiTuCi,
 			label:          "w3/magicCut",
-			expectedDamage: 60,
+			expectedDamage: 80,
 			expectedMP:     80,
 		},
 		{
@@ -3020,7 +3020,7 @@ func TestProcessActionAllowsCapturedDaggerSkills(t *testing.T) {
 			description:    "f_s_疾风刺^5BC46D&9@单体·攻击&8@游侠 &10@匕首&22@战斗&2@20&4@对敌人造成40%的物理伤害&0;击中敌人时有92%的机率使对方进入迟钝状态(削减对方50%的命中和回避)3回合<br><font color='#00cc00'>叠加施放将削弱其造成迟钝的功效</font>",
 			commandID:      CommandJiFengCi,
 			label:          "w3/windCut",
-			expectedDamage: 1,
+			expectedDamage: 20,
 			expectedMP:     80,
 		},
 	}
@@ -3105,7 +3105,7 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_强射^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@18&4@提升45%的物理伤害",
 			commandID:      CommandQiangShe,
 			label:          "w1/powerShoot",
-			expectedDamage: 105,
+			expectedDamage: 125,
 			expectedMP:     82,
 		},
 		{
@@ -3114,7 +3114,7 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_贯甲连矢^ffffff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【穿甲箭x1】</font><br>提升25%的物理伤害&0;进攻时增加30%（无视防御）的物理攻击力.",
 			commandID:      CommandGuanJiaLianShi,
 			label:          "w1/breakArmorShoot2",
-			expectedDamage: 115,
+			expectedDamage: 135,
 			expectedMP:     72,
 		},
 		{
@@ -3123,7 +3123,7 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_魔力速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@34&4@<font color='#00cc00'>特殊发动条件:需要【魔箭x1】</font><br>造成50%的物理伤害&0;并追加120%的魔法伤害(进攻时提高25%的魔法攻击力)",
 			commandID:      CommandMoLiSuShe,
 			label:          "w1/magicShoot",
-			expectedDamage: 64,
+			expectedDamage: 84,
 			expectedMP:     66,
 			magicAttack:    36,
 		},
@@ -3133,7 +3133,7 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_冰箭速射^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@28&4@<font color='#00cc00'>特殊发动条件:需要【冰之箭x1】</font><br><font color='#00cc00'>叠加施放将削弱其造成内伤的功效</font><br>造成70%的物理伤害&0;击中敌人时有90%的机率使敌人进入内伤状态(3回合内削弱敌人30%~35%的物理攻击和魔法攻击)",
 			commandID:      CommandBingJianSuShe,
 			label:          "w1/iceShoot",
-			expectedDamage: 30,
+			expectedDamage: 50,
 			expectedMP:     72,
 		},
 		{
@@ -3142,7 +3142,7 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_暗影箭^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@20&4@<font color='#00cc00'>特殊发动条件:需要【暗之箭x1】</font><br>造成72%的物理伤害&0;击中敌人时有17%的机率使敌人进入混乱状态2回合",
 			commandID:      CommandAnYingJian,
 			label:          "w1/darkShoot",
-			expectedDamage: 32,
+			expectedDamage: 52,
 			expectedMP:     80,
 		},
 		{
@@ -3151,7 +3151,7 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_毒矢^5BC46D&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@15&4@<font color='#00cc00'>特殊发动条件:需要【毒箭x1】<br>叠加施放将削弱其造成中毒的功效</font><br>对敌人造成90%的物理伤害&0;击中敌人时有70%的机率使敌人中毒(4回合内降低对方20%的物理防御和魔法防御&0;每回合使敌人损失气力为物理攻击的5%~10%)",
 			commandID:      CommandDuShi,
 			label:          "w1/drugShoot",
-			expectedDamage: 50,
+			expectedDamage: 70,
 			expectedMP:     85,
 		},
 		{
@@ -3160,7 +3160,7 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
 			commandID:      CommandAoYiHongLeiShi,
 			label:          "w1/bombThunderShoot",
-			expectedDamage: 69,
+			expectedDamage: 74,
 			expectedMP:     74,
 			storedPower:    2,
 			magicAttack:    36,
@@ -4086,8 +4086,8 @@ func TestGuanJiaLianShiUsesCapturedDirectAttackBonus(t *testing.T) {
 	if action.ActionName != "贯甲连矢" || action.SourceActionLabel != "w1/breakArmorShoot2" || action.TargetActionStateCode != "0" {
 		t.Fatalf("expected captured 贯甲连矢 hit action, got %+v", action)
 	}
-	if action.Damage != 75 || action.TargetHP != 425 || target.HP != 425 {
-		t.Fatalf("expected round(100*1.1)-50 plus round(100*0.15)=75 damage, got action=%+v target=%+v", action, target)
+	if action.Damage != 100 || action.TargetHP != 400 || target.HP != 400 {
+		t.Fatalf("expected round(100*1.1)-round(50*0.5) plus round(100*0.15)=100 damage, got action=%+v target=%+v", action, target)
 	}
 	if actor.MP != 75 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 75 {
 		t.Fatalf("expected captured 贯甲连矢 MP cost 25, got actor=%+v action=%+v", actor, action)
@@ -4787,7 +4787,7 @@ func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
 		t.Fatalf("expected 炎狩术 action, got %+v", flameResult)
 	}
 	flameAction := flameResult.Actions[0]
-	if flameAction.SourceActionLabel != "w10/fire2" || flameAction.Damage != 155 || flameAction.TargetHP != 845 || flame.cellByHandle("player_mage").MP != 120 {
+	if flameAction.SourceActionLabel != "w10/fire2" || flameAction.Damage != 165 || flameAction.TargetHP != 835 || flame.cellByHandle("player_mage").MP != 120 {
 		t.Fatalf("expected captured 炎狩术 magic action, got %+v", flameAction)
 	}
 
@@ -4797,7 +4797,7 @@ func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
 		t.Fatalf("expected 雷爆咒 action, got %+v", thunderResult)
 	}
 	thunderAction := thunderResult.Actions[0]
-	if thunderAction.TargetHandle != "all" || thunderAction.SourceActionLabel != "w10/thunderBombs" || len(thunderAction.TargetActionResults) != 2 || thunderAction.Damage != 164 || thunder.cellByHandle("enemy_thunder_1").HP != 836 || thunder.cellByHandle("enemy_thunder_2").HP != 846 || thunder.cellByHandle("player_mage").MP != 120 {
+	if thunderAction.TargetHandle != "all" || thunderAction.SourceActionLabel != "w10/thunderBombs" || len(thunderAction.TargetActionResults) != 2 || thunderAction.Damage != 174 || thunder.cellByHandle("enemy_thunder_1").HP != 826 || thunder.cellByHandle("enemy_thunder_2").HP != 831 || thunder.cellByHandle("player_mage").MP != 120 {
 		t.Fatalf("expected captured 雷爆咒 all-target action and one MP deduction, got %+v", thunderAction)
 	}
 	if len(thunderResult.BuffInfos) != 0 || len(thunderResult.ClearBuffInfos) != 0 {
@@ -4815,7 +4815,7 @@ func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
 		t.Fatalf("expected 雷龙强袭 action, got %+v", dragonResult)
 	}
 	dragonAction := dragonResult.Actions[0]
-	if dragonAction.SourceActionLabel != "w10/thunderDrongAtk" || dragonAction.Damage != 260 || dragonAction.TargetHP != 740 || dragon.cellByHandle("player_mage").MP != 75 {
+	if dragonAction.SourceActionLabel != "w10/thunderDrongAtk" || dragonAction.Damage != 270 || dragonAction.TargetHP != 730 || dragon.cellByHandle("player_mage").MP != 75 {
 		t.Fatalf("expected captured 雷龙强袭 magic action, got %+v", dragonAction)
 	}
 
@@ -4885,7 +4885,7 @@ func TestCapturedMageAdditionalStaffStatuses(t *testing.T) {
 		if len(runtime.PendingBuffInfos) != 1 {
 			continue
 		}
-		if action.SourceActionLabel != "w10/bombFire" || action.Damage != 65 || target.HP != 935 || actor.MP != 135 {
+		if action.SourceActionLabel != "w10/bombFire" || action.Damage != 75 || target.HP != 925 || actor.MP != 135 {
 			t.Fatalf("expected captured 赤焰魔咒 action, got %+v", action)
 		}
 		curse := runtime.PendingBuffInfos[0]
@@ -4915,7 +4915,7 @@ func TestCapturedMageAdditionalStaffStatuses(t *testing.T) {
 		if len(runtime.PendingBuffInfos) != 1 {
 			continue
 		}
-		if action.SourceActionLabel != "w10/thunderMagicAtk" || action.Damage != 100 || target.HP != 900 || actor.MP != 125 {
+		if action.SourceActionLabel != "w10/thunderMagicAtk" || action.Damage != 110 || target.HP != 890 || actor.MP != 125 {
 			t.Fatalf("expected captured 雷击 action, got %+v", action)
 		}
 		slow := runtime.PendingBuffInfos[0]
@@ -7273,8 +7273,8 @@ func TestBattleEnemyHelixAtkUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "螺旋锤杀" || action.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected captured cracktoad helixAtk action, got %+v", action)
 	}
-	if action.Damage != 159 || action.TargetHP != 886 {
-		t.Fatalf("expected helixAtk to use the full physical defense path, got %+v", action)
+	if action.Damage != 238 || action.TargetHP != 807 {
+		t.Fatalf("expected helixAtk to use the half physical defense path, got %+v", action)
 	}
 	if actor.MP != 554 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected helixAtk to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
@@ -7383,7 +7383,7 @@ func TestHuangfengIncantationShamanRockRainUsesCapturedAllTargetSkill(t *testing
 	if action.ActionName != "落石" || action.SourceActionLabel != "rockRain" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 落石 all-target action, got %+v", action)
 	}
-	if action.Damage != 162 || runtime.Cells[0].HP != 923 || runtime.Cells[1].MP != 540 {
+	if action.Damage != 182 || runtime.Cells[0].HP != 903 || runtime.Cells[1].MP != 540 {
 		t.Fatalf("expected 落石 to use captured MP cost 10 and magic damage path, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
@@ -7419,8 +7419,8 @@ func TestHuangfengSecondCastellanDarkMoonCutUsesCapturedLabel(t *testing.T) {
 	if action.ActionName != "暗月斩" || action.SourceActionLabel != "darkMoonCut" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 暗月斩 action, got %+v", action)
 	}
-	if action.Damage != 73 || action.TargetHP != 1012 || actor.MP != 554 {
-		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and full physical defense, action=%+v actor=%+v", action, actor)
+	if action.Damage != 156 || action.TargetHP != 929 || actor.MP != 554 {
+		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and half physical defense, action=%+v actor=%+v", action, actor)
 	}
 }
 
@@ -7458,8 +7458,8 @@ func TestHuangfengFirstCastellanEarthShockUsesCapturedAllTargetSkill(t *testing.
 	if action.ActionName != "裂震击" || action.SourceActionLabel != "earthShockAtk" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 裂震击 all-target action, got %+v", action)
 	}
-	if action.Damage != 100 || runtime.Cells[0].HP != 985 || runtime.Cells[1].MP != 554 {
-		t.Fatalf("expected 裂震击 to use captured MP cost 10 and full physical defense, action=%+v cells=%+v", action, runtime.Cells)
+	if action.Damage != 180 || runtime.Cells[0].HP != 905 || runtime.Cells[1].MP != 554 {
+		t.Fatalf("expected 裂震击 to use captured MP cost 10 and half physical defense, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
 
@@ -7925,8 +7925,8 @@ func TestFeixiandongLargerockRollAttackUsesCapturedDamage(t *testing.T) {
 	if action.ActionName != "滑行连击" || action.SourceActionLabel != "rollAttack" {
 		t.Fatalf("expected captured 滑行连击 action, got %+v", action)
 	}
-	if action.Damage != 218 || action.TargetHP != 555 || actor.MP != 544 {
-		t.Fatalf("expected 滑行连击 to use full physical defense and MP cost, got action=%+v target=%+v", action, target)
+	if action.Damage != 302 || action.TargetHP != 471 || actor.MP != 544 {
+		t.Fatalf("expected 滑行连击 to use half physical defense and MP cost, got action=%+v target=%+v", action, target)
 	}
 }
 
@@ -7948,8 +7948,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if lion.ActionName != "狮吼" || lion.SourceActionLabel != "lionroars" || lion.SourceMode != "1" {
 		t.Fatalf("expected shihuku whorllion 狮吼/lionroars action, got %+v", lion)
 	}
-	if lion.Damage != 293 {
-		t.Fatalf("expected 狮吼 to use 1.26 damage multiplier and full physical defense, got %+v", lion)
+	if lion.Damage != 353 {
+		t.Fatalf("expected 狮吼 to use 1.26 damage multiplier and half physical defense, got %+v", lion)
 	}
 	if runtime.cellByHandle("enemy_whorllion").MP != 374 {
 		t.Fatalf("expected 狮吼 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_whorllion"))
@@ -7959,8 +7959,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if piece.ActionName != "撕裂" || piece.SourceActionLabel != "pieceAttack" || piece.SourceMode != "1" {
 		t.Fatalf("expected shihuku 撕裂/pieceAttack action, got %+v", piece)
 	}
-	if piece.Damage != 359 {
-		t.Fatalf("expected shihuku 撕裂 to use 1.4 damage multiplier and full physical defense, got %+v", piece)
+	if piece.Damage != 419 {
+		t.Fatalf("expected shihuku 撕裂 to use 1.4 damage multiplier and half physical defense, got %+v", piece)
 	}
 	if runtime.cellByHandle("enemy_chiluking").MP != 590 {
 		t.Fatalf("expected shihuku 撕裂 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_chiluking"))
@@ -7981,8 +7981,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if gold.ActionName != "黄金穿刺" || gold.SourceActionLabel != "goldhit" || gold.TargetHandle != "all" || gold.SourceMode != "1" {
 		t.Fatalf("expected shihuku 蚩颅王 黄金穿刺/goldhit all-target action, got %+v", gold)
 	}
-	if gold.Damage != 468 {
-		t.Fatalf("expected shihuku 黄金穿刺 to use 1.72 damage multiplier and full physical defense, got %+v", gold)
+	if gold.Damage != 528 {
+		t.Fatalf("expected shihuku 黄金穿刺 to use 1.72 damage multiplier and half physical defense, got %+v", gold)
 	}
 	if runtime.cellByHandle("enemy_chiluking").MP != 580 {
 		t.Fatalf("expected shihuku 黄金穿刺 to use captured 10 MP cost once, got %+v", runtime.cellByHandle("enemy_chiluking"))
@@ -8455,8 +8455,8 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	runtime.EnemyAttackRanges[ranger.Handle] = expectedAttackRanges["7895833328747103"]
 	defer useSourceBattleAttackRoll(func(int) int { return 0 })()
 	sweepActions := runtime.resolveEnemyCommandActions(ranger, runtime.cellByHandle(targetOne.Handle), CommandEnemySweepSpear)
-	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 999 || runtime.cellByHandle(targetTwo.Handle).HP != 999 {
-		t.Fatalf("expected militia sweepspear all-target MP and full-defense behavior, actions=%+v cells=%+v", sweepActions, runtime.Cells)
+	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 946 || runtime.cellByHandle(targetTwo.Handle).HP != 951 {
+		t.Fatalf("expected militia sweepspear all-target MP and half-defense behavior, actions=%+v cells=%+v", sweepActions, runtime.Cells)
 	}
 
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
@@ -8467,7 +8467,127 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	}
 }
 
-func TestEnemyDamageUsesUnifiedFullDefense(t *testing.T) {
+func TestXiongluBeardeerUsesCapturedRampageAndSkills(t *testing.T) {
+	beardeer, ok := sourceVisibleMonsterConfigForHandle("203", "4264636384163425")
+	if !ok {
+		t.Fatal("expected map203 visible 熊鹿 config")
+	}
+	if beardeer.Cell.Name != "熊鹿" || beardeer.Cell.DisplayURL != "monstermap/beardeer.swf" || beardeer.Cell.Level != 40 || beardeer.Cell.MaxHP != 20000 || beardeer.Cell.MaxMP != 3102 || beardeer.Cell.CommandLabel != "法术普通攻击" || beardeer.Cell.DamageDefenseType != "magic" {
+		t.Fatalf("unexpected 熊鹿 config: %+v", beardeer.Cell)
+	}
+	if !sourceEnemyCanRampage(&beardeer.Cell) {
+		t.Fatalf("expected 熊鹿 to use captured 暴走之力, cell=%+v", beardeer.Cell)
+	}
+	if !sourceEnemyCanThunderstorm(&beardeer.Cell) {
+		t.Fatalf("expected 熊鹿 to use captured 雷鸣怒吼, cell=%+v", beardeer.Cell)
+	}
+	if !sourceEnemyCanAngleCurse(&beardeer.Cell) {
+		t.Fatalf("expected 熊鹿 to use captured 角念, cell=%+v", beardeer.Cell)
+	}
+	if sourceEnemyRampageMaxRounds(&beardeer.Cell) != enemyBainianRampageMaxRounds {
+		t.Fatalf("expected 熊鹿 rampage max rounds %d, got %d", enemyBainianRampageMaxRounds, sourceEnemyRampageMaxRounds(&beardeer.Cell))
+	}
+
+	group, ok := sourceVisibleMonsterConfigsForHandle("203", "4264636384163425")
+	if !ok || len(group) != 4 {
+		t.Fatalf("expected four-enemy 熊鹿 encounter, got %+v", group)
+	}
+	if group[0].Cell.Handle != "4264636384163425" || group[0].Cell.Name != "熊鹿" {
+		t.Fatalf("expected boss first in 熊鹿 encounter, got %+v", group[0].Cell)
+	}
+	for _, companion := range group[1:] {
+		if companion.Cell.Name != "机木玄师" || companion.Cell.DisplayURL != "monstermap/robothyun.swf" || companion.Cell.MaxHP != 2200 || companion.Cell.MaxMP != 860 {
+			t.Fatalf("unexpected 机木玄师 companion: %+v", companion.Cell)
+		}
+		if sourceEnemyCanRampage(&companion.Cell) || sourceEnemyCanThunderstorm(&companion.Cell) {
+			t.Fatalf("companions must not inherit 熊鹿 rampage/thunderstorm, got %+v", companion.Cell)
+		}
+		if !sourceEnemyCanRobothyunRobotUp(&companion.Cell) {
+			t.Fatalf("expected 机木玄师 robotup eligibility, got %+v", companion.Cell)
+		}
+	}
+
+	runtime := &Runtime{
+		BattleID:         "battle-xionglu-beardeer",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+	}
+	actor := beardeer.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
+	rampage := runtime.resolveEnemyRampageActions(&actor)
+	if len(rampage) != 1 || rampage[0].ActionName != "暴走之力" || rampage[0].SourceActionLabel != "battleStand" || rampage[0].TargetHandle != actor.Handle {
+		t.Fatalf("expected 熊鹿 rampage battleStand self action, got %+v", rampage)
+	}
+	if len(runtime.PendingBuffInfos) != 1 || runtime.PendingBuffInfos[0].Round != 51 || !strings.Contains(runtime.PendingBuffInfos[0].Description, "还有 51 回合暴走") {
+		t.Fatalf("expected captured 熊鹿 first rampage countdown 51, got %+v", runtime.PendingBuffInfos)
+	}
+
+	target := &CellInfoPush{
+		Handle:     "player_xionglu_1",
+		Camp:       CampTeam,
+		Name:       "恐龙抗狼1",
+		MaxHP:      1895,
+		HP:         1895,
+		Defense:    100,
+		MgcDefense: 80,
+	}
+	storm := runtime.resolveAttack(&actor, target, CommandEnemyThunderstorm)
+	if storm.ActionName != "雷鸣怒吼" || storm.SourceActionLabel != "thunderstorm" {
+		t.Fatalf("expected 雷鸣怒吼 thunderstorm action, got %+v", storm)
+	}
+	curse := runtime.resolveAttack(&actor, target, CommandEnemyAngleCurse)
+	if curse.ActionName != "角念" || curse.SourceActionLabel != "anglecurse" {
+		t.Fatalf("expected 角念 anglecurse action, got %+v", curse)
+	}
+
+	targetOne := CellInfoPush{Handle: "player_xionglu_a", Camp: CampTeam, HP: 2000, MaxHP: 2000, MgcDefense: 100}
+	targetTwo := CellInfoPush{Handle: "player_xionglu_b", Camp: CampTeam, HP: 2000, MaxHP: 2000, MgcDefense: 100}
+	actor.MP = beardeer.Cell.MaxMP
+	runtime.Cells = []CellInfoPush{targetOne, targetTwo, actor}
+	actorPtr := runtime.cellByHandle(actor.Handle)
+	defer useSourceBattleAttackRoll(func(int) int { return 0 })()
+	allActions := runtime.resolveEnemyCommandActions(actorPtr, runtime.cellByHandle(targetOne.Handle), CommandEnemyThunderstorm)
+	if len(allActions) != 1 || allActions[0].ActionName != "雷鸣怒吼" || allActions[0].TargetHandle != "all" || allActions[0].SourceActionLabel != "thunderstorm" || len(allActions[0].TargetActionResults) != 2 {
+		t.Fatalf("expected 雷鸣怒吼 all-target behavior, actions=%+v cells=%+v", allActions, runtime.Cells)
+	}
+	if runtime.cellByHandle(actor.Handle).MP != beardeer.Cell.MaxMP-enemyThunderstormMPCost {
+		t.Fatalf("expected thunderstorm MP cost %d, actor=%+v", enemyThunderstormMPCost, runtime.cellByHandle(actor.Handle))
+	}
+
+	stormSelected := false
+	curseSelected := false
+	for index := 0; index < 200; index += 1 {
+		candidate := &Runtime{BattleID: fmt.Sprintf("battle-xionglu-ai-%d", index), Round: 1, nextSequence: 1}
+		probe := beardeer.Cell.withBattleIDAndSlot(candidate.BattleID, 0)
+		probe.MP = beardeer.Cell.MaxMP
+		command := candidate.enemyBattleCommand(&probe, target)
+		if command == CommandEnemyThunderstorm {
+			stormSelected = true
+		}
+		if command == CommandEnemyAngleCurse {
+			curseSelected = true
+		}
+		if stormSelected && curseSelected {
+			break
+		}
+	}
+	if !stormSelected {
+		t.Fatal("expected capture-backed thunderstorm to be selectable by enemy AI")
+	}
+	if !curseSelected {
+		t.Fatal("expected capture-backed anglecurse to be selectable by enemy AI")
+	}
+
+	candidate, ok := sourceBattleRewardCandidateForCell("203", "熊鹿", 20000)
+	if !ok {
+		t.Fatalf("expected 熊鹿 reward candidate for map203 HP20000")
+	}
+	if candidate.ExpDelta != 0 {
+		t.Fatalf("expected zero-exp 熊鹿 reward candidate sample, got %+v", candidate)
+	}
+}
+
+func TestAllDamageUsesUnifiedHalfDefense(t *testing.T) {
 	runtime := &Runtime{EnemyAttackRanges: map[string]battleAttackRange{
 		"enemy_wocmon": {Min: 389, Max: 399},
 	}}
@@ -8476,40 +8596,47 @@ func TestEnemyDamageUsesUnifiedFullDefense(t *testing.T) {
 	profile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "magic"}
 
 	defense := runtime.effectiveBattleDefense(enemy, target, false, profile.DefenseType)
-	if defense != 300 {
-		t.Fatalf("expected full 阿柴 magic defense to mitigate enemy magic damage, got %d", defense)
+	if defense != 150 {
+		t.Fatalf("expected half 阿柴 magic defense to mitigate enemy magic damage, got %d", defense)
 	}
 	restoreMinimumRoll := useSourceBattleAttackRoll(func(int) int { return 0 })
-	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 89 {
-		t.Fatalf("expected a 389 attack to deal 89 against magic defense 300, got %d", damage)
+	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 239 {
+		t.Fatalf("expected a 389 attack to deal 239 against half magic defense 150, got %d", damage)
 	}
 	restoreMinimumRoll()
 	restoreMaximumRoll := useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })
 	defer restoreMaximumRoll()
-	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 99 {
-		t.Fatalf("expected a 399 attack to deal 99 against magic defense 300, got %d", damage)
+	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 249 {
+		t.Fatalf("expected a 399 attack to deal 249 against half magic defense 150, got %d", damage)
 	}
 
 	player := &CellInfoPush{Handle: "player_mage", Camp: CampTeam, Attack: 184}
-	if defense := runtime.effectiveBattleDefense(player, target, false, profile.DefenseType); defense != 300 {
-		t.Fatalf("expected player magic damage to retain full magic-defense path until separately evidenced, got %d", defense)
+	if defense := runtime.effectiveBattleDefense(player, target, false, profile.DefenseType); defense != 150 {
+		t.Fatalf("expected player magic damage to use half magic defense, got %d", defense)
 	}
 
 	physicalEnemy := &CellInfoPush{Handle: "7895833328747103", Camp: CampEnemy, Name: "被控制的民兵", DisplayURL: "monstermap/militia.swf", Attack: 200}
 	runtime.EnemyAttackRanges[physicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
 	physicalTarget := &CellInfoPush{Handle: "player_21432", Camp: CampTeam, Defense: 300}
 	physicalProfile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
-	if defense := runtime.effectiveBattleDefense(physicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 300 {
-		t.Fatalf("expected enemy physical damage to use full defense, got %d", defense)
+	if defense := runtime.effectiveBattleDefense(physicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 150 {
+		t.Fatalf("expected enemy physical damage to use half defense, got %d", defense)
 	}
 	otherPhysicalEnemy := &CellInfoPush{Handle: "enemy_with_range_but_no_cross_target_evidence", Camp: CampEnemy, Attack: 200}
 	runtime.EnemyAttackRanges[otherPhysicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
-	if defense := runtime.effectiveBattleDefense(otherPhysicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 300 {
-		t.Fatalf("expected every enemy physical attack to use full defense, got %d", defense)
+	if defense := runtime.effectiveBattleDefense(otherPhysicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 150 {
+		t.Fatalf("expected every enemy physical attack to use half defense, got %d", defense)
+	}
+	playerPhysical := &CellInfoPush{Handle: "player_physical", Camp: CampTeam, Attack: 200}
+	if defense := runtime.effectiveBattleDefense(playerPhysical, physicalTarget, false, physicalProfile.DefenseType); defense != 150 {
+		t.Fatalf("expected player physical damage to use half defense, got %d", defense)
+	}
+	if defense := runtime.effectiveBattleDefense(enemy, target, false, "direct"); defense != 0 {
+		t.Fatalf("expected direct damage to bypass half-defense policy, got %d", defense)
 	}
 }
 
-func TestLocalFullDefensePolicyDoublesDefenseUntilOneLandedHit(t *testing.T) {
+func TestLocalHalfDefensePolicyDoublesDefenseUntilOneLandedHit(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-local-defense-policy",
 		nextSequence:     1,
@@ -8531,16 +8658,16 @@ func TestLocalFullDefensePolicyDoublesDefenseUntilOneLandedHit(t *testing.T) {
 		MgcDefense: 80,
 	}
 
-	if defense := runtime.effectiveBattleDefense(enemy, target, true, "physical"); defense != 180 {
-		t.Fatalf("expected local Defense to double full physical mitigation to 180, got %d", defense)
+	if defense := runtime.effectiveBattleDefense(enemy, target, true, "physical"); defense != 90 {
+		t.Fatalf("expected local Defense to double half physical mitigation to 90, got %d", defense)
 	}
-	if defense := runtime.effectiveBattleDefense(enemy, target, true, "magic"); defense != 160 {
-		t.Fatalf("expected local Defense to double full magic mitigation to 160, got %d", defense)
+	if defense := runtime.effectiveBattleDefense(enemy, target, true, "magic"); defense != 80 {
+		t.Fatalf("expected local Defense to double half magic mitigation to 80, got %d", defense)
 	}
 
 	action := runtime.resolveAttack(enemy, target, CommandNormalAttack)
-	if !action.TargetInDef || action.Damage != 120 || target.HP != 880 {
-		t.Fatalf("expected the defended enemy hit to use the local 180 effective defense, got action=%+v target=%+v", action, target)
+	if !action.TargetInDef || action.Damage != 210 || target.HP != 790 {
+		t.Fatalf("expected the defended enemy hit to use the local 90 effective defense, got action=%+v target=%+v", action, target)
 	}
 	if runtime.DefendingHandles[target.Handle] {
 		t.Fatalf("expected a landed target outcome to consume the local Defense stance")
@@ -8549,9 +8676,21 @@ func TestLocalFullDefensePolicyDoublesDefenseUntilOneLandedHit(t *testing.T) {
 	runtime.DefendingHandles[target.Handle] = true
 	target.Dog = 1
 	enemy.Hit = 0
-	dodge := runtime.resolveAttack(enemy, target, CommandNormalAttack)
-	if dodge.TargetActionStateCode != "1" || !runtime.DefendingHandles[target.Handle] {
-		t.Fatalf("expected a dodge to preserve the local Defense stance, got action=%+v defending=%+v", dodge, runtime.DefendingHandles)
+	defendingHit := runtime.resolveAttack(enemy, target, CommandNormalAttack)
+	if defendingHit.TargetActionStateCode != "0" || defendingHit.Damage != 210 || target.HP != 580 || runtime.DefendingHandles[target.Handle] {
+		t.Fatalf("expected a defending target to be unable to dodge and consume Defense on hit, got action=%+v defending=%+v", defendingHit, runtime.DefendingHandles)
+	}
+}
+
+func TestStoredPowerTargetCannotDodge(t *testing.T) {
+	runtime := &Runtime{StoredPower: map[string]int{"player_storing": 1}}
+	actor := &CellInfoPush{Handle: "enemy", Camp: CampEnemy, Attack: 100, Hit: 0}
+	target := &CellInfoPush{Handle: "player_storing", Camp: CampTeam, HP: 500, MaxHP: 500, Dog: 1}
+
+	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
+
+	if action.TargetActionStateCode != "0" || action.Damage != 100 || target.HP != 400 {
+		t.Fatalf("expected a storing target to be unable to dodge, got action=%+v target=%+v", action, target)
 	}
 }
 
@@ -8647,8 +8786,8 @@ func TestMagicpandaEnemyNormalAttackUsesCapturedBroadcastName(t *testing.T) {
 	if action.ActionName != "法术普通攻击" || action.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected magicpanda normal attack to use CSV command_label while keeping source animation, config=%+v action=%+v", visibleMonster.Cell, action)
 	}
-	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 113 || action.TargetHP != 932 {
-		t.Fatalf("expected magicpanda normal attack to use the full magic-defense path without stored power bonus, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
+	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 128 || action.TargetHP != 917 {
+		t.Fatalf("expected magicpanda normal attack to use the half magic-defense path without stored power bonus, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
 	}
 }
 
@@ -8976,8 +9115,8 @@ func TestCracktoadEnemyTurnCanUseCapturedHelixAtk(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyHelixAtk || enemyAction.ActionName != "螺旋锤杀" || enemyAction.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected cracktoad enemy turn to use captured helixAtk, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 159 || enemyAction.TargetHP != 886 {
-		t.Fatalf("expected cracktoad enemy turn to apply full physical defense with helixAtk multiplier, got %+v", enemyAction)
+	if enemyAction.Damage != 238 || enemyAction.TargetHP != 807 {
+		t.Fatalf("expected cracktoad enemy turn to apply half physical defense with helixAtk multiplier, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 554 || enemyAction.RefreshInfos[0].Handle != "5176206909809579" || enemyAction.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected enemy helixAtk turn to consume MP 10, got cells=%+v action=%+v", runtime.Cells, enemyAction)
@@ -9036,8 +9175,8 @@ func TestCracktoadEnemyTurnCanUseCapturedNormalAttack(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyAttack || enemyAction.ActionName != "普通攻击" || enemyAction.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected cracktoad enemy turn to sometimes use captured normal attack, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 82 || enemyAction.TargetHP != 963 {
-		t.Fatalf("expected cracktoad normal attack to apply full physical defense, got %+v", enemyAction)
+	if enemyAction.Damage != 161 || enemyAction.TargetHP != 884 {
+		t.Fatalf("expected cracktoad normal attack to apply half physical defense, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 564 || len(enemyAction.RefreshInfos) != 1 {
 		t.Fatalf("expected cracktoad normal attack to keep MP unchanged, got cells=%+v action=%+v", runtime.Cells, enemyAction)

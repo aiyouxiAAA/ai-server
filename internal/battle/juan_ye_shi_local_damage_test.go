@@ -23,8 +23,8 @@ func Test666JuanYeShiAppliesMultiplierBeforeTargetDefense(t *testing.T) {
 		CommandJuanYeShi,
 	)
 
-	if action.SourceActionLabel != "w7/jys2" || action.Damage != 672 || action.TargetHP != 328 {
-		t.Fatalf("expected round(392 * 1.75) - 14 = 672, got %+v", action)
+	if action.SourceActionLabel != "w7/jys2" || action.Damage != 679 || action.TargetHP != 321 {
+		t.Fatalf("expected round(392 * 1.75) - round(14 * 0.5) = 679, got %+v", action)
 	}
 	if actor := runtime.cellByHandle("acct-66666666-role-001"); actor.MP != 439 {
 		t.Fatalf("expected Lv5 卷叶式 to consume 16 MP, actor=%+v", actor)

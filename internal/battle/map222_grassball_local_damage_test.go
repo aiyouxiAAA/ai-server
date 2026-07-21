@@ -2,7 +2,7 @@ package battle
 
 import "testing"
 
-func TestMap222GrassballLocalFullMagicDefenseCalibration(t *testing.T) {
+func TestMap222GrassballLocalHalfMagicDefensePolicy(t *testing.T) {
 	grassball, ok := sourceEnemyConfigForMap("222")
 	if !ok {
 		t.Fatal("expected map222 grassball config")
@@ -30,7 +30,7 @@ func TestMap222GrassballLocalFullMagicDefenseCalibration(t *testing.T) {
 	if action.ActionName != "法术普通攻击" || action.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected grassball normal magic attack, got %+v", action)
 	}
-	if actor.DamageDefenseType != "magic" || action.Damage != 271 || action.TargetHP != 1734 {
-		t.Fatalf("expected 344 - 73 = 271 against 666, actor=%+v action=%+v target=%+v", actor, action, target)
+	if actor.DamageDefenseType != "magic" || action.Damage != 307 || action.TargetHP != 1698 {
+		t.Fatalf("expected 344 - round(73 * 0.5) = 307 against 666, actor=%+v action=%+v target=%+v", actor, action, target)
 	}
 }

@@ -15,7 +15,6 @@ import (
 	"ai-server/internal/session"
 )
 
-
 func pendingStartActor(runtime *Runtime) *StartCommandPush {
 	if runtime == nil || len(runtime.PendingStarts) == 0 {
 		return nil
@@ -1094,7 +1093,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 		{mapID: "62", names: []string{"毒蜂"}, maxHPs: []int{680}, attacks: []int{246}},
 		{mapID: "63", names: []string{"金斑鳄", "金斑鳄"}, maxHPs: []int{980, 1020}, attacks: []int{270, 278}},
 		{mapID: "172", names: []string{"玄龟兽", "玄龟兽"}, maxHPs: []int{1221, 1260}, attacks: []int{273, 273}},
-		{mapID: "173", names: []string{"玄龟兽"}, maxHPs: []int{1221}, attacks: []int{273}},
+		{mapID: "173", names: []string{"玄龟兽"}, maxHPs: []int{1221}, attacks: []int{309}},
 		{mapID: "174", names: []string{"玄龟兽", "毒蜂"}, maxHPs: []int{1260, 850}, attacks: []int{273, 278}},
 		{mapID: "175", names: []string{"赤蛰子", "毒蜂", "玄龟兽"}, maxHPs: []int{3100, 850, 1260}, attacks: []int{330, 278, 313}},
 		{mapID: "177", names: []string{"赤蛰子", "毒蜂"}, maxHPs: []int{3100, 850}, attacks: []int{304, 281}},
@@ -2332,8 +2331,8 @@ func TestNewWildBattleSupportsCaptureBackedGrasslandMaps(t *testing.T) {
 		attack     int
 	}{
 		{mapID: "210", mapName: "草坝_4", enemyName: "草刺槐", displayURL: "monstermap/glassyx.swf", level: 38, maxHP: 1530, maxMP: 1034, attack: 391},
-		{mapID: "216", mapName: "草坝_11", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 40, maxHP: 1357, maxMP: 1500, attack: 496},
-		{mapID: "222", mapName: "草坝_16", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 42, maxHP: 1450, maxMP: 1518, attack: 494},
+		{mapID: "216", mapName: "草坝_11", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 40, maxHP: 1357, maxMP: 1500, attack: 333},
+		{mapID: "222", mapName: "草坝_16", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 42, maxHP: 1450, maxMP: 1518, attack: 344},
 	}
 
 	for _, testCase := range testCases {
@@ -2381,7 +2380,7 @@ func TestNewWildBattleSelectsCapturedEncounterWeightBoundaries(t *testing.T) {
 		{mapID: "50", mapName: "平原_16", roll: 50, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, attack: 203, encounterLabel: "平原_16 暗雷", enemyCount: 2},
 		{mapID: "52", mapName: "平原_18", roll: 0, handle: "7014979944725157", enemyName: "巡路小鬼", level: 18, maxHP: 545, maxMP: 184, attack: 216, encounterLabel: "平原_18 暗雷", enemyCount: 1},
 		{mapID: "52", mapName: "平原_18", roll: 836, handle: "1478600550966619", enemyName: "单刀狼人", level: 21, maxHP: 2500, maxMP: 334, attack: 260, encounterLabel: "平原_18 首领", enemyCount: 4},
-		{mapID: "173", mapName: "沼泽_11", roll: 304, handle: "2500770180184588", enemyName: "玄龟兽", level: 28, maxHP: 1221, maxMP: 200, attack: 273, encounterLabel: "沼泽_11 暗雷", enemyCount: 3},
+		{mapID: "173", mapName: "沼泽_11", roll: 304, handle: "2500770180184588", enemyName: "玄龟兽", level: 28, maxHP: 1221, maxMP: 200, attack: 309, encounterLabel: "沼泽_11 暗雷", enemyCount: 3},
 		{mapID: "201", mapName: "妖之森_10", roll: 227, handle: "capture-201-robothyun-lv34", enemyName: "机木玄师", level: 34, maxHP: 1189, maxMP: 910, attack: 239, encounterLabel: "妖之森_10 暗雷", enemyCount: 1},
 	}
 
@@ -7274,8 +7273,8 @@ func TestBattleEnemyHelixAtkUsesCapturedLabelAndMPCost(t *testing.T) {
 	if action.ActionName != "螺旋锤杀" || action.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected captured cracktoad helixAtk action, got %+v", action)
 	}
-	if action.Damage != 270 || action.TargetHP != 775 {
-		t.Fatalf("expected helixAtk to use the unified physical defense path, got %+v", action)
+	if action.Damage != 159 || action.TargetHP != 886 {
+		t.Fatalf("expected helixAtk to use the full physical defense path, got %+v", action)
 	}
 	if actor.MP != 554 || len(action.RefreshInfos) != 2 || action.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected helixAtk to consume captured MP cost 10, got actor=%+v action=%+v", actor, action)
@@ -7384,7 +7383,7 @@ func TestHuangfengIncantationShamanRockRainUsesCapturedAllTargetSkill(t *testing
 	if action.ActionName != "落石" || action.SourceActionLabel != "rockRain" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 落石 all-target action, got %+v", action)
 	}
-	if action.Damage != 190 || runtime.Cells[0].HP != 895 || runtime.Cells[1].MP != 540 {
+	if action.Damage != 162 || runtime.Cells[0].HP != 923 || runtime.Cells[1].MP != 540 {
 		t.Fatalf("expected 落石 to use captured MP cost 10 and magic damage path, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
@@ -7420,8 +7419,8 @@ func TestHuangfengSecondCastellanDarkMoonCutUsesCapturedLabel(t *testing.T) {
 	if action.ActionName != "暗月斩" || action.SourceActionLabel != "darkMoonCut" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 暗月斩 action, got %+v", action)
 	}
-	if action.Damage != 190 || action.TargetHP != 895 || actor.MP != 554 {
-		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and unified physical defense, action=%+v actor=%+v", action, actor)
+	if action.Damage != 73 || action.TargetHP != 1012 || actor.MP != 554 {
+		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and full physical defense, action=%+v actor=%+v", action, actor)
 	}
 }
 
@@ -7459,8 +7458,8 @@ func TestHuangfengFirstCastellanEarthShockUsesCapturedAllTargetSkill(t *testing.
 	if action.ActionName != "裂震击" || action.SourceActionLabel != "earthShockAtk" || action.TargetHandle != "all" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 裂震击 all-target action, got %+v", action)
 	}
-	if action.Damage != 212 || runtime.Cells[0].HP != 873 || runtime.Cells[1].MP != 554 {
-		t.Fatalf("expected 裂震击 to use captured MP cost 10 and unified physical defense, action=%+v cells=%+v", action, runtime.Cells)
+	if action.Damage != 100 || runtime.Cells[0].HP != 985 || runtime.Cells[1].MP != 554 {
+		t.Fatalf("expected 裂震击 to use captured MP cost 10 and full physical defense, action=%+v cells=%+v", action, runtime.Cells)
 	}
 }
 
@@ -7926,8 +7925,8 @@ func TestFeixiandongLargerockRollAttackUsesCapturedDamage(t *testing.T) {
 	if action.ActionName != "滑行连击" || action.SourceActionLabel != "rollAttack" {
 		t.Fatalf("expected captured 滑行连击 action, got %+v", action)
 	}
-	if action.Damage != 336 || action.TargetHP != 437 || actor.MP != 544 {
-		t.Fatalf("expected 滑行连击 to use unified physical defense and MP cost, got action=%+v target=%+v", action, target)
+	if action.Damage != 218 || action.TargetHP != 555 || actor.MP != 544 {
+		t.Fatalf("expected 滑行连击 to use full physical defense and MP cost, got action=%+v target=%+v", action, target)
 	}
 }
 
@@ -7949,8 +7948,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if lion.ActionName != "狮吼" || lion.SourceActionLabel != "lionroars" || lion.SourceMode != "1" {
 		t.Fatalf("expected shihuku whorllion 狮吼/lionroars action, got %+v", lion)
 	}
-	if lion.Damage != 377 {
-		t.Fatalf("expected 狮吼 to use 1.26 damage multiplier and unified physical defense, got %+v", lion)
+	if lion.Damage != 293 {
+		t.Fatalf("expected 狮吼 to use 1.26 damage multiplier and full physical defense, got %+v", lion)
 	}
 	if runtime.cellByHandle("enemy_whorllion").MP != 374 {
 		t.Fatalf("expected 狮吼 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_whorllion"))
@@ -7960,8 +7959,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if piece.ActionName != "撕裂" || piece.SourceActionLabel != "pieceAttack" || piece.SourceMode != "1" {
 		t.Fatalf("expected shihuku 撕裂/pieceAttack action, got %+v", piece)
 	}
-	if piece.Damage != 443 {
-		t.Fatalf("expected shihuku 撕裂 to use 1.4 damage multiplier and unified physical defense, got %+v", piece)
+	if piece.Damage != 359 {
+		t.Fatalf("expected shihuku 撕裂 to use 1.4 damage multiplier and full physical defense, got %+v", piece)
 	}
 	if runtime.cellByHandle("enemy_chiluking").MP != 590 {
 		t.Fatalf("expected shihuku 撕裂 to use captured 10 MP cost, got %+v", runtime.cellByHandle("enemy_chiluking"))
@@ -7982,8 +7981,8 @@ func TestShihukuEnemySkillProfilesUseCapturedActionLabels(t *testing.T) {
 	if gold.ActionName != "黄金穿刺" || gold.SourceActionLabel != "goldhit" || gold.TargetHandle != "all" || gold.SourceMode != "1" {
 		t.Fatalf("expected shihuku 蚩颅王 黄金穿刺/goldhit all-target action, got %+v", gold)
 	}
-	if gold.Damage != 552 {
-		t.Fatalf("expected shihuku 黄金穿刺 to use 1.72 damage multiplier and unified physical defense, got %+v", gold)
+	if gold.Damage != 468 {
+		t.Fatalf("expected shihuku 黄金穿刺 to use 1.72 damage multiplier and full physical defense, got %+v", gold)
 	}
 	if runtime.cellByHandle("enemy_chiluking").MP != 580 {
 		t.Fatalf("expected shihuku 黄金穿刺 to use captured 10 MP cost once, got %+v", runtime.cellByHandle("enemy_chiluking"))
@@ -8456,8 +8455,8 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	runtime.EnemyAttackRanges[ranger.Handle] = expectedAttackRanges["7895833328747103"]
 	defer useSourceBattleAttackRoll(func(int) int { return 0 })()
 	sweepActions := runtime.resolveEnemyCommandActions(ranger, runtime.cellByHandle(targetOne.Handle), CommandEnemySweepSpear)
-	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 888 || runtime.cellByHandle(targetTwo.Handle).HP != 891 {
-		t.Fatalf("expected captured militia sweepspear all-target MP and range behavior, actions=%+v cells=%+v", sweepActions, runtime.Cells)
+	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 999 || runtime.cellByHandle(targetTwo.Handle).HP != 999 {
+		t.Fatalf("expected militia sweepspear all-target MP and full-defense behavior, actions=%+v cells=%+v", sweepActions, runtime.Cells)
 	}
 
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
@@ -8468,27 +8467,27 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	}
 }
 
-func TestEnemyDamageUsesUnifiedPartialDefense(t *testing.T) {
+func TestEnemyDamageUsesUnifiedFullDefense(t *testing.T) {
 	runtime := &Runtime{EnemyAttackRanges: map[string]battleAttackRange{
-		"enemy_wocmon": {Min: 179, Max: 189},
+		"enemy_wocmon": {Min: 389, Max: 399},
 	}}
 	enemy := &CellInfoPush{Handle: "enemy_wocmon", Camp: CampEnemy, Attack: 184}
 	target := &CellInfoPush{Handle: "player_21499", Camp: CampTeam, MgcDefense: 300}
 	profile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "magic"}
 
 	defense := runtime.effectiveBattleDefense(enemy, target, false, profile.DefenseType)
-	if defense != 90 {
-		t.Fatalf("expected 30%% of 阿柴 magic defense to mitigate enemy magic damage, got %d", defense)
+	if defense != 300 {
+		t.Fatalf("expected full 阿柴 magic defense to mitigate enemy magic damage, got %d", defense)
 	}
 	restoreMinimumRoll := useSourceBattleAttackRoll(func(int) int { return 0 })
 	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 89 {
-		t.Fatalf("expected 百年虫精 minimum attack 179 to deal 89 against magic defense 300, got %d", damage)
+		t.Fatalf("expected a 389 attack to deal 89 against magic defense 300, got %d", damage)
 	}
 	restoreMinimumRoll()
 	restoreMaximumRoll := useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })
 	defer restoreMaximumRoll()
 	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 99 {
-		t.Fatalf("expected 百年虫精 maximum attack 189 to deal 99 against magic defense 300, got %d", damage)
+		t.Fatalf("expected a 399 attack to deal 99 against magic defense 300, got %d", damage)
 	}
 
 	player := &CellInfoPush{Handle: "player_mage", Camp: CampTeam, Attack: 184}
@@ -8500,13 +8499,59 @@ func TestEnemyDamageUsesUnifiedPartialDefense(t *testing.T) {
 	runtime.EnemyAttackRanges[physicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
 	physicalTarget := &CellInfoPush{Handle: "player_21432", Camp: CampTeam, Defense: 300}
 	physicalProfile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
-	if defense := runtime.effectiveBattleDefense(physicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 90 {
-		t.Fatalf("expected capture-backed enemy physical damage to use 30%% defense, got %d", defense)
+	if defense := runtime.effectiveBattleDefense(physicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 300 {
+		t.Fatalf("expected enemy physical damage to use full defense, got %d", defense)
 	}
 	otherPhysicalEnemy := &CellInfoPush{Handle: "enemy_with_range_but_no_cross_target_evidence", Camp: CampEnemy, Attack: 200}
 	runtime.EnemyAttackRanges[otherPhysicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
-	if defense := runtime.effectiveBattleDefense(otherPhysicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 90 {
-		t.Fatalf("expected every enemy physical attack to use 30%% defense, got %d", defense)
+	if defense := runtime.effectiveBattleDefense(otherPhysicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 300 {
+		t.Fatalf("expected every enemy physical attack to use full defense, got %d", defense)
+	}
+}
+
+func TestLocalFullDefensePolicyDoublesDefenseUntilOneLandedHit(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-local-defense-policy",
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{"player_defending": true},
+	}
+	enemy := &CellInfoPush{
+		Handle:       "enemy_local_policy",
+		Camp:         CampEnemy,
+		Attack:       300,
+		Hit:          100,
+		CommandLabel: "普通攻击",
+	}
+	target := &CellInfoPush{
+		Handle:     "player_defending",
+		Camp:       CampTeam,
+		HP:         1000,
+		MaxHP:      1000,
+		Defense:    90,
+		MgcDefense: 80,
+	}
+
+	if defense := runtime.effectiveBattleDefense(enemy, target, true, "physical"); defense != 180 {
+		t.Fatalf("expected local Defense to double full physical mitigation to 180, got %d", defense)
+	}
+	if defense := runtime.effectiveBattleDefense(enemy, target, true, "magic"); defense != 160 {
+		t.Fatalf("expected local Defense to double full magic mitigation to 160, got %d", defense)
+	}
+
+	action := runtime.resolveAttack(enemy, target, CommandNormalAttack)
+	if !action.TargetInDef || action.Damage != 120 || target.HP != 880 {
+		t.Fatalf("expected the defended enemy hit to use the local 180 effective defense, got action=%+v target=%+v", action, target)
+	}
+	if runtime.DefendingHandles[target.Handle] {
+		t.Fatalf("expected a landed target outcome to consume the local Defense stance")
+	}
+
+	runtime.DefendingHandles[target.Handle] = true
+	target.Dog = 1
+	enemy.Hit = 0
+	dodge := runtime.resolveAttack(enemy, target, CommandNormalAttack)
+	if dodge.TargetActionStateCode != "1" || !runtime.DefendingHandles[target.Handle] {
+		t.Fatalf("expected a dodge to preserve the local Defense stance, got action=%+v defending=%+v", dodge, runtime.DefendingHandles)
 	}
 }
 
@@ -8602,8 +8647,8 @@ func TestMagicpandaEnemyNormalAttackUsesCapturedBroadcastName(t *testing.T) {
 	if action.ActionName != "法术普通攻击" || action.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected magicpanda normal attack to use CSV command_label while keeping source animation, config=%+v action=%+v", visibleMonster.Cell, action)
 	}
-	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 134 || action.TargetHP != 911 {
-		t.Fatalf("expected magicpanda normal attack to use captured magic-defense damage path without stored power bonus, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
+	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 113 || action.TargetHP != 932 {
+		t.Fatalf("expected magicpanda normal attack to use the full magic-defense path without stored power bonus, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
 	}
 }
 
@@ -8931,8 +8976,8 @@ func TestCracktoadEnemyTurnCanUseCapturedHelixAtk(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyHelixAtk || enemyAction.ActionName != "螺旋锤杀" || enemyAction.SourceActionLabel != "helixAtk" {
 		t.Fatalf("expected cracktoad enemy turn to use captured helixAtk, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 270 || enemyAction.TargetHP != 775 {
-		t.Fatalf("expected cracktoad enemy turn to apply unified physical defense with helixAtk multiplier, got %+v", enemyAction)
+	if enemyAction.Damage != 159 || enemyAction.TargetHP != 886 {
+		t.Fatalf("expected cracktoad enemy turn to apply full physical defense with helixAtk multiplier, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 554 || enemyAction.RefreshInfos[0].Handle != "5176206909809579" || enemyAction.RefreshInfos[0].MP != 554 {
 		t.Fatalf("expected enemy helixAtk turn to consume MP 10, got cells=%+v action=%+v", runtime.Cells, enemyAction)
@@ -8991,8 +9036,8 @@ func TestCracktoadEnemyTurnCanUseCapturedNormalAttack(t *testing.T) {
 	if enemyAction.CommandID != CommandEnemyAttack || enemyAction.ActionName != "普通攻击" || enemyAction.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected cracktoad enemy turn to sometimes use captured normal attack, got %+v", enemyAction)
 	}
-	if enemyAction.Damage != 193 || enemyAction.TargetHP != 852 {
-		t.Fatalf("expected cracktoad normal attack to apply unified physical defense, got %+v", enemyAction)
+	if enemyAction.Damage != 82 || enemyAction.TargetHP != 963 {
+		t.Fatalf("expected cracktoad normal attack to apply full physical defense, got %+v", enemyAction)
 	}
 	if runtime.Cells[1].MP != 564 || len(enemyAction.RefreshInfos) != 1 {
 		t.Fatalf("expected cracktoad normal attack to keep MP unchanged, got cells=%+v action=%+v", runtime.Cells, enemyAction)

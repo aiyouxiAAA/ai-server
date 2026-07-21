@@ -65,7 +65,7 @@
       "max_hp": "1357",
       "max_mp": "1500",
       "speed": "0",
-      "attack": "496",
+      "attack": "333",
       "attack_min": "",
       "attack_max": "",
       "defense": "0",
@@ -74,7 +74,7 @@
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "",
-      "source": "capture-backed approximate: magic normal attack n=138 implied median 495.5 rounded to 496; D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260711_205359_937_auto_move_session/conn_0002/server-to-client-0001.bin"
+      "source": "local 1:1 defense calibration: strict normal attack n=506, implied full-magic-defense p50=333; not an original-server formula claim"
     },
     {
       "monster_id": "wild-222-caoba-glassss-lv42",
@@ -89,7 +89,7 @@
       "max_hp": "1450",
       "max_mp": "1518",
       "speed": "0",
-      "attack": "494",
+      "attack": "344",
       "attack_min": "",
       "attack_max": "",
       "defense": "0",
@@ -98,7 +98,7 @@
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "",
-      "source": "capture-backed approximate: magic normal attack n=159 implied median 494; D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260712_172043_134_auto_move_session/conn_0002/server-to-client-0001.bin"
+      "source": "local 1:1 defense calibration: strict normal attack n=831, implied full-magic-defense p50=344; target mgcDef=73 cohort n=255 has damage p50=267; not an original-server formula claim"
     },
     {
       "monster_id": "wild-4-7089932810872715",
@@ -1433,7 +1433,7 @@
       "max_hp": "1221",
       "max_mp": "200",
       "speed": "0",
-      "attack": "273",
+      "attack": "309",
       "attack_min": "",
       "attack_max": "",
       "defense": "0",
@@ -1442,7 +1442,7 @@
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "",
-      "source": "tmp/baiyuan-swamp-capture-summary.json#cell+reward-candidate+hp-delta-approx"
+      "source": "local 1:1 defense calibration: strict normal attack n=309, implied full-physical-defense p50=309; not an original-server formula claim"
     },
     {
       "monster_id": "wild-174-3741766722935500",

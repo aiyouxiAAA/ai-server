@@ -112,9 +112,6 @@ const (
 	enemySweepSpearMPCost         = 30
 	enemySweepSpearChance         = 28
 	enemyPalsyAtkStatusChance     = 100
-	// Capture-backed approximate: eligible enemy damage only absorbs 30% of target defense.
-	// Player damage and enemy physical encounters without paired cross-target evidence retain full defense.
-	enemyCaptureBackedDefenseMultiplier = 0.30
 	enemySweepSpearDamageMultiplier     = 1.30
 	enemyStunOnHitChance                = 5
 	enemyRampageMaxRounds               = 50
@@ -200,6 +197,8 @@ const (
 	qiYuHealPercent                   = 13
 	kuangWuShiStunChance              = 25
 	kuangWuShiStunRounds              = 2
+	// Captured single-sword Lv5 baselines above; lower levels come from
+	// skill-level-table / role skill description packets.
 	chiYanMoZhouCurseChance           = 85
 	chiYanMoZhouCurseRounds           = 2
 	leiJiSlownessChance               = 60
@@ -3962,9 +3961,6 @@ func (runtime *Runtime) effectiveBattleDefense(actor *CellInfoPush, target *Cell
 	baseDefense := target.Defense
 	if normalizedDefenseType == "magic" {
 		baseDefense = target.MgcDefense
-	}
-	if actor != nil && actor.Camp == CampEnemy {
-		baseDefense = int(math.Round(float64(baseDefense) * enemyCaptureBackedDefenseMultiplier))
 	}
 	if targetInDef {
 		return baseDefense * 2

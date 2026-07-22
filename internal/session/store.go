@@ -5562,6 +5562,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "w11", "60", true
 	case "天魁":
 		return "w1", "62", true
+	case "武雷拳套":
+		return "w5", "64", true
 	case "央月九影":
 		return "w8", "61", true
 	case "八极法冠":

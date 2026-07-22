@@ -4471,6 +4471,75 @@ func TestHandlePacketClassicTownCapturedWoodcutter333PushesCapturedFinalSkillsAn
 	}
 }
 
+func TestHandlePacketClassicTownCapturedWoodcutter777PushesFistSkills(t *testing.T) {
+	store := session.NewStore()
+	login := store.Login(session.LoginRequest{UserName: "77777777", Password: "77777777"})
+	create := store.CreateRole(session.RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "777",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !create.Success {
+		t.Fatalf("expected 777 role create success, got %+v", create)
+	}
+	socketSession := &packetSession{}
+	selectResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdRoleSelectRequest,
+		Seq: 1,
+		Payload: mustJSON(t, session.RoleSelectRequest{
+			PlayerID:     login.PlayerID,
+			SessionToken: login.SessionToken,
+			RoleID:       create.Role.RoleID,
+		}),
+	}, socketSession)
+	if !selectResult.handled || selectResult.townBootstrap == nil {
+		t.Fatalf("expected 777 role select to seed town bootstrap, got %+v", selectResult)
+	}
+
+	skillResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetSkillListReq,
+		Seq:     2,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if !skillResult.handled || skillResult.skillCap == nil || skillResult.skillCap.Count != 12 || len(skillResult.skillInfos) != 12 {
+		t.Fatalf("expected captured 777 fist skill list, got %+v", skillResult)
+	}
+	expectedSkillOrder := []string{"普通攻击", "武器娴熟", "灵力进修", "精神力", "爆发力", "幻影", "连击", "重烈", "气运丹田", "破魂打", "移形换影", "奥义.修罗幻翼拳"}
+	for index, expectedName := range expectedSkillOrder {
+		if skillResult.skillInfos[index].Name != expectedName {
+			t.Fatalf("expected captured 777 skill order %v, got %+v", expectedSkillOrder, skillResult.skillInfos)
+		}
+	}
+	skillByName := map[string]classicTownSkillInfoPush{}
+	for _, skill := range skillResult.skillInfos {
+		skillByName[skill.Name] = skill
+	}
+	if skillByName["连击"].Level != 5 || !strings.Contains(skillByName["连击"].Description, "&2@18") ||
+		skillByName["重烈"].Level != 5 || !strings.Contains(skillByName["重烈"].Description, "眩晕状态2回合") ||
+		skillByName["气运丹田"].Level != 5 || !strings.Contains(skillByName["气运丹田"].Description, "&2@32") ||
+		skillByName["破魂打"].Level != 5 || !strings.Contains(skillByName["破魂打"].Description, "&2@36") ||
+		skillByName["移形换影"].Level != 4 || skillByName["奥义.修罗幻翼拳"].Level != 4 {
+		t.Fatalf("expected captured 777 fist skill details, got %+v", skillByName)
+	}
+	if _, ok := skillByName["贯甲连矢"]; ok {
+		t.Fatalf("expected 777 fist skills to replace legacy bow skills, got %+v", skillResult.skillInfos)
+	}
+
+	fastPanelResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicTownGetFastPanelReq,
+		Seq:     3,
+		Payload: mustJSON(t, map[string]any{}),
+	}, socketSession)
+	if !fastPanelResult.handled || fastPanelResult.fastPanel == nil || len(fastPanelResult.fastPanel.Entries) != 3 ||
+		!fastPanelContains(fastPanelResult.fastPanel.Entries, 0, "skill", "普通攻击") ||
+		!fastPanelContains(fastPanelResult.fastPanel.Entries, 8, "item", "馒头") ||
+		!fastPanelContains(fastPanelResult.fastPanel.Entries, 9, "item", "小瓶甘露") {
+		t.Fatalf("expected 777 fast panel to keep only captured non-bow entries, got %+v", fastPanelResult.fastPanel)
+	}
+}
+
 func TestHandlePacketClassicTownCapturedWoodcutter222PushesCapturedEquipment(t *testing.T) {
 	store := session.NewStore()
 	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "222")

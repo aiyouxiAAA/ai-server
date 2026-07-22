@@ -509,6 +509,169 @@ func TestStoreCapturedWoodcutter333UsesCapturedLatestRuntime(t *testing.T) {
 	}
 }
 
+func TestStoreCapturedWoodcutter777UsesCurrentFullEquipment(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "77777777", "77777777")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "777",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !createResponse.Success {
+		t.Fatalf("expected 777 role create success, got %+v", createResponse)
+	}
+
+	role, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
+	if !ok {
+		t.Fatal("expected 777 captured role runtime data")
+	}
+	if role.DisplayName != "777" || playerBase.DisplayName != "777" || role.Level != 50 || role.Exp != 8378018 || role.MapID != 171 {
+		t.Fatalf("expected current captured 777 runtime summary, role=%+v base=%+v", role, playerBase)
+	}
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1410 || playerBase.RoleState.MP != 695 ||
+		playerBase.RoleState.Exp != 8378018 || playerBase.RoleState.Lv != 50 || playerBase.RoleState.Speed != 150 {
+		t.Fatalf("expected current captured 777 role state, got %+v", playerBase.RoleState)
+	}
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.PhyAtk != 358 || playerBase.RolePhysique.MgcAtk != 30 ||
+		playerBase.RolePhysique.PhyDef != 302 || playerBase.RolePhysique.MgcDef != 80 {
+		t.Fatalf("expected current captured 777 role physique, got %+v", playerBase.RolePhysique)
+	}
+	skills, cap, ok := store.GetRoleSkills(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || cap != 12 {
+		t.Fatalf("expected 777 captured fist skills, ok=%v cap=%d skills=%+v", ok, cap, skills)
+	}
+	expectedSkills := []struct {
+		name  string
+		level int
+	}{
+		{name: "普通攻击", level: 1},
+		{name: "武器娴熟", level: 5},
+		{name: "灵力进修", level: 4},
+		{name: "精神力", level: 5},
+		{name: "爆发力", level: 5},
+		{name: "幻影", level: 4},
+		{name: "连击", level: 5},
+		{name: "重烈", level: 5},
+		{name: "气运丹田", level: 5},
+		{name: "破魂打", level: 5},
+		{name: "移形换影", level: 4},
+		{name: "奥义.修罗幻翼拳", level: 4},
+	}
+	if len(skills) != len(expectedSkills) {
+		t.Fatalf("expected 777 captured fist skill count %d, got %+v", len(expectedSkills), skills)
+	}
+	for index, expected := range expectedSkills {
+		if skills[index].Name != expected.name || skills[index].Level != expected.level {
+			t.Fatalf("expected 777 captured fist skill %d to be %+v, got %+v", index, expected, skills[index])
+		}
+	}
+	for _, legacyBowSkill := range []string{"贯甲连矢", "暗影箭", "奥义.轰雷矢", "毒矢", "魔力速射", "冰箭速射"} {
+		for _, skill := range skills {
+			if skill.Name == legacyBowSkill {
+				t.Fatalf("expected 777 fist snapshot to replace legacy bow skill %q, got %+v", legacyBowSkill, skills)
+			}
+		}
+	}
+	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || len(fastPanel) != 3 || fastPanel[0].Index != 0 || fastPanel[0].Name != "普通攻击" ||
+		fastPanel[1].Index != 8 || fastPanel[1].Name != "馒头" || fastPanel[2].Index != 9 || fastPanel[2].Name != "小瓶甘露" {
+		t.Fatalf("expected 777 to retain only captured non-bow fast-panel entries, ok=%v fastPanel=%+v", ok, fastPanel)
+	}
+	for _, part := range []string{"w5=64", "c=61", "p=63", "se=49", "hr=12"} {
+		if !strings.Contains(role.SourceQuery, part) || !strings.Contains(playerBase.BattleSourceQuery, part) {
+			t.Fatalf("expected 777 source query to include %s, role=%q base=%q", part, role.SourceQuery, playerBase.BattleSourceQuery)
+		}
+	}
+
+	equipment, capacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "装备")
+	if !ok || capacity != 20 || len(equipment) != 13 {
+		t.Fatalf("expected full captured 777 equipment, ok=%v capacity=%d equipment=%+v", ok, capacity, equipment)
+	}
+	expectedByIndex := map[int]string{
+		0: "黄风围巾", 1: "蚩颅王护肩", 2: "炎爆护手", 3: "武雷拳套", 4: "珍元胸甲",
+		5: "机木护腿", 6: "骷髅戒指", 7: "银耳坠", 8: "翡翠项链", 9: "炎火兽",
+		10: "锁纹护腰", 11: "普通礼服", 12: "炎爆之靴",
+	}
+	for _, item := range equipment {
+		if expectedName, found := expectedByIndex[item.Index]; !found || item.Name != expectedName {
+			t.Fatalf("expected full captured 777 equipment %+v, got %+v", expectedByIndex, equipment)
+		}
+	}
+}
+
+func TestStorePersistentCapturedWoodcutter777ReplacesLegacyBowSkills(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("expected persistent store: %v", err)
+	}
+	login := firstStore.Login(LoginRequest{UserName: "77777777", Password: "77777777"})
+	created := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "777",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !created.Success {
+		t.Fatalf("expected captured 777 role create success, got %+v", created)
+	}
+	legacySkillsJSON, err := encodeRoleSkills(capturedWoodcutter333RoleSkills())
+	if err != nil {
+		t.Fatalf("encode legacy bow skills: %v", err)
+	}
+	legacyFastPanelJSON, err := encodeRoleFastPanel(capturedWoodcutter333FastPanel())
+	if err != nil {
+		t.Fatalf("encode legacy bow fast panel: %v", err)
+	}
+	if _, err := firstStore.db.Exec(
+		`UPDATE roles SET skills_json = ?, fast_panel_json = ? WHERE role_id = ? AND player_id = ?`,
+		legacySkillsJSON,
+		legacyFastPanelJSON,
+		created.Role.RoleID,
+		login.PlayerID,
+	); err != nil {
+		t.Fatalf("seed legacy 777 bow snapshot: %v", err)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("close first persistent store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	skills, _, ok := reopened.GetRoleSkills(login.PlayerID, created.Role.RoleID)
+	if !ok || len(skills) != 12 || skills[6].Name != "连击" || skills[6].Level != 5 ||
+		skills[10].Name != "移形换影" || skills[10].Level != 4 ||
+		skills[11].Name != "奥义.修罗幻翼拳" || skills[11].Level != 4 {
+		t.Fatalf("expected persistent 777 fist snapshot after legacy bow migration, ok=%v skills=%+v", ok, skills)
+	}
+	fastPanel, ok := reopened.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
+	if !ok || len(fastPanel) != 3 || fastPanel[0].Name != "普通攻击" ||
+		fastPanel[1].Name != "馒头" || fastPanel[2].Name != "小瓶甘露" {
+		t.Fatalf("expected persistent 777 fast panel to clear legacy bow entries, ok=%v fastPanel=%+v", ok, fastPanel)
+	}
+	var persistedFastPanelJSON string
+	if err := reopened.db.QueryRow(
+		`SELECT fast_panel_json FROM roles WHERE role_id = ? AND player_id = ?`,
+		created.Role.RoleID,
+		login.PlayerID,
+	).Scan(&persistedFastPanelJSON); err != nil {
+		t.Fatalf("read persisted 777 fast panel: %v", err)
+	}
+	persistedFastPanel, err := decodeRoleFastPanel(persistedFastPanelJSON)
+	if err != nil || len(persistedFastPanel) != 3 ||
+		persistedFastPanel[0].Name != "普通攻击" ||
+		persistedFastPanel[1].Name != "馒头" ||
+		persistedFastPanel[2].Name != "小瓶甘露" {
+		t.Fatalf("expected SQLite to persist cleared 777 fast panel, err=%v fastPanel=%+v", err, persistedFastPanel)
+	}
+}
+
 func TestCapturedWoodcutter333RuntimeDefaultsBackfillBowMaterialsAndEquipment(t *testing.T) {
 	role := withRoleRuntimeDefaults(RoleSummary{
 		RoleID:      "acct-333-role-legacy",
@@ -4468,6 +4631,7 @@ func TestStorePromotedEquipmentAppearanceMappings(t *testing.T) {
 		value string
 	}{
 		{name: "天魁", key: "w1", value: "62"},
+		{name: "武雷拳套", key: "w5", value: "64"},
 		{name: "央月九影", key: "w8", value: "61"},
 		{name: "炎爆龙鳞甲", key: "c", value: "28"},
 		{name: "狼人护腿", key: "p", value: "29"},

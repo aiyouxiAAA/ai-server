@@ -979,6 +979,76 @@ func capturedWoodcutter333FastPanel() []RoleFastPanelEntry {
 	}
 }
 
+func capturedWoodcutter777RoleSkills() []RoleSkill {
+	skills := cloneRoleSkills(capturedWoodcutter333RoleSkills()[:6])
+	return append(skills,
+		RoleSkill{
+			Name:        "连击",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "249.png",
+			Description: "f_s_连击^ffffff&9@单体·攻击&8@游侠 &10@拳套&22@战斗&2@18&4@提升45%的物理伤害",
+		},
+		RoleSkill{
+			Name:        "重烈",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "251.png",
+			Description: "f_s_重烈^5BC46D&9@单体·攻击&8@游侠 &10@拳套&22@战斗&2@28&4@造成100%的物理伤害<br>击中敌人时有25%的机率使敌人进入眩晕状态2回合",
+		},
+		RoleSkill{
+			Name:        "气运丹田",
+			Level:       5,
+			Type:        "own",
+			Icon:        "252.png",
+			Description: "f_s_气运丹田^5BC46D&9@单体·状态&8@游侠 &10@拳套&22@战斗&2@32&4@提升1格魂元&0;并且在3回合内提升60%的物理防御&0;100%的魔法防御&0;30%的物理攻击",
+		},
+		RoleSkill{
+			Name:        "破魂打",
+			Level:       5,
+			Type:        "oneE",
+			Icon:        "253.png",
+			Description: "f_s_破魂打^5BC46D&9@单体·攻击&8@游侠 &10@拳套&22@战斗&2@36&4@对敌人造成80%的物理伤害<br>进攻时提升30%（无视防御）的物理攻击&0;击中敌人时有50%的机率削弱其魂元",
+		},
+		RoleSkill{
+			Name:        "移形换影",
+			Level:       4,
+			Type:        "own",
+			Icon:        "254.png",
+			Description: "f_s_移形换影^5BC46D&9@单体·状态&8@游侠 &10@拳套&22@战斗&2@36&4@3回合内提升45%的回避",
+		},
+		RoleSkill{
+			Name:        "奥义.修罗幻翼拳",
+			Level:       4,
+			Type:        "oneE",
+			Icon:        "255.png",
+			Description: "f_s_奥义.修罗幻翼拳^00ccff&9@单体·攻击&8@游侠 &10@拳套&22@战斗&2@38&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升170%的物理伤害",
+		},
+	)
+}
+
+func capturedWoodcutter777FastPanel() []RoleFastPanelEntry {
+	return []RoleFastPanelEntry{
+		{Index: 0, Type: "skill", Name: "普通攻击"},
+		{Index: 8, Type: "item", Name: "馒头"},
+		{Index: 9, Type: "item", Name: "小瓶甘露"},
+	}
+}
+
+func syncCapturedWoodcutter777FastPanel(entries []RoleFastPanelEntry) []RoleFastPanelEntry {
+	entries = filterRoleFastPanelEntries(entries, capturedWoodcutter777RoleSkills())
+	occupied := make(map[int]bool, len(entries))
+	for _, entry := range entries {
+		occupied[entry.Index] = true
+	}
+	for _, captured := range capturedWoodcutter777FastPanel() {
+		if !occupied[captured.Index] {
+			entries = append(entries, captured)
+		}
+	}
+	return normalizeRoleFastPanel(entries)
+}
+
 func capturedWoodcutter333ShortcutSkills() []RoleSkill {
 	skills := capturedWoodcutter333RoleSkills()
 	skills = upsertCapturedRoleSkill(skills, RoleSkill{
@@ -1190,6 +1260,11 @@ func isCapturedWoodcutter333LocalRole(role RoleSummary) bool {
 	return strings.HasPrefix(roleID, "acct-333-role-") || strings.HasPrefix(roleID, "acct-33333333-role-")
 }
 
+func isCapturedWoodcutter777LocalRole(role RoleSummary) bool {
+	roleID := strings.TrimSpace(role.RoleID)
+	return strings.HasPrefix(roleID, "acct-777-role-") || strings.HasPrefix(roleID, "acct-77777777-role-")
+}
+
 func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 	role.Voc = "游侠"
 	role.DisplayName = "333"
@@ -1226,6 +1301,37 @@ func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 	return role
 }
 
+func withCapturedWoodcutter777RuntimeDefaults(role RoleSummary) RoleSummary {
+	role.Voc = "游侠"
+	role.DisplayName = "777"
+	if role.Level < 50 || role.Exp < 8378018 {
+		role.Level = 50
+		role.Exp = 8378018
+	}
+	if role.AGI == 0 && role.STR == 0 && role.INT == 0 && role.CON == 0 && role.LCK == 0 {
+		role.AGI = 183
+		role.STR = 102
+		role.INT = 16
+		role.CON = 2
+		role.LCK = 10
+	}
+	if role.MapID <= 1 {
+		role.MapID = 171
+	}
+	if role.VisualRoleID <= 0 {
+		role.VisualRoleID = 1
+	}
+	if role.RoleState == nil || role.RoleState.Lv < 50 || role.RoleState.Exp < 8378018 {
+		roleState := capturedWoodcutter777RoleState(role.RoleID)
+		role.RoleState = &roleState
+	}
+	if role.RolePhysique == nil || role.RolePhysique.MaxHP <= 0 || role.RolePhysique.MaxMP <= 0 {
+		rolePhysique := capturedWoodcutter777RolePhysique(role.RoleID)
+		role.RolePhysique = &rolePhysique
+	}
+	return role
+}
+
 func capturedWoodcutter333Level50RoleState(roleID string) RoleState {
 	return RoleState{
 		Handle: roleID,
@@ -1254,6 +1360,41 @@ func capturedWoodcutter333Level50RolePhysique(roleID string) RolePhysique {
 		MgcAtk:    357,
 		PhyDef:    299,
 		MgcDef:    77,
+		Hit:       565,
+		Dog:       265,
+		Fat:       597,
+		LastPoint: 0,
+	}
+}
+
+func capturedWoodcutter777RoleState(roleID string) RoleState {
+	return RoleState{
+		Handle: roleID,
+		HP:     1410,
+		MP:     695,
+		Exp:    8378018,
+		Lv:     50,
+		Speed:  150,
+		OutG:   0,
+		InG:    0,
+	}
+}
+
+func capturedWoodcutter777RolePhysique(roleID string) RolePhysique {
+	return RolePhysique{
+		Handle:    roleID,
+		ResPros:   []string{"冰冻|8", "眩晕|15", "封印|10", "外伤|12", "混乱|10", "迟钝|10", "麻痹|5"},
+		AGI:       183,
+		STR:       102,
+		INT:       16,
+		CON:       2,
+		LCK:       10,
+		MaxHP:     1535,
+		MaxMP:     739,
+		PhyAtk:    358,
+		MgcAtk:    30,
+		PhyDef:    302,
+		MgcDef:    80,
 		Hit:       565,
 		Dog:       265,
 		Fat:       597,
@@ -1298,6 +1439,65 @@ func capturedWoodcutter333EquipmentItems() []RoleItem {
 		{name: "寒影护腰", index: 10},
 		{name: "寒影靴", index: 12},
 	})
+}
+
+func capturedWoodcutter777EquipmentItems() []RoleItem {
+	return capturedRoleEquipmentItems([]capturedRoleEquipmentSpec{
+		{name: "黄风围巾", index: 0},
+		{name: "蚩颅王护肩", index: 1},
+		{name: "炎爆护手", index: 2},
+		{name: "武雷拳套", index: 3},
+		{name: "珍元胸甲", index: 4},
+		{name: "机木护腿", index: 5},
+		{name: "骷髅戒指", index: 6},
+		{name: "银耳坠", index: 7},
+		{name: "翡翠项链", index: 8},
+		{name: "炎火兽", index: 9},
+		{name: "锁纹护腰", index: 10},
+		{name: "普通礼服", index: 11},
+		{name: "炎爆之靴", index: 12},
+	})
+}
+
+func syncCapturedWoodcutter777EquipmentItems(items []RoleItem) []RoleItem {
+	normalized := normalizeRoleItems(items)
+	if !shouldSyncCapturedWoodcutter777EquipmentItems(normalized) {
+		return normalized
+	}
+	for _, captured := range capturedWoodcutter777EquipmentItems() {
+		replaced := false
+		for index := range normalized {
+			if normalized[index].Type == "装备" && normalized[index].Index == captured.Index {
+				normalized[index] = captured
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			normalized = append(normalized, captured)
+		}
+	}
+	return normalizeRoleItems(normalized)
+}
+
+func shouldSyncCapturedWoodcutter777EquipmentItems(items []RoleItem) bool {
+	hasWeapon := false
+	hasFashion := false
+	hasBoots := false
+	for _, item := range items {
+		if item.Type != "装备" {
+			continue
+		}
+		switch {
+		case item.Name == "武雷拳套" && item.Index == 3:
+			hasWeapon = true
+		case item.Name == "普通礼服" && item.Index == 11:
+			hasFashion = true
+		case item.Name == "炎爆之靴" && item.Index == 12:
+			hasBoots = true
+		}
+	}
+	return !(hasWeapon && hasFashion && hasBoots)
 }
 
 func syncCapturedWoodcutter333EquipmentItems(items []RoleItem) []RoleItem {
@@ -2042,16 +2242,22 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	}
 	isWoodcutter222 := isCapturedWoodcutterLocalRole(role)
 	isWoodcutter333 := isCapturedWoodcutter333LocalRole(role)
+	isWoodcutter777 := isCapturedWoodcutter777LocalRole(role)
 	isWarrior444 := isCapturedWarrior444LocalRole(role)
 	isKonglongKanglang1 := strings.HasPrefix(role.RoleID, "acct-66666666-role-")
 	if isWoodcutter333 {
 		role = withCapturedWoodcutter333RuntimeDefaults(role)
+	}
+	if isWoodcutter777 {
+		role = withCapturedWoodcutter777RuntimeDefaults(role)
 	}
 	if isWarrior444 {
 		role = withCapturedWarrior444RuntimeDefaults(role)
 	}
 	if isWarrior444 {
 		role.Skills = capturedWarrior444RoleSkills()
+	} else if isWoodcutter777 {
+		role.Skills = capturedWoodcutter777RoleSkills()
 	} else if isWoodcutter333 {
 		role.Skills = capturedWoodcutter333RoleSkills()
 	} else if isWoodcutter222 {
@@ -2064,6 +2270,8 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	}
 	if isWarrior444 {
 		role.FastPanel = capturedWarrior444FastPanel()
+	} else if isWoodcutter777 {
+		role.FastPanel = syncCapturedWoodcutter777FastPanel(role.FastPanel)
 	} else if isWoodcutter333 {
 		role.FastPanel = capturedWoodcutter333FastPanel()
 	} else if isWoodcutter222 {
@@ -2085,6 +2293,8 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else if len(role.Items) == 0 {
 		if isWoodcutter333 {
 			role.Items = syncCapturedWoodcutter333BattleConsumables(capturedWoodcutter333EquipmentItems())
+		} else if isWoodcutter777 {
+			role.Items = syncCapturedWoodcutter333BattleConsumables(capturedWoodcutter777EquipmentItems())
 		} else if isWarrior444 {
 			role.Items = capturedWarrior444EquipmentItems()
 		} else {
@@ -2097,6 +2307,10 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.Items = syncCapturedWoodcutter333EquipmentItems(role.Items)
 		role.Items = syncCapturedWoodcutter333BattleConsumables(role.Items)
 	}
+	if isWoodcutter777 {
+		role.Items = syncCapturedWoodcutter777EquipmentItems(role.Items)
+		role.Items = syncCapturedWoodcutter333BattleConsumables(role.Items)
+	}
 	if isWarrior444 {
 		role.Items = syncCapturedWarrior444EquipmentItems(role.Items)
 	}
@@ -2107,6 +2321,8 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.SourceQuery = capturedWoodcutterBaseSourceQuery()
 	} else if isWoodcutter333 {
 		role.SourceQuery = capturedWoodcutter40BodySourceQuery()
+	} else if isWoodcutter777 {
+		role.SourceQuery = capturedWoodcutterBaseSourceQuery()
 	} else if isWarrior444 {
 		role.SourceQuery = capturedWarrior44BodySourceQuery()
 	}

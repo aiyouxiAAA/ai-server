@@ -119,6 +119,9 @@ const (
 	enemyThunderstormDamageMultiplier = 2
 	enemyAngleCurseMPCost             = 10
 	enemyAngleCurseChance             = 10
+	// Anglecurse seal: reuse existing 封印 status (cannot use skills). Rate is design default 20% (not capture-confirmed).
+	enemyAngleCurseSealChance         = 20
+	enemyAngleCurseSealRounds         = 3
 	enemySweepSpearMPCost         = 30
 	enemySweepSpearChance         = 28
 	enemyPalsyAtkStatusChance     = 100
@@ -1913,6 +1916,13 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			CanDodge:          true,
 			CanFat:            true,
 			DefenseType:       "magic",
+			StatusName:        "封印",
+			StatusDisplay:     "19.png",
+			StatusDescription: "作用时间内对象无法使用技能",
+			StatusRounds:      enemyAngleCurseSealRounds,
+			StatusChance:      enemyAngleCurseSealChance,
+			// 封印 does not skip turns; it only blocks skill commands via PendingSkillSeal.
+			SkipTurn:          false,
 		}
 	case CommandEnemySweepSpear:
 		return commandProfile{

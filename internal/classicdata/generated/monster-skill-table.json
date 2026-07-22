@@ -545,14 +545,14 @@
       "damage_multiplier": "1",
       "mp_cost": "10",
       "defense_type": "magic",
-      "status_buff_id": "",
-      "status_chance_percent": "",
-      "status_rounds": "",
+      "status_buff_id": "seal",
+      "status_chance_percent": "20",
+      "status_rounds": "3",
       "status_tick_min_percent": "",
       "status_tick_max_percent": "",
       "evidence_status": "partial",
-      "evidence": "20260720_225539_439: 2 anglecurse actions; MP/cost PARTIAL placeholder",
-      "notes": "single-target label capture-backed; AI approx"
+      "evidence": "20260720_225539_439: 2 anglecurse actions; MP/cost PARTIAL; seal 20%/3r design default reusing equipment 封印 contract (not capture-confirmed rate)",
+      "notes": "single-target label capture-backed; AI approx; status=封印 20% 3 rounds"
     }
   ]
 }

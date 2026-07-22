@@ -8559,6 +8559,9 @@ func TestXiongluBeardeerUsesCapturedRampageAndSkills(t *testing.T) {
 	if curse.ActionName != "角念" || curse.SourceActionLabel != "anglecurse" {
 		t.Fatalf("expected 角念 anglecurse action, got %+v", curse)
 	}
+	if profileCurse.StatusName != "封印" || profileCurse.StatusDisplay != "19.png" || profileCurse.StatusChance != enemyAngleCurseSealChance || profileCurse.StatusRounds != enemyAngleCurseSealRounds || profileCurse.SkipTurn {
+		t.Fatalf("expected 角念 to carry 封印 status 20%%/3r without skip-turn, got %+v", profileCurse)
+	}
 
 	targetOne := CellInfoPush{Handle: "player_xionglu_a", Camp: CampTeam, HP: 2000, MaxHP: 2000, MgcDefense: 100}
 	targetTwo := CellInfoPush{Handle: "player_xionglu_b", Camp: CampTeam, HP: 2000, MaxHP: 2000, MgcDefense: 100}
@@ -8604,6 +8607,108 @@ func TestXiongluBeardeerUsesCapturedRampageAndSkills(t *testing.T) {
 	}
 	if candidate.ExpDelta != 0 {
 		t.Fatalf("expected zero-exp 熊鹿 reward candidate sample, got %+v", candidate)
+	}
+}
+
+
+func TestXiongluBeardeerAngleCurseCanApplySeal(t *testing.T) {
+	// Deterministic seed: battleId/handles chosen so status:封印 roll < 20.
+	// Seal reuses equipment 封印 contract (19.png, block skills, no skip-turn).
+	// Seal rate 20% is design default, not capture-confirmed.
+	runtime := &Runtime{
+		BattleID:         "battle-xionglu-anglecurse-seal",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		PendingBuffInfos: nil,
+	}
+	actor := &CellInfoPush{
+		Handle:            "4264636384163425",
+		Camp:              CampEnemy,
+		Name:              "熊鹿",
+		DisplayURL:        "monstermap/beardeer.swf",
+		Level:             40,
+		MaxHP:             20000,
+		HP:                20000,
+		MaxMP:             3102,
+		MP:                3102,
+		Attack:            400,
+		CommandLabel:      "法术普通攻击",
+		DamageDefenseType: "magic",
+	}
+	// Probe rolls until we find a target handle that seals and one that misses,
+	// so the test does not hardcode a fragile hash seed.
+	var sealedTarget *CellInfoPush
+	var missedTarget *CellInfoPush
+	for index := 0; index < 400; index += 1 {
+		handle := fmt.Sprintf("player_anglecurse_seal_%d", index)
+		target := &CellInfoPush{
+			Handle:     handle,
+			Camp:       CampTeam,
+			Name:       "测试目标",
+			MaxHP:      5000,
+			HP:         5000,
+			MgcDefense: 0,
+			Defense:    0,
+		}
+		probe := &Runtime{
+			BattleID:         runtime.BattleID,
+			Round:            1,
+			nextSequence:     1,
+			DefendingHandles: map[string]bool{},
+		}
+		roll := probe.hashBattleRollWithSalt(actor, target, CommandEnemyAngleCurse, "status:封印")
+		if sealedTarget == nil && roll < enemyAngleCurseSealChance {
+			sealedTarget = target
+		}
+		if missedTarget == nil && roll >= enemyAngleCurseSealChance {
+			missedTarget = target
+		}
+		if sealedTarget != nil && missedTarget != nil {
+			break
+		}
+	}
+	if sealedTarget == nil || missedTarget == nil {
+		t.Fatalf("failed to locate deterministic seal hit/miss seeds under 20%% chance")
+	}
+
+	// Force hit path: high hit / zero dog so dodge cannot suppress status.
+	actor.Hit = 999
+	sealedTarget.Dog = 0
+	missedTarget.Dog = 0
+	defer useSourceBattleAttackRoll(func(int) int { return 0 })()
+
+	runtime.PendingBuffInfos = nil
+	runtime.StatusEffects = map[string]BattleStatusEffects{}
+	action := runtime.resolveAttack(actor, sealedTarget, CommandEnemyAngleCurse)
+	if action.ActionName != "角念" || action.SourceActionLabel != "anglecurse" || action.Damage <= 0 {
+		t.Fatalf("expected damaging 角念 action on seal seed, got %+v", action)
+	}
+	if len(runtime.PendingBuffInfos) != 1 {
+		t.Fatalf("expected one 封印 BuffInfo from 角念, got %+v", runtime.PendingBuffInfos)
+	}
+	buff := runtime.PendingBuffInfos[0]
+	if buff.Name != "封印" || buff.Display != "19.png" || buff.Description != "作用时间内对象无法使用技能" || buff.Round != enemyAngleCurseSealRounds || buff.ReleaseHandle != actor.Handle || buff.TargetHandle != sealedTarget.Handle {
+		t.Fatalf("expected captured 封印 BuffInfo metadata from 角念, got %+v", buff)
+	}
+	effect := runtime.StatusEffects[sealedTarget.Handle].Effects["封印"]
+	if effect.Name != "封印" || effect.Display != "19.png" || effect.Rounds != enemyAngleCurseSealRounds || effect.SourceHandle != actor.Handle || effect.SourceSkill != "角念" || effect.SkipTurn {
+		t.Fatalf("expected runtime 封印 status without skip-turn from 角念, got %+v", runtime.StatusEffects)
+	}
+
+	// Miss seed must not apply seal.
+	runtime.PendingBuffInfos = nil
+	runtime.StatusEffects = map[string]BattleStatusEffects{}
+	miss := runtime.resolveAttack(actor, missedTarget, CommandEnemyAngleCurse)
+	if miss.ActionName != "角念" || miss.Damage <= 0 {
+		t.Fatalf("expected damaging 角念 miss-seed action, got %+v", miss)
+	}
+	if len(runtime.PendingBuffInfos) != 0 {
+		t.Fatalf("expected no 封印 BuffInfo on miss seed, got %+v", runtime.PendingBuffInfos)
+	}
+	if _, ok := runtime.StatusEffects[missedTarget.Handle]; ok {
+		t.Fatalf("expected no status on miss seed, got %+v", runtime.StatusEffects)
 	}
 }
 

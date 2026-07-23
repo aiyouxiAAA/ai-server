@@ -25,75 +25,81 @@ const (
 	PhasePlaying  = "playing"
 	PhaseFinished = "finished"
 
-	CommandNormalAttack    = "skill-normal-attack"
-	CommandMiZhan          = "skill-mi-zhan"
-	CommandDuoDuanZhan     = "skill-duo-duan-zhan"
-	CommandDuoDuanCi       = "skill-duo-duan-ci"
-	CommandShiXueZhan      = "skill-shi-xue-zhan"
-	CommandKuangBao        = "skill-kuang-bao"
-	CommandHongYueZhan     = "skill-hong-yue-zhan"
-	CommandXueQie          = "skill-xue-qie"
-	CommandPiShanGunFa     = "skill-pi-shan-gun-fa"
-	CommandYeChaGunFa      = "skill-ye-cha-gun-fa"
-	CommandLiShiGunShu     = "skill-li-shi-gun-shu"
-	CommandPanLongGunFa    = "skill-pan-long-gun-fa"
-	CommandQiangLiFeiBiao  = "skill-qiang-li-fei-biao"
-	CommandTouDu           = "skill-tou-du"
-	CommandMoLiTuCi        = "skill-mo-li-tu-ci"
-	CommandJiFengCi        = "skill-ji-feng-ci"
-	CommandJieDuShu        = "skill-jie-du-shu"
-	CommandQiangShe        = "skill-qiang-she"
-	CommandGuanJiaLianShi  = "skill-guan-jia-lian-shi"
-	CommandBingJianSuShe   = "skill-bing-jian-su-she"
-	CommandMoLiSuShe       = "skill-mo-li-su-she"
-	CommandAnYingJian      = "skill-an-ying-jian"
-	CommandDuShi           = "skill-du-shi"
-	CommandYanShouShu      = "skill-yan-shou-shu"
-	CommandChiYanMoZhou    = "skill-chi-yan-mo-zhou"
-	CommandLeiJi           = "skill-lei-ji"
-	CommandLeiBaoZhou      = "skill-lei-bao-zhou"
-	CommandLeiLongQiangXi  = "skill-lei-long-qiang-xi"
-	CommandMoZhangShu      = "skill-mo-zhang-shu"
-	CommandLeiHunZhan      = "skill-lei-hun-zhan"
-	CommandAoYiHongLeiShi  = "skill-ao-yi-hong-lei-shi"
-	CommandAoYiAnShaZhe    = "skill-ao-yi-an-sha-zhe"
-	CommandAoYiLiuHeGunFa  = "skill-ao-yi-liu-he-gun-fa"
-	CommandTaunt           = "skill-taunt"
-	CommandJuanYeShi       = "skill-juan-ye-shi"
-	CommandQiangGuanShi    = "skill-qiang-guan-shi"
-	CommandNingShenShi     = "skill-ning-shen-shi"
-	CommandKuangWuShi      = "skill-kuang-wu-shi"
-	CommandQiYuShi         = "skill-qi-yu-shi"
-	CommandAoYiPiaoXue     = "skill-ao-yi-piao-xue"
-	CommandEnemyAttack     = "enemy-normal-attack"
-	CommandEnemySlideCut   = "enemy-slide-cut"
-	CommandEnemyShadeCut   = "enemy-shade-cut"
-	CommandEnemyHelixAtk   = "enemy-helix-atk"
-	CommandEnemyPalsyAtk   = "enemy-palsy-atk"
-	CommandEnemyRampage    = "enemy-rampage-power"
-	CommandEnemyFirePower  = "enemy-fire-power"
-	CommandEnemyDeadLight  = "enemy-dead-light"
-	CommandEnemyDoubleHit  = "enemy-double-hit"
-	CommandEnemyRollAtk    = "enemy-roll-atk"
-	CommandEnemyRockRain   = "enemy-rock-rain"
-	CommandEnemyDarkMoon   = "enemy-dark-moon-cut"
-	CommandEnemyEarthShock = "enemy-earth-shock-atk"
-	CommandEnemyDelude     = "enemy-delude"
-	CommandEnemyPieceAtk   = "enemy-piece-attack"
-	CommandEnemyLionRoars  = "enemy-lion-roars"
-	CommandEnemyGoldHit    = "enemy-gold-hit"
-	CommandEnemyRoundAtk   = "enemy-round-atk"
-	CommandEnemyRulingAx   = "enemy-ruling-ax"
-	CommandEnemyVacuumKill = "enemy-vacuum-killed"
-	CommandEnemyRobotUp    = "enemy-robot-up"
+	CommandNormalAttack      = "skill-normal-attack"
+	CommandMiZhan            = "skill-mi-zhan"
+	CommandDuoDuanZhan       = "skill-duo-duan-zhan"
+	CommandDuoDuanCi         = "skill-duo-duan-ci"
+	CommandShiXueZhan        = "skill-shi-xue-zhan"
+	CommandKuangBao          = "skill-kuang-bao"
+	CommandHongYueZhan       = "skill-hong-yue-zhan"
+	CommandXueQie            = "skill-xue-qie"
+	CommandPiShanGunFa       = "skill-pi-shan-gun-fa"
+	CommandYeChaGunFa        = "skill-ye-cha-gun-fa"
+	CommandLiShiGunShu       = "skill-li-shi-gun-shu"
+	CommandPanLongGunFa      = "skill-pan-long-gun-fa"
+	CommandQiangLiFeiBiao    = "skill-qiang-li-fei-biao"
+	CommandTouDu             = "skill-tou-du"
+	CommandMoLiTuCi          = "skill-mo-li-tu-ci"
+	CommandJiFengCi          = "skill-ji-feng-ci"
+	CommandJieDuShu          = "skill-jie-du-shu"
+	CommandQiangShe          = "skill-qiang-she"
+	CommandGuanJiaLianShi    = "skill-guan-jia-lian-shi"
+	CommandBingJianSuShe     = "skill-bing-jian-su-she"
+	CommandMoLiSuShe         = "skill-mo-li-su-she"
+	CommandAnYingJian        = "skill-an-ying-jian"
+	CommandDuShi             = "skill-du-shi"
+	CommandYanShouShu        = "skill-yan-shou-shu"
+	CommandChiYanMoZhou      = "skill-chi-yan-mo-zhou"
+	CommandLeiJi             = "skill-lei-ji"
+	CommandLeiBaoZhou        = "skill-lei-bao-zhou"
+	CommandLeiLongQiangXi    = "skill-lei-long-qiang-xi"
+	CommandMoZhangShu        = "skill-mo-zhang-shu"
+	CommandLeiHunZhan        = "skill-lei-hun-zhan"
+	CommandAoYiHongLeiShi    = "skill-ao-yi-hong-lei-shi"
+	CommandAoYiAnShaZhe      = "skill-ao-yi-an-sha-zhe"
+	CommandAoYiLiuHeGunFa    = "skill-ao-yi-liu-he-gun-fa"
+	CommandTaunt             = "skill-taunt"
+	CommandJuanYeShi         = "skill-juan-ye-shi"
+	CommandQiangGuanShi      = "skill-qiang-guan-shi"
+	CommandNingShenShi       = "skill-ning-shen-shi"
+	CommandKuangWuShi        = "skill-kuang-wu-shi"
+	CommandQiYuShi           = "skill-qi-yu-shi"
+	CommandAoYiPiaoXue       = "skill-ao-yi-piao-xue"
+	CommandFistDoubleAtk     = "skill-fist-double-atk"
+	CommandFistPowHit        = "skill-fist-pow-hit"
+	CommandFistInfluxGas     = "skill-fist-influx-gas"
+	CommandFistBreakSoul     = "skill-fist-break-soul"
+	CommandFistMoveShadow    = "skill-fist-move-shadow"
+	CommandFistPowerAxeWing  = "skill-fist-power-axe-wing"
+	CommandEnemyAttack       = "enemy-normal-attack"
+	CommandEnemySlideCut     = "enemy-slide-cut"
+	CommandEnemyShadeCut     = "enemy-shade-cut"
+	CommandEnemyHelixAtk     = "enemy-helix-atk"
+	CommandEnemyPalsyAtk     = "enemy-palsy-atk"
+	CommandEnemyRampage      = "enemy-rampage-power"
+	CommandEnemyFirePower    = "enemy-fire-power"
+	CommandEnemyDeadLight    = "enemy-dead-light"
+	CommandEnemyDoubleHit    = "enemy-double-hit"
+	CommandEnemyRollAtk      = "enemy-roll-atk"
+	CommandEnemyRockRain     = "enemy-rock-rain"
+	CommandEnemyDarkMoon     = "enemy-dark-moon-cut"
+	CommandEnemyEarthShock   = "enemy-earth-shock-atk"
+	CommandEnemyDelude       = "enemy-delude"
+	CommandEnemyPieceAtk     = "enemy-piece-attack"
+	CommandEnemyLionRoars    = "enemy-lion-roars"
+	CommandEnemyGoldHit      = "enemy-gold-hit"
+	CommandEnemyRoundAtk     = "enemy-round-atk"
+	CommandEnemyRulingAx     = "enemy-ruling-ax"
+	CommandEnemyVacuumKill   = "enemy-vacuum-killed"
+	CommandEnemyRobotUp      = "enemy-robot-up"
 	CommandEnemyChaosHit     = "enemy-chaos-hit"
 	CommandEnemyThunderstorm = "enemy-thunderstorm"
 	CommandEnemyAngleCurse   = "enemy-angle-curse"
 	CommandEnemySweepSpear   = "enemy-sweep-spear"
-	CommandDefense         = "defense"
-	CommandStore           = "battle-store"
-	CommandEscape          = "battle-escape"
-	CommandItem            = "battle-item"
+	CommandDefense           = "defense"
+	CommandStore             = "battle-store"
+	CommandEscape            = "battle-escape"
+	CommandItem              = "battle-item"
 
 	maxStoredPower                = 5
 	leiHunZhanRequiredPower       = 3
@@ -102,6 +108,7 @@ const (
 	aoYiAnShaZheRequiredPower     = 3
 	aoYiLiuHeGunFaRequiredPower   = 3
 	aoYiPiaoXueRequiredPower      = 3
+	fistPowerAxeWingRequiredPower = 3
 	enemySlideCutMPCost           = 10
 	enemySlideCutChance           = 20
 	enemyShadeCutMPCost           = 40
@@ -120,54 +127,54 @@ const (
 	enemyAngleCurseMPCost             = 10
 	enemyAngleCurseChance             = 10
 	// Anglecurse seal: reuse existing 封印 status (cannot use skills). Rate is design default 20% (not capture-confirmed).
-	enemyAngleCurseSealChance         = 20
-	enemyAngleCurseSealRounds         = 3
-	enemySweepSpearMPCost         = 30
-	enemySweepSpearChance         = 28
-	enemyPalsyAtkStatusChance     = 100
-	enemySweepSpearDamageMultiplier     = 1.30
-	enemyStunOnHitChance                = 5
-	enemyRampageMaxRounds               = 50
-	enemyBainianRampageMaxRounds        = 51
-	enemyFirePowerMPCost                = 10
-	enemyFirePowerChance                = 60
-	enemyFirePowerDamageMultiplier      = 0.835
-	enemyDeadLightMPCost                = 10
-	enemyDeadLightChance                = 35
-	enemyDeadLightDamageMultiplier      = 1.142
-	enemyDoubleHitMPCost                = 10
-	enemyDoubleHitChance                = 45
-	enemyDoubleHitDamageMultiplier      = 1.825
-	enemyRollAtkMPCost                  = 10
-	enemyRollAtkChance                  = 45
-	enemyRollAtkDamageMultiplier        = 1.49
-	enemyRockRainMPCost                 = 10
-	enemyRockRainChance                 = 10
-	enemyDarkMoonMPCost                 = 10
-	enemyDarkMoonChance                 = 25
-	enemyEarthShockMPCost               = 10
-	enemyEarthShockChance               = 10
-	enemyDeludeMPCost                   = 10
-	enemyDeludeChance                   = 33
-	enemyDeludeStatusRounds             = 2
-	enemyShihukuBlackshadowPieceChance  = 7
-	enemyShihukuChilukingPieceChance    = 11
-	enemyShihukuBlackshadowWoundMin     = 6
-	enemyShihukuBlackshadowWoundMax     = 9
-	enemyShihukuChilukingWoundMin       = 7
-	enemyShihukuChilukingWoundMax       = 10
-	enemyShihukuPieceWoundRounds        = 5
-	enemyShihukuSkillMPCost             = 10
-	enemyShihukuPieceDamageMultiplier   = 1.4
-	enemyShihukuLionDamageMultiplier    = 1.26
-	enemyShihukuGoldDamageMultiplier    = 1.72
-	enemyShihukuLionRoarsChance         = 20
-	enemyShihukuGoldHitChance           = 19
-	enemyRobotawlRoundAtkChance         = 23
-	enemyRobotSkillMPCost               = 10
-	enemyRobotawlArmorBreakChance       = 70
-	enemyRobotawlArmorBreakRounds       = 3
-	enemyRobotawlArmorBreakAttackPct    = 10
+	enemyAngleCurseSealChance          = 20
+	enemyAngleCurseSealRounds          = 3
+	enemySweepSpearMPCost              = 30
+	enemySweepSpearChance              = 28
+	enemyPalsyAtkStatusChance          = 100
+	enemySweepSpearDamageMultiplier    = 1.30
+	enemyStunOnHitChance               = 5
+	enemyRampageMaxRounds              = 50
+	enemyBainianRampageMaxRounds       = 51
+	enemyFirePowerMPCost               = 10
+	enemyFirePowerChance               = 60
+	enemyFirePowerDamageMultiplier     = 0.835
+	enemyDeadLightMPCost               = 10
+	enemyDeadLightChance               = 35
+	enemyDeadLightDamageMultiplier     = 1.142
+	enemyDoubleHitMPCost               = 10
+	enemyDoubleHitChance               = 45
+	enemyDoubleHitDamageMultiplier     = 1.825
+	enemyRollAtkMPCost                 = 10
+	enemyRollAtkChance                 = 45
+	enemyRollAtkDamageMultiplier       = 1.49
+	enemyRockRainMPCost                = 10
+	enemyRockRainChance                = 10
+	enemyDarkMoonMPCost                = 10
+	enemyDarkMoonChance                = 25
+	enemyEarthShockMPCost              = 10
+	enemyEarthShockChance              = 10
+	enemyDeludeMPCost                  = 10
+	enemyDeludeChance                  = 33
+	enemyDeludeStatusRounds            = 2
+	enemyShihukuBlackshadowPieceChance = 7
+	enemyShihukuChilukingPieceChance   = 11
+	enemyShihukuBlackshadowWoundMin    = 6
+	enemyShihukuBlackshadowWoundMax    = 9
+	enemyShihukuChilukingWoundMin      = 7
+	enemyShihukuChilukingWoundMax      = 10
+	enemyShihukuPieceWoundRounds       = 5
+	enemyShihukuSkillMPCost            = 10
+	enemyShihukuPieceDamageMultiplier  = 1.4
+	enemyShihukuLionDamageMultiplier   = 1.26
+	enemyShihukuGoldDamageMultiplier   = 1.72
+	enemyShihukuLionRoarsChance        = 20
+	enemyShihukuGoldHitChance          = 19
+	enemyRobotawlRoundAtkChance        = 23
+	enemyRobotSkillMPCost              = 10
+	enemyRobotawlArmorBreakChance      = 70
+	enemyRobotawlArmorBreakRounds      = 3
+	enemyRobotawlArmorBreakAttackPct   = 10
 	// Capture-backed approximate action ratios; they are not original-server AI constants.
 	enemyRobotaxRulingAxChance         = 20
 	enemyRobotaxRulingAxSlownessChance = 30
@@ -209,16 +216,24 @@ const (
 	qiYuRounds                        = 3
 	qiYuHealPercent                   = 13
 	kuangWuShiStunChance              = 25
+	fistPowHitStunChance              = 25
+	fistPowHitStunRounds              = 2
+	fistInfluxGasRounds               = 3
+	fistInfluxGasDefensePercent       = 40
+	fistInfluxGasMagicDefensePercent  = 80
+	fistInfluxGasAttackPercent        = 10
+	fistMoveShadowRounds              = 3
+	fistMoveShadowDodgePercent        = 30
 	kuangWuShiStunRounds              = 2
 	// Captured single-sword Lv5 baselines above; lower levels come from
 	// skill-level-table / role skill description packets.
-	chiYanMoZhouCurseChance           = 85
-	chiYanMoZhouCurseRounds           = 2
-	leiJiSlownessChance               = 60
-	leiJiSlownessRounds               = 2
-	leiJiSlownessPercent              = 30
-	magicObstacleRounds               = 5
-	magicObstacleDamageToMPPercent    = 35
+	chiYanMoZhouCurseChance        = 85
+	chiYanMoZhouCurseRounds        = 2
+	leiJiSlownessChance            = 60
+	leiJiSlownessRounds            = 2
+	leiJiSlownessPercent           = 30
+	magicObstacleRounds            = 5
+	magicObstacleDamageToMPPercent = 35
 )
 
 var sourceEncounterRoll = func(maxExclusive int) int {
@@ -476,8 +491,11 @@ type BattleStatusEffect struct {
 	MagicAttackReduction     int
 	DefenseReduction         int
 	MagicDefenseReduction    int
+	DefenseIncrease          int
+	MagicDefenseIncrease     int
 	HitReduction             int
 	DodgeReduction           int
+	DodgeIncrease            int
 	HitIncrease              int
 	FatIncrease              int
 	HealPercent              int
@@ -1040,6 +1058,44 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		})
 		result.BuffInfos = append(result.BuffInfos, buffInfo)
 		return result
+	case CommandFistInfluxGas:
+		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
+			return ActionResult{ErrorCode: "unsupported_command"}
+		}
+		if !runtime.isSelfTarget(actor, request.TargetHandle) {
+			return ActionResult{ErrorCode: "invalid_target"}
+		}
+		runtime.ConsumedSequence[request.Sequence] = true
+		profile := runtime.battleCommandProfile(actor, commandID)
+		if profile.MPCost > 0 {
+			actor.MP = maxInt(0, actor.MP-profile.MPCost)
+		}
+		runtime.setStoredPower(actor.Handle, runtime.powerFor(actor.Handle)+1)
+		buffInfos := runtime.applyFistInfluxGasStatusEffects(actor)
+		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
+			runtime.resolveProfileSelfAction(actor, commandID, profile),
+		})
+		result.BuffInfos = append(result.BuffInfos, buffInfos...)
+		return result
+	case CommandFistMoveShadow:
+		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
+			return ActionResult{ErrorCode: "unsupported_command"}
+		}
+		if !runtime.isSelfTarget(actor, request.TargetHandle) {
+			return ActionResult{ErrorCode: "invalid_target"}
+		}
+		runtime.ConsumedSequence[request.Sequence] = true
+		runtime.setStoredPower(actor.Handle, 0)
+		profile := runtime.battleCommandProfile(actor, commandID)
+		if profile.MPCost > 0 {
+			actor.MP = maxInt(0, actor.MP-profile.MPCost)
+		}
+		buffInfo := runtime.applyFistMoveShadowStatusEffect(actor)
+		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
+			runtime.resolveProfileSelfAction(actor, commandID, profile),
+		})
+		result.BuffInfos = append(result.BuffInfos, buffInfo)
+		return result
 	case CommandMoZhangShu:
 		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
 			return ActionResult{ErrorCode: "unsupported_command"}
@@ -1091,6 +1147,9 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return ActionResult{ErrorCode: "insufficient_power"}
 	}
 	if normalizeBattleCommandID(commandID) == CommandAoYiPiaoXue && runtime.powerFor(actor.Handle) < aoYiPiaoXueRequiredPower {
+		return ActionResult{ErrorCode: "insufficient_power"}
+	}
+	if normalizeBattleCommandID(commandID) == CommandFistPowerAxeWing && runtime.powerFor(actor.Handle) < fistPowerAxeWingRequiredPower {
 		return ActionResult{ErrorCode: "insufficient_power"}
 	}
 
@@ -1619,6 +1678,18 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "气愈式", 5)
 	case CommandAoYiPiaoXue:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.飘血", 4)
+	case CommandFistDoubleAtk:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "连击", 5)
+	case CommandFistPowHit:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "重烈", 5)
+	case CommandFistInfluxGas:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "气运丹田", 5)
+	case CommandFistBreakSoul:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "破魂打", 5)
+	case CommandFistMoveShadow:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "移形换影", 4)
+	case CommandFistPowerAxeWing:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.修罗幻翼拳", 4)
 	case CommandPiShanGunFa:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "劈山棍法", 5)
 	case CommandYeChaGunFa:
@@ -1922,7 +1993,7 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 			StatusRounds:      enemyAngleCurseSealRounds,
 			StatusChance:      enemyAngleCurseSealChance,
 			// 封印 does not skip turns; it only blocks skill commands via PendingSkillSeal.
-			SkipTurn:          false,
+			SkipTurn: false,
 		}
 	case CommandEnemySweepSpear:
 		return commandProfile{
@@ -2464,6 +2535,18 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasCapturedRoleSkillForActor(handle, "气愈式")
 	case CommandAoYiPiaoXue:
 		return runtime.hasCapturedRoleSkillForActor(handle, "奥义.飘血")
+	case CommandFistDoubleAtk:
+		return runtime.hasRoleSkillForActor(handle, "连击")
+	case CommandFistPowHit:
+		return runtime.hasRoleSkillForActor(handle, "重烈")
+	case CommandFistInfluxGas:
+		return runtime.hasRoleSkillForActor(handle, "气运丹田")
+	case CommandFistBreakSoul:
+		return runtime.hasRoleSkillForActor(handle, "破魂打")
+	case CommandFistMoveShadow:
+		return runtime.hasRoleSkillForActor(handle, "移形换影")
+	case CommandFistPowerAxeWing:
+		return runtime.hasRoleSkillForActor(handle, "奥义.修罗幻翼拳")
 	case CommandPiShanGunFa:
 		return runtime.hasRoleSkillForActor(handle, "劈山棍法")
 	case CommandYeChaGunFa:
@@ -2724,6 +2807,14 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusDisplay = "9.png"
 		profile.StatusRounds = kuangWuShiStunRounds
 		profile.StatusChance = stunChance
+		profile.StatusDescription = "眩晕无法行动"
+		profile.SkipTurn = true
+	}
+	if name == "重烈" {
+		profile.StatusName = "眩晕"
+		profile.StatusDisplay = "9.png"
+		profile.StatusRounds = fistPowHitStunRounds
+		profile.StatusChance = fistPowHitStunChance
 		profile.StatusDescription = "眩晕无法行动"
 		profile.SkipTurn = true
 	}
@@ -3408,7 +3499,6 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 	}
 }
 
-
 func (runtime *Runtime) roleSkillLevelForActor(handle string, name string, fallbackLevel int) int {
 	skill, ok := runtime.roleSkillByNameForActor(handle, name)
 	if !ok || skill.Level <= 0 {
@@ -3492,7 +3582,6 @@ func sourceAoYiPiaoXueHitMultiplier(level int) float64 {
 		return 1.85
 	}
 }
-
 
 func fallbackJuanYeShiDescription(level int) string {
 	switch level {
@@ -4947,11 +5036,20 @@ func (runtime *Runtime) restoreStatusEffect(target *CellInfoPush, effect BattleS
 	if effect.MagicDefenseReduction > 0 {
 		target.MgcDefense += effect.MagicDefenseReduction
 	}
+	if effect.DefenseIncrease > 0 {
+		target.Defense = maxInt(0, target.Defense-effect.DefenseIncrease)
+	}
+	if effect.MagicDefenseIncrease > 0 {
+		target.MgcDefense = maxInt(0, target.MgcDefense-effect.MagicDefenseIncrease)
+	}
 	if effect.HitReduction > 0 {
 		target.Hit += effect.HitReduction
 	}
 	if effect.DodgeReduction > 0 {
 		target.Dog += effect.DodgeReduction
+	}
+	if effect.DodgeIncrease > 0 {
+		target.Dog = maxInt(0, target.Dog-effect.DodgeIncrease)
 	}
 	if effect.HitIncrease > 0 {
 		target.Hit = maxInt(0, target.Hit-effect.HitIncrease)
@@ -5548,6 +5646,82 @@ func (runtime *Runtime) applyFightingSpiritStatusEffect(actor *CellInfoPush) Buf
 		Description:   description,
 		Round:         liShiGunShuRounds,
 	}
+}
+
+func (runtime *Runtime) applyFistInfluxGasStatusEffects(actor *CellInfoPush) []BuffInfoPush {
+	if runtime == nil || actor == nil {
+		return nil
+	}
+	runtime.restoreExistingStatusEffect(actor.Handle, "护甲")
+	runtime.restoreExistingStatusEffect(actor.Handle, "御法")
+	runtime.restoreExistingStatusEffect(actor.Handle, "斗志")
+
+	defenseIncrease := int(math.Round(float64(actor.Defense) * float64(fistInfluxGasDefensePercent) / 100))
+	magicDefenseIncrease := int(math.Round(float64(actor.MgcDefense) * float64(fistInfluxGasMagicDefensePercent) / 100))
+	attackIncrease := int(math.Round(float64(actor.Attack) * float64(fistInfluxGasAttackPercent) / 100))
+	actor.Defense += defenseIncrease
+	actor.MgcDefense += magicDefenseIncrease
+	actor.Attack += attackIncrease
+
+	armor := BattleStatusEffect{
+		Name:            "护甲",
+		Display:         "11.png",
+		Description:     fmt.Sprintf("提升对象%d点物理防御力", defenseIncrease),
+		Rounds:          fistInfluxGasRounds,
+		SourceHandle:    actor.Handle,
+		SourceSkill:     "气运丹田",
+		AppliedAction:   "w5/influxGas",
+		DefenseIncrease: defenseIncrease,
+	}
+	magicGuard := BattleStatusEffect{
+		Name:                 "御法",
+		Display:              "13.png",
+		Description:          fmt.Sprintf("提升对象%d法术防御力", magicDefenseIncrease),
+		Rounds:               fistInfluxGasRounds,
+		SourceHandle:         actor.Handle,
+		SourceSkill:          "气运丹田",
+		AppliedAction:        "w5/influxGas",
+		MagicDefenseIncrease: magicDefenseIncrease,
+	}
+	fightingSpirit := BattleStatusEffect{
+		Name:           "斗志",
+		Display:        "23.png",
+		Description:    fmt.Sprintf("提升对象%d点物理攻击", attackIncrease),
+		Rounds:         fistInfluxGasRounds,
+		SourceHandle:   actor.Handle,
+		SourceSkill:    "气运丹田",
+		AppliedAction:  "w5/influxGas",
+		AttackIncrease: attackIncrease,
+	}
+	runtime.applyStatusEffect(actor.Handle, armor)
+	runtime.applyStatusEffect(actor.Handle, magicGuard)
+	runtime.applyStatusEffect(actor.Handle, fightingSpirit)
+	return []BuffInfoPush{
+		runtime.resolveStatusBuffInfo(actor, actor, armor),
+		runtime.resolveStatusBuffInfo(actor, actor, magicGuard),
+		runtime.resolveStatusBuffInfo(actor, actor, fightingSpirit),
+	}
+}
+
+func (runtime *Runtime) applyFistMoveShadowStatusEffect(actor *CellInfoPush) BuffInfoPush {
+	if runtime == nil || actor == nil {
+		return BuffInfoPush{}
+	}
+	runtime.restoreExistingStatusEffect(actor.Handle, "回避提升")
+	dodgeIncrease := int(math.Round(float64(actor.Dog) * float64(fistMoveShadowDodgePercent) / 100))
+	actor.Dog += dodgeIncrease
+	effect := BattleStatusEffect{
+		Name:          "回避提升",
+		Display:       "14.png",
+		Description:   fmt.Sprintf("提高对象%d点回避", dodgeIncrease),
+		Rounds:        fistMoveShadowRounds,
+		SourceHandle:  actor.Handle,
+		SourceSkill:   "移形换影",
+		AppliedAction: "w5/moveShadow",
+		DodgeIncrease: dodgeIncrease,
+	}
+	runtime.applyStatusEffect(actor.Handle, effect)
+	return runtime.resolveStatusBuffInfo(actor, actor, effect)
 }
 
 func (runtime *Runtime) applyKuangBao(handle string) {

@@ -8610,7 +8610,6 @@ func TestXiongluBeardeerUsesCapturedRampageAndSkills(t *testing.T) {
 	}
 }
 
-
 func TestXiongluBeardeerAngleCurseCanApplySeal(t *testing.T) {
 	// Deterministic seed: battleId/handles chosen so status:封印 roll < 20.
 	// Seal reuses equipment 封印 contract (19.png, block skills, no skip-turn).
@@ -9615,5 +9614,217 @@ func TestAoYiPiaoXueRequiresCapturedSoulPowerAndUsesCapturedAction(t *testing.T)
 	actor := runtime.cellByHandle("player_sword")
 	if action.SourceActionLabel != "w7/aypx" || action.Damage != 330 || action.TargetHP != 670 || actor.MP != 62 {
 		t.Fatalf("expected captured 奥义.飘血 action and MP cost, action=%+v actor=%+v", action, actor)
+	}
+}
+
+func TestWoodcutterFistSkillProfilesUseCapturedRows(t *testing.T) {
+	cases := []struct {
+		name        string
+		level       int
+		commandID   string
+		sourceType  string
+		actionLabel string
+		mpCost      int
+		multiplier  float64
+		directBonus float64
+		target      string
+	}{
+		{name: "连击", level: 5, commandID: CommandFistDoubleAtk, sourceType: "oneE", actionLabel: "w5/doubleAtk", mpCost: 18, multiplier: 1.45, target: "enemy"},
+		{name: "重烈", level: 5, commandID: CommandFistPowHit, sourceType: "oneE", actionLabel: "w5/powHit", mpCost: 28, multiplier: 1, target: "enemy"},
+		{name: "气运丹田", level: 5, commandID: CommandFistInfluxGas, sourceType: "own", actionLabel: "w5/influxGas", mpCost: 32, multiplier: 0, target: "self"},
+		{name: "破魂打", level: 5, commandID: CommandFistBreakSoul, sourceType: "oneE", actionLabel: "w5/breakSoul", mpCost: 36, multiplier: 0.8, directBonus: 0.3, target: "enemy"},
+		{name: "移形换影", level: 4, commandID: CommandFistMoveShadow, sourceType: "own", actionLabel: "w5/moveShadow", mpCost: 36, multiplier: 0, target: "self"},
+		{name: "奥义.修罗幻翼拳", level: 4, commandID: CommandFistPowerAxeWing, sourceType: "oneE", actionLabel: "w5/PowerAxeWing", mpCost: 38, multiplier: 2.7, target: "enemy"},
+	}
+
+	skills := make([]session.RoleSkill, 0, len(cases))
+	for _, testCase := range cases {
+		skill := session.RoleSkill{Name: testCase.name, Level: testCase.level, Type: testCase.sourceType, Description: "stale description"}
+		skills = append(skills, skill)
+		profile := sourceBattleSkillProfile(skill)
+		if sourceBattleSkillCommandID(testCase.name) != testCase.commandID || profile.SourceType != testCase.sourceType || profile.SourceActionLabel != testCase.actionLabel || profile.MPCost != testCase.mpCost || profile.DamageMultiplier != testCase.multiplier || profile.DirectAttackBonus != testCase.directBonus {
+			t.Fatalf("expected captured %s profile, got %+v", testCase.name, profile)
+		}
+	}
+
+	commandsByID := map[string]CommandDefinition{}
+	for _, command := range sourceBattleCommandDefinitions(skills) {
+		commandsByID[command.ID] = command
+	}
+	for _, testCase := range cases {
+		command, ok := commandsByID[testCase.commandID]
+		if !ok || command.SourceType != testCase.sourceType || command.SourceActionLabel != testCase.actionLabel || command.MPCost != testCase.mpCost || command.DamageMultiplier != testCase.multiplier || command.Target != testCase.target {
+			t.Fatalf("expected captured %s command definition, got %+v", testCase.name, command)
+		}
+	}
+
+	limitedRuntime := &Runtime{RoleSkills: []session.RoleSkill{{Name: "连击", Level: 5, Type: "oneE"}}}
+	if !limitedRuntime.isBattleCommandAllowedForActor("", CommandFistDoubleAtk) || limitedRuntime.isBattleCommandAllowedForActor("", CommandFistPowHit) {
+		t.Fatalf("expected fist commands to require the learned captured skill")
+	}
+}
+
+func TestWoodcutterFistDamagingSkillsUseCapturedProfiles(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-fist-damage",
+		Round:            1,
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		RoleSkills: []session.RoleSkill{
+			{Name: "连击", Level: 5, Type: "oneE"},
+			{Name: "破魂打", Level: 5, Type: "oneE"},
+		},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-fist-damage", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, MaxMP: 100, Attack: 100, Hit: 100},
+			{BattleID: "battle-fist-damage", Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Defense: 0},
+		},
+	}
+	actor := runtime.cellByHandle("player_fist")
+	target := runtime.cellByHandle("enemy_1")
+	doubleAttack := runtime.resolveAttack(actor, target, CommandFistDoubleAtk)
+	if doubleAttack.ActionName != "连击" || doubleAttack.SourceActionLabel != "w5/doubleAtk" || doubleAttack.Damage != 145 || actor.MP != 82 {
+		t.Fatalf("expected 连击 captured action, damage, and MP cost, action=%+v actor=%+v", doubleAttack, actor)
+	}
+
+	actor.MP = 100
+	target.HP = target.MaxHP
+	breakSoul := runtime.resolveAttack(actor, target, CommandFistBreakSoul)
+	if breakSoul.ActionName != "破魂打" || breakSoul.SourceActionLabel != "w5/breakSoul" || breakSoul.Damage != 110 || actor.MP != 64 {
+		t.Fatalf("expected 破魂打 captured damage/direct bonus and MP cost, action=%+v actor=%+v", breakSoul, actor)
+	}
+}
+
+func TestWoodcutterFistInfluxGasBuffsRestoreOnReplaceAndExpiry(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:      "battle-fist-influx",
+		StatusEffects: map[string]BattleStatusEffects{},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-fist-influx", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, Attack: 360, Defense: 312, MgcDefense: 80},
+		},
+	}
+	actor := runtime.cellByHandle("player_fist")
+	buffs := runtime.applyFistInfluxGasStatusEffects(actor)
+	if actor.Defense != 437 || actor.MgcDefense != 144 || actor.Attack != 396 || len(buffs) != 3 || buffs[0].Name != "护甲" || buffs[0].Display != "11.png" || buffs[0].Description != "提升对象125点物理防御力" || buffs[1].Name != "御法" || buffs[1].Display != "13.png" || buffs[1].Description != "提升对象64法术防御力" || buffs[2].Name != "斗志" || buffs[2].Display != "23.png" || buffs[2].Description != "提升对象36点物理攻击" {
+		t.Fatalf("expected 气运丹田 captured three-buff values, actor=%+v buffs=%+v", actor, buffs)
+	}
+
+	runtime.applyFistInfluxGasStatusEffects(actor)
+	if actor.Defense != 437 || actor.MgcDefense != 144 || actor.Attack != 396 {
+		t.Fatalf("expected 气运丹田 recast to replace rather than stack buffs, actor=%+v", actor)
+	}
+	for index := 0; index < fistInfluxGasRounds; index += 1 {
+		runtime.resolveStatusStartActions(actor)
+	}
+	if actor.Defense != 312 || actor.MgcDefense != 80 || actor.Attack != 360 {
+		t.Fatalf("expected 气运丹田 buffs to restore all attributes on expiry, actor=%+v", actor)
+	}
+	clears := runtime.consumePendingClearBuffInfos()
+	cleared := map[string]bool{}
+	for _, clear := range clears {
+		cleared[clear.Name] = clear.TargetHandle == actor.Handle
+	}
+	if !cleared["护甲"] || !cleared["御法"] || !cleared["斗志"] {
+		t.Fatalf("expected 气运丹田 expiry to clear all three buff icons, got %+v", clears)
+	}
+}
+
+func TestWoodcutterFistMoveShadowAndPowHitStatusLifecycle(t *testing.T) {
+	shadowRuntime := &Runtime{
+		BattleID:      "battle-fist-shadow",
+		StatusEffects: map[string]BattleStatusEffects{},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-fist-shadow", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, Dog: 267},
+		},
+	}
+	shadowActor := shadowRuntime.cellByHandle("player_fist")
+	shadowBuff := shadowRuntime.applyFistMoveShadowStatusEffect(shadowActor)
+	if shadowActor.Dog != 347 || shadowBuff.Name != "回避提升" || shadowBuff.Display != "14.png" || shadowBuff.Description != "提高对象80点回避" || shadowBuff.Round != 3 {
+		t.Fatalf("expected 移形换影 captured dodge buff, actor=%+v buff=%+v", shadowActor, shadowBuff)
+	}
+	shadowRuntime.applyFistMoveShadowStatusEffect(shadowActor)
+	if shadowActor.Dog != 347 {
+		t.Fatalf("expected 移形换影 recast to replace rather than stack dodge, actor=%+v", shadowActor)
+	}
+	if !shadowRuntime.clearStatusEffect(shadowActor.Handle, "回避提升") || shadowActor.Dog != 267 {
+		t.Fatalf("expected 移形换影 clear to restore dodge, actor=%+v effects=%+v", shadowActor, shadowRuntime.StatusEffects)
+	}
+
+	var stunRuntime *Runtime
+	for index := 0; index < 200; index += 1 {
+		candidate := &Runtime{
+			BattleID:         fmt.Sprintf("battle-fist-pow-hit-%d", index),
+			Round:            1,
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+			RoleSkills:       []session.RoleSkill{{Name: "重烈", Level: 5, Type: "oneE"}},
+			Cells: []CellInfoPush{
+				{Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, Attack: 100, Hit: 100},
+				{Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Dog: 0},
+			},
+		}
+		if candidate.hashBattleRollWithSalt(candidate.cellByHandle("player_fist"), candidate.cellByHandle("enemy_1"), CommandFistPowHit, "status:眩晕") < fistPowHitStunChance {
+			stunRuntime = candidate
+			break
+		}
+	}
+	if stunRuntime == nil {
+		t.Fatal("expected deterministic 重烈 stun roll")
+	}
+	stunAction := stunRuntime.resolveAttack(stunRuntime.cellByHandle("player_fist"), stunRuntime.cellByHandle("enemy_1"), CommandFistPowHit)
+	stunBuffs := stunRuntime.consumePendingBuffInfos()
+	if stunAction.TargetActionStateCode != "0" || stunAction.SourceActionLabel != "w5/powHit" || len(stunBuffs) != 1 || stunBuffs[0].Name != "眩晕" || stunBuffs[0].Display != "9.png" || stunBuffs[0].Round != 2 {
+		t.Fatalf("expected 重烈 hit to emit captured stun buff, action=%+v buffs=%+v", stunAction, stunBuffs)
+	}
+	for index := 0; index < fistPowHitStunRounds; index += 1 {
+		actions, skipped := stunRuntime.resolveStatusStartActions(stunRuntime.cellByHandle("enemy_1"))
+		if !skipped || len(actions) != 1 || actions[0].SourceActionLabel != "yun" {
+			t.Fatalf("expected 重烈 stun to use yun skip-turn action, actions=%+v skipped=%t", actions, skipped)
+		}
+	}
+	if clears := stunRuntime.consumePendingClearBuffInfos(); len(clears) != 1 || clears[0].Name != "眩晕" {
+		t.Fatalf("expected 重烈 stun to clear after two rounds, got %+v", clears)
+	}
+
+	dodgeRuntime := &Runtime{
+		BattleID:         "battle-fist-pow-hit-dodge",
+		DefendingHandles: map[string]bool{},
+		StatusEffects:    map[string]BattleStatusEffects{},
+		RoleSkills:       []session.RoleSkill{{Name: "重烈", Level: 5, Type: "oneE"}},
+	}
+	dodgeAction := dodgeRuntime.resolveAttack(&CellInfoPush{Handle: "player_fist", Camp: CampTeam, Attack: 100, Hit: 0}, &CellInfoPush{Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Dog: 1}, CommandFistPowHit)
+	if dodgeAction.TargetActionStateCode != "1" || len(dodgeRuntime.PendingBuffInfos) != 0 || len(dodgeRuntime.StatusEffects) != 0 {
+		t.Fatalf("expected 重烈 dodge to suppress stun, action=%+v effects=%+v", dodgeAction, dodgeRuntime.StatusEffects)
+	}
+}
+
+func TestWoodcutterFistUltimateRequiresSoulPower(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:         "battle-fist-ultimate",
+		Round:            1,
+		Phase:            PhaseCommand,
+		ActiveHandle:     "player_fist",
+		nextSequence:     1,
+		ConsumedSequence: map[int]bool{},
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{},
+		RoleSkills:       []session.RoleSkill{{Name: "奥义.修罗幻翼拳", Level: 4, Type: "oneE"}},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-fist-ultimate", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, MaxMP: 100, Attack: 100, Hit: 100},
+			{BattleID: "battle-fist-ultimate", Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Defense: 0},
+		},
+	}
+	request := ActionRequest{BattleID: runtime.BattleID, ActorHandle: "player_fist", CommandID: CommandFistPowerAxeWing, TargetHandle: "enemy_1", Round: 1, Sequence: 1}
+	if result := runtime.ProcessAction(request); result.ErrorCode != "insufficient_power" {
+		t.Fatalf("expected 奥义.修罗幻翼拳 to require three stored power, got %+v", result)
+	}
+	runtime.StoredPower["player_fist"] = fistPowerAxeWingRequiredPower
+	result := runtime.ProcessAction(request)
+	if result.ErrorCode != "" || len(result.Actions) == 0 {
+		t.Fatalf("expected 奥义.修罗幻翼拳 action with three stored power, got %+v", result)
+	}
+	action := result.Actions[0]
+	actor := runtime.cellByHandle("player_fist")
+	if action.SourceActionLabel != "w5/PowerAxeWing" || action.Damage != 270 || action.TargetHP != 730 || actor.MP != 62 {
+		t.Fatalf("expected 奥义.修罗幻翼拳 captured action and MP cost, action=%+v actor=%+v", action, actor)
 	}
 }

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill",
   "source": "internal/classicdata/source/skill-table.csv",
-  "rowCount": 40,
+  "rowCount": 46,
   "rows": [
     {
       "skill_id": "skill-normal-attack",
@@ -322,6 +322,54 @@
       "label": "奥义.飘血",
       "source_type": "oneE",
       "action_name": "奥义.飘血",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-fist-double-atk",
+      "kind": "skill",
+      "label": "连击",
+      "source_type": "oneE",
+      "action_name": "连击",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-fist-pow-hit",
+      "kind": "skill",
+      "label": "重烈",
+      "source_type": "oneE",
+      "action_name": "重烈",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-fist-influx-gas",
+      "kind": "skill",
+      "label": "气运丹田",
+      "source_type": "own",
+      "action_name": "气运丹田",
+      "target": "self"
+    },
+    {
+      "skill_id": "skill-fist-break-soul",
+      "kind": "skill",
+      "label": "破魂打",
+      "source_type": "oneE",
+      "action_name": "破魂打",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-fist-move-shadow",
+      "kind": "skill",
+      "label": "移形换影",
+      "source_type": "own",
+      "action_name": "移形换影",
+      "target": "self"
+    },
+    {
+      "skill_id": "skill-fist-power-axe-wing",
+      "kind": "skill",
+      "label": "奥义.修罗幻翼拳",
+      "source_type": "oneE",
+      "action_name": "奥义.修罗幻翼拳",
       "target": "enemy"
     }
   ]

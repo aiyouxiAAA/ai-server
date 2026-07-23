@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill-level",
   "source": "internal/classicdata/source/skill-level-table.csv",
-  "rowCount": 78,
+  "rowCount": 84,
   "rows": [
     {
       "skill_level_id": "skill-normal-attack-lv1",
@@ -857,6 +857,72 @@
       "level": "4",
       "source_action_label": "w7/aypx",
       "damage_multiplier": "3.3",
+      "mp_cost": "38",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-fist-double-atk-lv5",
+      "skill_id": "skill-fist-double-atk",
+      "level": "5",
+      "source_action_label": "w5/doubleAtk",
+      "damage_multiplier": "1.45",
+      "mp_cost": "18",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-fist-pow-hit-lv5",
+      "skill_id": "skill-fist-pow-hit",
+      "level": "5",
+      "source_action_label": "w5/powHit",
+      "damage_multiplier": "1",
+      "mp_cost": "28",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-fist-influx-gas-lv5",
+      "skill_id": "skill-fist-influx-gas",
+      "level": "5",
+      "source_action_label": "w5/influxGas",
+      "damage_multiplier": "0",
+      "mp_cost": "32",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-fist-break-soul-lv5",
+      "skill_id": "skill-fist-break-soul",
+      "level": "5",
+      "source_action_label": "w5/breakSoul",
+      "damage_multiplier": "0.8",
+      "mp_cost": "36",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0.3"
+    },
+    {
+      "skill_level_id": "skill-fist-move-shadow-lv4",
+      "skill_id": "skill-fist-move-shadow",
+      "level": "4",
+      "source_action_label": "w5/moveShadow",
+      "damage_multiplier": "0",
+      "mp_cost": "36",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-fist-power-axe-wing-lv4",
+      "skill_id": "skill-fist-power-axe-wing",
+      "level": "4",
+      "source_action_label": "w5/PowerAxeWing",
+      "damage_multiplier": "2.7",
       "mp_cost": "38",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",

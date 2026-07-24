@@ -219,11 +219,7 @@ const (
 	fistPowHitStunChance              = 25
 	fistPowHitStunRounds              = 2
 	fistInfluxGasRounds               = 3
-	fistInfluxGasDefensePercent       = 40
-	fistInfluxGasMagicDefensePercent  = 80
-	fistInfluxGasAttackPercent        = 10
 	fistMoveShadowRounds              = 3
-	fistMoveShadowDodgePercent        = 30
 	kuangWuShiStunRounds              = 2
 	// Captured single-sword Lv5 baselines above; lower levels come from
 	// skill-level-table / role skill description packets.
@@ -453,6 +449,7 @@ type Runtime struct {
 	PendingTeamSequences  map[string]int
 	DefendingHandles      map[string]bool
 	EnemyAttackRanges     map[string]battleAttackRange
+	EnemySweepSpearRanges map[string]battleAttackRange
 	StatusEffects         map[string]BattleStatusEffects
 	PendingConfusion      map[string]bool
 	StoredPower           map[string]int
@@ -531,6 +528,7 @@ type commandProfile struct {
 	SourceType            string
 	SourceActionLabel     string
 	DamageMultiplier      float64
+	DamageUsesStoredPower bool
 	MPCost                int
 	CanDodge              bool
 	CanFat                bool
@@ -648,6 +646,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		},
 	}
 	enemyAttackRanges := map[string]battleAttackRange{}
+	enemySweepSpearRanges := map[string]battleAttackRange{}
 	for index, enemyConfig := range enemyConfigs {
 		var cell CellInfoPush
 		if sourceMonsterHandle != "" {
@@ -659,35 +658,39 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 		if enemyConfig.AttackMin > 0 && enemyConfig.AttackMax >= enemyConfig.AttackMin {
 			enemyAttackRanges[cell.Handle] = battleAttackRange{Min: enemyConfig.AttackMin, Max: enemyConfig.AttackMax}
 		}
+		if enemyConfig.SweepSpearAttackMin > 0 && enemyConfig.SweepSpearAttackMax >= enemyConfig.SweepSpearAttackMin {
+			enemySweepSpearRanges[cell.Handle] = battleAttackRange{Min: enemyConfig.SweepSpearAttackMin, Max: enemyConfig.SweepSpearAttackMax}
+		}
 	}
 	runtime := &Runtime{
-		BattleID:            battleID,
-		RoleID:              role.RoleID,
-		MapID:               mapID,
-		LastMapName:         mapName,
-		EncounterID:         "classic-wild-" + mapID,
-		EncounterLabel:      mapName + " " + encounterKind,
-		StageFocusX:         request.StageFocusX,
-		ReturnRoute:         defaultString(request.ReturnRoute, "town-placeholder"),
-		QueueIndexTeam:      firstEnemyConfig.QueueIndexTeam,
-		QueueIndexEnemy:     firstEnemyConfig.QueueIndexEnemy,
-		SourceMonsterHandle: sourceMonsterHandle,
-		RoleSkills:          cloneBattleRoleSkills(role.Skills),
-		RoleSkillsByHandle:  map[string][]session.RoleSkill{role.RoleID: cloneBattleRoleSkills(role.Skills)},
-		RoleItems:           cloneBattleRoleItems(role.Items),
-		RoleItemsByHandle:   map[string][]session.RoleItem{role.RoleID: cloneBattleRoleItems(role.Items)},
-		Phase:               PhaseCommand,
-		Round:               1,
-		Cells:               cells,
-		ActiveHandle:        role.RoleID,
-		ConsumedSequence:    map[int]bool{},
-		DefendingHandles:    map[string]bool{},
-		EnemyAttackRanges:   enemyAttackRanges,
-		StatusEffects:       map[string]BattleStatusEffects{},
-		PendingConfusion:    map[string]bool{},
-		PendingSkillSeal:    map[string]bool{},
-		StoredPower:         map[string]int{},
-		nextSequence:        1,
+		BattleID:              battleID,
+		RoleID:                role.RoleID,
+		MapID:                 mapID,
+		LastMapName:           mapName,
+		EncounterID:           "classic-wild-" + mapID,
+		EncounterLabel:        mapName + " " + encounterKind,
+		StageFocusX:           request.StageFocusX,
+		ReturnRoute:           defaultString(request.ReturnRoute, "town-placeholder"),
+		QueueIndexTeam:        firstEnemyConfig.QueueIndexTeam,
+		QueueIndexEnemy:       firstEnemyConfig.QueueIndexEnemy,
+		SourceMonsterHandle:   sourceMonsterHandle,
+		RoleSkills:            cloneBattleRoleSkills(role.Skills),
+		RoleSkillsByHandle:    map[string][]session.RoleSkill{role.RoleID: cloneBattleRoleSkills(role.Skills)},
+		RoleItems:             cloneBattleRoleItems(role.Items),
+		RoleItemsByHandle:     map[string][]session.RoleItem{role.RoleID: cloneBattleRoleItems(role.Items)},
+		Phase:                 PhaseCommand,
+		Round:                 1,
+		Cells:                 cells,
+		ActiveHandle:          role.RoleID,
+		ConsumedSequence:      map[int]bool{},
+		DefendingHandles:      map[string]bool{},
+		EnemyAttackRanges:     enemyAttackRanges,
+		EnemySweepSpearRanges: enemySweepSpearRanges,
+		StatusEffects:         map[string]BattleStatusEffects{},
+		PendingConfusion:      map[string]bool{},
+		PendingSkillSeal:      map[string]bool{},
+		StoredPower:           map[string]int{},
+		nextSequence:          1,
 	}
 	start := StartPush{
 		BattleID:        battleID,
@@ -1491,7 +1494,7 @@ func (runtime *Runtime) resolveAllTargetAttack(actor *CellInfoPush, targets []*C
 func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *CellInfoPush, commandID string, consumeMP bool) ActionPush {
 	profile := runtime.battleCommandProfile(actor, commandID)
 	targetInDef := runtime.DefendingHandles[target.Handle]
-	defense := runtime.effectiveBattleDefense(actor, target, targetInDef, profile.DefenseType)
+	defense := runtime.effectiveBattleDefenseValue(actor, target, targetInDef, profile.DefenseType)
 	sourceActionLabel := profile.SourceActionLabel
 	targetActionState := "normal"
 	targetActionStateCode := "0"
@@ -1556,20 +1559,21 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			Sequence:              runtime.currentActionSequence(),
 		}
 	}
-	damage := runtime.baseBattleDamage(actor, profile, defense)
+	damage := runtime.baseBattleDamageValue(actor, profile, defense)
 	if runtime.resolveCriticalHit(actor, target, commandID, profile) {
 		damage *= 2
 		targetActionState = "fat"
 		targetActionStateCode = "2"
 	}
-	actualHPLoss, _ := runtime.applyTargetHPDamage(target, damage)
+	resolvedDamage := maxInt(1, int(math.Round(damage)))
+	actualHPLoss, _ := runtime.applyTargetHPDamage(target, resolvedDamage)
 	delete(runtime.DefendingHandles, target.Handle)
 	runtime.applyStoredPowerFromSingleHPLoss(target, actualHPLoss)
 	if consumeMP && profile.MPCost > 0 {
 		actor.MP = maxInt(0, actor.MP-profile.MPCost)
 	}
-	if profile.LifeStealChance > 0 && profile.LifeStealRatio > 0 && damage > 0 && runtime.resolveLifeSteal(actor, target, commandID, profile) {
-		actor.HP = clampInt(actor.HP+int(math.Floor(float64(damage)*profile.LifeStealRatio)), 0, actor.MaxHP)
+	if profile.LifeStealChance > 0 && profile.LifeStealRatio > 0 && resolvedDamage > 0 && runtime.resolveLifeSteal(actor, target, commandID, profile) {
+		actor.HP = clampInt(actor.HP+int(math.Floor(float64(resolvedDamage)*profile.LifeStealRatio)), 0, actor.MaxHP)
 	}
 	if target.HP > 0 && runtime.resolveStatusApply(actor, target, commandID, profile) {
 		effect := BattleStatusEffect{
@@ -1627,7 +1631,7 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 		TargetInDef:           targetInDef,
 		TargetActionState:     targetActionState,
 		TargetActionStateCode: targetActionStateCode,
-		Damage:                damage,
+		Damage:                resolvedDamage,
 		TargetHP:              target.HP,
 		TargetDead:            target.HP <= 0,
 		RefreshInfos:          refreshInfos,
@@ -2744,6 +2748,14 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 	if profile.MPCost <= 0 {
 		profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
 	}
+	if name == "破魂打" {
+		// Raw 777 HP deltas require a 1.5x mitigated component; the description's
+		// 80% text is not the final runtime multiplier.
+		profile.DamageMultiplier = 1.5
+	}
+	if name == "奥义.修罗幻翼拳" {
+		profile.DamageUsesStoredPower = true
+	}
 	if name == "嗜血斩" {
 		profile.LifeStealChance = sourceBattleSkillLifeStealChance(description)
 		profile.LifeStealRatio = sourceBattleSkillLifeStealRatio(description)
@@ -2780,19 +2792,20 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusName = "诅咒"
 		profile.StatusDisplay = "780.png"
 		profile.StatusRounds = chiYanMoZhouCurseRounds
-		profile.StatusChance = chiYanMoZhouCurseChance
+		profile.StatusChance = sourceChiYanMoZhouCurseChance(level)
 		profile.StatusDescription = "作用时间内无法增加魂元。"
 	}
 	if name == "雷击" {
+		slowPercent := sourceLeiJiSlownessPercent(level)
 		profile.StatusName = "迟钝"
 		profile.StatusDisplay = "16.png"
 		profile.StatusRounds = leiJiSlownessRounds
-		profile.StatusChance = leiJiSlownessChance
-		profile.StatusDescription = "降低对象30%命中和回避"
-		profile.StatusHitDodgePercent = leiJiSlownessPercent
+		profile.StatusChance = sourceLeiJiSlownessChance(level)
+		profile.StatusDescription = fmt.Sprintf("降低对象%d%%命中和回避", slowPercent)
+		profile.StatusHitDodgePercent = slowPercent
 		profile.HitMultiplier = 1.5
 	}
-	if name == "强贯式" {
+if name == "强贯式" {
 		armorBreakPercent := sourceQiangGuanShiArmorBreakPercent(level)
 		profile.StatusName = "卸甲"
 		profile.StatusDisplay = "10.png"
@@ -3179,6 +3192,54 @@ func normalizeBattleCommandID(commandID string) string {
 	}
 }
 
+func sourceChiYanMoZhouCurseChance(level int) int {
+	switch level {
+	case 3:
+		return 90
+	case 4:
+		return 95
+	case 5:
+		return 100
+	default:
+		return chiYanMoZhouCurseChance
+	}
+}
+
+func sourceLeiJiSlownessChance(level int) int {
+	switch level {
+	case 4:
+		return 65
+	case 5:
+		return 70
+	default:
+		return leiJiSlownessChance
+	}
+}
+
+func sourceLeiJiSlownessPercent(level int) int {
+	switch level {
+	case 4:
+		return 35
+	case 5:
+		return 40
+	default:
+		return leiJiSlownessPercent
+	}
+}
+
+func sourceMoZhangShuDamageToMPPercent(level int) int {
+	switch level {
+	case 3:
+		return 40
+	case 4:
+		return 45
+	case 5:
+		return 50
+	default:
+		return magicObstacleDamageToMPPercent
+	}
+}
+
 func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 	if level <= 0 {
 		level = 1
@@ -3381,7 +3442,7 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Description: "f_s_炎狩术^ffffff&9@单体·攻击&8@术士 &10@法杖&22@战斗&2@80&4@提升75%的魔法伤害",
 		}
 	case "雷爆咒":
-		if level < 1 || level > 4 {
+		if level < 1 || level > 5 {
 			return session.RoleSkill{}
 		}
 		return session.RoleSkill{
@@ -3871,13 +3932,15 @@ func fallbackAoYiAnShaZheDescription(level int) string {
 func fallbackLeiBaoZhouDescription(level int) string {
 	switch level {
 	case 1:
-		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@70&4@提升82%的魔法伤害&0;击中敌人时有12%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的5%~7%)"
+		return "f_s_雷爆咒^5BC46D&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@70&4@<font color='#00cc00'>特殊发动条件:<br>需要【雷击lv.2】</font><br>进攻时提升50%的命中<br>对所有敌人造成82%的魔法伤害&0;击中敌人时有12%的机率使敌人进入麻痹状态2回合(每回合损失气力为魔法攻击的5%~7%)"
 	case 2:
-		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@80&4@提升84%的魔法伤害&0;击中敌人时有14%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的7%~9%)"
+		return "f_s_雷爆咒^5BC46D&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@80&4@<font color='#00cc00'>特殊发动条件:<br>需要【雷击lv.2】</font><br>进攻时提升50%的命中<br>对所有敌人造成84%的魔法伤害&0;击中敌人时有14%的机率使敌人进入麻痹状态2回合(每回合损失气力为魔法攻击的7%~9%)"
 	case 3:
-		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@90&4@提升86%的魔法伤害&0;击中敌人时有16%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的9%~11%)"
+		return "f_s_雷爆咒^5BC46D&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@90&4@<font color='#00cc00'>特殊发动条件:<br>需要【雷击lv.2】</font><br>进攻时提升50%的命中<br>对所有敌人造成86%的魔法伤害&0;击中敌人时有16%的机率使敌人进入麻痹状态2回合(每回合损失气力为魔法攻击的9%~11%)"
 	case 4:
-		return "f_s_雷爆咒^ffffff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@100&4@提升88%的魔法伤害&0;击中敌人时有18%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的11%~13%)"
+		return "f_s_雷爆咒^5BC46D&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@100&4@<font color='#00cc00'>特殊发动条件:<br>需要【雷击lv.2】</font><br>进攻时提升50%的命中<br>对所有敌人造成88%的魔法伤害&0;击中敌人时有18%的机率使敌人进入麻痹状态2回合(每回合损失气力为魔法攻击的11%~13%)"
+	case 5:
+		return "f_s_雷爆咒^5BC46D&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@110&4@<font color='#00cc00'>特殊发动条件:<br>需要【雷击lv.2】</font><br>进攻时提升50%的命中<br>对所有敌人造成90%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态2回合(每回合损失气力为魔法攻击的13%~15%)"
 	default:
 		return ""
 	}
@@ -4123,19 +4186,47 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 			return 1.75
 		}
 		return 0
-	case "雷爆咒":
+	case "赤焰魔咒":
 		switch level {
-		case 1:
-			return 1.82
 		case 2:
-			return 1.84
+			return 0.85
 		case 3:
-			return 1.86
+			return 0.9
 		case 4:
-			return 1.88
+			return 0.95
+		case 5:
+			return 1
 		default:
 			return 0
 		}
+	case "雷击":
+		switch level {
+		case 3:
+			return 1.2
+		case 4:
+			return 1.25
+		case 5:
+			return 1.3
+		default:
+			return 0
+		}
+	case "雷爆咒":
+		switch level {
+		case 1:
+			return 0.82
+		case 2:
+			return 0.84
+		case 3:
+			return 0.86
+		case 4:
+			return 0.88
+		case 5:
+			return 0.9
+		default:
+			return 0
+		}
+	case "魔障术":
+		return 0
 	case "雷龙强袭":
 		if level == 1 {
 			return 2.8
@@ -4332,6 +4423,30 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 			return 80
 		}
 		return 0
+	case "赤焰魔咒":
+		switch level {
+		case 2:
+			return 65
+		case 3:
+			return 75
+		case 4:
+			return 85
+		case 5:
+			return 95
+		default:
+			return 0
+		}
+	case "雷击":
+		switch level {
+		case 3:
+			return 75
+		case 4:
+			return 85
+		case 5:
+			return 95
+		default:
+			return 0
+		}
 	case "雷爆咒":
 		switch level {
 		case 1:
@@ -4342,6 +4457,21 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 			return 90
 		case 4:
 			return 100
+		case 5:
+			return 110
+		default:
+			return 0
+		}
+	case "魔障术":
+		switch level {
+		case 2:
+			return 90
+		case 3:
+			return 110
+		case 4:
+			return 130
+		case 5:
+			return 150
 		default:
 			return 0
 		}
@@ -4469,6 +4599,10 @@ func fallbackXueQieWoundChance(level int) int {
 }
 
 func (runtime *Runtime) effectiveBattleDefense(actor *CellInfoPush, target *CellInfoPush, targetInDef bool, defenseType string) int {
+	return int(math.Round(runtime.effectiveBattleDefenseValue(actor, target, targetInDef, defenseType)))
+}
+
+func (runtime *Runtime) effectiveBattleDefenseValue(actor *CellInfoPush, target *CellInfoPush, targetInDef bool, defenseType string) float64 {
 	if target == nil {
 		return 0
 	}
@@ -4483,11 +4617,11 @@ func (runtime *Runtime) effectiveBattleDefense(actor *CellInfoPush, target *Cell
 	if normalizedDefenseType == "magic" {
 		baseDefense = target.MgcDefense
 	}
-	baseDefense = int(math.Round(float64(baseDefense) * 0.5))
+	effectiveDefense := float64(baseDefense) * 0.5
 	if targetInDef {
-		return baseDefense * 2
+		return effectiveDefense * 2
 	}
-	return baseDefense
+	return effectiveDefense
 }
 
 func (runtime *Runtime) hasCaptureBackedEnemyAttackRange(actor *CellInfoPush) bool {
@@ -4499,30 +4633,35 @@ func (runtime *Runtime) hasCaptureBackedEnemyAttackRange(actor *CellInfoPush) bo
 }
 
 func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandProfile, defense int) int {
+	return maxInt(1, int(math.Round(runtime.baseBattleDamageValue(actor, profile, float64(defense)))))
+}
+
+func (runtime *Runtime) baseBattleDamageValue(actor *CellInfoPush, profile commandProfile, defense float64) float64 {
 	if actor == nil {
 		return 0
 	}
-	attack := runtime.captureBackedEnemyAttack(actor, profile)
-	if profile.UseMagicAttack && actor.MagicAttack > 0 {
-		attack = actor.MagicAttack
-	}
+	attack := runtime.captureBackedAttack(actor, profile)
 	if runtime.hasKuangBao(actor.Handle) {
 		attack *= 2
 	}
-	damage := maxInt(1, int(math.Round(float64(attack)*profile.DamageMultiplier))-defense)
+	damageMultiplier := profile.DamageMultiplier
+	if profile.DamageUsesStoredPower {
+		damageMultiplier *= float64(runtime.powerFor(actor.Handle))
+	}
+	damage := attack*damageMultiplier - defense
 	if profile.AdditionalMagicBonus > 0 && actor.MagicAttack > 0 {
 		magicAttack := float64(actor.MagicAttack)
 		if profile.MagicAttackBoost > 0 {
 			magicAttack *= 1 + profile.MagicAttackBoost
 		}
-		damage += maxInt(1, int(math.Round(magicAttack*profile.AdditionalMagicBonus)))
+		damage += math.Max(1, magicAttack*profile.AdditionalMagicBonus)
 	}
 	if profile.DirectAttackBonus > 0 {
-		if bonus := int(math.Round(float64(attack) * profile.DirectAttackBonus)); bonus > 0 {
+		if bonus := attack * profile.DirectAttackBonus; bonus > 0 {
 			damage += bonus
 		}
 	}
-	return damage
+	return math.Max(1, damage)
 }
 
 func (runtime *Runtime) applyTargetHPDamage(target *CellInfoPush, damage int) (int, int) {
@@ -4545,16 +4684,63 @@ func (runtime *Runtime) applyTargetHPDamage(target *CellInfoPush, damage int) (i
 	return beforeHP - target.HP, mpDamage
 }
 
-func (runtime *Runtime) captureBackedEnemyAttack(actor *CellInfoPush, profile commandProfile) int {
+const (
+	capturedWoodcutterPhysicalRollMinBasisPoints = 9500
+	capturedWoodcutterPhysicalRollMaxBasisPoints = 14000
+	capturedPvpMonsterRollMinBasisPoints         = 8000
+	capturedPvpMonsterRollMaxBasisPoints         = 12700
+)
+
+func (runtime *Runtime) captureBackedAttack(actor *CellInfoPush, profile commandProfile) float64 {
 	if actor == nil {
 		return 0
 	}
-	attack := actor.Attack
-	if !runtime.hasCaptureBackedEnemyAttackRange(actor) || (profile.SourceActionLabel != "nomalAtk" && profile.SourceActionLabel != "sweepspear") {
+	attack := float64(actor.Attack)
+	if profile.UseMagicAttack && actor.MagicAttack > 0 {
+		attack = float64(actor.MagicAttack)
+	}
+	if actor.Camp == CampTeam && !profile.UseMagicAttack && isCapturedWoodcutterPhysicalAttackActor(actor.Handle) {
+		basisPoints := capturedWoodcutterPhysicalRollMinBasisPoints + sourceBattleAttackRoll(
+			capturedWoodcutterPhysicalRollMaxBasisPoints-capturedWoodcutterPhysicalRollMinBasisPoints+1,
+		)
+		return attack * float64(basisPoints) / 10000
+	}
+	if actor.Camp != CampEnemy {
 		return attack
 	}
-	attackRange := runtime.EnemyAttackRanges[actor.Handle]
-	return attackRange.Min + sourceBattleAttackRoll(attackRange.Max-attackRange.Min+1)
+	if !profile.UseMagicAttack && profile.SourceActionLabel == "sweepspear" {
+		if attackRange, ok := runtime.EnemySweepSpearRanges[actor.Handle]; ok && attackRange.Min > 0 && attackRange.Max >= attackRange.Min {
+			return float64(attackRange.Min + sourceBattleAttackRoll(attackRange.Max-attackRange.Min+1))
+		}
+	}
+	if !profile.UseMagicAttack && runtime.hasCaptureBackedEnemyAttackRange(actor) && profile.SourceActionLabel == "nomalAtk" {
+		attackRange := runtime.EnemyAttackRanges[actor.Handle]
+		return float64(attackRange.Min + sourceBattleAttackRoll(attackRange.Max-attackRange.Min+1))
+	}
+	if !runtime.usesPvpCaptureRollForWildEnemy(actor) {
+		return attack
+	}
+	basisPoints := capturedPvpMonsterRollMinBasisPoints + sourceBattleAttackRoll(
+		capturedPvpMonsterRollMaxBasisPoints-capturedPvpMonsterRollMinBasisPoints+1,
+	)
+	return attack * float64(basisPoints) / 10000
+}
+
+func (runtime *Runtime) usesPvpCaptureRollForWildEnemy(actor *CellInfoPush) bool {
+	if runtime == nil || actor == nil || actor.Camp != CampEnemy {
+		return false
+	}
+	for _, config := range sourceEnemyConfigsForMap(runtime.MapID) {
+		if config.Cell.Handle == actor.Handle {
+			return true
+		}
+	}
+	return false
+}
+
+func isCapturedWoodcutterPhysicalAttackActor(handle string) bool {
+	handle = strings.TrimSpace(handle)
+	return strings.HasPrefix(handle, "acct-777-role-") || strings.HasPrefix(handle, "acct-77777777-role-")
 }
 
 func sourceBattleStatusAttack(actor *CellInfoPush, profile commandProfile) int {
@@ -5603,16 +5789,24 @@ func (runtime *Runtime) applyMagicBarrierStatusEffect(actor *CellInfoPush) BuffI
 	if runtime == nil || actor == nil {
 		return BuffInfoPush{}
 	}
+	level := 2
+	for _, skill := range runtime.RoleSkills {
+		if strings.TrimSpace(skill.Name) == "魔障术" && skill.Level > 0 {
+			level = skill.Level
+			break
+		}
+	}
+	percent := sourceMoZhangShuDamageToMPPercent(level)
 	runtime.restoreExistingStatusEffect(actor.Handle, "法术屏障")
 	effect := BattleStatusEffect{
 		Name:              "法术屏障",
 		Display:           "28.png",
-		Description:       "作用时间内气力损失量的35%以精力来代替",
+		Description:       fmt.Sprintf("作用时间内气力损失量的%d%%以精力来代替", percent),
 		Rounds:            magicObstacleRounds,
 		SourceHandle:      actor.Handle,
 		SourceSkill:       "魔障术",
 		AppliedAction:     "w10/magicObstacle",
-		DamageToMPPercent: magicObstacleDamageToMPPercent,
+		DamageToMPPercent: percent,
 	}
 	runtime.applyStatusEffect(actor.Handle, effect)
 	return runtime.resolveStatusBuffInfo(actor, actor, effect)
@@ -5656,9 +5850,10 @@ func (runtime *Runtime) applyFistInfluxGasStatusEffects(actor *CellInfoPush) []B
 	runtime.restoreExistingStatusEffect(actor.Handle, "御法")
 	runtime.restoreExistingStatusEffect(actor.Handle, "斗志")
 
-	defenseIncrease := int(math.Round(float64(actor.Defense) * float64(fistInfluxGasDefensePercent) / 100))
-	magicDefenseIncrease := int(math.Round(float64(actor.MgcDefense) * float64(fistInfluxGasMagicDefensePercent) / 100))
-	attackIncrease := int(math.Round(float64(actor.Attack) * float64(fistInfluxGasAttackPercent) / 100))
+	defensePercent, magicDefensePercent, attackPercent := fistInfluxGasPercents(runtime.roleSkillLevelForActor(actor.Handle, "气运丹田", 1))
+	defenseIncrease := int(math.Round(float64(actor.Defense) * float64(defensePercent) / 100))
+	magicDefenseIncrease := int(math.Round(float64(actor.MgcDefense) * float64(magicDefensePercent) / 100))
+	attackIncrease := int(math.Round(float64(actor.Attack) * float64(attackPercent) / 100))
 	actor.Defense += defenseIncrease
 	actor.MgcDefense += magicDefenseIncrease
 	actor.Attack += attackIncrease
@@ -5708,7 +5903,8 @@ func (runtime *Runtime) applyFistMoveShadowStatusEffect(actor *CellInfoPush) Buf
 		return BuffInfoPush{}
 	}
 	runtime.restoreExistingStatusEffect(actor.Handle, "回避提升")
-	dodgeIncrease := int(math.Round(float64(actor.Dog) * float64(fistMoveShadowDodgePercent) / 100))
+	dodgePercent := fistMoveShadowDodgePercent(runtime.roleSkillLevelForActor(actor.Handle, "移形换影", 1))
+	dodgeIncrease := int(math.Round(float64(actor.Dog) * float64(dodgePercent) / 100))
 	actor.Dog += dodgeIncrease
 	effect := BattleStatusEffect{
 		Name:          "回避提升",
@@ -5722,6 +5918,34 @@ func (runtime *Runtime) applyFistMoveShadowStatusEffect(actor *CellInfoPush) Buf
 	}
 	runtime.applyStatusEffect(actor.Handle, effect)
 	return runtime.resolveStatusBuffInfo(actor, actor, effect)
+}
+
+func fistInfluxGasPercents(level int) (int, int, int) {
+	switch level {
+	case 1:
+		return 40, 80, 10
+	case 2:
+		return 45, 85, 15
+	case 3:
+		return 50, 90, 20
+	case 4:
+		return 55, 95, 25
+	default:
+		return 60, 100, 30
+	}
+}
+
+func fistMoveShadowDodgePercent(level int) int {
+	switch level {
+	case 1:
+		return 30
+	case 2:
+		return 35
+	case 3:
+		return 40
+	default:
+		return 45
+	}
 }
 
 func (runtime *Runtime) applyKuangBao(handle string) {

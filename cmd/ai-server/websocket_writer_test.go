@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"ai-server/internal/protocol"
 	"ai-server/internal/world"
@@ -242,6 +243,59 @@ func TestClassicTownSourceMonsterReplayKeepsMap171PatrolContinuousAcrossLoops(t 
 	nextLoop := writer.prepareClassicTownSourceMonsterReplayMove(toLeft)
 	if nextLoop.X != 2027 || nextLoop.Y != 516 || nextLoop.TX != 942 || nextLoop.TY != 516 {
 		t.Fatalf("expected loop boundary to continue from previous target, got %+v", nextLoop)
+	}
+}
+
+func TestClassicTownSourceMonsterReplaySkipsZeroLengthStepsAndMatchesClientWalkSpeed(t *testing.T) {
+	// 客户端 CLASSIC_TOWN_WALK_SPEED = 130 / 25 * 30。
+	wantSpeed := 130.0 / 25.0 * 30.0
+	if classicTownSourceMonsterWalkSpeed != wantSpeed {
+		t.Fatalf("expected walk speed %.1f, got %.1f", wantSpeed, classicTownSourceMonsterWalkSpeed)
+	}
+
+	zero := world.RoleMovePush{Handle: "7893833328746190", Type: "Move", X: 942, Y: 516, TX: 942, TY: 516, MapID: "171"}
+	if classicTownSourceMonsterReplayDistance(zero) >= classicTownSourceMonsterMinStepDistance {
+		t.Fatalf("expected zero-length step distance below min, got %f", classicTownSourceMonsterReplayDistance(zero))
+	}
+
+	// 1085 像素腿不应再被 8s 上限截断。
+	longStep := world.RoleMovePush{Handle: "7893833328746190", Type: "Move", X: 942, Y: 516, TX: 2027, TY: 516, MapID: "171"}
+	delay := classicTownSourceMonsterReplayDelay(longStep)
+	wantDelay := time.Duration(1085.0/wantSpeed*float64(time.Second)) + classicTownSourceMonsterReplayMinDelay
+	if delay != wantDelay {
+		t.Fatalf("expected long-leg delay %s, got %s", wantDelay, delay)
+	}
+	if delay > 8*time.Second && classicTownSourceMonsterReplayMaxDelay <= 8*time.Second {
+		t.Fatal("max delay must allow full map171 long-leg travel time")
+	}
+}
+
+func TestClassicTownSourceMonsterLiveRolesStartReplayState(t *testing.T) {
+	writer := &websocketWriter{}
+	roles := []world.RolePush{
+		{
+			Handle:     "7893833328746190",
+			RoleID:     "-2",
+			Kind:       "monster",
+			MapID:      "171",
+			SpawnFlash: world.SpawnPoint{X: 1560, Y: 516},
+		},
+	}
+	// conn 为 nil 时不启动 goroutine，但仍应写入状态供后续 prepare 使用。
+	writer.startClassicTownSourceMonsterMoveReplayForRoles(roles)
+
+	step := world.RoleMovePush{Handle: "7893833328746190", Type: "Move", X: 1112, Y: 516, TX: 942, TY: 516, MapID: "171"}
+	first := writer.prepareClassicTownSourceMonsterReplayMove(step)
+	if first.X != 1560 || first.Y != 516 || first.TX != 942 || first.TY != 516 {
+		t.Fatalf("live createRole must seed source-monster state for continuous replay, got %+v", first)
+	}
+
+	writer.removeClassicTownSourceMonsterStates([]string{"7893833328746190"})
+	writer.sourceMonsterStateMu.Lock()
+	_, exists := writer.sourceMonsterStates["7893833328746190"]
+	writer.sourceMonsterStateMu.Unlock()
+	if exists {
+		t.Fatal("remove must clear live source-monster state")
 	}
 }
 

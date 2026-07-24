@@ -705,7 +705,8 @@ func TestCapturedSourceMonsterMoveReplayMap171PatrolRoutes(t *testing.T) {
 		{Handle: "7893833328746190", Type: "Move", X: 1112, Y: 516, Z: 0, TX: 942, TY: 516, TZ: 0, MapID: "171"},
 		{Handle: "7893833328746190", Type: "Move", X: 1096, Y: 516, Z: 0, TX: 2027, TY: 516, TZ: 0, MapID: "171"},
 		{Handle: "7895833328747103", Type: "Move", X: 1176, Y: 467, Z: 0, TX: 1978, TY: 463, TZ: 0, MapID: "171"},
-		{Handle: "7895833328747103", Type: "Move", X: 1893, Y: 463, Z: 0, TX: 1047, TY: 467, TZ: 0, MapID: "171"},
+		// 抓包目标 1047,467 不可走；回放端点改用同段最后可走采样 1318,464。
+		{Handle: "7895833328747103", Type: "Move", X: 1893, Y: 463, Z: 0, TX: 1318, TY: 464, TZ: 0, MapID: "171"},
 		{Handle: "7897833328748728", Type: "Move", X: 1863, Y: 600, Z: 0, TX: 1963, TY: 603, TZ: 0, MapID: "171"},
 		{Handle: "7897833328748728", Type: "Move", X: 1879, Y: 602, Z: 0, TX: 1115, TY: 591, TZ: 0, MapID: "171"},
 		{Handle: "7899833328749140", Type: "Move", X: 1965, Y: 533, Z: 0, TX: 1255, TY: 539, TZ: 0, MapID: "171"},
@@ -714,6 +715,16 @@ func TestCapturedSourceMonsterMoveReplayMap171PatrolRoutes(t *testing.T) {
 	for _, want := range wants {
 		if !hasMoveReplayStep(steps, want) {
 			t.Fatalf("expected map171 captured patrol route %+v, got %+v", want, steps)
+		}
+	}
+	// 每个 handle 只保留 2 个交替目标，循环拼接时不会出现零距离步。
+	byHandle := map[string]int{}
+	for _, step := range steps {
+		byHandle[step.Handle]++
+	}
+	for handle, count := range byHandle {
+		if count != 2 {
+			t.Fatalf("expected map171 handle %s to have exactly 2 alternating patrol steps, got %d", handle, count)
 		}
 	}
 }

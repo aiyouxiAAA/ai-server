@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 //go:embed captured_konglongkanglang1_role.json
@@ -63,8 +64,8 @@ func applyCapturedKonglongKanglang1Snapshot(role RoleSummary) RoleSummary {
 	role.Currencies = cloneRoleCurrencies(snapshot.Currencies)
 	role.ContainerCapacities = cloneRoleContainerCapacities(snapshot.Capacities)
 	role.Items = cloneRoleItems(snapshot.Items)
-	role.Skills = cloneRoleSkills(snapshot.Skills)
-	role.FastPanel = cloneRoleFastPanel(snapshot.FastPanel)
+	role.Skills = capturedKonglongKanglang1RoleSkills()
+	role.FastPanel = capturedKonglongKanglang1FastPanel()
 	role.TownBuffs = cloneRoleTownBuffs(snapshot.TownBuffs)
 	roleState := snapshot.State
 	roleState.Handle = role.RoleID
@@ -77,6 +78,34 @@ func applyCapturedKonglongKanglang1Snapshot(role RoleSummary) RoleSummary {
 
 func capturedKonglongKanglang1SourceQuery() string {
 	return capturedKonglongKanglang1Snapshot.Role.SourceQuery
+}
+
+func capturedKonglongKanglang1RoleSkills() []RoleSkill {
+	return cloneRoleSkills(capturedKonglongKanglang1Snapshot.Role.Skills)
+}
+
+// capturedKonglongKanglang1FastPanel keeps the capture-final single-sword panel and
+// places 强贯式 on free slot 7 so the learned skill is usable from the HUD without
+// overwriting captured slots 0..6 / 8 / 9.
+func capturedKonglongKanglang1FastPanel() []RoleFastPanelEntry {
+	entries := cloneRoleFastPanel(capturedKonglongKanglang1Snapshot.Role.FastPanel)
+	hasStrongPierce := false
+	for _, entry := range entries {
+		if entry.Type == "skill" && entry.Name == "强贯式" {
+			hasStrongPierce = true
+			break
+		}
+	}
+	if !hasStrongPierce {
+		entries = append(entries, RoleFastPanelEntry{Index: 7, Type: "skill", Name: "强贯式"})
+	}
+	return normalizeRoleFastPanel(entries)
+}
+
+func isCapturedKonglongKanglang1LocalRole(role RoleSummary) bool {
+	return strings.HasPrefix(role.RoleID, "acct-66666666-role-") ||
+		strings.HasPrefix(role.RoleID, "acct-666-role-") ||
+		role.DisplayName == "666"
 }
 
 // MigrateCapturedKonglongKanglang1Role replaces the requested local role with

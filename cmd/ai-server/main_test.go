@@ -4532,11 +4532,27 @@ func TestHandlePacketClassicTownCapturedWoodcutter777PushesFistSkills(t *testing
 		Seq:     3,
 		Payload: mustJSON(t, map[string]any{}),
 	}, socketSession)
-	if !fastPanelResult.handled || fastPanelResult.fastPanel == nil || len(fastPanelResult.fastPanel.Entries) != 3 ||
-		!fastPanelContains(fastPanelResult.fastPanel.Entries, 0, "skill", "普通攻击") ||
-		!fastPanelContains(fastPanelResult.fastPanel.Entries, 8, "item", "馒头") ||
-		!fastPanelContains(fastPanelResult.fastPanel.Entries, 9, "item", "小瓶甘露") {
-		t.Fatalf("expected 777 fast panel to keep only captured non-bow entries, got %+v", fastPanelResult.fastPanel)
+	if !fastPanelResult.handled || fastPanelResult.fastPanel == nil || len(fastPanelResult.fastPanel.Entries) != 9 {
+		t.Fatalf("expected captured final 777 fast panel, got %+v", fastPanelResult.fastPanel)
+	}
+	for _, expected := range []struct {
+		index     int
+		entryType string
+		name      string
+	}{
+		{0, "skill", "普通攻击"},
+		{1, "skill", "连击"},
+		{2, "skill", "气运丹田"},
+		{3, "skill", "破魂打"},
+		{4, "skill", "移形换影"},
+		{5, "skill", "重烈"},
+		{6, "skill", "奥义.修罗幻翼拳"},
+		{8, "item", "馒头"},
+		{9, "item", "小瓶甘露"},
+	} {
+		if !fastPanelContains(fastPanelResult.fastPanel.Entries, expected.index, expected.entryType, expected.name) {
+			t.Fatalf("expected captured final 777 fast panel slot %+v, got %+v", expected, fastPanelResult.fastPanel.Entries)
+		}
 	}
 }
 

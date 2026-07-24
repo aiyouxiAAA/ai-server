@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"math"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,20 +16,21 @@ import (
 )
 
 type websocketWriter struct {
-	conn                      *websocket.Conn
-	mu                        sync.Mutex
-	nextServerSeq             uint64
-	outboundStateMu           sync.Mutex
-	outboundQueue             chan websocketOutboundMessage
-	outboundStop              chan struct{}
-	outboundDone              chan struct{}
-	outboundClosed            bool
-	outboundCloseOnce         sync.Once
-	sourceMonsterReplayMu     sync.Mutex
-	sourceMonsterReplayCancel context.CancelFunc
-	sourceMonsterStateMu      sync.Mutex
-	sourceMonsterStates       map[string]classicTownSourceMonsterMoveState
-	sourceMonsterLastTargets  map[string]world.SpawnPoint
+	conn                       *websocket.Conn
+	mu                         sync.Mutex
+	nextServerSeq              uint64
+	outboundStateMu            sync.Mutex
+	outboundQueue              chan websocketOutboundMessage
+	outboundStop               chan struct{}
+	outboundDone               chan struct{}
+	outboundClosed             bool
+	outboundCloseOnce          sync.Once
+	sourceMonsterReplayMu      sync.Mutex
+	sourceMonsterReplayCancel  context.CancelFunc
+	sourceMonsterHandleCancels map[string]context.CancelFunc
+	sourceMonsterStateMu       sync.Mutex
+	sourceMonsterStates        map[string]classicTownSourceMonsterMoveState
+	sourceMonsterLastTargets   map[string]world.SpawnPoint
 }
 
 type websocketOutboundMessage struct {
@@ -42,13 +45,16 @@ type classicTownSourceMonsterMoveState struct {
 }
 
 const (
-	websocketWriterQueueCapacity               = 4096
+	websocketWriterQueueCapacity = 4096
+	// 与客户端 CLASSIC_TOWN_WALK_SPEED = BASE 130 / 25 * 30 对齐，避免服务端步间延时偏长导致下一段改写时客户端仍未到端点。
 	classicTownSourceMonsterReplayInitialDelay = 250 * time.Millisecond
-	classicTownSourceMonsterWalkSpeed          = 130.0
+	classicTownSourceMonsterWalkSpeed          = 130.0 / 25.0 * 30.0
 	classicTownSourceMonsterRunMultiplier      = 2.0
 	classicTownSourceMonsterReplayMinDelay     = 150 * time.Millisecond
-	classicTownSourceMonsterReplayMaxDelay     = 8 * time.Second
-	classicTownSourceMonsterChaseRadius        = 200.0
+	// 最长 map171 腿约 1085 像素 / 156 ≈ 7s；留余量避免被截断。
+	classicTownSourceMonsterReplayMaxDelay  = 12 * time.Second
+	classicTownSourceMonsterChaseRadius     = 200.0
+	classicTownSourceMonsterMinStepDistance = 1.0
 )
 
 var (
@@ -243,17 +249,114 @@ func (writer *websocketWriter) startClassicTownSourceMonsterMoveReplay(snapshot 
 	ctx, cancel := context.WithCancel(context.Background())
 	writer.sourceMonsterReplayMu.Lock()
 	writer.sourceMonsterReplayCancel = cancel
+	writer.sourceMonsterHandleCancels = make(map[string]context.CancelFunc)
 	writer.sourceMonsterReplayMu.Unlock()
 
 	go writer.replayClassicTownSourceMonsterMoves(ctx, steps, loop)
+}
+
+// startClassicTownSourceMonsterMoveReplayForRoles 给 live createRole（如百年虫精周期出现）补状态并启动对应 handle 的抓包回放。
+// 不会打断其它 handle 已在跑的回放；同 handle 若已在回放会先停再起。
+func (writer *websocketWriter) startClassicTownSourceMonsterMoveReplayForRoles(roles []world.RolePush) {
+	if len(roles) == 0 {
+		return
+	}
+
+	// 即使 writer.conn 尚未就绪，也先写入 spawn 状态，保证后续 prepare 从连续位置起步。
+	visible := make(map[string]world.RolePush, len(roles))
+	for _, role := range roles {
+		if role.Kind != "monster" || role.RoleID != "-2" || role.Handle == "" {
+			continue
+		}
+		visible[role.Handle] = role
+		writer.setClassicTownSourceMonsterPosition(role.Handle, role.MapID, role.SpawnFlash)
+	}
+	if len(visible) == 0 || writer.conn == nil {
+		return
+	}
+
+	mapIDs := make(map[int]bool)
+	for _, role := range visible {
+		mapID, err := strconv.Atoi(strings.TrimSpace(role.MapID))
+		if err != nil {
+			continue
+		}
+		mapIDs[mapID] = true
+	}
+
+	for mapID := range mapIDs {
+		steps := world.CapturedSourceMonsterMoveReplayForMap(mapID)
+		if len(steps) == 0 {
+			continue
+		}
+		loop := world.CapturedSourceMonsterMoveReplayLoopsForMap(mapID)
+		stepsByHandle := make(map[string][]world.RoleMovePush)
+		for _, step := range steps {
+			if _, ok := visible[step.Handle]; !ok {
+				continue
+			}
+			stepsByHandle[step.Handle] = append(stepsByHandle[step.Handle], step)
+		}
+		for handle, handleSteps := range stepsByHandle {
+			writer.startClassicTownSourceMonsterHandleReplay(handle, handleSteps, loop)
+		}
+	}
+}
+
+func (writer *websocketWriter) startClassicTownSourceMonsterHandleReplay(handle string, steps []world.RoleMovePush, loop bool) {
+	if handle == "" || len(steps) == 0 {
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	writer.sourceMonsterReplayMu.Lock()
+	if writer.sourceMonsterHandleCancels == nil {
+		writer.sourceMonsterHandleCancels = make(map[string]context.CancelFunc)
+	}
+	if prev := writer.sourceMonsterHandleCancels[handle]; prev != nil {
+		prev()
+	}
+	writer.sourceMonsterHandleCancels[handle] = cancel
+	writer.sourceMonsterReplayMu.Unlock()
+
+	go writer.replayClassicTownSourceMonsterHandleMoves(ctx, append([]world.RoleMovePush{}, steps...), loop)
 }
 
 func (writer *websocketWriter) stopClassicTownSourceMonsterMoveReplay() {
 	writer.sourceMonsterReplayMu.Lock()
 	cancel := writer.sourceMonsterReplayCancel
 	writer.sourceMonsterReplayCancel = nil
+	handleCancels := writer.sourceMonsterHandleCancels
+	writer.sourceMonsterHandleCancels = nil
 	writer.sourceMonsterReplayMu.Unlock()
 	if cancel != nil {
+		cancel()
+	}
+	for _, handleCancel := range handleCancels {
+		if handleCancel != nil {
+			handleCancel()
+		}
+	}
+}
+
+func (writer *websocketWriter) stopClassicTownSourceMonsterHandleReplays(handles []string) {
+	if len(handles) == 0 {
+		return
+	}
+	writer.sourceMonsterReplayMu.Lock()
+	cancels := make([]context.CancelFunc, 0, len(handles))
+	for _, handle := range handles {
+		handle = strings.TrimSpace(handle)
+		if handle == "" || writer.sourceMonsterHandleCancels == nil {
+			continue
+		}
+		if cancel := writer.sourceMonsterHandleCancels[handle]; cancel != nil {
+			cancels = append(cancels, cancel)
+			delete(writer.sourceMonsterHandleCancels, handle)
+		}
+	}
+	writer.sourceMonsterReplayMu.Unlock()
+	for _, cancel := range cancels {
 		cancel()
 	}
 }
@@ -274,7 +377,15 @@ func (writer *websocketWriter) replayClassicTownSourceMonsterMoves(ctx context.C
 
 	for _, handle := range handleOrder {
 		handleSteps := append([]world.RoleMovePush{}, stepsByHandle[handle]...)
-		go writer.replayClassicTownSourceMonsterHandleMoves(ctx, handleSteps, loop)
+		// 注册到 handle cancel 表，便于 live remove 时精确停掉。
+		writer.sourceMonsterReplayMu.Lock()
+		if writer.sourceMonsterHandleCancels == nil {
+			writer.sourceMonsterHandleCancels = make(map[string]context.CancelFunc)
+		}
+		handleCtx, handleCancel := context.WithCancel(ctx)
+		writer.sourceMonsterHandleCancels[handle] = handleCancel
+		writer.sourceMonsterReplayMu.Unlock()
+		go writer.replayClassicTownSourceMonsterHandleMoves(handleCtx, handleSteps, loop)
 	}
 }
 
@@ -285,8 +396,12 @@ func (writer *websocketWriter) replayClassicTownSourceMonsterHandleMoves(ctx con
 			if !classicTownSourceMonsterReplayableStep(step) {
 				continue
 			}
-			replayed = true
 			replayStep := writer.prepareClassicTownSourceMonsterReplayMove(step)
+			if classicTownSourceMonsterReplayDistance(replayStep) < classicTownSourceMonsterMinStepDistance {
+				// 循环拼接后可能出现 x/y 已等于 tx/ty 的零长度步，跳过避免原地停顿。
+				continue
+			}
+			replayed = true
 			if err := writer.writePush(cmdClassicTownMoveRolePush, encodePayload(replayStep)); err != nil {
 				log.Printf("[ai-server] write classic source monster moveRole replay failed: %v", err)
 				return
@@ -306,6 +421,12 @@ func classicTownSourceMonsterReplayableStep(step world.RoleMovePush) bool {
 	return step.Type != "Run"
 }
 
+func classicTownSourceMonsterReplayDistance(step world.RoleMovePush) float64 {
+	dx := float64(step.TX - step.X)
+	dy := float64(step.TY - step.Y)
+	return math.Sqrt(dx*dx + dy*dy)
+}
+
 func classicTownSourceMonsterReplayDelay(step world.RoleMovePush) time.Duration {
 	if step.Type == "Flash" {
 		return classicTownSourceMonsterReplayMinDelay
@@ -319,9 +440,7 @@ func classicTownSourceMonsterReplayDelay(step world.RoleMovePush) time.Duration 
 		return classicTownSourceMonsterReplayMinDelay
 	}
 
-	dx := float64(step.TX - step.X)
-	dy := float64(step.TY - step.Y)
-	distance := math.Sqrt(dx*dx + dy*dy)
+	distance := classicTownSourceMonsterReplayDistance(step)
 	delay := time.Duration(distance/speed*float64(time.Second)) + classicTownSourceMonsterReplayMinDelay
 	if delay < classicTownSourceMonsterReplayMinDelay {
 		return classicTownSourceMonsterReplayMinDelay
@@ -393,6 +512,7 @@ func (writer *websocketWriter) removeClassicTownSourceMonsterStates(handles []st
 		return
 	}
 
+	writer.stopClassicTownSourceMonsterHandleReplays(handles)
 	writer.sourceMonsterStateMu.Lock()
 	defer writer.sourceMonsterStateMu.Unlock()
 	for _, handle := range handles {

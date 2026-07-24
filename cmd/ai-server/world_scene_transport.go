@@ -637,8 +637,24 @@ func (hub *worldSceneConnectionHub) staticCreateRoleActions(mapID int, roles []w
 }
 
 // broadcastStaticCreateRolesToMap 给某 map 上所有在线玩家推送静态明怪 createRole。
+// 同时为每个在线连接补 source-monster 状态并启动抓包 moveRole 回放，避免 live 出现后站桩。
 func (hub *worldSceneConnectionHub) broadcastStaticCreateRolesToMap(mapID int, roles []world.RolePush) {
 	writeWorldSceneActions(hub.staticCreateRoleActions(mapID, roles))
+	if hub == nil || len(roles) == 0 {
+		return
+	}
+	hub.mu.Lock()
+	writers := make([]*websocketWriter, 0, len(hub.connections))
+	for _, conn := range hub.connections {
+		if conn.mapID != mapID || conn.writer == nil {
+			continue
+		}
+		writers = append(writers, conn.writer)
+	}
+	hub.mu.Unlock()
+	for _, writer := range writers {
+		writer.startClassicTownSourceMonsterMoveReplayForRoles(roles)
+	}
 }
 
 // staticRemoveHandleActions 构造给某 map 上所有在线玩家的静态明怪 removeRole actions。
@@ -669,8 +685,24 @@ func (hub *worldSceneConnectionHub) staticRemoveHandleActions(mapID int, handles
 }
 
 // broadcastStaticRemoveHandlesToMap 给某 map 上所有在线玩家推送静态明怪 removeRole。
+// 同时停掉对应 handle 的回放并清状态，避免下一轮 live spawn 复用脏位置。
 func (hub *worldSceneConnectionHub) broadcastStaticRemoveHandlesToMap(mapID int, handles []string) {
 	writeWorldSceneActions(hub.staticRemoveHandleActions(mapID, handles))
+	if hub == nil || len(handles) == 0 {
+		return
+	}
+	hub.mu.Lock()
+	writers := make([]*websocketWriter, 0, len(hub.connections))
+	for _, conn := range hub.connections {
+		if conn.mapID != mapID || conn.writer == nil {
+			continue
+		}
+		writers = append(writers, conn.writer)
+	}
+	hub.mu.Unlock()
+	for _, writer := range writers {
+		writer.removeClassicTownSourceMonsterStates(handles)
+	}
 }
 
 

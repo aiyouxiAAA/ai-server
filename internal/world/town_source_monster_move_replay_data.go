@@ -1489,11 +1489,13 @@ var capturedSourceMonsterMoveReplayByMapID = map[int][]RoleMovePush{
 		{Handle: "7546622260836700", Type: "Run", X: 2061, Y: 459, Z: 0, TX: 2010, TY: 457, TZ: 0},
 		{Handle: "7548622260837633", Type: "Run", X: 2066, Y: 453, Z: 0, TX: 2010, TY: 457, TZ: 0},
 	},
+	// map171 百年虫精活动明怪：每个 handle 只保留两个交替目标，避免 3 段压缩在循环边界拼出零距离步。
+	// 游侠民兵抓包目标 (1047,467) 落在 map171 collision 不可走格；用同段最后可走采样 (1318,464) 作端点。
 	171: {
 		{Handle: "7893833328746190", Type: "Move", X: 1112, Y: 516, Z: 0, TX: 942, TY: 516, TZ: 0},
 		{Handle: "7893833328746190", Type: "Move", X: 1096, Y: 516, Z: 0, TX: 2027, TY: 516, TZ: 0},
 		{Handle: "7895833328747103", Type: "Move", X: 1176, Y: 467, Z: 0, TX: 1978, TY: 463, TZ: 0},
-		{Handle: "7895833328747103", Type: "Move", X: 1893, Y: 463, Z: 0, TX: 1047, TY: 467, TZ: 0},
+		{Handle: "7895833328747103", Type: "Move", X: 1893, Y: 463, Z: 0, TX: 1318, TY: 464, TZ: 0},
 		{Handle: "7897833328748728", Type: "Move", X: 1863, Y: 600, Z: 0, TX: 1963, TY: 603, TZ: 0},
 		{Handle: "7897833328748728", Type: "Move", X: 1879, Y: 602, Z: 0, TX: 1115, TY: 591, TZ: 0},
 		{Handle: "7899833328749140", Type: "Move", X: 1965, Y: 533, Z: 0, TX: 1255, TY: 539, TZ: 0},

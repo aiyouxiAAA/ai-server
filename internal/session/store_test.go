@@ -575,9 +575,16 @@ func TestStoreCapturedWoodcutter777UsesCurrentFullEquipment(t *testing.T) {
 		}
 	}
 	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, createResponse.Role.RoleID)
-	if !ok || len(fastPanel) != 3 || fastPanel[0].Index != 0 || fastPanel[0].Name != "普通攻击" ||
-		fastPanel[1].Index != 8 || fastPanel[1].Name != "馒头" || fastPanel[2].Index != 9 || fastPanel[2].Name != "小瓶甘露" {
-		t.Fatalf("expected 777 to retain only captured non-bow fast-panel entries, ok=%v fastPanel=%+v", ok, fastPanel)
+	if !ok || len(fastPanel) != 9 {
+		t.Fatalf("expected complete 777 fist fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
+	}
+	expectedFastPanel := map[int]string{
+		0: "普通攻击", 1: "连击", 2: "气运丹田", 3: "破魂打", 4: "移形换影", 5: "重烈", 6: "奥义.修罗幻翼拳", 8: "馒头", 9: "小瓶甘露",
+	}
+	for _, entry := range fastPanel {
+		if expectedName, found := expectedFastPanel[entry.Index]; !found || entry.Name != expectedName {
+			t.Fatalf("expected 777 fist fast panel %+v, got %+v", expectedFastPanel, fastPanel)
+		}
 	}
 	for _, part := range []string{"w5=64", "c=61", "p=63", "se=49", "hr=12"} {
 		if !strings.Contains(role.SourceQuery, part) || !strings.Contains(playerBase.BattleSourceQuery, part) {
@@ -598,6 +605,36 @@ func TestStoreCapturedWoodcutter777UsesCurrentFullEquipment(t *testing.T) {
 		if expectedName, found := expectedByIndex[item.Index]; !found || item.Name != expectedName {
 			t.Fatalf("expected full captured 777 equipment %+v, got %+v", expectedByIndex, equipment)
 		}
+	}
+	bagItems, bagCapacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+	if !ok || bagCapacity != 42 || len(bagItems) != 38 {
+		t.Fatalf("expected full captured 777 bag, ok=%v capacity=%d items=%+v", ok, bagCapacity, bagItems)
+	}
+	bagByIndex := map[int]RoleItem{}
+	for _, item := range bagItems {
+		bagByIndex[item.Index] = item
+	}
+	for _, expected := range []struct {
+		index int
+		name  string
+		count int
+	}{
+		{index: 2, name: "传送晶体", count: 1},
+		{index: 10, name: "小瓶甘露", count: 49},
+		{index: 19, name: "小包还元散", count: 62},
+		{index: 21, name: "穿甲箭", count: 6851},
+		{index: 25, name: "L小喇叭", count: 1165},
+		{index: 30, name: "宠物用营养水", count: 366},
+		{index: 38, name: "盗贼护臂", count: 1},
+	} {
+		item, found := bagByIndex[expected.index]
+		if !found || item.Name != expected.name || item.Count != expected.count {
+			t.Fatalf("expected captured 777 bag index %d to be %s x%d, got %+v", expected.index, expected.name, expected.count, item)
+		}
+	}
+	currencies, ok := store.GetRoleCurrencies(login.PlayerID, createResponse.Role.RoleID)
+	if !ok || currencies["银元宝"] != 189 || currencies["铜钱"] != 1278 || len(currencies) != 2 {
+		t.Fatalf("expected captured 777 currencies, ok=%v currencies=%+v", ok, currencies)
 	}
 }
 
@@ -626,10 +663,26 @@ func TestStorePersistentCapturedWoodcutter777ReplacesLegacyBowSkills(t *testing.
 	if err != nil {
 		t.Fatalf("encode legacy bow fast panel: %v", err)
 	}
+	legacyItems := append(capturedWoodcutter777EquipmentItems(), capturedWoodcutter777BagItems()...)
+	for index := range legacyItems {
+		if legacyItems[index].Type == "背包" && legacyItems[index].Name == "银元宝" && legacyItems[index].Index == 0 {
+			legacyItems[index].Count = defaultSilver
+		}
+	}
+	legacyItemsJSON, err := encodeRoleItems(legacyItems)
+	if err != nil {
+		t.Fatalf("encode stale 777 bag: %v", err)
+	}
+	capturedCurrenciesJSON, err := encodeRoleCurrencies(capturedWoodcutter777Currencies())
+	if err != nil {
+		t.Fatalf("encode captured 777 currencies: %v", err)
+	}
 	if _, err := firstStore.db.Exec(
-		`UPDATE roles SET skills_json = ?, fast_panel_json = ? WHERE role_id = ? AND player_id = ?`,
+		`UPDATE roles SET skills_json = ?, fast_panel_json = ?, items_json = ?, currencies_json = ? WHERE role_id = ? AND player_id = ?`,
 		legacySkillsJSON,
 		legacyFastPanelJSON,
+		legacyItemsJSON,
+		capturedCurrenciesJSON,
 		created.Role.RoleID,
 		login.PlayerID,
 	); err != nil {
@@ -651,9 +704,12 @@ func TestStorePersistentCapturedWoodcutter777ReplacesLegacyBowSkills(t *testing.
 		t.Fatalf("expected persistent 777 fist snapshot after legacy bow migration, ok=%v skills=%+v", ok, skills)
 	}
 	fastPanel, ok := reopened.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
-	if !ok || len(fastPanel) != 3 || fastPanel[0].Name != "普通攻击" ||
-		fastPanel[1].Name != "馒头" || fastPanel[2].Name != "小瓶甘露" {
-		t.Fatalf("expected persistent 777 fast panel to clear legacy bow entries, ok=%v fastPanel=%+v", ok, fastPanel)
+	if !ok || len(fastPanel) != 9 || fastPanel[0].Name != "普通攻击" ||
+		fastPanel[1].Name != "连击" || fastPanel[2].Name != "气运丹田" ||
+		fastPanel[3].Name != "破魂打" || fastPanel[4].Name != "移形换影" ||
+		fastPanel[5].Name != "重烈" || fastPanel[6].Name != "奥义.修罗幻翼拳" ||
+		fastPanel[7].Name != "馒头" || fastPanel[8].Name != "小瓶甘露" {
+		t.Fatalf("expected persistent 777 fist fast panel, ok=%v fastPanel=%+v", ok, fastPanel)
 	}
 	var persistedFastPanelJSON string
 	if err := reopened.db.QueryRow(
@@ -664,11 +720,34 @@ func TestStorePersistentCapturedWoodcutter777ReplacesLegacyBowSkills(t *testing.
 		t.Fatalf("read persisted 777 fast panel: %v", err)
 	}
 	persistedFastPanel, err := decodeRoleFastPanel(persistedFastPanelJSON)
-	if err != nil || len(persistedFastPanel) != 3 ||
+	if err != nil || len(persistedFastPanel) != 9 ||
 		persistedFastPanel[0].Name != "普通攻击" ||
-		persistedFastPanel[1].Name != "馒头" ||
-		persistedFastPanel[2].Name != "小瓶甘露" {
-		t.Fatalf("expected SQLite to persist cleared 777 fast panel, err=%v fastPanel=%+v", err, persistedFastPanel)
+		persistedFastPanel[1].Name != "连击" ||
+		persistedFastPanel[6].Name != "奥义.修罗幻翼拳" ||
+		persistedFastPanel[7].Name != "馒头" ||
+		persistedFastPanel[8].Name != "小瓶甘露" {
+		t.Fatalf("expected SQLite to persist 777 fist fast panel, err=%v fastPanel=%+v", err, persistedFastPanel)
+	}
+	bagItems, _, ok := reopened.GetRoleItems(login.PlayerID, created.Role.RoleID, "背包")
+	if !ok || len(bagItems) != 38 {
+		t.Fatalf("expected persistent captured 777 bag replacement, ok=%v items=%+v", ok, bagItems)
+	}
+	for _, legacyArrowName := range []string{"暗之箭", "毒箭", "火之箭", "冰之箭", "魔箭"} {
+		if _, found := testRoleItemByName(bagItems, legacyArrowName); found {
+			t.Fatalf("expected persistent 777 bag to remove legacy %s, items=%+v", legacyArrowName, bagItems)
+		}
+	}
+	teleportCrystal, found := testRoleItemByName(bagItems, "传送晶体")
+	if !found || teleportCrystal.Index != 2 || teleportCrystal.Count != 1 {
+		t.Fatalf("expected persistent 777 captured teleport crystal, found=%t item=%+v", found, teleportCrystal)
+	}
+	silver, found := testRoleItemByName(bagItems, "银元宝")
+	if !found || silver.Index != 0 || silver.Count != 189 {
+		t.Fatalf("expected persistent 777 captured silver stack, found=%t item=%+v", found, silver)
+	}
+	currencies, ok := reopened.GetRoleCurrencies(login.PlayerID, created.Role.RoleID)
+	if !ok || currencies["银元宝"] != 189 || currencies["铜钱"] != 1278 || len(currencies) != 2 {
+		t.Fatalf("expected persistent 777 captured currencies, ok=%v currencies=%+v", ok, currencies)
 	}
 }
 

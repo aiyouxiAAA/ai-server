@@ -17,14 +17,16 @@ import (
 var battleConfigFiles embed.FS
 
 type sourceWildEnemyConfig struct {
-	Cell             CellInfoPush
-	AttackMin        int
-	AttackMax        int
-	QueueIndexTeam   int
-	QueueIndexEnemy  int
-	Vocation         string
-	Source           string
-	EncounterHandles []string
+	Cell                CellInfoPush
+	AttackMin           int
+	AttackMax           int
+	SweepSpearAttackMin int
+	SweepSpearAttackMax int
+	QueueIndexTeam      int
+	QueueIndexEnemy     int
+	Vocation            string
+	Source              string
+	EncounterHandles    []string
 }
 
 type sourceWildEncounterConfig struct {
@@ -290,13 +292,15 @@ func sourceWildEnemyConfigFromClassicDataRow(row map[string]string, rowIndex int
 			CommandLabel:      requiredClassicDataString(row, "monster", "command_label", rowIndex),
 			DamageDefenseType: defaultString(classicDataOptionalString(row, "damage_defense_type"), "physical"),
 		},
-		AttackMin:        classicDataOptionalInt(row, "attack_min"),
-		AttackMax:        classicDataOptionalInt(row, "attack_max"),
-		QueueIndexTeam:   requiredClassicDataInt(row, "monster", "queue_index_team", rowIndex),
-		QueueIndexEnemy:  requiredClassicDataInt(row, "monster", "queue_index_enemy", rowIndex),
-		Vocation:         requiredClassicDataString(row, "monster", "vocation", rowIndex),
-		Source:           classicDataOptionalString(row, "source"),
-		EncounterHandles: splitBattleConfigList(classicDataOptionalString(row, "encounter_handles")),
+		AttackMin:           classicDataOptionalInt(row, "attack_min"),
+		AttackMax:           classicDataOptionalInt(row, "attack_max"),
+		SweepSpearAttackMin: classicDataOptionalInt(row, "sweepspear_attack_min"),
+		SweepSpearAttackMax: classicDataOptionalInt(row, "sweepspear_attack_max"),
+		QueueIndexTeam:      requiredClassicDataInt(row, "monster", "queue_index_team", rowIndex),
+		QueueIndexEnemy:     requiredClassicDataInt(row, "monster", "queue_index_enemy", rowIndex),
+		Vocation:            requiredClassicDataString(row, "monster", "vocation", rowIndex),
+		Source:              classicDataOptionalString(row, "source"),
+		EncounterHandles:    splitBattleConfigList(classicDataOptionalString(row, "encounter_handles")),
 	}
 }
 
@@ -327,13 +331,15 @@ func sourceWildEnemyConfigFromRow(row []string, header map[string]int, rowIndex 
 			CommandLabel:      requiredBattleConfigString(row, header, "command_label", rowIndex),
 			DamageDefenseType: defaultString(optionalBattleConfigString(row, header, "damage_defense_type"), "physical"),
 		},
-		AttackMin:        optionalBattleConfigInt(row, header, "attack_min"),
-		AttackMax:        optionalBattleConfigInt(row, header, "attack_max"),
-		QueueIndexTeam:   requiredBattleConfigInt(row, header, "queue_index_team", rowIndex),
-		QueueIndexEnemy:  requiredBattleConfigInt(row, header, "queue_index_enemy", rowIndex),
-		Vocation:         requiredBattleConfigString(row, header, "vocation", rowIndex),
-		Source:           optionalBattleConfigString(row, header, "source"),
-		EncounterHandles: splitBattleConfigList(optionalBattleConfigString(row, header, "encounter_handles")),
+		AttackMin:           optionalBattleConfigInt(row, header, "attack_min"),
+		AttackMax:           optionalBattleConfigInt(row, header, "attack_max"),
+		SweepSpearAttackMin: optionalBattleConfigInt(row, header, "sweepspear_attack_min"),
+		SweepSpearAttackMax: optionalBattleConfigInt(row, header, "sweepspear_attack_max"),
+		QueueIndexTeam:      requiredBattleConfigInt(row, header, "queue_index_team", rowIndex),
+		QueueIndexEnemy:     requiredBattleConfigInt(row, header, "queue_index_enemy", rowIndex),
+		Vocation:            requiredBattleConfigString(row, header, "vocation", rowIndex),
+		Source:              optionalBattleConfigString(row, header, "source"),
+		EncounterHandles:    splitBattleConfigList(optionalBattleConfigString(row, header, "encounter_handles")),
 	}
 }
 

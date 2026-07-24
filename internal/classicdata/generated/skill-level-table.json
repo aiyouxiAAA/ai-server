@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill-level",
   "source": "internal/classicdata/source/skill-level-table.csv",
-  "rowCount": 84,
+  "rowCount": 93,
   "rows": [
     {
       "skill_level_id": "skill-normal-attack-lv1",
@@ -445,6 +445,39 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-chi-yan-mo-zhou-lv3",
+      "skill_id": "skill-chi-yan-mo-zhou",
+      "level": "3",
+      "source_action_label": "w10/bombFire",
+      "damage_multiplier": "0.9",
+      "mp_cost": "75",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-chi-yan-mo-zhou-lv4",
+      "skill_id": "skill-chi-yan-mo-zhou",
+      "level": "4",
+      "source_action_label": "w10/bombFire",
+      "damage_multiplier": "0.95",
+      "mp_cost": "85",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-chi-yan-mo-zhou-lv5",
+      "skill_id": "skill-chi-yan-mo-zhou",
+      "level": "5",
+      "source_action_label": "w10/bombFire",
+      "damage_multiplier": "1",
+      "mp_cost": "95",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
       "skill_level_id": "skill-lei-ji-lv3",
       "skill_id": "skill-lei-ji",
       "level": "3",
@@ -456,11 +489,33 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-lei-ji-lv4",
+      "skill_id": "skill-lei-ji",
+      "level": "4",
+      "source_action_label": "w10/thunderMagicAtk",
+      "damage_multiplier": "1.25",
+      "mp_cost": "85",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-lei-ji-lv5",
+      "skill_id": "skill-lei-ji",
+      "level": "5",
+      "source_action_label": "w10/thunderMagicAtk",
+      "damage_multiplier": "1.3",
+      "mp_cost": "95",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
       "skill_level_id": "skill-lei-bao-zhou-lv1",
       "skill_id": "skill-lei-bao-zhou",
       "level": "1",
       "source_action_label": "w10/thunderBombs",
-      "damage_multiplier": "1.82",
+      "damage_multiplier": "0.82",
       "mp_cost": "70",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
@@ -471,7 +526,7 @@
       "skill_id": "skill-lei-bao-zhou",
       "level": "2",
       "source_action_label": "w10/thunderBombs",
-      "damage_multiplier": "1.84",
+      "damage_multiplier": "0.84",
       "mp_cost": "80",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
@@ -482,7 +537,7 @@
       "skill_id": "skill-lei-bao-zhou",
       "level": "3",
       "source_action_label": "w10/thunderBombs",
-      "damage_multiplier": "1.86",
+      "damage_multiplier": "0.86",
       "mp_cost": "90",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
@@ -493,8 +548,19 @@
       "skill_id": "skill-lei-bao-zhou",
       "level": "4",
       "source_action_label": "w10/thunderBombs",
-      "damage_multiplier": "1.88",
+      "damage_multiplier": "0.88",
       "mp_cost": "100",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-lei-bao-zhou-lv5",
+      "skill_id": "skill-lei-bao-zhou",
+      "level": "5",
+      "source_action_label": "w10/thunderBombs",
+      "damage_multiplier": "0.9",
+      "mp_cost": "110",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
       "direct_attack_bonus_multiplier": "0"
@@ -517,6 +583,39 @@
       "source_action_label": "w10/magicObstacle",
       "damage_multiplier": "0",
       "mp_cost": "90",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-mo-zhang-shu-lv3",
+      "skill_id": "skill-mo-zhang-shu",
+      "level": "3",
+      "source_action_label": "w10/magicObstacle",
+      "damage_multiplier": "0",
+      "mp_cost": "110",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-mo-zhang-shu-lv4",
+      "skill_id": "skill-mo-zhang-shu",
+      "level": "4",
+      "source_action_label": "w10/magicObstacle",
+      "damage_multiplier": "0",
+      "mp_cost": "130",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-mo-zhang-shu-lv5",
+      "skill_id": "skill-mo-zhang-shu",
+      "level": "5",
+      "source_action_label": "w10/magicObstacle",
+      "damage_multiplier": "0",
+      "mp_cost": "150",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
       "direct_attack_bonus_multiplier": "0"
@@ -900,7 +999,7 @@
       "skill_id": "skill-fist-break-soul",
       "level": "5",
       "source_action_label": "w5/breakSoul",
-      "damage_multiplier": "0.8",
+      "damage_multiplier": "1.5",
       "mp_cost": "36",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",

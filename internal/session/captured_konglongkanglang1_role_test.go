@@ -108,7 +108,15 @@ func TestPersistentCapturedKonglongKanglang1MigrationKeepsFinalSnapshot(t *testi
 		}
 	}
 	fastPanel, ok := reopened.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
-	if !ok || len(fastPanel) != 9 || fastPanel[1].Name != "卷叶式" || fastPanel[2].Name != "挑衅" || fastPanel[6].Name != "奥义.飘血" || fastPanel[7].Index != 8 || fastPanel[8].Name != "小瓶甘露" {
+	if !ok || len(fastPanel) != 10 ||
+		fastPanel[1].Name != "卷叶式" ||
+		fastPanel[2].Name != "挑衅" ||
+		fastPanel[6].Name != "奥义.飘血" ||
+		fastPanel[7].Index != 7 ||
+		fastPanel[7].Name != "强贯式" ||
+		fastPanel[8].Index != 8 ||
+		fastPanel[8].Name != "馒头" ||
+		fastPanel[9].Name != "小瓶甘露" {
 		t.Fatalf("unexpected captured fast panel: %+v", fastPanel)
 	}
 	for _, container := range []struct {

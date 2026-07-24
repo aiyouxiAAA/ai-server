@@ -1030,6 +1030,12 @@ func capturedWoodcutter777RoleSkills() []RoleSkill {
 func capturedWoodcutter777FastPanel() []RoleFastPanelEntry {
 	return []RoleFastPanelEntry{
 		{Index: 0, Type: "skill", Name: "普通攻击"},
+		{Index: 1, Type: "skill", Name: "连击"},
+		{Index: 2, Type: "skill", Name: "气运丹田"},
+		{Index: 3, Type: "skill", Name: "破魂打"},
+		{Index: 4, Type: "skill", Name: "移形换影"},
+		{Index: 5, Type: "skill", Name: "重烈"},
+		{Index: 6, Type: "skill", Name: "奥义.修罗幻翼拳"},
 		{Index: 8, Type: "item", Name: "馒头"},
 		{Index: 9, Type: "item", Name: "小瓶甘露"},
 	}
@@ -1424,6 +1430,12 @@ type capturedRoleEquipmentSpec struct {
 	index int
 }
 
+type capturedRoleBagItemSpec struct {
+	name  string
+	count int
+	index int
+}
+
 func capturedWoodcutter333EquipmentItems() []RoleItem {
 	return capturedRoleEquipmentItems([]capturedRoleEquipmentSpec{
 		{name: "黄风围巾", index: 0},
@@ -1459,6 +1471,76 @@ func capturedWoodcutter777EquipmentItems() []RoleItem {
 	})
 }
 
+func capturedWoodcutter777BagItems() []RoleItem {
+	specs := []capturedRoleBagItemSpec{
+		{name: "银元宝", count: 189, index: 0},
+		{name: "铜钱", count: 1000, index: 1},
+		{name: "传送晶体", count: 1, index: 2},
+		{name: "L进阶经验卡", count: 1, index: 3},
+		{name: "回城咒", count: 10, index: 4},
+		{name: "精炼宝石", count: 3, index: 5},
+		{name: "石块", count: 59, index: 6},
+		{name: "肉", count: 84, index: 7},
+		{name: "肉", count: 99, index: 8},
+		{name: "天眼符", count: 14, index: 9},
+		{name: "小瓶甘露", count: 49, index: 10},
+		{name: "兽血", count: 99, index: 11},
+		{name: "兽骨", count: 99, index: 12},
+		{name: "兽血", count: 99, index: 13},
+		{name: "碎铁矿", count: 69, index: 14},
+		{name: "羽", count: 49, index: 15},
+		{name: "木材", count: 60, index: 16},
+		{name: "小瓶甘露", count: 25, index: 17},
+		{name: "馒头", count: 93, index: 18},
+		{name: "小包还元散", count: 62, index: 19},
+		{name: "毛皮", count: 70, index: 20},
+		{name: "穿甲箭", count: 6851, index: 21},
+		{name: "头骨", count: 49, index: 22},
+		{name: "兽牙", count: 49, index: 23},
+		{name: "裘皮", count: 1, index: 24},
+		{name: "L小喇叭", count: 1165, index: 25},
+		{name: "馒头", count: 99, index: 26},
+		{name: "馒头", count: 53, index: 27},
+		{name: "包子", count: 69, index: 28},
+		{name: "阴阳结", count: 1, index: 29},
+		{name: "宠物用营养水", count: 366, index: 30},
+		{name: "红方巾", count: 5, index: 31},
+		{name: "狼牙棒", count: 1, index: 32},
+		{name: "狼兽的头", count: 2, index: 33},
+		{name: "盗贼的首级", count: 21, index: 34},
+		{name: "铜钱", count: 278, index: 35},
+		{name: "狮虎窟通行证", count: 1, index: 37},
+		{name: "盗贼护臂", count: 1, index: 38},
+	}
+	items := make([]RoleItem, 0, len(specs))
+	for _, spec := range specs {
+		item, ok := CapturedRoleItemTemplate(spec.name)
+		if !ok {
+			panic(fmt.Sprintf("missing captured 777 bag item template: %s", spec.name))
+		}
+		item.Type = "背包"
+		item.Count = spec.count
+		item.Index = spec.index
+		items = append(items, item)
+	}
+	return normalizeRoleItems(items)
+}
+
+func capturedWoodcutter777Currencies() RoleCurrencies {
+	return RoleCurrencies{
+		"银元宝": 189,
+		"铜钱":  1278,
+	}
+}
+
+func syncCapturedWoodcutter777Currencies(currencies RoleCurrencies) RoleCurrencies {
+	normalized := normalizeRoleCurrencies(currencies)
+	if normalized["银元宝"] == defaultSilver && normalized["铜钱"] == defaultCopper {
+		return capturedWoodcutter777Currencies()
+	}
+	return normalized
+}
+
 func syncCapturedWoodcutter777EquipmentItems(items []RoleItem) []RoleItem {
 	normalized := normalizeRoleItems(items)
 	if !shouldSyncCapturedWoodcutter777EquipmentItems(normalized) {
@@ -1478,6 +1560,44 @@ func syncCapturedWoodcutter777EquipmentItems(items []RoleItem) []RoleItem {
 		}
 	}
 	return normalizeRoleItems(normalized)
+}
+
+func syncCapturedWoodcutter777BagItems(items []RoleItem, currencies RoleCurrencies) []RoleItem {
+	normalized := normalizeRoleItems(items)
+	if !shouldSyncCapturedWoodcutter777BagItems(normalized, currencies) {
+		return normalized
+	}
+	result := make([]RoleItem, 0, len(normalized)+len(capturedWoodcutter777BagItems()))
+	for _, item := range normalized {
+		if item.Type != "背包" {
+			result = append(result, item)
+		}
+	}
+	result = append(result, capturedWoodcutter777BagItems()...)
+	return normalizeRoleItems(result)
+}
+
+func shouldSyncCapturedWoodcutter777BagItems(items []RoleItem, currencies RoleCurrencies) bool {
+	hasLegacyArrow := false
+	hasCapturedTeleportCrystal := false
+	hasStaleDefaultSilverSlot := false
+	for _, item := range items {
+		if item.Type != "背包" {
+			continue
+		}
+		if item.Name == "传送晶体" && item.Index == 2 {
+			hasCapturedTeleportCrystal = true
+		}
+		if item.Name == "银元宝" && item.Index == 0 && item.Count == defaultSilver {
+			hasStaleDefaultSilverSlot = true
+		}
+		switch item.Name {
+		case "暗之箭", "毒箭", "火之箭", "冰之箭", "魔箭":
+			hasLegacyArrow = true
+		}
+	}
+	return hasLegacyArrow || !hasCapturedTeleportCrystal ||
+		(currencies["银元宝"] == 189 && currencies["铜钱"] == 1278 && hasStaleDefaultSilverSlot)
 }
 
 func shouldSyncCapturedWoodcutter777EquipmentItems(items []RoleItem) bool {
@@ -2244,7 +2364,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	isWoodcutter333 := isCapturedWoodcutter333LocalRole(role)
 	isWoodcutter777 := isCapturedWoodcutter777LocalRole(role)
 	isWarrior444 := isCapturedWarrior444LocalRole(role)
-	isKonglongKanglang1 := strings.HasPrefix(role.RoleID, "acct-66666666-role-")
+	isKonglongKanglang1 := isCapturedKonglongKanglang1LocalRole(role)
 	if isWoodcutter333 {
 		role = withCapturedWoodcutter333RuntimeDefaults(role)
 	}
@@ -2260,6 +2380,8 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.Skills = capturedWoodcutter777RoleSkills()
 	} else if isWoodcutter333 {
 		role.Skills = capturedWoodcutter333RoleSkills()
+	} else if isKonglongKanglang1 {
+		role.Skills = capturedKonglongKanglang1RoleSkills()
 	} else if isWoodcutter222 {
 		role.Voc = "游侠"
 		role.Skills = capturedWoodcutterRoleSkills()
@@ -2274,6 +2396,8 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.FastPanel = syncCapturedWoodcutter777FastPanel(role.FastPanel)
 	} else if isWoodcutter333 {
 		role.FastPanel = capturedWoodcutter333FastPanel()
+	} else if isKonglongKanglang1 {
+		role.FastPanel = capturedKonglongKanglang1FastPanel()
 	} else if isWoodcutter222 {
 		role.FastPanel = capturedWoodcutterFastPanel()
 	} else if len(role.FastPanel) == 0 {
@@ -2288,13 +2412,16 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.Currencies = normalizeRoleCurrencies(role.Currencies)
 	}
+	if isWoodcutter777 {
+		role.Currencies = syncCapturedWoodcutter777Currencies(role.Currencies)
+	}
 	if isWoodcutter222 {
 		role.Items = syncCapturedWoodcutterEquipmentItems(role.Items)
 	} else if len(role.Items) == 0 {
 		if isWoodcutter333 {
 			role.Items = syncCapturedWoodcutter333BattleConsumables(capturedWoodcutter333EquipmentItems())
 		} else if isWoodcutter777 {
-			role.Items = syncCapturedWoodcutter333BattleConsumables(capturedWoodcutter777EquipmentItems())
+			role.Items = append(capturedWoodcutter777EquipmentItems(), capturedWoodcutter777BagItems()...)
 		} else if isWarrior444 {
 			role.Items = capturedWarrior444EquipmentItems()
 		} else {
@@ -2309,7 +2436,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	}
 	if isWoodcutter777 {
 		role.Items = syncCapturedWoodcutter777EquipmentItems(role.Items)
-		role.Items = syncCapturedWoodcutter333BattleConsumables(role.Items)
+		role.Items = syncCapturedWoodcutter777BagItems(role.Items, role.Currencies)
 	}
 	if isWarrior444 {
 		role.Items = syncCapturedWarrior444EquipmentItems(role.Items)

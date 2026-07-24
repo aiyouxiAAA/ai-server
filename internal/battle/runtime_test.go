@@ -3,6 +3,7 @@ package battle
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -979,11 +980,8 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected map49 wild enemy config")
 	}
-	if enemy.Cell.Name != "盗贼" || enemy.Cell.DisplayURL != "monstermap/robber.swf" || enemy.Cell.MaxHP != 445 || enemy.Cell.MaxMP != 194 || enemy.Cell.Attack != 164 {
+	if enemy.Cell.Name != "盗贼" || enemy.Cell.DisplayURL != "monstermap/robber.swf" || enemy.Cell.MaxHP != 445 || enemy.Cell.MaxMP != 194 || enemy.Cell.Attack != 107 {
 		t.Fatalf("expected captured map49 robber config, got %+v", enemy)
-	}
-	if damage := (&Runtime{}).baseBattleDamage(&enemy.Cell, commandProfile{DamageMultiplier: 1}, 122); damage != 42 {
-		t.Fatalf("expected captured map49 robber attack 164 against captured player defense 122 to deal 42, got %d", damage)
 	}
 	if enemy.QueueIndexTeam != 1 || enemy.QueueIndexEnemy != 4 {
 		t.Fatalf("expected captured map49 queue indexes 1/4, got %+v", enemy)
@@ -1007,9 +1005,6 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if visibleBoss.Cell.Level != 20 || visibleBoss.Cell.MaxHP != 1500 || visibleBoss.Cell.MaxMP != 564 {
 		t.Fatalf("expected captured cracktoad level/hp/mp, got %+v", visibleBoss.Cell)
 	}
-	if visibleBoss.Cell.Attack != 240 {
-		t.Fatalf("expected captured cracktoad base attack 240 from normal-attack HP deltas, got %+v", visibleBoss.Cell)
-	}
 	if visibleBoss.QueueIndexTeam != 1 || visibleBoss.QueueIndexEnemy != 4 {
 		t.Fatalf("expected visible monster queue indexes 1/4, got %+v", visibleBoss)
 	}
@@ -1019,27 +1014,26 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 		handle string
 		name   string
 		level  int
-		attack int
 		label  string
 	}{
-		{mapID: "131", handle: "8128205778897212", name: "武斗蛤蟆", level: 12, attack: 208, label: "普通攻击"},
-		{mapID: "132", handle: "1656205827185847", name: "武斗蛤蟆", level: 13, attack: 230, label: "普通攻击"},
-		{mapID: "133", handle: "8112205902790159", name: "武斗蛤蟆", level: 14, attack: 234, label: "普通攻击"},
-		{mapID: "144", handle: "2762206074545916", name: "武斗蛤蟆", level: 16, attack: 205, label: "普通攻击"},
-		{mapID: "140", handle: "8430206376341780", name: "武斗蛤蟆", level: 17, attack: 211, label: "普通攻击"},
-		{mapID: "137", handle: "4889205982270617", name: "剑术蛤蟆", level: 15, attack: 246, label: "普通攻击"},
-		{mapID: "144", handle: "2768206074548639", name: "剑术蛤蟆", level: 17, attack: 244, label: "普通攻击"},
-		{mapID: "145", handle: "2890206197338884", name: "剑术蛤蟆", level: 18, attack: 220, label: "普通攻击"},
-		{mapID: "143", handle: "5172206909807859", name: "剑术蛤蟆", level: 18, attack: 121, label: "普通攻击"},
-		{mapID: "137", handle: "4895205982272135", name: "法术蛤蟆", level: 16, attack: 202, label: "法术普通攻击"},
-		{mapID: "143", handle: "5166206909805441", name: "法术蛤蟆", level: 17, attack: 143, label: "法术普通攻击"},
+		{mapID: "131", handle: "8128205778897212", name: "武斗蛤蟆", level: 12, label: "普通攻击"},
+		{mapID: "132", handle: "1656205827185847", name: "武斗蛤蟆", level: 13, label: "普通攻击"},
+		{mapID: "133", handle: "8112205902790159", name: "武斗蛤蟆", level: 14, label: "普通攻击"},
+		{mapID: "144", handle: "2762206074545916", name: "武斗蛤蟆", level: 16, label: "普通攻击"},
+		{mapID: "140", handle: "8430206376341780", name: "武斗蛤蟆", level: 17, label: "普通攻击"},
+		{mapID: "137", handle: "4889205982270617", name: "剑术蛤蟆", level: 15, label: "普通攻击"},
+		{mapID: "144", handle: "2768206074548639", name: "剑术蛤蟆", level: 17, label: "普通攻击"},
+		{mapID: "145", handle: "2890206197338884", name: "剑术蛤蟆", level: 18, label: "普通攻击"},
+		{mapID: "143", handle: "5172206909807859", name: "剑术蛤蟆", level: 18, label: "普通攻击"},
+		{mapID: "137", handle: "4895205982272135", name: "法术蛤蟆", level: 16, label: "法术普通攻击"},
+		{mapID: "143", handle: "5166206909805441", name: "法术蛤蟆", level: 17, label: "法术普通攻击"},
 	}
 	for _, testCase := range visibleAttackCases {
 		config, ok := sourceVisibleMonsterConfigForHandle(testCase.mapID, testCase.handle)
 		if !ok {
 			t.Fatalf("expected captured shuiliandong visible monster config for %s/%s", testCase.mapID, testCase.handle)
 		}
-		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.Attack != testCase.attack || config.Cell.CommandLabel != testCase.label {
+		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.CommandLabel != testCase.label {
 			t.Fatalf("expected captured visible monster %+v, got %+v", testCase, config.Cell)
 		}
 	}
@@ -1069,7 +1063,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	}
 
 	map50Configs := sourceEnemyConfigsForMap("50")
-	if len(map50Configs) != 2 || map50Configs[0].Cell.Attack != 203 || map50Configs[1].Cell.Attack != 216 {
+	if len(map50Configs) != 2 {
 		t.Fatalf("expected captured map50 normal enemy attacks 203/216, got %+v", map50Configs)
 	}
 	for _, config := range map50Configs {
@@ -1079,25 +1073,24 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	}
 
 	swampCases := []struct {
-		mapID   string
-		names   []string
-		maxHPs  []int
-		attacks []int
+		mapID  string
+		names  []string
+		maxHPs []int
 	}{
-		{mapID: "56", names: []string{"小恶鬼", "瘴气泥巴"}, maxHPs: []int{600, 510}, attacks: []int{228, 154}},
-		{mapID: "57", names: []string{"瘴气泥巴", "瘴气泥巴"}, maxHPs: []int{520, 525}, attacks: []int{154, 163}},
-		{mapID: "58", names: []string{"瘴气泥巴", "瘴气泥巴"}, maxHPs: []int{520, 525}, attacks: []int{154, 163}},
-		{mapID: "59", names: []string{"王花", "王花"}, maxHPs: []int{750, 760}, attacks: []int{246, 252}},
-		{mapID: "60", names: []string{"毒蜂", "王花"}, maxHPs: []int{680, 750}, attacks: []int{246, 246}},
-		{mapID: "61", names: []string{"王花", "王花"}, maxHPs: []int{750, 760}, attacks: []int{246, 252}},
-		{mapID: "62", names: []string{"毒蜂"}, maxHPs: []int{680}, attacks: []int{246}},
-		{mapID: "63", names: []string{"金斑鳄", "金斑鳄"}, maxHPs: []int{980, 1020}, attacks: []int{270, 278}},
-		{mapID: "172", names: []string{"玄龟兽", "玄龟兽"}, maxHPs: []int{1221, 1260}, attacks: []int{273, 273}},
-		{mapID: "173", names: []string{"玄龟兽"}, maxHPs: []int{1221}, attacks: []int{309}},
-		{mapID: "174", names: []string{"玄龟兽", "毒蜂"}, maxHPs: []int{1260, 850}, attacks: []int{273, 278}},
-		{mapID: "175", names: []string{"赤蛰子", "毒蜂", "玄龟兽"}, maxHPs: []int{3100, 850, 1260}, attacks: []int{330, 278, 313}},
-		{mapID: "177", names: []string{"赤蛰子", "毒蜂"}, maxHPs: []int{3100, 850}, attacks: []int{304, 281}},
-		{mapID: "178", names: []string{"毒蜂"}, maxHPs: []int{850}, attacks: []int{282}},
+		{mapID: "56", names: []string{"小恶鬼", "瘴气泥巴"}, maxHPs: []int{600, 510}},
+		{mapID: "57", names: []string{"瘴气泥巴", "瘴气泥巴"}, maxHPs: []int{520, 525}},
+		{mapID: "58", names: []string{"瘴气泥巴", "瘴气泥巴"}, maxHPs: []int{520, 525}},
+		{mapID: "59", names: []string{"王花", "王花"}, maxHPs: []int{750, 760}},
+		{mapID: "60", names: []string{"毒蜂", "王花"}, maxHPs: []int{680, 750}},
+		{mapID: "61", names: []string{"王花", "王花"}, maxHPs: []int{750, 760}},
+		{mapID: "62", names: []string{"毒蜂"}, maxHPs: []int{680}},
+		{mapID: "63", names: []string{"金斑鳄", "金斑鳄"}, maxHPs: []int{980, 1020}},
+		{mapID: "172", names: []string{"玄龟兽", "玄龟兽"}, maxHPs: []int{1221, 1260}},
+		{mapID: "173", names: []string{"玄龟兽"}, maxHPs: []int{1221}},
+		{mapID: "174", names: []string{"玄龟兽", "毒蜂"}, maxHPs: []int{1260, 850}},
+		{mapID: "175", names: []string{"赤蛰子", "毒蜂", "玄龟兽"}, maxHPs: []int{3100, 850, 1260}},
+		{mapID: "177", names: []string{"赤蛰子", "毒蜂"}, maxHPs: []int{3100, 850}},
+		{mapID: "178", names: []string{"毒蜂"}, maxHPs: []int{850}},
 	}
 	for _, testCase := range swampCases {
 		configs := sourceEnemyConfigsForMap(testCase.mapID)
@@ -1106,8 +1099,8 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 		}
 		for index, expectedName := range testCase.names {
 			config := configs[index]
-			if config.Cell.Name != expectedName || config.Cell.MaxHP != testCase.maxHPs[index] || config.Cell.Attack != testCase.attacks[index] {
-				t.Fatalf("expected swamp map %s enemy %d %s hp=%d attack=%d, got %+v", testCase.mapID, index, expectedName, testCase.maxHPs[index], testCase.attacks[index], config.Cell)
+			if config.Cell.Name != expectedName || config.Cell.MaxHP != testCase.maxHPs[index] {
+				t.Fatalf("expected swamp map %s enemy %d %s hp=%d, got %+v", testCase.mapID, index, expectedName, testCase.maxHPs[index], config.Cell)
 			}
 		}
 	}
@@ -1120,7 +1113,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected map171 visible 百年虫精 config")
 	}
-	if bainian.Cell.Name != "百年虫精" || bainian.Cell.DisplayURL != "monstermap/wocmon.swf" || bainian.Cell.Level != 30 || bainian.Cell.MaxHP != 8000 || bainian.Cell.MaxMP != 1500 || bainian.Cell.Attack != 184 || bainian.Cell.CommandLabel != "法术普通攻击" || bainian.Cell.DamageDefenseType != "magic" {
+	if bainian.Cell.Name != "百年虫精" || bainian.Cell.DisplayURL != "monstermap/wocmon.swf" || bainian.Cell.Level != 30 || bainian.Cell.MaxHP != 8000 || bainian.Cell.MaxMP != 1500 || bainian.Cell.Attack != 202 || bainian.Cell.CommandLabel != "法术普通攻击" || bainian.Cell.DamageDefenseType != "magic" {
 		t.Fatalf("unexpected 百年虫精 config: %+v", bainian.Cell)
 	}
 	group, ok := sourceVisibleMonsterConfigsForHandle("171", "7893833328746190")
@@ -1162,8 +1155,8 @@ func TestCaptureBackedYaozhisenNormalAttackUsesConfiguredRange(t *testing.T) {
 	defer useSourceEncounterRoll(func(int) int { return 227 })()
 
 	enemy, ok := sourceEnemyConfigForMap("201")
-	if !ok || enemy.AttackMin != 218 || enemy.AttackMax != 420 {
-		t.Fatalf("expected map201 capture-backed attack range 218..420, got %+v", enemy)
+	if !ok || enemy.Cell.Attack != 193 || enemy.AttackMin != 186 || enemy.AttackMax != 374 {
+		t.Fatalf("expected map201 half-defense calibrated attack 193 and range 186..374, got %+v", enemy)
 	}
 	runtime, bundle, started := NewWildBattle(
 		session.RoleSummary{RoleID: "player_yaozhisen_range", DisplayName: "测试女侠", Level: 34},
@@ -1174,14 +1167,14 @@ func TestCaptureBackedYaozhisenNormalAttackUsesConfiguredRange(t *testing.T) {
 		t.Fatalf("expected map201 capture-backed encounter, got started=%v bundle=%+v", started, bundle)
 	}
 	actor := runtime.cellByHandle(bundle.Cells[1].Handle)
-	if actor == nil || runtime.EnemyAttackRanges[actor.Handle] != (battleAttackRange{Min: 218, Max: 420}) {
+	if actor == nil || runtime.EnemyAttackRanges[actor.Handle] != (battleAttackRange{Min: 186, Max: 374}) {
 		t.Fatalf("expected map201 range to reach runtime actor, got actor=%+v ranges=%+v", actor, runtime.EnemyAttackRanges)
 	}
-	if damage := runtime.baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 400 {
-		t.Fatalf("expected upper bound 420 minus defense 20, got %d", damage)
+	if damage := runtime.baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 354 {
+		t.Fatalf("expected upper bound 374 minus defense 20, got %d", damage)
 	}
-	if damage := (&Runtime{}).baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 219 {
-		t.Fatalf("expected missing range to retain fixed attack proxy 239 minus defense 20, got %d", damage)
+	if damage := (&Runtime{}).baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 173 {
+		t.Fatalf("expected missing range to retain fixed attack proxy 193 minus defense 20, got %d", damage)
 	}
 }
 
@@ -1408,15 +1401,14 @@ func TestHuangfengzhaiVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) 
 		level  int
 		maxHP  int
 		maxMP  int
-		attack int
 		label  string
 	}{
-		{mapID: "146", handle: "6887685480585492", name: "蛮族刀客", level: 12, maxHP: 520, maxMP: 214, attack: 208, label: "普通攻击"},
-		{mapID: "147", handle: "7633284548716137", name: "蛮族刀客", level: 12, maxHP: 520, maxMP: 214, attack: 208, label: "普通攻击"},
-		{mapID: "149", handle: "3218685759638239", name: "黄风二寨主", level: 19, maxHP: 1200, maxMP: 564, attack: 240, label: "普通攻击"},
-		{mapID: "153", handle: "7494686002239485", name: "咒巫师", level: 16, maxHP: 500, maxMP: 550, attack: 202, label: "法术普通攻击"},
-		{mapID: "155", handle: "2600686416056495", name: "黄风大寨主", level: 20, maxHP: 1500, maxMP: 564, attack: 260, label: "普通攻击"},
-		{mapID: "155", handle: "2800686416057704", name: "黄风寨夫人", level: 20, maxHP: 1200, maxMP: 704, attack: 240, label: "普通攻击"},
+		{mapID: "146", handle: "6887685480585492", name: "蛮族刀客", level: 12, maxHP: 520, maxMP: 214, label: "普通攻击"},
+		{mapID: "147", handle: "7633284548716137", name: "蛮族刀客", level: 12, maxHP: 520, maxMP: 214, label: "普通攻击"},
+		{mapID: "149", handle: "3218685759638239", name: "黄风二寨主", level: 19, maxHP: 1200, maxMP: 564, label: "普通攻击"},
+		{mapID: "153", handle: "7494686002239485", name: "咒巫师", level: 16, maxHP: 500, maxMP: 550, label: "法术普通攻击"},
+		{mapID: "155", handle: "2600686416056495", name: "黄风大寨主", level: 20, maxHP: 1500, maxMP: 564, label: "普通攻击"},
+		{mapID: "155", handle: "2800686416057704", name: "黄风寨夫人", level: 20, maxHP: 1200, maxMP: 704, label: "普通攻击"},
 	}
 
 	for _, testCase := range cases {
@@ -1424,7 +1416,7 @@ func TestHuangfengzhaiVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) 
 		if !ok {
 			t.Fatalf("expected captured huangfengzhai visible monster config for %s/%s", testCase.mapID, testCase.handle)
 		}
-		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.MaxHP != testCase.maxHP || config.Cell.MaxMP != testCase.maxMP || config.Cell.Attack != testCase.attack || config.Cell.CommandLabel != testCase.label {
+		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.MaxHP != testCase.maxHP || config.Cell.MaxMP != testCase.maxMP || config.Cell.CommandLabel != testCase.label {
 			t.Fatalf("expected captured huangfengzhai visible monster %+v, got %+v", testCase, config.Cell)
 		}
 		if config.QueueIndexTeam != 1 || config.QueueIndexEnemy != 4 {
@@ -1441,19 +1433,18 @@ func TestShihukuVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) {
 		level  int
 		maxHP  int
 		maxMP  int
-		attack int
 		label  string
 	}{
-		{mapID: "158", handle: "5837621591158929", name: "黑影", level: 25, maxHP: 2300, maxMP: 724, attack: 299, label: "普通攻击"},
-		{mapID: "160", handle: "3824621817512450", name: "蛮虎怪", level: 25, maxHP: 3000, maxMP: 584, attack: 303, label: "普通攻击"},
-		{mapID: "161", handle: "9333621886743795", name: "蛮虎队长", level: 28, maxHP: 3500, maxMP: 600, attack: 322, label: "普通攻击"},
-		{mapID: "163", handle: "8094622782649492", name: "盘狮队长", level: 26, maxHP: 3300, maxMP: 440, attack: 338, label: "普通攻击"},
-		{mapID: "165", handle: "3856623006745359", name: "黑影队长", level: 26, maxHP: 3000, maxMP: 760, attack: 378, label: "普通攻击"},
-		{mapID: "160", handle: "3826621817513876", name: "盘狮怪", level: 25, maxHP: 2600, maxMP: 384, attack: 314, label: "普通攻击"},
-		{mapID: "163", handle: "8088622782646450", name: "盘狮怪", level: 26, maxHP: 2800, maxMP: 400, attack: 312, label: "普通攻击"},
-		{mapID: "167", handle: "7548622260837633", name: "盘狮怪", level: 27, maxHP: 3000, maxMP: 384, attack: 328, label: "普通攻击"},
-		{mapID: "167", handle: "7546622260836700", name: "蛮虎怪", level: 27, maxHP: 3200, maxMP: 600, attack: 336, label: "普通攻击"},
-		{mapID: "167", handle: "7550622260838906", name: "蚩颅王", level: 30, maxHP: 6000, maxMP: 600, attack: 342, label: "普通攻击"},
+		{mapID: "158", handle: "5837621591158929", name: "黑影", level: 25, maxHP: 2300, maxMP: 724, label: "普通攻击"},
+		{mapID: "160", handle: "3824621817512450", name: "蛮虎怪", level: 25, maxHP: 3000, maxMP: 584, label: "普通攻击"},
+		{mapID: "161", handle: "9333621886743795", name: "蛮虎队长", level: 28, maxHP: 3500, maxMP: 600, label: "普通攻击"},
+		{mapID: "163", handle: "8094622782649492", name: "盘狮队长", level: 26, maxHP: 3300, maxMP: 440, label: "普通攻击"},
+		{mapID: "165", handle: "3856623006745359", name: "黑影队长", level: 26, maxHP: 3000, maxMP: 760, label: "普通攻击"},
+		{mapID: "160", handle: "3826621817513876", name: "盘狮怪", level: 25, maxHP: 2600, maxMP: 384, label: "普通攻击"},
+		{mapID: "163", handle: "8088622782646450", name: "盘狮怪", level: 26, maxHP: 2800, maxMP: 400, label: "普通攻击"},
+		{mapID: "167", handle: "7548622260837633", name: "盘狮怪", level: 27, maxHP: 3000, maxMP: 384, label: "普通攻击"},
+		{mapID: "167", handle: "7546622260836700", name: "蛮虎怪", level: 27, maxHP: 3200, maxMP: 600, label: "普通攻击"},
+		{mapID: "167", handle: "7550622260838906", name: "蚩颅王", level: 30, maxHP: 6000, maxMP: 600, label: "普通攻击"},
 	}
 
 	for _, testCase := range cases {
@@ -1461,7 +1452,7 @@ func TestShihukuVisibleMonsterConfigsUseCapturedBattleCells(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected captured shihuku visible monster config for %s/%s", testCase.mapID, testCase.handle)
 		}
-		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.MaxHP != testCase.maxHP || config.Cell.MaxMP != testCase.maxMP || config.Cell.Attack != testCase.attack || config.Cell.CommandLabel != testCase.label {
+		if config.Cell.Name != testCase.name || config.Cell.Level != testCase.level || config.Cell.MaxHP != testCase.maxHP || config.Cell.MaxMP != testCase.maxMP || config.Cell.CommandLabel != testCase.label {
 			t.Fatalf("expected captured shihuku visible monster %+v, got %+v", testCase, config.Cell)
 		}
 		if config.QueueIndexTeam != 1 || config.QueueIndexEnemy != 4 {
@@ -2217,13 +2208,12 @@ func TestNewWildBattleUsesCapturedPlainEnemyStats(t *testing.T) {
 		level      int
 		maxHP      int
 		maxMP      int
-		attack     int
 		cellCount  int
 	}{
-		{mapID: "11", mapName: "涧庭道_1", enemyName: "蟾蜍", displayURL: "monstermap/toad.swf", level: 1, maxHP: 15, maxMP: 9, attack: 28, cellCount: 2},
-		{mapID: "37", mapName: "平原_6", enemyName: "花妖", displayURL: "monstermap/huayao.swf", level: 10, maxHP: 230, maxMP: 150, attack: 162, cellCount: 2},
-		{mapID: "49", mapName: "平原_15", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 15, maxHP: 445, maxMP: 194, attack: 164, cellCount: 3},
-		{mapID: "52", mapName: "平原_18", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 18, maxHP: 470, maxMP: 220, attack: 202, cellCount: 2},
+		{mapID: "11", mapName: "涧庭道_1", enemyName: "蟾蜍", displayURL: "monstermap/toad.swf", level: 1, maxHP: 15, maxMP: 9, cellCount: 2},
+		{mapID: "37", mapName: "平原_6", enemyName: "花妖", displayURL: "monstermap/huayao.swf", level: 10, maxHP: 230, maxMP: 150, cellCount: 2},
+		{mapID: "49", mapName: "平原_15", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 15, maxHP: 445, maxMP: 194, cellCount: 3},
+		{mapID: "52", mapName: "平原_18", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 18, maxHP: 470, maxMP: 220, cellCount: 2},
 	}
 
 	for _, testCase := range cases {
@@ -2237,9 +2227,6 @@ func TestNewWildBattleUsesCapturedPlainEnemyStats(t *testing.T) {
 		enemy := bundle.Cells[1]
 		if enemy.Name != testCase.enemyName || enemy.DisplayURL != testCase.displayURL || enemy.Level != testCase.level || enemy.MaxHP != testCase.maxHP || enemy.HP != testCase.maxHP || enemy.MaxMP != testCase.maxMP || enemy.MP != testCase.maxMP {
 			t.Fatalf("expected captured enemy stats for map %s, got %+v", testCase.mapID, enemy)
-		}
-		if enemy.Attack != testCase.attack {
-			t.Fatalf("expected captured enemy attack for map %s to be %d, got %+v", testCase.mapID, testCase.attack, enemy)
 		}
 	}
 }
@@ -2269,20 +2256,19 @@ func TestNewWildBattleUsesExpandedCapturedPlainEnemyStats(t *testing.T) {
 		level      int
 		maxHP      int
 		maxMP      int
-		attack     int
 		cellCount  int
 	}{
-		{mapID: "34", mapName: "平原_3", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 12, maxHP: 260, maxMP: 155, attack: 193, cellCount: 2},
-		{mapID: "35", mapName: "平原_4", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 13, maxHP: 295, maxMP: 162, attack: 211, cellCount: 2},
-		{mapID: "36", mapName: "平原_5", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 13, maxHP: 280, maxMP: 145, attack: 164, cellCount: 2},
-		{mapID: "39", mapName: "平原_8", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 280, maxMP: 130, attack: 200, cellCount: 2},
-		{mapID: "40", mapName: "平原_9", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 280, maxMP: 130, attack: 200, cellCount: 2},
-		{mapID: "41", mapName: "平原_10", enemyName: "牙菇", displayURL: "monstermap/yagu.swf", level: 10, maxHP: 250, maxMP: 190, attack: 229, cellCount: 2},
-		{mapID: "43", mapName: "平原_12", enemyName: "刺鸟", displayURL: "monstermap/swordbird.swf", level: 11, maxHP: 230, maxMP: 160, attack: 175, cellCount: 2},
-		{mapID: "44", mapName: "平原_13", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 250, maxMP: 130, attack: 187, cellCount: 2},
-		{mapID: "48", mapName: "平原_14", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 14, maxHP: 330, maxMP: 210, attack: 171, cellCount: 2},
-		{mapID: "50", mapName: "平原_16", enemyName: "巡路小鬼", displayURL: "monstermap/lilghost.swf", level: 17, maxHP: 545, maxMP: 184, attack: 216, cellCount: 2},
-		{mapID: "51", mapName: "平原_17", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 18, maxHP: 470, maxMP: 220, attack: 202, cellCount: 2},
+		{mapID: "34", mapName: "平原_3", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 12, maxHP: 260, maxMP: 155, cellCount: 2},
+		{mapID: "35", mapName: "平原_4", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 13, maxHP: 295, maxMP: 162, cellCount: 2},
+		{mapID: "36", mapName: "平原_5", enemyName: "爆骨猪", displayURL: "monstermap/bomepig.swf", level: 13, maxHP: 280, maxMP: 145, cellCount: 2},
+		{mapID: "39", mapName: "平原_8", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 280, maxMP: 130, cellCount: 2},
+		{mapID: "40", mapName: "平原_9", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 280, maxMP: 130, cellCount: 2},
+		{mapID: "41", mapName: "平原_10", enemyName: "牙菇", displayURL: "monstermap/yagu.swf", level: 10, maxHP: 250, maxMP: 190, cellCount: 2},
+		{mapID: "43", mapName: "平原_12", enemyName: "刺鸟", displayURL: "monstermap/swordbird.swf", level: 11, maxHP: 230, maxMP: 160, cellCount: 2},
+		{mapID: "44", mapName: "平原_13", enemyName: "尖刀暴牙", displayURL: "monstermap/jdby.swf", level: 12, maxHP: 250, maxMP: 130, cellCount: 2},
+		{mapID: "48", mapName: "平原_14", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 14, maxHP: 330, maxMP: 210, cellCount: 2},
+		{mapID: "50", mapName: "平原_16", enemyName: "巡路小鬼", displayURL: "monstermap/lilghost.swf", level: 17, maxHP: 545, maxMP: 184, cellCount: 2},
+		{mapID: "51", mapName: "平原_17", enemyName: "盗贼", displayURL: "monstermap/robber.swf", level: 18, maxHP: 470, maxMP: 220, cellCount: 2},
 	}
 
 	for _, testCase := range cases {
@@ -2296,9 +2282,6 @@ func TestNewWildBattleUsesExpandedCapturedPlainEnemyStats(t *testing.T) {
 		enemy := bundle.Cells[1]
 		if enemy.Name != testCase.enemyName || enemy.DisplayURL != testCase.displayURL || enemy.Level != testCase.level || enemy.MaxHP != testCase.maxHP || enemy.HP != testCase.maxHP || enemy.MaxMP != testCase.maxMP || enemy.MP != testCase.maxMP {
 			t.Fatalf("expected captured enemy stats for map %s, got %+v", testCase.mapID, enemy)
-		}
-		if enemy.Attack != testCase.attack {
-			t.Fatalf("expected captured enemy attack for map %s to be %d, got %+v", testCase.mapID, testCase.attack, enemy)
 		}
 	}
 }
@@ -2330,9 +2313,9 @@ func TestNewWildBattleSupportsCaptureBackedGrasslandMaps(t *testing.T) {
 		maxMP      int
 		attack     int
 	}{
-		{mapID: "210", mapName: "草坝_4", enemyName: "草刺槐", displayURL: "monstermap/glassyx.swf", level: 38, maxHP: 1530, maxMP: 1034, attack: 391},
-		{mapID: "216", mapName: "草坝_11", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 40, maxHP: 1357, maxMP: 1500, attack: 333},
-		{mapID: "222", mapName: "草坝_16", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 42, maxHP: 1450, maxMP: 1518, attack: 344},
+		{mapID: "210", mapName: "草坝_4", enemyName: "草刺槐", displayURL: "monstermap/glassyx.swf", level: 38, maxHP: 1530, maxMP: 1034, attack: 264},
+		{mapID: "216", mapName: "草坝_11", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 40, maxHP: 1357, maxMP: 1500, attack: 281},
+		{mapID: "222", mapName: "草坝_16", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 42, maxHP: 1450, maxMP: 1518, attack: 290},
 	}
 
 	for _, testCase := range testCases {
@@ -2371,17 +2354,16 @@ func TestNewWildBattleSelectsCapturedEncounterWeightBoundaries(t *testing.T) {
 		level          int
 		maxHP          int
 		maxMP          int
-		attack         int
 		encounterLabel string
 		enemyCount     int
 	}{
-		{mapID: "36", mapName: "平原_5", roll: 123, handle: "6093598288385864", enemyName: "爆骨猪", level: 13, maxHP: 265, maxMP: 162, attack: 210, encounterLabel: "平原_5 暗雷", enemyCount: 1},
-		{mapID: "40", mapName: "平原_9", roll: 4392, handle: "6132760366794317", enemyName: "刺鸟", level: 11, maxHP: 230, maxMP: 160, attack: 175, encounterLabel: "平原_9 暗雷", enemyCount: 1},
-		{mapID: "50", mapName: "平原_16", roll: 50, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, attack: 203, encounterLabel: "平原_16 暗雷", enemyCount: 2},
-		{mapID: "52", mapName: "平原_18", roll: 0, handle: "7014979944725157", enemyName: "巡路小鬼", level: 18, maxHP: 545, maxMP: 184, attack: 216, encounterLabel: "平原_18 暗雷", enemyCount: 1},
-		{mapID: "52", mapName: "平原_18", roll: 836, handle: "1478600550966619", enemyName: "单刀狼人", level: 21, maxHP: 2500, maxMP: 334, attack: 260, encounterLabel: "平原_18 首领", enemyCount: 4},
-		{mapID: "173", mapName: "沼泽_11", roll: 304, handle: "2500770180184588", enemyName: "玄龟兽", level: 28, maxHP: 1221, maxMP: 200, attack: 309, encounterLabel: "沼泽_11 暗雷", enemyCount: 3},
-		{mapID: "201", mapName: "妖之森_10", roll: 227, handle: "capture-201-robothyun-lv34", enemyName: "机木玄师", level: 34, maxHP: 1189, maxMP: 910, attack: 239, encounterLabel: "妖之森_10 暗雷", enemyCount: 1},
+		{mapID: "36", mapName: "平原_5", roll: 123, handle: "6093598288385864", enemyName: "爆骨猪", level: 13, maxHP: 265, maxMP: 162, encounterLabel: "平原_5 暗雷", enemyCount: 1},
+		{mapID: "40", mapName: "平原_9", roll: 4392, handle: "6132760366794317", enemyName: "刺鸟", level: 11, maxHP: 230, maxMP: 160, encounterLabel: "平原_9 暗雷", enemyCount: 1},
+		{mapID: "50", mapName: "平原_16", roll: 50, enemyName: "巡路小鬼", level: 16, maxHP: 520, maxMP: 160, encounterLabel: "平原_16 暗雷", enemyCount: 2},
+		{mapID: "52", mapName: "平原_18", roll: 0, handle: "7014979944725157", enemyName: "巡路小鬼", level: 18, maxHP: 545, maxMP: 184, encounterLabel: "平原_18 暗雷", enemyCount: 1},
+		{mapID: "52", mapName: "平原_18", roll: 836, handle: "1478600550966619", enemyName: "单刀狼人", level: 21, maxHP: 2500, maxMP: 334, encounterLabel: "平原_18 首领", enemyCount: 4},
+		{mapID: "173", mapName: "沼泽_11", roll: 304, handle: "2500770180184588", enemyName: "玄龟兽", level: 28, maxHP: 1221, maxMP: 200, encounterLabel: "沼泽_11 暗雷", enemyCount: 3},
+		{mapID: "201", mapName: "妖之森_10", roll: 227, handle: "capture-201-robothyun-lv34", enemyName: "机木玄师", level: 34, maxHP: 1189, maxMP: 910, encounterLabel: "妖之森_10 暗雷", enemyCount: 1},
 	}
 
 	for _, testCase := range cases {
@@ -2398,7 +2380,7 @@ func TestNewWildBattleSelectsCapturedEncounterWeightBoundaries(t *testing.T) {
 			t.Fatalf("expected encounter label %s, got %+v", testCase.encounterLabel, bundle.Start)
 		}
 		enemy := bundle.Cells[1]
-		if enemy.Name != testCase.enemyName || enemy.Level != testCase.level || enemy.MaxHP != testCase.maxHP || enemy.MaxMP != testCase.maxMP || enemy.Attack != testCase.attack {
+		if enemy.Name != testCase.enemyName || enemy.Level != testCase.level || enemy.MaxHP != testCase.maxHP || enemy.MaxMP != testCase.maxMP {
 			t.Fatalf("expected weighted candidate enemy for map %s roll %d, got %+v", testCase.mapID, testCase.roll, enemy)
 		}
 		if testCase.handle != "" && enemy.Handle != testCase.handle {
@@ -4679,10 +4661,11 @@ func TestCapturedMageSkillProfilesAndLevelGates(t *testing.T) {
 		hitMultiplier float64
 	}{
 		{name: "炎狩术", level: 5, sourceType: "oneE", label: "w10/fire2", mpCost: 80, multiplier: 1.75},
-		{name: "雷爆咒", level: 1, sourceType: "all", label: "w10/thunderBombs", mpCost: 70, multiplier: 1.82, hitMultiplier: 1.5},
-		{name: "雷爆咒", level: 2, sourceType: "all", label: "w10/thunderBombs", mpCost: 80, multiplier: 1.84, hitMultiplier: 1.5},
-		{name: "雷爆咒", level: 3, sourceType: "all", label: "w10/thunderBombs", mpCost: 90, multiplier: 1.86, hitMultiplier: 1.5},
-		{name: "雷爆咒", level: 4, sourceType: "all", label: "w10/thunderBombs", mpCost: 100, multiplier: 1.88, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 1, sourceType: "all", label: "w10/thunderBombs", mpCost: 70, multiplier: 0.82, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 2, sourceType: "all", label: "w10/thunderBombs", mpCost: 80, multiplier: 0.84, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 3, sourceType: "all", label: "w10/thunderBombs", mpCost: 90, multiplier: 0.86, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 4, sourceType: "all", label: "w10/thunderBombs", mpCost: 100, multiplier: 0.88, hitMultiplier: 1.5},
+		{name: "雷爆咒", level: 5, sourceType: "all", label: "w10/thunderBombs", mpCost: 110, multiplier: 0.9, hitMultiplier: 1.5},
 		{name: "雷龙强袭", level: 1, sourceType: "oneE", label: "w10/thunderDrongAtk", mpCost: 125, multiplier: 2.8, hitMultiplier: 2},
 	}
 
@@ -4706,7 +4689,7 @@ func TestCapturedMageSkillProfilesAndLevelGates(t *testing.T) {
 
 	for _, skill := range []session.RoleSkill{
 		{Name: "炎狩术", Level: 4, Type: "oneE"},
-		{Name: "雷爆咒", Level: 5, Type: "all"},
+		{Name: "雷爆咒", Level: 6, Type: "all"},
 		{Name: "雷龙强袭", Level: 2, Type: "oneE"},
 	} {
 		if isSourceBattleSkillLevelCaptured(skill.Name, skill.Level) {
@@ -4728,14 +4711,24 @@ func TestSkillLevelTableLinksMasterSkillToCapturedMageLevel(t *testing.T) {
 	if sourceBattleSkillCommandIDFromConfig("雷爆咒") != CommandLeiBaoZhou {
 		t.Fatalf("expected 雷爆咒 to keep its command skill id")
 	}
-	if profile.SourceType != "all" || profile.SourceActionLabel != "w10/thunderBombs" || profile.MPCost != 100 || profile.DamageMultiplier != 1.88 {
+	if profile.SourceType != "all" || profile.SourceActionLabel != "w10/thunderBombs" || profile.MPCost != 100 || profile.DamageMultiplier != 0.88 {
 		t.Fatalf("expected 雷爆咒 Lv4 to resolve linked skill-level values, got %+v", profile)
 	}
 	if !sourceBattleSkillLevelExists("雷爆咒", 4) {
 		t.Fatal("expected 雷爆咒 Lv4 skill-level row")
 	}
-	if sourceBattleSkillLevelExists("雷爆咒", 5) {
-		t.Fatal("unexpected unconfirmed 雷爆咒 Lv5 skill-level row")
+	lv5, ok := sourceBattleSkillProfileFromConfig("雷爆咒", 5)
+	if !ok {
+		t.Fatal("expected 雷爆咒 Lv5 skill-level row from 20260724 skillInfo capture")
+	}
+	if lv5.SourceType != "all" || lv5.SourceActionLabel != "w10/thunderBombs" || lv5.MPCost != 110 || lv5.DamageMultiplier != 0.9 {
+		t.Fatalf("expected 雷爆咒 Lv5 to resolve linked skill-level values, got %+v", lv5)
+	}
+	if !sourceBattleSkillLevelExists("雷爆咒", 5) {
+		t.Fatal("expected 雷爆咒 Lv5 skill-level row")
+	}
+	if sourceBattleSkillLevelExists("雷爆咒", 6) {
+		t.Fatal("unexpected unconfirmed 雷爆咒 Lv6 skill-level row")
 	}
 }
 
@@ -4797,7 +4790,7 @@ func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
 		t.Fatalf("expected 雷爆咒 action, got %+v", thunderResult)
 	}
 	thunderAction := thunderResult.Actions[0]
-	if thunderAction.TargetHandle != "all" || thunderAction.SourceActionLabel != "w10/thunderBombs" || len(thunderAction.TargetActionResults) != 2 || thunderAction.Damage != 174 || thunder.cellByHandle("enemy_thunder_1").HP != 826 || thunder.cellByHandle("enemy_thunder_2").HP != 831 || thunder.cellByHandle("player_mage").MP != 120 {
+	if thunderAction.TargetHandle != "all" || thunderAction.SourceActionLabel != "w10/thunderBombs" || len(thunderAction.TargetActionResults) != 2 || thunderAction.Damage != 74 || thunder.cellByHandle("enemy_thunder_1").HP != 926 || thunder.cellByHandle("enemy_thunder_2").HP != 931 || thunder.cellByHandle("player_mage").MP != 120 {
 		t.Fatalf("expected captured 雷爆咒 all-target action and one MP deduction, got %+v", thunderAction)
 	}
 	if len(thunderResult.BuffInfos) != 0 || len(thunderResult.ClearBuffInfos) != 0 {
@@ -4838,8 +4831,16 @@ func TestCapturedMageAdditionalStaffSkillProfiles(t *testing.T) {
 		hitMultiplier float64
 	}{
 		{name: "赤焰魔咒", level: 2, commandID: CommandChiYanMoZhou, sourceType: "oneE", actionLabel: "w10/bombFire", mpCost: 65, multiplier: 0.85},
+		{name: "赤焰魔咒", level: 3, commandID: CommandChiYanMoZhou, sourceType: "oneE", actionLabel: "w10/bombFire", mpCost: 75, multiplier: 0.9},
+		{name: "赤焰魔咒", level: 4, commandID: CommandChiYanMoZhou, sourceType: "oneE", actionLabel: "w10/bombFire", mpCost: 85, multiplier: 0.95},
+		{name: "赤焰魔咒", level: 5, commandID: CommandChiYanMoZhou, sourceType: "oneE", actionLabel: "w10/bombFire", mpCost: 95, multiplier: 1},
 		{name: "雷击", level: 3, commandID: CommandLeiJi, sourceType: "oneE", actionLabel: "w10/thunderMagicAtk", mpCost: 75, multiplier: 1.2, hitMultiplier: 1.5},
+		{name: "雷击", level: 4, commandID: CommandLeiJi, sourceType: "oneE", actionLabel: "w10/thunderMagicAtk", mpCost: 85, multiplier: 1.25, hitMultiplier: 1.5},
+		{name: "雷击", level: 5, commandID: CommandLeiJi, sourceType: "oneE", actionLabel: "w10/thunderMagicAtk", mpCost: 95, multiplier: 1.3, hitMultiplier: 1.5},
 		{name: "魔障术", level: 2, commandID: CommandMoZhangShu, sourceType: "own", actionLabel: "w10/magicObstacle", mpCost: 90, multiplier: 0},
+		{name: "魔障术", level: 3, commandID: CommandMoZhangShu, sourceType: "own", actionLabel: "w10/magicObstacle", mpCost: 110, multiplier: 0},
+		{name: "魔障术", level: 4, commandID: CommandMoZhangShu, sourceType: "own", actionLabel: "w10/magicObstacle", mpCost: 130, multiplier: 0},
+		{name: "魔障术", level: 5, commandID: CommandMoZhangShu, sourceType: "own", actionLabel: "w10/magicObstacle", mpCost: 150, multiplier: 0},
 	}
 
 	for _, testCase := range cases {
@@ -4855,8 +4856,20 @@ func TestCapturedMageAdditionalStaffSkillProfiles(t *testing.T) {
 	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "赤焰魔咒", Level: 2, Type: "oneE"}); profile.StatusName != "诅咒" || profile.StatusDisplay != "780.png" || profile.StatusRounds != 2 || profile.StatusChance != 85 {
 		t.Fatalf("expected captured 赤焰魔咒 curse profile, got %+v", profile)
 	}
+	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "赤焰魔咒", Level: 5, Type: "oneE"}); profile.StatusChance != 100 {
+		t.Fatalf("expected 赤焰魔咒 Lv5 curse chance 100, got %+v", profile)
+	}
 	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "雷击", Level: 3, Type: "oneE"}); profile.StatusName != "迟钝" || profile.StatusRounds != 2 || profile.StatusChance != 60 || profile.StatusHitDodgePercent != 30 {
 		t.Fatalf("expected captured 雷击 slowness profile, got %+v", profile)
+	}
+	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "雷击", Level: 5, Type: "oneE"}); profile.StatusChance != 70 || profile.StatusHitDodgePercent != 40 {
+		t.Fatalf("expected 雷击 Lv5 slowness chance/percent, got %+v", profile)
+	}
+	if got := sourceMoZhangShuDamageToMPPercent(2); got != 35 {
+		t.Fatalf("expected 魔障术 Lv2 barrier percent 35, got %d", got)
+	}
+	if got := sourceMoZhangShuDamageToMPPercent(5); got != 50 {
+		t.Fatalf("expected 魔障术 Lv5 barrier percent 50, got %d", got)
 	}
 }
 
@@ -7419,7 +7432,7 @@ func TestHuangfengSecondCastellanDarkMoonCutUsesCapturedLabel(t *testing.T) {
 	if action.ActionName != "暗月斩" || action.SourceActionLabel != "darkMoonCut" || action.SourceMode != "1" {
 		t.Fatalf("expected captured 暗月斩 action, got %+v", action)
 	}
-	if action.Damage != 156 || action.TargetHP != 929 || actor.MP != 554 {
+	if action.Damage != 157 || action.TargetHP != 928 || actor.MP != 554 {
 		t.Fatalf("expected 暗月斩 to use captured MP cost 10 and half physical defense, action=%+v actor=%+v", action, actor)
 	}
 }
@@ -7925,7 +7938,7 @@ func TestFeixiandongLargerockRollAttackUsesCapturedDamage(t *testing.T) {
 	if action.ActionName != "滑行连击" || action.SourceActionLabel != "rollAttack" {
 		t.Fatalf("expected captured 滑行连击 action, got %+v", action)
 	}
-	if action.Damage != 302 || action.TargetHP != 471 || actor.MP != 544 {
+	if action.Damage != 303 || action.TargetHP != 470 || actor.MP != 544 {
 		t.Fatalf("expected 滑行连击 to use half physical defense and MP cost, got action=%+v target=%+v", action, target)
 	}
 }
@@ -8367,23 +8380,32 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 		t.Fatalf("expected four-enemy 百年虫精 encounter, got %+v", group)
 	}
 	expectedAttackRanges := map[string]battleAttackRange{
-		"7893833328746190": {Min: 179, Max: 189},
-		"7895833328747103": {Min: 153, Max: 247},
-		"7897833328748728": {Min: 165, Max: 298},
-		"7899833328749140": {Min: 165, Max: 298},
+		"7893833328746190": {Min: 197, Max: 208},
+		"7895833328747103": {Min: 222, Max: 245},
+		"7897833328748728": {Min: 216, Max: 321},
+		"7899833328749140": {Min: 216, Max: 321},
+	}
+	expectedSweepSpearRanges := map[string]battleAttackRange{
+		"7895833328747103": {Min: 209, Max: 209},
+		"7897833328748728": {Min: 207, Max: 314},
+		"7899833328749140": {Min: 207, Max: 314},
 	}
 	for _, enemy := range group {
 		if actual := (battleAttackRange{Min: enemy.AttackMin, Max: enemy.AttackMax}); actual != expectedAttackRanges[enemy.Cell.Handle] {
 			t.Fatalf("expected capture-backed 百年虫精 attack range for %s, got %+v", enemy.Cell.Handle, actual)
 		}
+		if actual := (battleAttackRange{Min: enemy.SweepSpearAttackMin, Max: enemy.SweepSpearAttackMax}); enemy.Cell.Name == "被控制的民兵" && actual != expectedSweepSpearRanges[enemy.Cell.Handle] {
+			t.Fatalf("expected capture-backed 百年虫精 sweepspear range for %s, got %+v", enemy.Cell.Handle, actual)
+		}
 	}
 
 	runtime := &Runtime{
-		BattleID:          "battle-bainian-chongjing",
-		Round:             1,
-		nextSequence:      1,
-		DefendingHandles:  map[string]bool{},
-		EnemyAttackRanges: expectedAttackRanges,
+		BattleID:              "battle-bainian-chongjing",
+		Round:                 1,
+		nextSequence:          1,
+		DefendingHandles:      map[string]bool{},
+		EnemyAttackRanges:     expectedAttackRanges,
+		EnemySweepSpearRanges: expectedSweepSpearRanges,
 	}
 	actor := bainian.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
 	rampage := runtime.resolveEnemyRampageActions(&actor)
@@ -8453,9 +8475,16 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	runtime.Cells = []CellInfoPush{targetOne, targetTwo, *ranger}
 	ranger = runtime.cellByHandle(ranger.Handle)
 	runtime.EnemyAttackRanges[ranger.Handle] = expectedAttackRanges["7895833328747103"]
+	runtime.EnemySweepSpearRanges[ranger.Handle] = expectedSweepSpearRanges["7895833328747103"]
+	ranger.Fat = 0
 	defer useSourceBattleAttackRoll(func(int) int { return 0 })()
+	normalAction := runtime.resolveAttack(ranger, runtime.cellByHandle(targetOne.Handle), CommandEnemyAttack)
+	if normalAction.Damage != 77 || normalAction.TargetHP != 923 {
+		t.Fatalf("expected militia normal attack to use its 222 minimum instead of sweepspear range, action=%+v", normalAction)
+	}
+	runtime.cellByHandle(targetOne.Handle).HP = 1000
 	sweepActions := runtime.resolveEnemyCommandActions(ranger, runtime.cellByHandle(targetOne.Handle), CommandEnemySweepSpear)
-	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 946 || runtime.cellByHandle(targetTwo.Handle).HP != 951 {
+	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 873 || runtime.cellByHandle(targetTwo.Handle).HP != 878 {
 		t.Fatalf("expected militia sweepspear all-target MP and half-defense behavior, actions=%+v cells=%+v", sweepActions, runtime.Cells)
 	}
 
@@ -8740,7 +8769,7 @@ func TestAllDamageUsesUnifiedHalfDefense(t *testing.T) {
 	}
 
 	physicalEnemy := &CellInfoPush{Handle: "7895833328747103", Camp: CampEnemy, Name: "被控制的民兵", DisplayURL: "monstermap/militia.swf", Attack: 200}
-	runtime.EnemyAttackRanges[physicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
+	runtime.EnemyAttackRanges[physicalEnemy.Handle] = battleAttackRange{Min: 209, Max: 245}
 	physicalTarget := &CellInfoPush{Handle: "player_21432", Camp: CampTeam, Defense: 300}
 	physicalProfile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
 	if defense := runtime.effectiveBattleDefense(physicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 150 {
@@ -8757,6 +8786,55 @@ func TestAllDamageUsesUnifiedHalfDefense(t *testing.T) {
 	}
 	if defense := runtime.effectiveBattleDefense(enemy, target, false, "direct"); defense != 0 {
 		t.Fatalf("expected direct damage to bypass half-defense policy, got %d", defense)
+	}
+}
+
+func TestMilitiaDamageAgainst777InfluxUsesFractionalHalfDefense(t *testing.T) {
+	runtime := &Runtime{
+		EnemyAttackRanges: map[string]battleAttackRange{
+			"militia-ranger":  {Min: 222, Max: 245},
+			"militia-warrior": {Min: 216, Max: 321},
+		},
+		EnemySweepSpearRanges: map[string]battleAttackRange{
+			"militia-ranger":  {Min: 209, Max: 209},
+			"militia-warrior": {Min: 207, Max: 314},
+		},
+	}
+	target := &CellInfoPush{Handle: "acct-777-role-001", Camp: CampTeam, Defense: 509}
+	ranger := &CellInfoPush{Handle: "militia-ranger", Camp: CampEnemy, Attack: 234}
+	warrior := &CellInfoPush{Handle: "militia-warrior", Camp: CampEnemy, Attack: 269}
+	normalProfile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
+	sweepProfile := commandProfile{SourceActionLabel: "sweepspear", DamageMultiplier: enemySweepSpearDamageMultiplier, DefenseType: "physical"}
+	defense := runtime.effectiveBattleDefenseValue(ranger, target, false, normalProfile.DefenseType)
+	if defense != 254.5 {
+		t.Fatalf("expected 777 influx defense 509 to retain fractional half-defense 254.5, got %v", defense)
+	}
+
+	restoreMinimumRoll := useSourceBattleAttackRoll(func(int) int { return 0 })
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, normalProfile, defense)))); damage != 1 {
+		t.Fatalf("expected ranger militia minimum normal damage 1 against influx 777, got %d", damage)
+	}
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, sweepProfile, defense)))); damage != 17 {
+		t.Fatalf("expected ranger militia sweepspear damage 17 against influx 777, got %d", damage)
+	}
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, normalProfile, defense)))); damage != 1 {
+		t.Fatalf("expected warrior militia minimum normal damage 1 against influx 777, got %d", damage)
+	}
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, sweepProfile, defense)))); damage != 15 {
+		t.Fatalf("expected warrior militia minimum sweepspear damage 15 against influx 777, got %d", damage)
+	}
+	restoreMinimumRoll()
+
+	restoreMaximumRoll := useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })
+	defer restoreMaximumRoll()
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, normalProfile, defense)))); damage != 1 {
+		t.Fatalf("expected ranger militia maximum normal damage 1 against influx 777, got %d", damage)
+	}
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, normalProfile, defense)))); damage != 67 {
+		t.Fatalf("expected warrior militia maximum normal damage 67 against influx 777, got %d", damage)
+	}
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, sweepProfile, defense)))); damage != 154 {
+		t.Fatalf("expected warrior militia maximum sweepspear damage 154 against influx 777, got %d", damage)
 	}
 }
 
@@ -9632,7 +9710,7 @@ func TestWoodcutterFistSkillProfilesUseCapturedRows(t *testing.T) {
 		{name: "连击", level: 5, commandID: CommandFistDoubleAtk, sourceType: "oneE", actionLabel: "w5/doubleAtk", mpCost: 18, multiplier: 1.45, target: "enemy"},
 		{name: "重烈", level: 5, commandID: CommandFistPowHit, sourceType: "oneE", actionLabel: "w5/powHit", mpCost: 28, multiplier: 1, target: "enemy"},
 		{name: "气运丹田", level: 5, commandID: CommandFistInfluxGas, sourceType: "own", actionLabel: "w5/influxGas", mpCost: 32, multiplier: 0, target: "self"},
-		{name: "破魂打", level: 5, commandID: CommandFistBreakSoul, sourceType: "oneE", actionLabel: "w5/breakSoul", mpCost: 36, multiplier: 0.8, directBonus: 0.3, target: "enemy"},
+		{name: "破魂打", level: 5, commandID: CommandFistBreakSoul, sourceType: "oneE", actionLabel: "w5/breakSoul", mpCost: 36, multiplier: 1.5, directBonus: 0.3, target: "enemy"},
 		{name: "移形换影", level: 4, commandID: CommandFistMoveShadow, sourceType: "own", actionLabel: "w5/moveShadow", mpCost: 36, multiplier: 0, target: "self"},
 		{name: "奥义.修罗幻翼拳", level: 4, commandID: CommandFistPowerAxeWing, sourceType: "oneE", actionLabel: "w5/PowerAxeWing", mpCost: 38, multiplier: 2.7, target: "enemy"},
 	}
@@ -9689,7 +9767,7 @@ func TestWoodcutterFistDamagingSkillsUseCapturedProfiles(t *testing.T) {
 	actor.MP = 100
 	target.HP = target.MaxHP
 	breakSoul := runtime.resolveAttack(actor, target, CommandFistBreakSoul)
-	if breakSoul.ActionName != "破魂打" || breakSoul.SourceActionLabel != "w5/breakSoul" || breakSoul.Damage != 110 || actor.MP != 64 {
+	if breakSoul.ActionName != "破魂打" || breakSoul.SourceActionLabel != "w5/breakSoul" || breakSoul.Damage != 180 || actor.MP != 64 {
 		t.Fatalf("expected 破魂打 captured damage/direct bonus and MP cost, action=%+v actor=%+v", breakSoul, actor)
 	}
 }
@@ -9698,6 +9776,7 @@ func TestWoodcutterFistInfluxGasBuffsRestoreOnReplaceAndExpiry(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:      "battle-fist-influx",
 		StatusEffects: map[string]BattleStatusEffects{},
+		RoleSkills:    []session.RoleSkill{{Name: "气运丹田", Level: 1, Type: "own"}},
 		Cells: []CellInfoPush{
 			{BattleID: "battle-fist-influx", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, Attack: 360, Defense: 312, MgcDefense: 80},
 		},
@@ -9728,10 +9807,35 @@ func TestWoodcutterFistInfluxGasBuffsRestoreOnReplaceAndExpiry(t *testing.T) {
 	}
 }
 
+func TestWoodcutterFistFinalLevelsUseCapturedStatusValues(t *testing.T) {
+	runtime := &Runtime{
+		BattleID:      "battle-fist-final-status-levels",
+		StatusEffects: map[string]BattleStatusEffects{},
+		RoleSkills: []session.RoleSkill{
+			{Name: "气运丹田", Level: 5, Type: "own"},
+			{Name: "移形换影", Level: 4, Type: "own"},
+		},
+		Cells: []CellInfoPush{
+			{BattleID: "battle-fist-final-status-levels", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, Attack: 360, Defense: 312, MgcDefense: 80, Dog: 267},
+		},
+	}
+	actor := runtime.cellByHandle("player_fist")
+	buffs := runtime.applyFistInfluxGasStatusEffects(actor)
+	if actor.Defense != 499 || actor.MgcDefense != 160 || actor.Attack != 468 || len(buffs) != 3 ||
+		buffs[0].Description != "提升对象187点物理防御力" || buffs[1].Description != "提升对象80法术防御力" || buffs[2].Description != "提升对象108点物理攻击" {
+		t.Fatalf("expected final-level 气运丹田 values, actor=%+v buffs=%+v", actor, buffs)
+	}
+	shadowBuff := runtime.applyFistMoveShadowStatusEffect(actor)
+	if actor.Dog != 387 || shadowBuff.Description != "提高对象120点回避" {
+		t.Fatalf("expected final-level 移形换影 values, actor=%+v buff=%+v", actor, shadowBuff)
+	}
+}
+
 func TestWoodcutterFistMoveShadowAndPowHitStatusLifecycle(t *testing.T) {
 	shadowRuntime := &Runtime{
 		BattleID:      "battle-fist-shadow",
 		StatusEffects: map[string]BattleStatusEffects{},
+		RoleSkills:    []session.RoleSkill{{Name: "移形换影", Level: 1, Type: "own"}},
 		Cells: []CellInfoPush{
 			{BattleID: "battle-fist-shadow", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, Dog: 267},
 		},
@@ -9824,7 +9928,32 @@ func TestWoodcutterFistUltimateRequiresSoulPower(t *testing.T) {
 	}
 	action := result.Actions[0]
 	actor := runtime.cellByHandle("player_fist")
-	if action.SourceActionLabel != "w5/PowerAxeWing" || action.Damage != 270 || action.TargetHP != 730 || actor.MP != 62 {
+	if action.SourceActionLabel != "w5/PowerAxeWing" || action.Damage != 810 || action.TargetHP != 190 || actor.MP != 62 {
 		t.Fatalf("expected 奥义.修罗幻翼拳 captured action and MP cost, action=%+v actor=%+v", action, actor)
+	}
+}
+
+func TestWoodcutter777SharedPhysicalFormulaReplaysCapturedDamage(t *testing.T) {
+	previousRoll := sourceBattleAttackRoll
+	defer func() { sourceBattleAttackRoll = previousRoll }()
+
+	runtime := &Runtime{StoredPower: map[string]int{"acct-777-role-001": fistPowerAxeWingRequiredPower}}
+	actor := &CellInfoPush{Handle: "acct-777-role-001", Camp: CampTeam, Attack: 361}
+	map52Robber := &CellInfoPush{Handle: "map52_robber", Camp: CampEnemy, Defense: 321}
+
+	// 113.96% is the captured p50 attack roll for Lv5 破魂打 against map52 盗贼.
+	sourceBattleAttackRoll = func(int) int { return 1896 }
+	breakSoul := runtime.baseBattleDamageValue(actor, commandProfile{DamageMultiplier: 1.5, DirectAttackBonus: 0.3}, runtime.effectiveBattleDefenseValue(actor, map52Robber, false, "physical"))
+	if got := int(math.Round(breakSoul)); got != 580 {
+		t.Fatalf("expected shared formula to replay 777 Lv5 破魂打 p50=580, got %.4f -> %d", breakSoul, got)
+	}
+
+	actor.Attack = 397
+	map48Robber := &CellInfoPush{Handle: "map48_robber", Camp: CampEnemy, Defense: 121}
+	// 96.98% with three stored soul power gives the captured 5423 critical exactly.
+	sourceBattleAttackRoll = func(int) int { return 198 }
+	ultimate := runtime.baseBattleDamageValue(actor, commandProfile{DamageMultiplier: 2.4, DamageUsesStoredPower: true}, runtime.effectiveBattleDefenseValue(actor, map48Robber, false, "physical"))
+	if got := int(math.Round(ultimate * 2)); got != 5423 {
+		t.Fatalf("expected shared formula to defer rounding until after 777 ultimate critical, got %.4f -> %d", ultimate, got)
 	}
 }

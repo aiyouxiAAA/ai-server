@@ -109,6 +109,11 @@ func (store *Store) initSchema() error {
 			role_physique_json TEXT NOT NULL DEFAULT '',
 			dungeon_instances_json TEXT NOT NULL DEFAULT ''
 		)`,
+		`CREATE TABLE IF NOT EXISTS role_snapshot_migrations (
+			role_id TEXT NOT NULL,
+			migration_key TEXT NOT NULL,
+			PRIMARY KEY (role_id, migration_key)
+		)`,
 		`CREATE TABLE IF NOT EXISTS role_removed_quests (
 			role_id TEXT NOT NULL,
 			title TEXT NOT NULL,

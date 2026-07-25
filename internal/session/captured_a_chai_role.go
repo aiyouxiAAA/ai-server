@@ -24,6 +24,7 @@ type capturedAChaiRoleSnapshot struct {
 		Capacities        RoleContainerCapacities `json:"capacities"`
 		Currencies        RoleCurrencies          `json:"currencies"`
 		Items             []RoleItem              `json:"items"`
+		SkillCap          int                     `json:"skillCap"`
 		Skills            []RoleSkill             `json:"skills"`
 		FastPanel         []RoleFastPanelEntry    `json:"fastPanel"`
 		TownBuffs         []RoleTownBuff          `json:"townBuffs"`
@@ -38,6 +39,15 @@ type capturedAChaiQuestSnapshot struct {
 }
 
 var capturedAChaiSnapshot = mustLoadCapturedAChaiSnapshot()
+
+func capturedAChaiRoleItemTemplate(name string) (RoleItem, bool) {
+	for _, item := range capturedAChaiSnapshot.Role.Items {
+		if item.Name == name {
+			return item, true
+		}
+	}
+	return RoleItem{}, false
+}
 
 func mustLoadCapturedAChaiSnapshot() capturedAChaiRoleSnapshot {
 	var snapshot capturedAChaiRoleSnapshot
@@ -60,6 +70,7 @@ func applyCapturedAChaiSnapshot(role RoleSummary) RoleSummary {
 	role.Currencies = cloneRoleCurrencies(snapshot.Currencies)
 	role.ContainerCapacities = cloneRoleContainerCapacities(snapshot.Capacities)
 	role.Items = cloneRoleItems(snapshot.Items)
+	role.SkillCap = snapshot.SkillCap
 	role.Skills = cloneRoleSkills(snapshot.Skills)
 	role.FastPanel = cloneRoleFastPanel(snapshot.FastPanel)
 	role.TownBuffs = cloneRoleTownBuffs(snapshot.TownBuffs)
@@ -105,6 +116,7 @@ func (store *Store) MigrateCapturedAChaiSkills(playerID string, roleID string) (
 			continue
 		}
 		roles[index].Skills = cloneRoleSkills(capturedAChaiSnapshot.Role.Skills)
+		roles[index].SkillCap = capturedAChaiSnapshot.Role.SkillCap
 		roles[index].FastPanel = cloneRoleFastPanel(capturedAChaiSnapshot.Role.FastPanel)
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {

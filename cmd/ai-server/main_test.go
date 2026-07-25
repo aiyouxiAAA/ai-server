@@ -6804,6 +6804,117 @@ func TestClassicBattleActionRequiredItemNameIncludesCapturedRangerBowArrows(t *t
 	if got := classicBattleActionRequiredItemName(battle.CommandAoYiHongLeiShi); got != "" {
 		t.Fatalf("expected 奥义.轰雷矢 to have no item requirement, got %q", got)
 	}
+	if got := classicBattleActionRequiredItemName(battle.CommandHuanHunShu); got != "魂之石" {
+		t.Fatalf("expected 还魂术 to require 魂之石, got %q", got)
+	}
+}
+
+func TestHandlePacketClassicBattleHuanHunShuConsumesSoulStoneAndRevivesDeadAlly(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleStartReq,
+		Seq: 2,
+		Payload: mustJSON(t, battle.StartRequest{
+			MapID:       "4",
+			MapName:     "云隐村口",
+			StageFocusX: 120,
+			ReturnRoute: "town-placeholder",
+		}),
+	}, socketSession)
+	if startResult.battleStart == nil || startResult.battleCommand == nil {
+		t.Fatalf("expected battle start result, got %+v", startResult)
+	}
+
+	soulStoneTemplate, ok := session.CapturedRoleItemTemplate("魂之石")
+	if !ok || soulStoneTemplate.Type != "背包" || soulStoneTemplate.ItemType != "null" || soulStoneTemplate.Display != "248.png" || soulStoneTemplate.Index != 41 {
+		t.Fatalf("expected captured 魂之石 template, got %+v", soulStoneTemplate)
+	}
+	soulStoneTemplate.Index = -1
+	soulStone, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, soulStoneTemplate)
+	if !ok {
+		t.Fatal("expected grant 魂之石")
+	}
+
+	socketSession.battleRuntime.RoleSkills = []session.RoleSkill{{Name: "还魂术", Level: 5, Type: "oneO"}}
+	socketSession.battleRuntime.RoleSkillsByHandle[socketSession.selectedRole.RoleID] = socketSession.battleRuntime.RoleSkills
+	socketSession.battleRuntime.Cells = append(socketSession.battleRuntime.Cells, battle.CellInfoPush{
+		BattleID: startResult.battleStart.BattleID, Handle: "enemy_1", Camp: battle.CampEnemy, HP: 1000, MaxHP: 1000, Attack: 1,
+	})
+	actor := &socketSession.battleRuntime.Cells[0]
+	actor.MP = 3509
+	actor.MaxMP = 3649
+	deadAlly := &socketSession.battleRuntime.Cells[1]
+	deadAlly.Handle = "player_dead_ally"
+	deadAlly.Camp = battle.CampTeam
+	deadAlly.HP = -420
+	deadAlly.MaxHP = 2101
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleActionReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.ActionRequest{
+			BattleID: startResult.battleStart.BattleID, ActorHandle: socketSession.selectedRole.RoleID, CommandID: battle.CommandHuanHunShu,
+			TargetHandle: deadAlly.Handle, Round: startResult.battleCommand.Round, Sequence: startResult.battleCommand.Sequence,
+		}),
+	}, socketSession)
+
+	if !result.handled || len(result.battleActions) == 0 {
+		t.Fatalf("expected 还魂术 battleAction, got %+v", result)
+	}
+	action := result.battleActions[0]
+	if action.ActionName != "还魂术" || action.SourceActionLabel != "w10/relive" || action.SourceMode != "1" || action.TargetHandle != deadAlly.Handle || action.TargetHP != 1051 || action.TargetDead || actor.MP != 3379 {
+		t.Fatalf("expected captured 还魂术 result, action=%+v actor=%+v", action, actor)
+	}
+	if len(result.itemClears) != 1 || result.itemClears[0].Type != soulStone.Type || result.itemClears[0].Index != soulStone.Index {
+		t.Fatalf("expected 魂之石 slot clear after 还魂术, got %+v", result.itemClears)
+	}
+	if _, ok := store.GetRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, soulStone.Type, soulStone.Index); ok {
+		t.Fatalf("expected 魂之石 slot %d to be consumed", soulStone.Index)
+	}
+}
+
+func TestHandlePacketClassicBattleHuanHunShuRejectsMissingSoulStoneWithoutMutation(t *testing.T) {
+	store, socketSession := seedSelectedRoleSession(t)
+	startResult := handlePacketWithSession(store, protocol.Packet{
+		Cmd:     cmdClassicBattleStartReq,
+		Seq:     2,
+		Payload: mustJSON(t, battle.StartRequest{MapID: "4", MapName: "云隐村口", StageFocusX: 120, ReturnRoute: "town-placeholder"}),
+	}, socketSession)
+	if startResult.battleStart == nil || startResult.battleCommand == nil {
+		t.Fatalf("expected battle start result, got %+v", startResult)
+	}
+
+	socketSession.battleRuntime.RoleSkills = []session.RoleSkill{{Name: "还魂术", Level: 5, Type: "oneO"}}
+	socketSession.battleRuntime.RoleSkillsByHandle[socketSession.selectedRole.RoleID] = socketSession.battleRuntime.RoleSkills
+	socketSession.battleRuntime.Cells = append(socketSession.battleRuntime.Cells, battle.CellInfoPush{
+		BattleID: startResult.battleStart.BattleID, Handle: "enemy_1", Camp: battle.CampEnemy, HP: 1000, MaxHP: 1000, Attack: 1,
+	})
+	actor := &socketSession.battleRuntime.Cells[0]
+	actor.MP = 3509
+	deadAlly := &socketSession.battleRuntime.Cells[1]
+	deadAlly.Handle = "player_dead_ally"
+	deadAlly.Camp = battle.CampTeam
+	deadAlly.HP = -420
+	deadAlly.MaxHP = 2101
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicBattleActionReq,
+		Seq: 3,
+		Payload: mustJSON(t, battle.ActionRequest{
+			BattleID: startResult.battleStart.BattleID, ActorHandle: socketSession.selectedRole.RoleID, CommandID: battle.CommandHuanHunShu,
+			TargetHandle: deadAlly.Handle, Round: startResult.battleCommand.Round, Sequence: startResult.battleCommand.Sequence,
+		}),
+	}, socketSession)
+
+	if !result.handled || len(result.battleActions) != 0 || len(result.itemInfos) != 0 || len(result.itemClears) != 0 || result.battleCommand == nil {
+		t.Fatalf("expected missing 魂之石 to reject with retry startCommand and without mutation pushes, got %+v", result)
+	}
+	if result.battleCommand.ActorHandle != socketSession.selectedRole.RoleID || result.battleCommand.Sequence != startResult.battleCommand.Sequence {
+		t.Fatalf("expected missing 魂之石 retry command to keep current actor/sequence, got %+v", result.battleCommand)
+	}
+	if len(result.errorMessages) != 1 || result.errorMessages[0].Msg != "物品不足" || actor.MP != 3509 || deadAlly.HP != -420 || socketSession.battleRuntime.ConsumedSequence[startResult.battleCommand.Sequence] {
+		t.Fatalf("expected missing 魂之石 to avoid battle mutation, result=%+v actor=%+v target=%+v", result, actor, deadAlly)
+	}
 }
 
 func TestHandlePacketClassicBattleTouDuConsumesPoison(t *testing.T) {

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "buff",
   "source": "internal/classicdata/source/buff-table.csv",
-  "rowCount": 13,
+  "rowCount": 14,
   "rows": [
     {
       "buff_id": "hotblood",
@@ -29,6 +29,19 @@
       "description_template": "提升对象{value}点物理攻击",
       "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go applyFightingSpiritStatusEffect",
       "notes": "力释棍术来源已实现；X=当前物攻*15%"
+    },
+    {
+      "buff_id": "healing",
+      "name": "气疗",
+      "display": "21.png",
+      "default_rounds": "3",
+      "status": "confirmed",
+      "mechanism": "fixed healing tick",
+      "description": "每回合对象恢复N气力",
+      "description_kind": "dynamic",
+      "description_template": "每回合对象恢复{value}气力",
+      "evidence": ".planning/BATTLE_BUFF_STATUS_DEVELOPMENT_PLAN.md + internal/battle/runtime.go applyQiYuStatusEffect/applyHuiShangShuQiLiaoStatusEffect",
+      "notes": "气愈式按百分比；回伤术按抓包固定130气力"
     },
     {
       "buff_id": "slow",

@@ -181,6 +181,7 @@ type RoleSummary struct {
 	SourceQuery         string                          `json:"sourceQuery,omitempty"`
 	BattleSourceQuery   string                          `json:"battleSourceQuery,omitempty"`
 	Appearance          RoleAppearance                  `json:"appearance,omitempty"`
+	SkillCap            int                             `json:"skillCap,omitempty"`
 	Skills              []RoleSkill                     `json:"skills,omitempty"`
 	FastPanel           []RoleFastPanelEntry            `json:"fastPanel,omitempty"`
 	TownBuffs           []RoleTownBuff                  `json:"townBuffs,omitempty"`
@@ -712,10 +713,21 @@ func NewPersistentStore(persistencePath string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	migratedCaptured777RoleIDs, err := store.applyPendingCapturedWoodcutter777InventoryMigration()
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	if err := store.saveLocked(); err != nil {
 		_ = db.Close()
 		return nil, err
+	}
+	for _, roleID := range migratedCaptured777RoleIDs {
+		if err := store.recordCapturedWoodcutter777InventoryMigration(roleID); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
 	}
 
 	return store, nil
@@ -1203,7 +1215,7 @@ func (store *Store) GetRoleSkills(playerID string, roleID string) ([]RoleSkill, 
 		}
 
 		role = withRoleRuntimeDefaults(role)
-		return cloneRoleSkills(role.Skills), defaultSkillCap, true
+		return cloneRoleSkills(role.Skills), role.SkillCap, true
 	}
 
 	return nil, defaultSkillCap, false
@@ -1221,6 +1233,9 @@ func (store *Store) GetRoleFastPanel(playerID string, roleID string) ([]RoleFast
 		role = withRoleRuntimeDefaults(role)
 		if isCapturedWoodcutter333LocalRole(role) {
 			return cloneRoleFastPanel(filterRoleFastPanelEntries(role.FastPanel, capturedWoodcutter333ShortcutSkills())), true
+		}
+		if isCapturedAChaiLocalRole(role) {
+			return cloneRoleFastPanel(normalizeRoleFastPanel(role.FastPanel)), true
 		}
 		return cloneRoleFastPanel(filterRoleFastPanelEntries(role.FastPanel, role.Skills)), true
 	}
@@ -3824,7 +3839,7 @@ func (store *Store) useSkillItemLocked(
 	}
 	skill = roleSkillWithCapturedActiveItemPresentation(skill)
 
-	if targetSkillIndex < 0 && len(roles[roleIndex].Skills) >= defaultSkillCap {
+	if targetSkillIndex < 0 && len(roles[roleIndex].Skills) >= roles[roleIndex].SkillCap {
 		role := withRoleRuntimeDefaults(roles[roleIndex])
 		return RoleUseItemResult{
 			Role:         role,
@@ -4077,7 +4092,19 @@ func (store *Store) useCurrencyExchangeItemLocked(
 	targetTemplate.Type = sourceItem.Type
 	targetTemplate.Index = -1
 	targetTemplate.Count = targetCount
-	updatedItems, grantedItem, ok := grantRoleItemToItems(updatedItems, defaultBagCap, targetTemplate)
+	// Use the role's real bag capacity (e.g. 777 expanded to 42). Hardcoding
+	// defaultBagCap=30 rejects free slots at index >= 30 even when the bag
+	// still has room, which surfaces as "背包已满。" on silver->copper exchange.
+	// Capture: copper stack limit is 1000, so +1000 often needs an extra slot
+	// after filling an existing partial copper stack.
+	baseCapacity, supported := roleContainerCapacity(sourceItem.Type)
+	if !supported {
+		baseCapacity = defaultBagCap
+	}
+	capacityRole := roles[roleIndex]
+	capacityRole.Items = updatedItems
+	capacity := roleContainerCapacityForRole(capacityRole, sourceItem.Type, baseCapacity)
+	updatedItems, grantedItem, ok := grantRoleItemToItems(updatedItems, capacity, targetTemplate)
 	if !ok {
 		role := withRoleRuntimeDefaults(roles[roleIndex])
 		return RoleUseItemResult{
@@ -5802,17 +5829,17 @@ func (store *Store) LearnRoleSkill(playerID string, roleID string, skill RoleSki
 		roles[index] = withRoleRuntimeDefaults(roles[index])
 		skill = normalizeRoleSkill(skill)
 		if skill.Name == "" {
-			return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, false
+			return cloneRoleSkills(roles[index].Skills), roles[index].SkillCap, true, false
 		}
 
 		for _, existing := range roles[index].Skills {
 			if existing.Name == skill.Name {
-				return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, false
+				return cloneRoleSkills(roles[index].Skills), roles[index].SkillCap, true, false
 			}
 		}
 
-		if len(roles[index].Skills) >= defaultSkillCap {
-			return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, false
+		if len(roles[index].Skills) >= roles[index].SkillCap {
+			return cloneRoleSkills(roles[index].Skills), roles[index].SkillCap, true, false
 		}
 
 		roles[index].Skills = append(roles[index].Skills, skill)
@@ -5821,7 +5848,7 @@ func (store *Store) LearnRoleSkill(playerID string, roleID string, skill RoleSki
 			log.Printf("[session.Store] persist learned skill failed: %v", err)
 		}
 
-		return cloneRoleSkills(roles[index].Skills), defaultSkillCap, true, true
+		return cloneRoleSkills(roles[index].Skills), roles[index].SkillCap, true, true
 	}
 
 	return nil, defaultSkillCap, false, false
@@ -5843,7 +5870,7 @@ func (store *Store) RemoveRoleSkill(playerID string, roleID string, name string)
 		if name == "" {
 			return RoleSkillRemoveResult{
 				Skills:       currentSkills,
-				SkillCap:     defaultSkillCap,
+				SkillCap:     roles[index].SkillCap,
 				Found:        true,
 				ErrorCode:    "skill_missing",
 				ErrorMessage: "技能不存在。",
@@ -5852,7 +5879,7 @@ func (store *Store) RemoveRoleSkill(playerID string, roleID string, name string)
 		if name == "普通攻击" {
 			return RoleSkillRemoveResult{
 				Skills:       currentSkills,
-				SkillCap:     defaultSkillCap,
+				SkillCap:     roles[index].SkillCap,
 				Found:        true,
 				ErrorCode:    "skill_locked",
 				ErrorMessage: "普通攻击不能遗忘。",
@@ -5872,7 +5899,7 @@ func (store *Store) RemoveRoleSkill(playerID string, roleID string, name string)
 		if removedSkill == nil {
 			return RoleSkillRemoveResult{
 				Skills:       currentSkills,
-				SkillCap:     defaultSkillCap,
+				SkillCap:     roles[index].SkillCap,
 				Found:        true,
 				ErrorCode:    "skill_missing",
 				ErrorMessage: "技能不存在。",
@@ -5888,7 +5915,7 @@ func (store *Store) RemoveRoleSkill(playerID string, roleID string, name string)
 
 		return RoleSkillRemoveResult{
 			Skills:       cloneRoleSkills(roles[index].Skills),
-			SkillCap:     defaultSkillCap,
+			SkillCap:     roles[index].SkillCap,
 			RemovedSkill: removedSkill,
 			Found:        true,
 			Removed:      true,
@@ -5921,7 +5948,7 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 		if skill.Name == "" {
 			return RoleSkillPurchaseResult{
 				Skills:       currentSkills,
-				SkillCap:     defaultSkillCap,
+				SkillCap:     roles[index].SkillCap,
 				Currencies:   currentCurrencies,
 				Found:        true,
 				ErrorCode:    "invalid_skill",
@@ -5934,7 +5961,7 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 			if roles[index].Currencies[name] < count {
 				return RoleSkillPurchaseResult{
 					Skills:       currentSkills,
-					SkillCap:     defaultSkillCap,
+					SkillCap:     roles[index].SkillCap,
 					Currencies:   currentCurrencies,
 					Found:        true,
 					ErrorCode:    "not_enough_currency",
@@ -5949,7 +5976,7 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 				if existing.Level >= maxLevel {
 					return RoleSkillPurchaseResult{
 						Skills:       currentSkills,
-						SkillCap:     defaultSkillCap,
+						SkillCap:     roles[index].SkillCap,
 						Currencies:   currentCurrencies,
 						Found:        true,
 						ErrorCode:    "skill_level_max",
@@ -5968,7 +5995,7 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 				}
 				return RoleSkillPurchaseResult{
 					Skills:     cloneRoleSkills(roles[index].Skills),
-					SkillCap:   defaultSkillCap,
+					SkillCap:   roles[index].SkillCap,
 					Currencies: cloneRoleCurrencies(roles[index].Currencies),
 					Found:      true,
 					Learned:    true,
@@ -5976,10 +6003,10 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 			}
 		}
 
-		if len(roles[index].Skills) >= defaultSkillCap {
+		if len(roles[index].Skills) >= roles[index].SkillCap {
 			return RoleSkillPurchaseResult{
 				Skills:       currentSkills,
-				SkillCap:     defaultSkillCap,
+				SkillCap:     roles[index].SkillCap,
 				Currencies:   currentCurrencies,
 				Found:        true,
 				ErrorCode:    "skill_cap_full",
@@ -5999,7 +6026,7 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 
 		return RoleSkillPurchaseResult{
 			Skills:     cloneRoleSkills(roles[index].Skills),
-			SkillCap:   defaultSkillCap,
+			SkillCap:   roles[index].SkillCap,
 			Currencies: cloneRoleCurrencies(roles[index].Currencies),
 			Found:      true,
 			Learned:    true,

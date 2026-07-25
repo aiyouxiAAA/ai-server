@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill-level",
   "source": "internal/classicdata/source/skill-level-table.csv",
-  "rowCount": 103,
+  "rowCount": 107,
   "rows": [
     {
       "skill_level_id": "skill-normal-attack-lv1",
@@ -726,6 +726,50 @@
       "source_action_label": "w10/magicObstacle",
       "damage_multiplier": "0",
       "mp_cost": "150",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-yu-qi-shu-lv5",
+      "skill_id": "skill-yu-qi-shu",
+      "level": "5",
+      "source_action_label": "w10/hpup",
+      "damage_multiplier": "0",
+      "mp_cost": "105",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-hui-shang-shu-lv1",
+      "skill_id": "skill-hui-shang-shu",
+      "level": "1",
+      "source_action_label": "w10/backInjury",
+      "damage_multiplier": "0",
+      "mp_cost": "60",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-sheng-guang-jue-lv1",
+      "skill_id": "skill-sheng-guang-jue",
+      "level": "1",
+      "source_action_label": "w10/holyLight",
+      "damage_multiplier": "0",
+      "mp_cost": "60",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0"
+    },
+    {
+      "skill_level_id": "skill-huan-hun-shu-lv5",
+      "skill_id": "skill-huan-hun-shu",
+      "level": "5",
+      "source_action_label": "w10/relive",
+      "damage_multiplier": "0",
+      "mp_cost": "130",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
       "direct_attack_bonus_multiplier": "0"

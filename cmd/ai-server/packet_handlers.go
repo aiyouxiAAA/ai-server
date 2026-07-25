@@ -1249,6 +1249,8 @@ func classicBattleActionRequiredItemName(commandID string) string {
 		return "暗之箭"
 	case battle.CommandDuShi, "毒矢":
 		return "毒箭"
+	case battle.CommandHuanHunShu, "还魂术":
+		return "魂之石"
 	default:
 		return ""
 	}
@@ -2527,7 +2529,7 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		result.currencyPush = buildClassicTownCurrencyPush(useResult.Role.RoleID, useResult.Currencies)
 	}
 	if useResult.LearnedSkill != nil {
-		result.skillCap = &classicTownSkillCapPush{Count: 12}
+		result.skillCap = &classicTownSkillCapPush{Count: useResult.Role.SkillCap}
 		result.skillInfos = []classicTownSkillInfoPush{
 			classicTownSkillInfoPushFromRoleSkill(useResult.Role.RoleID, *useResult.LearnedSkill),
 		}

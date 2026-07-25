@@ -562,7 +562,7 @@ func fillMissingRoleItemTemplateFields(item RoleItem) RoleItem {
 		return item
 	}
 	repairedDescription, repairedRefinementLineBreaks := repairEquipmentTemplateRefinementLineBreaks(item, template)
-	staleDescription := isStaleEquipmentTemplateDescription(item, template)
+	staleDescription := isStaleEquipmentTemplateDescription(item, template) || isStaleConsumableRecoveryDescription(item, template)
 	usesTemplateDisplay := item.Display == "" || item.Display == template.Display
 	usesTemplateDescription := item.Description == "" ||
 		item.Description == genericCollectionRewardDescription(item.Name) ||
@@ -584,6 +584,23 @@ func fillMissingRoleItemTemplateFields(item RoleItem) RoleItem {
 		item.ItemLevel = template.ItemLevel
 	}
 	return item
+}
+
+// isStaleConsumableRecoveryDescription detects bag/shop consumables that lost the
+// source recovery payload (&7@ HP / &8@ MP). 777 and other captured roles previously
+// fell through classicDataRoleItemTemplate and only kept the short &20@ text, so
+// UseRoleItem returned item_not_usable ("该物品不能使用。").
+// Capture source: classic_town_item_shop.go shop rows for 馒头/包子/小包还元散/小瓶甘露.
+func isStaleConsumableRecoveryDescription(item RoleItem, template RoleItem) bool {
+	if strings.TrimSpace(template.Description) == "" {
+		return false
+	}
+	_, _, templateOK := roleItemRecoveryAmounts(template)
+	if !templateOK {
+		return false
+	}
+	_, _, itemOK := roleItemRecoveryAmounts(item)
+	return !itemOK
 }
 
 func isStaleEquipmentTemplateDescription(item RoleItem, template RoleItem) bool {
@@ -1266,9 +1283,14 @@ func isCapturedWoodcutter333LocalRole(role RoleSummary) bool {
 	return strings.HasPrefix(roleID, "acct-333-role-") || strings.HasPrefix(roleID, "acct-33333333-role-")
 }
 
+func isCapturedAChaiLocalRole(role RoleSummary) bool {
+	roleID := strings.TrimSpace(role.RoleID)
+	return strings.HasPrefix(roleID, "acct-555-role-") || strings.HasPrefix(roleID, "acct-55555555-role-")
+}
+
 func isCapturedWoodcutter777LocalRole(role RoleSummary) bool {
 	roleID := strings.TrimSpace(role.RoleID)
-	return strings.HasPrefix(roleID, "acct-777-role-") || strings.HasPrefix(roleID, "acct-77777777-role-")
+	return roleID == capturedWoodcutter777RoleID || roleID == capturedWoodcutter777LongRoleID
 }
 
 func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
@@ -1539,85 +1561,6 @@ func syncCapturedWoodcutter777Currencies(currencies RoleCurrencies) RoleCurrenci
 		return capturedWoodcutter777Currencies()
 	}
 	return normalized
-}
-
-func syncCapturedWoodcutter777EquipmentItems(items []RoleItem) []RoleItem {
-	normalized := normalizeRoleItems(items)
-	if !shouldSyncCapturedWoodcutter777EquipmentItems(normalized) {
-		return normalized
-	}
-	for _, captured := range capturedWoodcutter777EquipmentItems() {
-		replaced := false
-		for index := range normalized {
-			if normalized[index].Type == "装备" && normalized[index].Index == captured.Index {
-				normalized[index] = captured
-				replaced = true
-				break
-			}
-		}
-		if !replaced {
-			normalized = append(normalized, captured)
-		}
-	}
-	return normalizeRoleItems(normalized)
-}
-
-func syncCapturedWoodcutter777BagItems(items []RoleItem, currencies RoleCurrencies) []RoleItem {
-	normalized := normalizeRoleItems(items)
-	if !shouldSyncCapturedWoodcutter777BagItems(normalized, currencies) {
-		return normalized
-	}
-	result := make([]RoleItem, 0, len(normalized)+len(capturedWoodcutter777BagItems()))
-	for _, item := range normalized {
-		if item.Type != "背包" {
-			result = append(result, item)
-		}
-	}
-	result = append(result, capturedWoodcutter777BagItems()...)
-	return normalizeRoleItems(result)
-}
-
-func shouldSyncCapturedWoodcutter777BagItems(items []RoleItem, currencies RoleCurrencies) bool {
-	hasLegacyArrow := false
-	hasCapturedTeleportCrystal := false
-	hasStaleDefaultSilverSlot := false
-	for _, item := range items {
-		if item.Type != "背包" {
-			continue
-		}
-		if item.Name == "传送晶体" && item.Index == 2 {
-			hasCapturedTeleportCrystal = true
-		}
-		if item.Name == "银元宝" && item.Index == 0 && item.Count == defaultSilver {
-			hasStaleDefaultSilverSlot = true
-		}
-		switch item.Name {
-		case "暗之箭", "毒箭", "火之箭", "冰之箭", "魔箭":
-			hasLegacyArrow = true
-		}
-	}
-	return hasLegacyArrow || !hasCapturedTeleportCrystal ||
-		(currencies["银元宝"] == 189 && currencies["铜钱"] == 1278 && hasStaleDefaultSilverSlot)
-}
-
-func shouldSyncCapturedWoodcutter777EquipmentItems(items []RoleItem) bool {
-	hasWeapon := false
-	hasFashion := false
-	hasBoots := false
-	for _, item := range items {
-		if item.Type != "装备" {
-			continue
-		}
-		switch {
-		case item.Name == "武雷拳套" && item.Index == 3:
-			hasWeapon = true
-		case item.Name == "普通礼服" && item.Index == 11:
-			hasFashion = true
-		case item.Name == "炎爆之靴" && item.Index == 12:
-			hasBoots = true
-		}
-	}
-	return !(hasWeapon && hasFashion && hasBoots)
 }
 
 func syncCapturedWoodcutter333EquipmentItems(items []RoleItem) []RoleItem {
@@ -2355,6 +2298,7 @@ func maxInt(left int, right int) int {
 }
 
 func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
+	role.SkillCap = maxInt(defaultSkillCap, role.SkillCap)
 	if vocation, ok := normalizeRoleVocation(role.Voc); ok {
 		role.Voc = vocation
 	} else {
@@ -2365,6 +2309,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	isWoodcutter777 := isCapturedWoodcutter777LocalRole(role)
 	isWarrior444 := isCapturedWarrior444LocalRole(role)
 	isKonglongKanglang1 := isCapturedKonglongKanglang1LocalRole(role)
+	isAChai := isCapturedAChaiLocalRole(role)
 	if isWoodcutter333 {
 		role = withCapturedWoodcutter333RuntimeDefaults(role)
 	}
@@ -2382,6 +2327,9 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.Skills = capturedWoodcutter333RoleSkills()
 	} else if isKonglongKanglang1 {
 		role.Skills = capturedKonglongKanglang1RoleSkills()
+	} else if isAChai {
+		role.SkillCap = maxInt(role.SkillCap, capturedAChaiSnapshot.Role.SkillCap)
+		role.Skills = cloneRoleSkills(capturedAChaiSnapshot.Role.Skills)
 	} else if isWoodcutter222 {
 		role.Voc = "游侠"
 		role.Skills = capturedWoodcutterRoleSkills()
@@ -2398,6 +2346,8 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 		role.FastPanel = capturedWoodcutter333FastPanel()
 	} else if isKonglongKanglang1 {
 		role.FastPanel = capturedKonglongKanglang1FastPanel()
+	} else if isAChai {
+		role.FastPanel = cloneRoleFastPanel(capturedAChaiSnapshot.Role.FastPanel)
 	} else if isWoodcutter222 {
 		role.FastPanel = capturedWoodcutterFastPanel()
 	} else if len(role.FastPanel) == 0 {
@@ -2433,10 +2383,6 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	if isWoodcutter333 {
 		role.Items = syncCapturedWoodcutter333EquipmentItems(role.Items)
 		role.Items = syncCapturedWoodcutter333BattleConsumables(role.Items)
-	}
-	if isWoodcutter777 {
-		role.Items = syncCapturedWoodcutter777EquipmentItems(role.Items)
-		role.Items = syncCapturedWoodcutter777BagItems(role.Items, role.Currencies)
 	}
 	if isWarrior444 {
 		role.Items = syncCapturedWarrior444EquipmentItems(role.Items)
@@ -2534,6 +2480,9 @@ func CapturedRoleItemTemplate(name string) (RoleItem, bool) {
 			return item, true
 		}
 	}
+	if item, ok := capturedAChaiRoleItemTemplate(name); ok {
+		return item, true
+	}
 	if item, ok := classicDataRoleItemTemplate(name); ok {
 		return item, true
 	}
@@ -2545,6 +2494,9 @@ func CapturedRoleItemTemplates() []RoleItem {
 	items = append(items, sourceStarterEquipmentItems()...)
 	items = append(items, capturedDefaultRoleItems()...)
 	items = append(items, capturedAdditionalRoleItemTemplates()...)
+	if soulStone, ok := capturedAChaiRoleItemTemplate("魂之石"); ok {
+		items = append(items, soulStone)
+	}
 	return cloneRoleItems(items)
 }
 
@@ -2874,12 +2826,63 @@ func capturedDefaultRoleItems() []RoleItem {
 
 func capturedAdditionalRoleItemTemplates() []RoleItem {
 	return []RoleItem{
+		// Town medicine shop capture (classic_town_item_shop.go): recovery amounts in &7@/&8@.
+		{
+			Type:        "背包",
+			Name:        "馒头",
+			ItemType:    "own",
+			Display:     "0.png",
+			Description: "f_i_馒头&24@消耗品&25@99&7@200&20@又白又香的馒头&0;饥饿的时候用来充饥.&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "包子",
+			ItemType:    "own",
+			Display:     "212.png",
+			Description: "f_i_包子&24@消耗品&25@99&7@600&20@带馅的包子&0;看起来非常可口&0;食用后可恢复些气力.&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "花卷",
+			ItemType:    "own",
+			Display:     "213.png",
+			Description: "f_i_花卷^ffffff&24@消耗品&25@99&7@350&20@葱香的花卷馒头.食用后可恢复一些气力.&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "小包还元散",
+			ItemType:    "own",
+			Display:     "695.png",
+			Description: "f_i_小包还元散&24@消耗品&25@99&7@1500&20@恢复气力的药散.&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
+		{
+			Type:        "背包",
+			Name:        "小瓶甘露",
+			ItemType:    "own",
+			Display:     "696.png",
+			Description: "f_i_小瓶甘露&24@消耗品&25@99&8@100&20@恢复精力的甘露.&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   1,
+		},
 		{
 			Type:        "背包",
 			Name:        "超时空要塞",
 			ItemType:    "equip",
 			Display:     "1205.png",
-			Description: "f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@1779629952719&105@&107@&108@0",
+			Description: "f_i_超时空要塞^00ccff&24@幻·时装&25@1&15@20&16@20&19@【注：7天时限】&20@交杂着爱与友情以及惑星之命运的超银河Love Story！！！ &27@sitem_ezhj&103@0&104@0&105@&107@&108@0",
 			Count:       1,
 			Index:       0,
 			ItemLevel:   3,

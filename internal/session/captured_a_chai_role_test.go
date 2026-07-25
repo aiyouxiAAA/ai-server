@@ -79,20 +79,53 @@ func TestPersistentCapturedAChai555MigrationKeepsFinalSnapshot(t *testing.T) {
 	}
 
 	skills, skillCap, ok := reopened.GetRoleSkills(login.PlayerID, created.Role.RoleID)
-	if !ok || skillCap != 12 || len(skills) != 13 {
+	if !ok || skillCap != 16 || len(skills) != 16 {
 		t.Fatalf("unexpected captured skills cap=%d skills=%+v", skillCap, skills)
 	}
-	if skills[1].Name != "赤焰魔咒" || skills[1].Level != 5 || skills[2].Name != "雷击" || skills[2].Level != 5 || skills[8].Name != "魔障术" || skills[8].Level != 5 || skills[9].Name != "雷爆咒" || skills[9].Level != 5 || skills[10].Name != "雷龙强袭" || skills[11].Name != "火神咒" || skills[11].Level != 5 || skills[12].Name != "石雨术" || skills[12].Level != 5 {
-		t.Fatalf("unexpected captured skill order: %+v", skills)
+	expectedSkills := []struct {
+		name  string
+		level int
+	}{
+		{name: "普通攻击", level: 1},
+		{name: "赤焰魔咒", level: 5},
+		{name: "炎狩术", level: 5},
+		{name: "愈气术", level: 5},
+		{name: "御气经", level: 5},
+		{name: "精元经", level: 5},
+		{name: "苦心经", level: 5},
+		{name: "魔障术", level: 5},
+		{name: "雷爆咒", level: 5},
+		{name: "圣光诀", level: 1},
+		{name: "回伤术", level: 1},
+		{name: "还魂术", level: 5},
+		{name: "雷击", level: 5},
+		{name: "火神咒", level: 5},
+		{name: "石雨术", level: 5},
+		{name: "雷龙强袭", level: 1},
+	}
+	for index, expected := range expectedSkills {
+		if skills[index].Name != expected.name || skills[index].Level != expected.level {
+			t.Fatalf("unexpected captured skill[%d], want=%+v got=%+v all=%+v", index, expected, skills[index], skills)
+		}
 	}
 	fastPanel, ok := reopened.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
-	if !ok || len(fastPanel) != 10 || fastPanel[1].Name != "炎狩术" || fastPanel[6].Name != "火神咒" || fastPanel[7].Index != 7 || fastPanel[7].Name != "石雨术" || fastPanel[8].Index != 8 || fastPanel[9].Name != "小瓶甘露" {
+	if !ok || len(fastPanel) != 10 || fastPanel[1].Name != "炎狩术" || fastPanel[3].Name != "圣光诀" || fastPanel[6].Name != "火神咒" || fastPanel[7].Index != 7 || fastPanel[7].Name != "石雨术" || fastPanel[8].Index != 8 || fastPanel[9].Name != "小瓶甘露" {
 		t.Fatalf("unexpected captured fast panel: %+v", fastPanel)
 	}
 
 	bag, bagCapacity, ok := reopened.GetRoleItems(login.PlayerID, created.Role.RoleID, "背包")
-	if !ok || bagCapacity != 42 || len(bag) != 34 {
+	if !ok || bagCapacity != 42 || len(bag) != 35 {
 		t.Fatalf("unexpected captured bag capacity=%d items=%d", bagCapacity, len(bag))
+	}
+	var soulStone RoleItem
+	for _, item := range bag {
+		if item.Name == "魂之石" {
+			soulStone = item
+			break
+		}
+	}
+	if soulStone.Type != "背包" || soulStone.ItemType != "null" || soulStone.Display != "248.png" || soulStone.Count != 1 || soulStone.Index != 41 || soulStone.ItemLevel != 3 {
+		t.Fatalf("unexpected captured 魂之石 bag item: %+v", soulStone)
 	}
 	warehouse, warehouseCapacity, ok := reopened.GetRoleItems(login.PlayerID, created.Role.RoleID, "仓库")
 	if !ok || warehouseCapacity != 38 || len(warehouse) != 21 {
@@ -143,7 +176,31 @@ func TestPersistentCapturedAChai555SkillMigrationKeepsOtherRoleState(t *testing.
 	if migrated.DisplayName != before.DisplayName || migrated.Level != before.Level || migrated.MapID != before.MapID || migrated.Voc != before.Voc {
 		t.Fatalf("skill-only migration changed role state: before=%+v migrated=%+v", before, migrated)
 	}
-	if len(migrated.Skills) != 13 || migrated.Skills[11].Name != "火神咒" || migrated.Skills[12].Name != "石雨术" || len(migrated.FastPanel) != 10 || migrated.FastPanel[6].Name != "火神咒" || migrated.FastPanel[7].Name != "石雨术" {
+	if migrated.SkillCap != 16 || len(migrated.Skills) != 16 || migrated.Skills[12].Name != "雷击" || migrated.Skills[13].Name != "火神咒" || migrated.Skills[14].Name != "石雨术" || migrated.Skills[15].Name != "雷龙强袭" || len(migrated.FastPanel) != 10 || migrated.FastPanel[3].Name != "圣光诀" || migrated.FastPanel[6].Name != "火神咒" || migrated.FastPanel[7].Name != "石雨术" {
 		t.Fatalf("unexpected migrated captured skills: %+v fastPanel=%+v", migrated.Skills, migrated.FastPanel)
+	}
+}
+
+func TestCapturedAChaiRuntimeDefaultsSyncLatestSkillsForExisting555Role(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "55555555", "55555555")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "555",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !created.Success {
+		t.Fatalf("create existing 555 role: %+v", created)
+	}
+
+	skills, skillCap, ok := store.GetRoleSkills(login.PlayerID, created.Role.RoleID)
+	if !ok || skillCap != 16 || len(skills) != 16 || skills[3].Name != "愈气术" || skills[9].Name != "圣光诀" || skills[10].Name != "回伤术" || skills[12].Name != "雷击" || skills[15].Name != "雷龙强袭" {
+		t.Fatalf("expected existing 555 role runtime skills to sync captured support skills, got %+v", skills)
+	}
+	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
+	if !ok || len(fastPanel) != 10 || fastPanel[3].Name != "圣光诀" {
+		t.Fatalf("expected existing 555 role runtime fast panel to match capture, got %+v", fastPanel)
 	}
 }

@@ -56,6 +56,10 @@ const (
 	CommandShiYuShu          = "skill-shi-yu-shu"
 	CommandLeiLongQiangXi    = "skill-lei-long-qiang-xi"
 	CommandMoZhangShu        = "skill-mo-zhang-shu"
+	CommandYuQiShu           = "skill-yu-qi-shu"
+	CommandHuiShangShu       = "skill-hui-shang-shu"
+	CommandShengGuangJue     = "skill-sheng-guang-jue"
+	CommandHuanHunShu        = "skill-huan-hun-shu"
 	CommandLeiHunZhan        = "skill-lei-hun-zhan"
 	CommandAoYiHongLeiShi    = "skill-ao-yi-hong-lei-shi"
 	CommandAoYiAnShaZhe      = "skill-ao-yi-an-sha-zhe"
@@ -218,6 +222,9 @@ const (
 	ningShenHitPercent                = 70
 	qiYuRounds                        = 3
 	qiYuHealPercent                   = 13
+	yuQiShuCapturedHealAmount         = 765
+	huiShangShuQiLiaoHealAmount       = 130
+	huiShangShuQiLiaoRounds           = 3
 	kuangWuShiStunChance              = 25
 	fistPowHitStunChance              = 25
 	fistPowHitStunRounds              = 2
@@ -499,6 +506,7 @@ type BattleStatusEffect struct {
 	HitIncrease              int
 	FatIncrease              int
 	HealPercent              int
+	HealAmount               int
 	DamageToMPPercent        int
 	VisualOnly               bool
 	SkipTurn                 bool
@@ -1064,6 +1072,41 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		})
 		result.BuffInfos = append(result.BuffInfos, buffInfo)
 		return result
+	case CommandYuQiShu, CommandHuiShangShu, CommandShengGuangJue, CommandHuanHunShu:
+		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
+			return ActionResult{ErrorCode: "unsupported_command"}
+		}
+		target := runtime.cellByHandle(request.TargetHandle)
+		normalizedCommandID := normalizeBattleCommandID(commandID)
+		if target == nil || target.Camp != CampTeam || (normalizedCommandID == CommandHuanHunShu && target.HP > 0) || (normalizedCommandID != CommandHuanHunShu && target.HP <= 0) {
+			return ActionResult{ErrorCode: "invalid_target"}
+		}
+		profile := runtime.battleCommandProfile(actor, commandID)
+		runtime.ConsumedSequence[request.Sequence] = true
+		runtime.consumePendingSkillSeal(actor.Handle)
+		runtime.setStoredPower(actor.Handle, 0)
+		if profile.MPCost > 0 {
+			actor.MP = maxInt(0, actor.MP-profile.MPCost)
+		}
+		switch normalizedCommandID {
+		case CommandYuQiShu:
+			target.HP = clampInt(target.HP+yuQiShuCapturedHealAmount, 0, target.MaxHP)
+		case CommandHuiShangShu:
+			runtime.clearStatusEffect(target.Handle, "内伤")
+			runtime.clearStatusEffect(target.Handle, "外伤")
+			runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.applyHuiShangShuQiLiaoStatusEffect(actor, target))
+		case CommandShengGuangJue:
+			for _, statusName := range []string{"混乱", "眩晕", "冰冻", "麻痹"} {
+				runtime.clearStatusEffect(target.Handle, statusName)
+			}
+		case CommandHuanHunShu:
+			target.HP = (target.MaxHP + 1) / 2
+		}
+		action := runtime.resolveProfileFriendlyAction(actor, target, commandID, profile)
+		if normalizedCommandID == CommandHuanHunShu {
+			action.SourceMode = "1"
+		}
+		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{action})
 	case CommandFistInfluxGas:
 		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
 			return ActionResult{ErrorCode: "unsupported_command"}
@@ -1748,6 +1791,14 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "雷龙强袭", 1)
 	case CommandMoZhangShu:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "魔障术", 2)
+	case CommandYuQiShu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "愈气术", 5)
+	case CommandHuiShangShu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "回伤术", 1)
+	case CommandShengGuangJue:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "圣光诀", 1)
+	case CommandHuanHunShu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "还魂术", 5)
 	case CommandLeiHunZhan:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
 	case CommandAoYiHongLeiShi:
@@ -2609,6 +2660,14 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasCapturedRoleSkillForActor(handle, "雷龙强袭")
 	case CommandMoZhangShu:
 		return runtime.hasCapturedRoleSkillForActor(handle, "魔障术")
+	case CommandYuQiShu:
+		return runtime.hasCapturedRoleSkillForActor(handle, "愈气术")
+	case CommandHuiShangShu:
+		return runtime.hasCapturedRoleSkillForActor(handle, "回伤术")
+	case CommandShengGuangJue:
+		return runtime.hasCapturedRoleSkillForActor(handle, "圣光诀")
+	case CommandHuanHunShu:
+		return runtime.hasCapturedRoleSkillForActor(handle, "还魂术")
 	case CommandLeiHunZhan:
 		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
 	case CommandAoYiHongLeiShi:
@@ -2660,7 +2719,7 @@ func (runtime *Runtime) hasCapturedRoleSkillForActor(handle string, name string)
 
 func isSourceBattleSkillLevelCaptured(name string, level int) bool {
 	switch strings.TrimSpace(name) {
-	case "炎狩术", "赤焰魔咒", "雷击", "雷爆咒", "火神咒", "石雨术", "雷龙强袭", "魔障术":
+	case "炎狩术", "赤焰魔咒", "雷击", "雷爆咒", "火神咒", "石雨术", "雷龙强袭", "魔障术", "愈气术", "回伤术", "圣光诀", "还魂术":
 		return sourceBattleSkillLevelExists(name, level)
 	default:
 		return true
@@ -2949,6 +3008,10 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.CanDodge = false
 		profile.CanFat = false
 	}
+	if name == "愈气术" || name == "回伤术" || name == "圣光诀" || name == "还魂术" {
+		profile.CanDodge = false
+		profile.CanFat = false
+	}
 	if name == "挑衅" || name == "凝神式" || name == "气愈式" {
 		profile.CanDodge = false
 		profile.CanFat = false
@@ -3114,6 +3177,14 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandShiYuShu
 	case "雷龙强袭":
 		return CommandLeiLongQiangXi
+	case "愈气术":
+		return CommandYuQiShu
+	case "回伤术":
+		return CommandHuiShangShu
+	case "圣光诀":
+		return CommandShengGuangJue
+	case "还魂术":
+		return CommandHuanHunShu
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	case "奥义.轰雷矢":
@@ -3136,6 +3207,8 @@ func sourceBattleSkillSourceType(name string, fallbackType string) string {
 		return "oneE"
 	case "狂爆", "解毒术", "力释棍术":
 		return "own"
+	case "愈气术", "回伤术", "圣光诀", "还魂术":
+		return "oneO"
 	case "红月斩", "盘龙棍法", "雷爆咒", "火神咒", "石雨术":
 		return "all"
 	default:
@@ -3156,6 +3229,8 @@ func sourceBattleCommandTarget(sourceType string) string {
 	switch strings.TrimSpace(sourceType) {
 	case "own":
 		return "self"
+	case "oneO":
+		return "ally"
 	default:
 		return "enemy"
 	}
@@ -3226,6 +3301,14 @@ func normalizeBattleCommandID(commandID string) string {
 		return CommandLeiBaoZhou
 	case "雷龙强袭":
 		return CommandLeiLongQiangXi
+	case "愈气术":
+		return CommandYuQiShu
+	case "回伤术":
+		return CommandHuiShangShu
+	case "圣光诀":
+		return CommandShengGuangJue
+	case "还魂术":
+		return CommandHuanHunShu
 	case "奥义.雷魂斩":
 		return CommandLeiHunZhan
 	case "奥义.轰雷矢":
@@ -5731,11 +5814,14 @@ func (runtime *Runtime) resolveQiLiaoStatusAction(target *CellInfoPush, effect B
 	if runtime == nil || target == nil || target.HP <= 0 {
 		return nil
 	}
-	healPercent := effect.HealPercent
-	if healPercent <= 0 {
-		healPercent = qiYuHealPercent
+	healAmount := effect.HealAmount
+	if healAmount <= 0 {
+		healPercent := effect.HealPercent
+		if healPercent <= 0 {
+			healPercent = qiYuHealPercent
+		}
+		healAmount = int(math.Round(float64(target.MaxHP) * float64(healPercent) / 100))
 	}
-	healAmount := int(math.Round(float64(target.MaxHP) * float64(healPercent) / 100))
 	target.HP = clampInt(target.HP+healAmount, 0, target.MaxHP)
 	action := runtime.resolveSelfAction(target, "", "气疗", "battleStand")
 	return &action
@@ -5938,6 +6024,25 @@ func (runtime *Runtime) applyQiYuStatusEffect(actor *CellInfoPush) BuffInfoPush 
 	}
 	runtime.applyStatusEffect(actor.Handle, effect)
 	return runtime.resolveStatusBuffInfo(actor, actor, effect)
+}
+
+func (runtime *Runtime) applyHuiShangShuQiLiaoStatusEffect(actor *CellInfoPush, target *CellInfoPush) BuffInfoPush {
+	if runtime == nil || actor == nil || target == nil {
+		return BuffInfoPush{}
+	}
+	runtime.restoreExistingStatusEffect(target.Handle, "气疗")
+	effect := BattleStatusEffect{
+		Name:          "气疗",
+		Display:       "21.png",
+		Description:   fmt.Sprintf("每回合对象恢复%d气力", huiShangShuQiLiaoHealAmount),
+		Rounds:        huiShangShuQiLiaoRounds,
+		SourceHandle:  actor.Handle,
+		SourceSkill:   "回伤术",
+		AppliedAction: "w10/backInjury",
+		HealAmount:    huiShangShuQiLiaoHealAmount,
+	}
+	runtime.applyStatusEffect(target.Handle, effect)
+	return runtime.resolveStatusBuffInfo(actor, target, effect)
 }
 
 func (runtime *Runtime) applyMagicBarrierStatusEffect(actor *CellInfoPush) BuffInfoPush {
@@ -6238,6 +6343,32 @@ func (runtime *Runtime) resolveProfileSelfAction(actor *CellInfoPush, commandID 
 	action := runtime.resolveSelfAction(actor, commandID, profile.ActionName, profile.SourceActionLabel)
 	action.SourceMode = sourceBattleActionMode(profile.SourceType)
 	return action
+}
+
+func (runtime *Runtime) resolveProfileFriendlyAction(actor *CellInfoPush, target *CellInfoPush, commandID string, profile commandProfile) ActionPush {
+	if runtime == nil || actor == nil || target == nil {
+		return ActionPush{}
+	}
+	refreshInfos := []CellInfoPush{*actor}
+	if target.Handle != actor.Handle {
+		refreshInfos = []CellInfoPush{*target, *actor}
+	}
+	return ActionPush{
+		BattleID:          runtime.BattleID,
+		ActorHandle:       actor.Handle,
+		TargetHandle:      target.Handle,
+		CommandID:         commandID,
+		ActionName:        profile.ActionName,
+		SourceMode:        sourceBattleActionMode(profile.SourceType),
+		SourceActionLabel: profile.SourceActionLabel,
+		Damage:            0,
+		TargetHP:          target.HP,
+		TargetMP:          target.MP,
+		TargetDead:        target.HP <= 0,
+		RefreshInfos:      refreshInfos,
+		Round:             runtime.Round,
+		Sequence:          runtime.currentActionSequence(),
+	}
 }
 
 // resolveCapturedTauntAction matches capture shape:

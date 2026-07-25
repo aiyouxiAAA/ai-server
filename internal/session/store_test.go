@@ -1653,6 +1653,80 @@ func TestStoreGetRoleItemsTrimsStaleCurrencyStacks(t *testing.T) {
 	}
 }
 
+func TestStoreUseRoleItemExchangesSilverUsingExpandedBagCapacity(t *testing.T) {
+	// Repro 777: bag capacity 42 with free slots only after index 30, partial copper
+	// stack < 1000. Exchange must not hardcode defaultBagCap=30 and report bag_full.
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "扩容换铜钱女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	roleID := createResponse.Role.RoleID
+
+	silver, ok := CapturedRoleItemTemplate("银元宝")
+	if !ok {
+		t.Fatal("expected silver template")
+	}
+	copper, ok := CapturedRoleItemTemplate("铜钱")
+	if !ok {
+		t.Fatal("expected copper template")
+	}
+	silver.Type = "背包"
+	silver.Index = 0
+	silver.Count = 5
+	copper.Type = "背包"
+	copper.Index = 1
+	copper.Count = 278
+
+	// Fill bag indexes 2..29 so defaultBagCap=30 has no free slot.
+	items := []RoleItem{silver, copper}
+	for index := 2; index < 30; index++ {
+		items = append(items, RoleItem{
+			Type:        "背包",
+			Name:        "石块",
+			ItemType:    "null",
+			Display:     "104.png",
+			Description: "f_i_石块&24@材料&25@99&20@石块",
+			Count:       1,
+			Index:       index,
+			ItemLevel:   1,
+		})
+	}
+	// Expanded bag still has free slots at 30+.
+	store.rolesByPID[login.PlayerID][0].Items = items
+	store.rolesByPID[login.PlayerID][0].Currencies = RoleCurrencies{"银元宝": 5, "铜钱": 278}
+	store.rolesByPID[login.PlayerID][0].ContainerCapacities = RoleContainerCapacities{"背包": 42}
+
+	result := store.UseRoleItem(login.PlayerID, roleID, "背包", 0)
+	if !result.Found || !result.Used || result.ErrorCode != "" {
+		t.Fatalf("expected silver->copper exchange to use expanded bag capacity, got %+v", result)
+	}
+	if result.Currencies["银元宝"] != 4 || result.Currencies["铜钱"] != 1278 {
+		t.Fatalf("expected currencies 银元宝=4 铜钱=1278, got %+v", result.Currencies)
+	}
+	bag, capacity, ok := store.GetRoleItems(login.PlayerID, roleID, "背包")
+	if !ok || capacity < 42 {
+		t.Fatalf("expected expanded bag capacity, ok=%v capacity=%d", ok, capacity)
+	}
+	var copperTotal int
+	var silverCount int
+	for _, item := range bag {
+		switch item.Name {
+		case "铜钱":
+			copperTotal += item.Count
+		case "银元宝":
+			silverCount = item.Count
+		}
+	}
+	if silverCount != 4 || copperTotal != 1278 {
+		t.Fatalf("expected bag silver=4 copperTotal=1278, silver=%d copper=%d items=%+v", silverCount, copperTotal, bag)
+	}
+}
+
 func TestStoreUseRoleItemClearsSelectedStaleCurrencyStack(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -2318,6 +2392,110 @@ func TestStoreUseRoleItemRestoresTownHPFromClassicDescription(t *testing.T) {
 	_, playerBase, ok := store.GetRoleRuntimeData(login.PlayerID, createResponse.Role.RoleID)
 	if !ok || playerBase.RoleState == nil || playerBase.RoleState.HP != 110 {
 		t.Fatalf("expected recovered HP to persist, got ok=%v playerBase=%+v", ok, playerBase)
+	}
+}
+
+func TestCapturedRecoveryItemTemplatesIncludeShopCaptureAmounts(t *testing.T) {
+	expected := map[string]struct {
+		healHP int
+		healMP int
+	}{
+		"馒头":   {healHP: 200},
+		"包子":   {healHP: 600},
+		"花卷":   {healHP: 350},
+		"小包还元散": {healHP: 1500},
+		"小瓶甘露":  {healMP: 100},
+		"L花卷":  {healHP: 350},
+		"肉":    {healHP: 50},
+	}
+	for name, want := range expected {
+		item, ok := CapturedRoleItemTemplate(name)
+		if !ok {
+			t.Fatalf("expected captured recovery template for %s", name)
+		}
+		healHP, healMP, usable := roleItemRecoveryAmounts(item)
+		if !usable || healHP != want.healHP || healMP != want.healMP {
+			t.Fatalf("expected %s recovery HP=%d MP=%d, got HP=%d MP=%d desc=%q", name, want.healHP, want.healMP, healHP, healMP, item.Description)
+		}
+	}
+}
+
+func TestNormalizeRoleItemRepairsStaleRecoveryDescriptionFromCapture(t *testing.T) {
+	// Mirrors 777 bag rows that only kept short classicData text without &7@/&8@.
+	stale := RoleItem{
+		Type:        "背包",
+		Name:        "馒头",
+		ItemType:    "own",
+		Display:     "0.png",
+		Description: "f_i_馒头^5BC46D&24@消耗品&25@99&20@又白又香的馒头&101@0.png&103@0&104@0&105@&107@&108@0",
+		Count:       93,
+		Index:       18,
+		ItemLevel:   1,
+	}
+	repaired := normalizeRoleItem(stale)
+	healHP, healMP, usable := roleItemRecoveryAmounts(repaired)
+	if !usable || healHP != 200 || healMP != 0 {
+		t.Fatalf("expected stale 馒头 description to repair to shop capture &7@200, got HP=%d MP=%d desc=%q", healHP, healMP, repaired.Description)
+	}
+
+	staleMP := RoleItem{
+		Type:        "背包",
+		Name:        "小瓶甘露",
+		ItemType:    "own",
+		Display:     "696.png",
+		Description: "f_i_小瓶甘露^5BC46D&24@消耗品&25@99&20@古有仙人承露&27@sitem_water&101@696.png&103@0&104@0&105@&107@&108@0",
+		Count:       49,
+		Index:       10,
+		ItemLevel:   1,
+	}
+	repairedMP := normalizeRoleItem(staleMP)
+	healHP, healMP, usable = roleItemRecoveryAmounts(repairedMP)
+	if !usable || healHP != 0 || healMP != 100 {
+		t.Fatalf("expected stale 小瓶甘露 description to repair to shop capture &8@100, got HP=%d MP=%d desc=%q", healHP, healMP, repairedMP.Description)
+	}
+}
+
+func TestStoreUseRoleItemRestoresCapturedMantouAfterStaleDescription(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "残缺馒头女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	store.rolesByPID[login.PlayerID][0].RoleState = &RoleState{
+		Handle: createResponse.Role.RoleID,
+		HP:     10,
+		MP:     20,
+		Exp:    0,
+		Lv:     1,
+		Speed:  130,
+	}
+	// Persist a stale bag row the same way 777's classicData template previously did.
+	store.rolesByPID[login.PlayerID][0].Items = append(store.rolesByPID[login.PlayerID][0].Items, RoleItem{
+		Type:        "背包",
+		Name:        "馒头",
+		ItemType:    "own",
+		Display:     "0.png",
+		Description: "f_i_馒头^5BC46D&24@消耗品&25@99&20@又白又香的馒头&101@0.png&103@0&104@0&105@&107@&108@0",
+		Count:       3,
+		Index:       20,
+		ItemLevel:   1,
+	})
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, "背包", 20)
+	if !result.Found || !result.Used || result.ErrorCode != "" {
+		t.Fatalf("expected repaired 馒头 to be usable, got %+v", result)
+	}
+	if result.PlayerBase.RoleState == nil || result.PlayerBase.RolePhysique == nil {
+		t.Fatalf("expected repaired 馒头 to update role state, got %+v", result.PlayerBase)
+	}
+	// Level-1 max HP is below 10+200; shop capture amount must still apply and clamp to MaxHP.
+	expectedHP := result.PlayerBase.RolePhysique.MaxHP
+	if result.PlayerBase.RoleState.HP != expectedHP || expectedHP <= 10 {
+		t.Fatalf("expected 馒头 &7@200 to restore HP to max (%d), got state=%+v physique=%+v", expectedHP, result.PlayerBase.RoleState, result.PlayerBase.RolePhysique)
 	}
 }
 

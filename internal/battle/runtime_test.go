@@ -4650,6 +4650,134 @@ func TestLiShiGunShuAppliesCapturedFightingSpirit(t *testing.T) {
 	}
 }
 
+func TestCapturedMageSupportSkillsUseCapturedActionsAndFixedHealing(t *testing.T) {
+	newRuntime := func(skill session.RoleSkill) *Runtime {
+		return &Runtime{
+			BattleID:         "battle-mage-support-" + skill.Name,
+			Round:            1,
+			Phase:            PhaseCommand,
+			ActiveHandle:     "player_mage",
+			nextSequence:     1,
+			ConsumedSequence: map[int]bool{},
+			DefendingHandles: map[string]bool{},
+			StatusEffects:    map[string]BattleStatusEffects{},
+			RoleSkills:       []session.RoleSkill{skill},
+			Cells: []CellInfoPush{
+				{BattleID: "battle-mage-support", Handle: "player_mage", Camp: CampTeam, HP: 700, MaxHP: 1105, MP: 500, MaxMP: 3273, MagicAttack: 367},
+				{BattleID: "battle-mage-support", Handle: "player_ally", Camp: CampTeam, HP: 383, MaxHP: 2000, MP: 100, MaxMP: 200, Attack: 100, MagicAttack: 80},
+				{BattleID: "battle-mage-support", Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Attack: 1},
+			},
+		}
+	}
+
+	yuQi := newRuntime(session.RoleSkill{Name: "愈气术", Level: 5, Type: "oneO"})
+	yuQiResult := yuQi.ProcessAction(ActionRequest{BattleID: yuQi.BattleID, ActorHandle: "player_mage", CommandID: CommandYuQiShu, TargetHandle: "player_ally", Round: 1, Sequence: 1})
+	if yuQiResult.ErrorCode != "" || len(yuQiResult.Actions) == 0 {
+		t.Fatalf("expected captured 愈气术 action, got %+v", yuQiResult)
+	}
+	yuQiAction := yuQiResult.Actions[0]
+	if yuQiAction.ActionName != "愈气术" || yuQiAction.SourceActionLabel != "w10/hpup" || yuQiAction.SourceMode != "0" || yuQiAction.TargetHandle != "player_ally" || yuQiAction.TargetHP != 1148 || yuQi.cellByHandle("player_mage").MP != 395 {
+		t.Fatalf("expected captured 愈气术 +765 and MP105 action, got action=%+v actor=%+v", yuQiAction, yuQi.cellByHandle("player_mage"))
+	}
+	if len(yuQiAction.RefreshInfos) != 2 || yuQiAction.RefreshInfos[0].Handle != "player_ally" || yuQiAction.RefreshInfos[0].HP != 1148 || yuQiAction.RefreshInfos[1].Handle != "player_mage" || yuQiAction.RefreshInfos[1].MP != 395 {
+		t.Fatalf("expected 愈气术 target/actor refresh order, got %+v", yuQiAction.RefreshInfos)
+	}
+
+	huiShang := newRuntime(session.RoleSkill{Name: "回伤术", Level: 1, Type: "oneO"})
+	huiTarget := huiShang.cellByHandle("player_ally")
+	huiTarget.Attack = 70
+	huiTarget.MagicAttack = 56
+	huiShang.StatusEffects[huiTarget.Handle] = BattleStatusEffects{Effects: map[string]BattleStatusEffect{
+		"内伤": {Name: "内伤", Rounds: 2, AttackReduction: 30, MagicAttackReduction: 24},
+		"外伤": {Name: "外伤", Rounds: 2},
+	}}
+	huiShangResult := huiShang.ProcessAction(ActionRequest{BattleID: huiShang.BattleID, ActorHandle: "player_mage", CommandID: CommandHuiShangShu, TargetHandle: huiTarget.Handle, Round: 1, Sequence: 1})
+	if huiShangResult.ErrorCode != "" || len(huiShangResult.Actions) == 0 {
+		t.Fatalf("expected captured 回伤术 action, got %+v", huiShangResult)
+	}
+	huiShangAction := huiShangResult.Actions[0]
+	if huiShangAction.ActionName != "回伤术" || huiShangAction.SourceActionLabel != "w10/backInjury" || huiShangAction.TargetHandle != huiTarget.Handle || huiShang.cellByHandle("player_mage").MP != 440 {
+		t.Fatalf("expected captured 回伤术 action/MP, got action=%+v actor=%+v", huiShangAction, huiShang.cellByHandle("player_mage"))
+	}
+	if huiTarget.Attack != 100 || huiTarget.MagicAttack != 80 {
+		t.Fatalf("expected 回伤术 to restore inner injury reductions, target=%+v", huiTarget)
+	}
+	if len(huiShangResult.BuffInfos) != 1 || huiShangResult.BuffInfos[0].Name != "气疗" || huiShangResult.BuffInfos[0].Display != "21.png" || huiShangResult.BuffInfos[0].Description != "每回合对象恢复130气力" || huiShangResult.BuffInfos[0].Round != 3 {
+		t.Fatalf("expected captured 回伤术 气疗 BuffInfo, got %+v", huiShangResult.BuffInfos)
+	}
+	if len(huiShangResult.ClearBuffInfos) != 2 || huiShangResult.ClearBuffInfos[0].Name != "内伤" || huiShangResult.ClearBuffInfos[1].Name != "外伤" {
+		t.Fatalf("expected 回伤术 to clear 内伤/外伤, got %+v", huiShangResult.ClearBuffInfos)
+	}
+	qiLiaoEffect := huiShang.StatusEffects[huiTarget.Handle].Effects["气疗"]
+	if qiLiaoEffect.HealAmount != 130 || qiLiaoEffect.Rounds != 2 {
+		t.Fatalf("expected 回伤术 气疗 to tick once during the progressed turn, got %+v", qiLiaoEffect)
+	}
+	qiLiaoProbe := newRuntime(session.RoleSkill{Name: "回伤术", Level: 1, Type: "oneO"})
+	qiLiaoProbeTarget := qiLiaoProbe.cellByHandle("player_ally")
+	qiLiaoProbe.applyHuiShangShuQiLiaoStatusEffect(qiLiaoProbe.cellByHandle("player_mage"), qiLiaoProbeTarget)
+	qiLiaoEffect = qiLiaoProbe.StatusEffects[qiLiaoProbeTarget.Handle].Effects["气疗"]
+	beforeQiLiaoTick := qiLiaoProbeTarget.HP
+	qiLiaoActions, qiLiaoSkip := qiLiaoProbe.resolveStatusStartActions(qiLiaoProbeTarget)
+	if qiLiaoEffect.HealAmount != 130 || qiLiaoEffect.Rounds != 3 || qiLiaoSkip || len(qiLiaoActions) != 1 || qiLiaoActions[0].ActionName != "气疗" || qiLiaoProbeTarget.HP != beforeQiLiaoTick+130 {
+		t.Fatalf("expected 回伤术 initial 气疗 fixed +130 tick, before=%d target=%+v effect=%+v actions=%+v skip=%t", beforeQiLiaoTick, qiLiaoProbeTarget, qiLiaoEffect, qiLiaoActions, qiLiaoSkip)
+	}
+
+	shengGuang := newRuntime(session.RoleSkill{Name: "圣光诀", Level: 1, Type: "oneO"})
+	shengTarget := shengGuang.cellByHandle("player_ally")
+	shengGuang.StatusEffects[shengTarget.Handle] = BattleStatusEffects{Effects: map[string]BattleStatusEffect{
+		"混乱": {Name: "混乱", Rounds: 2},
+		"眩晕": {Name: "眩晕", Rounds: 2, SkipTurn: true},
+		"冰冻": {Name: "冰冻", Rounds: 2},
+		"麻痹": {Name: "麻痹", Rounds: 2, SkipTurn: true},
+	}}
+	shengGuangResult := shengGuang.ProcessAction(ActionRequest{BattleID: shengGuang.BattleID, ActorHandle: "player_mage", CommandID: CommandShengGuangJue, TargetHandle: shengTarget.Handle, Round: 1, Sequence: 1})
+	if shengGuangResult.ErrorCode != "" || len(shengGuangResult.Actions) == 0 {
+		t.Fatalf("expected 圣光诀 action, got %+v", shengGuangResult)
+	}
+	shengGuangAction := shengGuangResult.Actions[0]
+	if shengGuangAction.ActionName != "圣光诀" || shengGuangAction.SourceActionLabel != "w10/holyLight" || shengGuangAction.TargetHandle != shengTarget.Handle || shengGuang.cellByHandle("player_mage").MP != 440 {
+		t.Fatalf("expected 圣光诀 action/MP, got action=%+v actor=%+v", shengGuangAction, shengGuang.cellByHandle("player_mage"))
+	}
+	if len(shengGuang.StatusEffects[shengTarget.Handle].Effects) != 0 || len(shengGuangResult.ClearBuffInfos) != 4 {
+		t.Fatalf("expected 圣光诀 partial cleanse set to clear all configured statuses, effects=%+v clears=%+v", shengGuang.StatusEffects, shengGuangResult.ClearBuffInfos)
+	}
+
+	huanHun := newRuntime(session.RoleSkill{Name: "还魂术", Level: 5, Type: "oneO"})
+	huanHunTarget := huanHun.cellByHandle("player_ally")
+	huanHunTarget.HP = -420
+	huanHunTarget.MaxHP = 2101
+	huanHunResult := huanHun.ProcessAction(ActionRequest{BattleID: huanHun.BattleID, ActorHandle: "player_mage", CommandID: CommandHuanHunShu, TargetHandle: huanHunTarget.Handle, Round: 1, Sequence: 1})
+	if huanHunResult.ErrorCode != "" || len(huanHunResult.Actions) == 0 {
+		t.Fatalf("expected captured 还魂术 action, got %+v", huanHunResult)
+	}
+	huanHunAction := huanHunResult.Actions[0]
+	if huanHunAction.ActionName != "还魂术" || huanHunAction.SourceActionLabel != "w10/relive" || huanHunAction.SourceMode != "1" || huanHunAction.TargetHP != 1051 || huanHunAction.TargetDead || huanHun.cellByHandle("player_mage").MP != 370 {
+		t.Fatalf("expected captured 还魂术 revive/MP/source action, got action=%+v actor=%+v", huanHunAction, huanHun.cellByHandle("player_mage"))
+	}
+	if len(huanHunAction.RefreshInfos) != 2 || huanHunAction.RefreshInfos[0].Handle != huanHunTarget.Handle || huanHunAction.RefreshInfos[0].HP != 1051 || huanHunAction.RefreshInfos[1].Handle != "player_mage" || huanHunAction.RefreshInfos[1].MP != 370 {
+		t.Fatalf("expected 还魂术 target/actor refresh order, got %+v", huanHunAction.RefreshInfos)
+	}
+
+	livingTarget := newRuntime(session.RoleSkill{Name: "还魂术", Level: 5, Type: "oneO"})
+	livingResult := livingTarget.ProcessAction(ActionRequest{BattleID: livingTarget.BattleID, ActorHandle: "player_mage", CommandID: CommandHuanHunShu, TargetHandle: "player_ally", Round: 1, Sequence: 1})
+	if livingResult.ErrorCode != "invalid_target" || livingTarget.cellByHandle("player_mage").MP != 500 {
+		t.Fatalf("expected 还魂术 to reject living allies without MP mutation, got result=%+v actor=%+v", livingResult, livingTarget.cellByHandle("player_mage"))
+	}
+
+	enemyTarget := newRuntime(session.RoleSkill{Name: "还魂术", Level: 5, Type: "oneO"})
+	enemyTarget.cellByHandle("enemy_1").HP = -420
+	enemyResult := enemyTarget.ProcessAction(ActionRequest{BattleID: enemyTarget.BattleID, ActorHandle: "player_mage", CommandID: CommandHuanHunShu, TargetHandle: "enemy_1", Round: 1, Sequence: 1})
+	if enemyResult.ErrorCode != "invalid_target" || enemyTarget.cellByHandle("player_mage").MP != 500 {
+		t.Fatalf("expected 还魂术 to reject enemies without MP mutation, got result=%+v actor=%+v", enemyResult, enemyTarget.cellByHandle("player_mage"))
+	}
+
+	invalidTarget := newRuntime(session.RoleSkill{Name: "愈气术", Level: 5, Type: "oneO"})
+	invalidResult := invalidTarget.ProcessAction(ActionRequest{BattleID: invalidTarget.BattleID, ActorHandle: "player_mage", CommandID: CommandYuQiShu, TargetHandle: "enemy_1", Round: 1, Sequence: 1})
+	if invalidResult.ErrorCode != "invalid_target" || invalidTarget.cellByHandle("player_mage").MP != 500 {
+		t.Fatalf("expected friendly support skills to reject enemy targets without MP mutation, got result=%+v actor=%+v", invalidResult, invalidTarget.cellByHandle("player_mage"))
+	}
+}
+
 func TestCapturedMageSkillProfilesAndLevelGates(t *testing.T) {
 	cases := []struct {
 		name          string

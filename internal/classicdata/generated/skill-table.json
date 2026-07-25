@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill",
   "source": "internal/classicdata/source/skill-table.csv",
-  "rowCount": 48,
+  "rowCount": 52,
   "rows": [
     {
       "skill_id": "skill-normal-attack",
@@ -275,6 +275,38 @@
       "source_type": "own",
       "action_name": "魔障术",
       "target": "self"
+    },
+    {
+      "skill_id": "skill-yu-qi-shu",
+      "kind": "skill",
+      "label": "愈气术",
+      "source_type": "oneO",
+      "action_name": "愈气术",
+      "target": "ally"
+    },
+    {
+      "skill_id": "skill-hui-shang-shu",
+      "kind": "skill",
+      "label": "回伤术",
+      "source_type": "oneO",
+      "action_name": "回伤术",
+      "target": "ally"
+    },
+    {
+      "skill_id": "skill-sheng-guang-jue",
+      "kind": "skill",
+      "label": "圣光诀",
+      "source_type": "oneO",
+      "action_name": "圣光诀",
+      "target": "ally"
+    },
+    {
+      "skill_id": "skill-huan-hun-shu",
+      "kind": "skill",
+      "label": "还魂术",
+      "source_type": "oneO",
+      "action_name": "还魂术",
+      "target": "ally"
     },
     {
       "skill_id": "skill-ao-yi-hong-lei-shi",

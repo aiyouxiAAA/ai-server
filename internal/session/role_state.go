@@ -1039,7 +1039,7 @@ func capturedWoodcutter777RoleSkills() []RoleSkill {
 			Level:       4,
 			Type:        "oneE",
 			Icon:        "255.png",
-			Description: "f_s_奥义.修罗幻翼拳^00ccff&9@单体·攻击&8@游侠 &10@拳套&22@战斗&2@38&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升170%的物理伤害",
+			Description: "f_s_奥义.修罗幻翼拳^00ccff&9@单体·攻击&8@游侠 &10@拳套&22@战斗&2@38&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升170%的物理伤害&0;进攻时增加25%（无视防御）的物理攻击力",
 		},
 	)
 }

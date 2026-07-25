@@ -9445,14 +9445,14 @@
       "attack_max": "",
       "sweepspear_attack_min": "",
       "sweepspear_attack_max": "",
-      "defense": "0",
-      "mgc_defense": "0",
+      "defense": "220",
+      "mgc_defense": "385",
       "command_label": "法术普通攻击",
       "damage_defense_type": "magic",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "4264636384163425;4266636384163669;4268636384164547;4270636384165790",
-      "source": "local half-defense full rerun: same defense type inherited ratio from wild-216-caoba-glassss-lv40;wild-222-caoba-glassss-lv42;visible-203-4266636384163669;visible-203-4268636384164547;visible-203-4270636384165790; baseline attack=302; local policy, not an original-server Attack claim"
+      "source": "local half-defense full rerun: same defense type inherited ratio from wild-216-caoba-glassss-lv40;wild-222-caoba-glassss-lv42;visible-203-4266636384163669;visible-203-4268636384164547;visible-203-4270636384165790; baseline attack=302; local policy, not an original-server Attack claim; map203 强贯式 Lv5 卸甲为基准物防的50%，BuffInfo confirmed reduction=110, resolved defense=220, n=1; map203 炎狩术 Lv5 unit-roll magic defense candidates=385|385|399, resolved p50=385, n=3; actor 法术屏障 only redirects incoming damage; local policy, not an original-server Defense claim"
     },
     {
       "monster_id": "visible-203-4266636384163669",
@@ -9472,14 +9472,14 @@
       "attack_max": "",
       "sweepspear_attack_min": "",
       "sweepspear_attack_max": "",
-      "defense": "0",
-      "mgc_defense": "0",
+      "defense": "179",
+      "mgc_defense": "313",
       "command_label": "法术普通攻击",
       "damage_defense_type": "magic",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "4264636384163425;4266636384163669;4268636384164547;4270636384165790",
-      "source": "local half-defense full rerun: strict normal half-defense n=1, resolved p50=225.500; baseline attack=218; local policy, not an original-server Attack claim"
+      "source": "local half-defense full rerun: strict normal half-defense n=1, resolved p50=225.500; baseline attack=218; local policy, not an original-server Attack claim; map203 user-directed same-encounter defense ratio estimate: 313 * 220 / 385 = 179 from 熊鹿 captured defense/magic-defense pair; not an original-server Defense claim; map203 炎狩术 Lv5 static-group magic defense candidates=315|311, resolved p50=313, n=2; local policy, not an original-server Defense claim"
     },
     {
       "monster_id": "visible-203-4268636384164547",
@@ -9499,14 +9499,14 @@
       "attack_max": "",
       "sweepspear_attack_min": "",
       "sweepspear_attack_max": "",
-      "defense": "0",
-      "mgc_defense": "0",
+      "defense": "179",
+      "mgc_defense": "313",
       "command_label": "法术普通攻击",
       "damage_defense_type": "magic",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "4264636384163425;4266636384163669;4268636384164547;4270636384165790",
-      "source": "local half-defense full rerun: strict normal half-defense n=1, resolved p50=225.500; baseline attack=218; local policy, not an original-server Attack claim"
+      "source": "local half-defense full rerun: strict normal half-defense n=1, resolved p50=225.500; baseline attack=218; local policy, not an original-server Attack claim; map203 user-directed same-encounter defense ratio estimate: 313 * 220 / 385 = 179 from 熊鹿 captured defense/magic-defense pair; not an original-server Defense claim; map203 炎狩术 Lv5 static-group magic defense candidates=315|311, resolved p50=313, n=2; local policy, not an original-server Defense claim"
     },
     {
       "monster_id": "visible-203-4270636384165790",
@@ -9526,14 +9526,14 @@
       "attack_max": "",
       "sweepspear_attack_min": "",
       "sweepspear_attack_max": "",
-      "defense": "0",
-      "mgc_defense": "0",
+      "defense": "179",
+      "mgc_defense": "313",
       "command_label": "法术普通攻击",
       "damage_defense_type": "magic",
       "queue_index_team": "1",
       "queue_index_enemy": "4",
       "encounter_handles": "4264636384163425;4266636384163669;4268636384164547;4270636384165790",
-      "source": "local half-defense full rerun: strict normal half-defense n=1, resolved p50=225.500; baseline attack=218; local policy, not an original-server Attack claim"
+      "source": "local half-defense full rerun: strict normal half-defense n=1, resolved p50=225.500; baseline attack=218; local policy, not an original-server Attack claim; map203 user-directed same-encounter defense ratio estimate: 313 * 220 / 385 = 179 from 熊鹿 captured defense/magic-defense pair; not an original-server Defense claim; map203 炎狩术 Lv5 static-group magic defense candidates=315|311, resolved p50=313, n=2; local policy, not an original-server Defense claim"
     }
   ]
 }

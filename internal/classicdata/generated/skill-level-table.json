@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill-level",
   "source": "internal/classicdata/source/skill-level-table.csv",
-  "rowCount": 107,
+  "rowCount": 110,
   "rows": [
     {
       "skill_level_id": "skill-normal-attack-lv1",
@@ -1171,6 +1171,39 @@
       "direct_attack_bonus_multiplier": "0"
     },
     {
+      "skill_level_id": "skill-fist-power-axe-wing-lv1",
+      "skill_id": "skill-fist-power-axe-wing",
+      "level": "1",
+      "source_action_label": "w5/PowerAxeWing",
+      "damage_multiplier": "2.4",
+      "mp_cost": "26",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0.1"
+    },
+    {
+      "skill_level_id": "skill-fist-power-axe-wing-lv2",
+      "skill_id": "skill-fist-power-axe-wing",
+      "level": "2",
+      "source_action_label": "w5/PowerAxeWing",
+      "damage_multiplier": "2.5",
+      "mp_cost": "30",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0.15"
+    },
+    {
+      "skill_level_id": "skill-fist-power-axe-wing-lv3",
+      "skill_id": "skill-fist-power-axe-wing",
+      "level": "3",
+      "source_action_label": "w5/PowerAxeWing",
+      "damage_multiplier": "2.6",
+      "mp_cost": "34",
+      "hp_drain_chance_percent": "0",
+      "hp_drain_multiplier": "0",
+      "direct_attack_bonus_multiplier": "0.2"
+    },
+    {
       "skill_level_id": "skill-fist-power-axe-wing-lv4",
       "skill_id": "skill-fist-power-axe-wing",
       "level": "4",
@@ -1179,7 +1212,7 @@
       "mp_cost": "38",
       "hp_drain_chance_percent": "0",
       "hp_drain_multiplier": "0",
-      "direct_attack_bonus_multiplier": "0"
+      "direct_attack_bonus_multiplier": "0.25"
     }
   ]
 }

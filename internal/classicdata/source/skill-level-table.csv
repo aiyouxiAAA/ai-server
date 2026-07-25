@@ -105,4 +105,7 @@
 "skill-fist-influx-gas-lv5","skill-fist-influx-gas","5","w5/influxGas","0","32","0","0","0"
 "skill-fist-break-soul-lv5","skill-fist-break-soul","5","w5/breakSoul","1.5","36","0","0","0.3"
 "skill-fist-move-shadow-lv4","skill-fist-move-shadow","4","w5/moveShadow","0","36","0","0","0"
-"skill-fist-power-axe-wing-lv4","skill-fist-power-axe-wing","4","w5/PowerAxeWing","2.7","38","0","0","0"
+"skill-fist-power-axe-wing-lv1","skill-fist-power-axe-wing","1","w5/PowerAxeWing","2.4","26","0","0","0.1"
+"skill-fist-power-axe-wing-lv2","skill-fist-power-axe-wing","2","w5/PowerAxeWing","2.5","30","0","0","0.15"
+"skill-fist-power-axe-wing-lv3","skill-fist-power-axe-wing","3","w5/PowerAxeWing","2.6","34","0","0","0.2"
+"skill-fist-power-axe-wing-lv4","skill-fist-power-axe-wing","4","w5/PowerAxeWing","2.7","38","0","0","0.25"

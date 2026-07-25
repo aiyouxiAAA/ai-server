@@ -2704,7 +2704,7 @@ func TestResolveAttackNormalUsesSourceStateCodeZero(t *testing.T) {
 	}
 }
 
-func TestResolveAttackDoesNotApplyStoredPowerDamageBonus(t *testing.T) {
+func TestResolveAttackAppliesStoredPowerDamageBonusPerSoul(t *testing.T) {
 	runtime := &Runtime{
 		BattleID:         "battle-power-damage",
 		Round:            1,
@@ -2726,8 +2726,30 @@ func TestResolveAttackDoesNotApplyStoredPowerDamageBonus(t *testing.T) {
 
 	action := runtime.resolveAttack(actor, target, CommandNormalAttack)
 
-	if action.Damage != 47 || action.TargetHP != 73 {
-		t.Fatalf("expected stored power to leave normal damage unchanged, got %+v", action)
+	// 2 souls => +40% damage: round(47 * 1.4) = 66
+	if action.Damage != 66 || action.TargetHP != 54 {
+		t.Fatalf("expected 2 souls to add +40%% normal damage, got %+v", action)
+	}
+
+	runtime.StoredPower["player_21424"] = 0
+	target.HP = 120
+	zeroSoul := runtime.resolveAttack(actor, target, CommandNormalAttack)
+	if zeroSoul.Damage != 47 || zeroSoul.TargetHP != 73 {
+		t.Fatalf("expected 0 souls to leave normal damage unchanged, got %+v", zeroSoul)
+	}
+
+	enemyRuntime := &Runtime{
+		BattleID:         "battle-power-damage-enemy",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
+		StoredPower:      map[string]int{"enemy_1": 3},
+	}
+	enemy := &CellInfoPush{Handle: "enemy_1", Camp: CampEnemy, Attack: 47}
+	player := &CellInfoPush{Handle: "player_21424", Camp: CampTeam, MaxHP: 120, HP: 120}
+	enemyAction := enemyRuntime.resolveAttack(enemy, player, CommandNormalAttack)
+	if enemyAction.Damage != 47 || enemyAction.TargetHP != 73 {
+		t.Fatalf("expected enemy stored power not to boost damage, got %+v", enemyAction)
 	}
 }
 
@@ -3151,7 +3173,8 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			description:    "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
 			commandID:      CommandAoYiHongLeiShi,
 			label:          "w1/bombThunderShoot",
-			expectedDamage: 74,
+			// base 74.2 with 2 souls (+40%) => round(103.88) = 104
+			expectedDamage: 104,
 			expectedMP:     74,
 			storedPower:    2,
 			magicAttack:    36,
@@ -4968,8 +4991,9 @@ func TestProcessActionUsesCapturedMageSkills(t *testing.T) {
 		t.Fatalf("expected 雷龙强袭 action, got %+v", dragonResult)
 	}
 	dragonAction := dragonResult.Actions[0]
-	if dragonAction.SourceActionLabel != "w10/thunderDrongAtk" || dragonAction.Damage != 270 || dragonAction.TargetHP != 730 || dragon.cellByHandle("player_mage").MP != 75 {
-		t.Fatalf("expected captured 雷龙强袭 magic action, got %+v", dragonAction)
+	// 2 souls => +40% on base 270 => 378
+	if dragonAction.SourceActionLabel != "w10/thunderDrongAtk" || dragonAction.Damage != 378 || dragonAction.TargetHP != 622 || dragon.cellByHandle("player_mage").MP != 75 {
+		t.Fatalf("expected captured 雷龙强袭 magic action with soul damage bonus, got %+v", dragonAction)
 	}
 
 	unsupported := newRuntime(session.RoleSkill{Name: "炎狩术", Level: 4, Type: "oneE"}, newEnemy("enemy_invalid", 20))
@@ -5302,8 +5326,9 @@ func TestLeiHunZhanRequiresCapturedSoulPowerAndUsesThunderSoulAtk(t *testing.T) 
 	if action.ActionName != "奥义.雷魂斩" || action.SourceMode != "1" || action.SourceActionLabel != "w8/thunderSoulAtk" {
 		t.Fatalf("expected captured 奥义.雷魂斩 action label, got %+v", action)
 	}
-	if action.Damage != 340 || action.TargetHP != 660 {
-		t.Fatalf("expected 奥义.雷魂斩 Lv1 captured multiplier without soul power damage bonus, got %+v", action)
+	// skill 3.4x + 3 souls (+60%) => 100*3.4*1.6 = 544
+	if action.Damage != 544 || action.TargetHP != 456 {
+		t.Fatalf("expected 奥义.雷魂斩 Lv1 multiplier with per-soul damage bonus, got %+v", action)
 	}
 	actor := runtime.cellByHandle("player_21424")
 	if actor == nil || actor.MP != 76 {
@@ -5387,8 +5412,9 @@ func TestAoYiLiuHeGunFaRequiresCapturedSoulPowerAndUsesLiuhe(t *testing.T) {
 	if action.ActionName != "奥义.六合棍法" || action.SourceMode != "1" || action.SourceActionLabel != "w11/liuhe" {
 		t.Fatalf("expected captured 奥义.六合棍法 action label, got %+v", action)
 	}
-	if action.Damage != 310 || action.TargetHP != 690 {
-		t.Fatalf("expected 奥义.六合棍法 Lv1 captured multiplier without soul power damage bonus, got %+v", action)
+	// skill 3.1x + 3 souls (+60%) => 100*3.1*1.6 = 496
+	if action.Damage != 496 || action.TargetHP != 504 {
+		t.Fatalf("expected 奥义.六合棍法 Lv1 multiplier with per-soul damage bonus, got %+v", action)
 	}
 	actor := runtime.cellByHandle("player_21424")
 	if actor == nil || actor.MP != 76 {
@@ -5472,8 +5498,9 @@ func TestAoYiAnShaZheRequiresCapturedSoulPowerAndUsesAssassinate(t *testing.T) {
 	if action.ActionName != "奥义.暗杀者" || action.SourceMode != "1" || action.SourceActionLabel != "w3/assassinate" {
 		t.Fatalf("expected captured 奥义.暗杀者 action label, got %+v", action)
 	}
-	if action.Damage != 280 || action.TargetHP != 720 {
-		t.Fatalf("expected 奥义.暗杀者 Lv1 captured multiplier without soul power damage bonus, got %+v", action)
+	// skill 2.8x + 3 souls (+60%) => 100*2.8*1.6 = 448
+	if action.Damage != 448 || action.TargetHP != 552 {
+		t.Fatalf("expected 奥义.暗杀者 Lv1 multiplier with per-soul damage bonus, got %+v", action)
 	}
 	actor := runtime.cellByHandle("player_21432")
 	if actor == nil || actor.MP != 74 {
@@ -5552,6 +5579,9 @@ func TestKuangBaoUsesCapturedSelfBuffFormula(t *testing.T) {
 
 	target := runtime.cellByHandle("enemy_1")
 	target.HP = 500
+	// Enemy counter-hit during 狂爆 turn may grant soul orbs; clear them so this probe
+	// only asserts the 热血 double-attack contract.
+	runtime.StoredPower["player_21424"] = 0
 	attack := runtime.resolveAttack(actor, target, CommandNormalAttack)
 	if attack.Damage != 100 || attack.SourceActionLabel != "nomalAtk" || runtime.StatusEffects["player_21424"].KuangBaoRounds != 2 {
 		t.Fatalf("expected 狂爆 to double attack without consuming rounds on hit, got action=%+v effects=%+v", attack, runtime.StatusEffects)
@@ -5568,6 +5598,7 @@ func TestKuangBaoUsesCapturedSelfBuffFormula(t *testing.T) {
 		t.Fatalf("expected 狂爆 to expire on startCommand round advance, got %+v", runtime.StatusEffects)
 	}
 	target.HP = 500
+	runtime.StoredPower["player_21424"] = 0
 	expiredAttack := runtime.resolveAttack(actor, target, CommandNormalAttack)
 	if expiredAttack.Damage != 50 {
 		t.Fatalf("expected expired 狂爆 to stop modifying attack damage, got %+v", expiredAttack)
@@ -9927,8 +9958,9 @@ func TestAoYiPiaoXueRequiresCapturedSoulPowerAndUsesCapturedAction(t *testing.T)
 	}
 	action := result.Actions[0]
 	actor := runtime.cellByHandle("player_sword")
-	if action.SourceActionLabel != "w7/aypx" || action.Damage != 330 || action.TargetHP != 670 || actor.MP != 62 {
-		t.Fatalf("expected captured 奥义.飘血 action and MP cost, action=%+v actor=%+v", action, actor)
+	// skill 3.3x + 3 souls (+60%) => 100*3.3*1.6 = 528
+	if action.SourceActionLabel != "w7/aypx" || action.Damage != 528 || action.TargetHP != 472 || actor.MP != 62 {
+		t.Fatalf("expected captured 奥义.飘血 action with soul damage bonus and MP cost, action=%+v actor=%+v", action, actor)
 	}
 }
 
@@ -9949,7 +9981,7 @@ func TestWoodcutterFistSkillProfilesUseCapturedRows(t *testing.T) {
 		{name: "气运丹田", level: 5, commandID: CommandFistInfluxGas, sourceType: "own", actionLabel: "w5/influxGas", mpCost: 32, multiplier: 0, target: "self"},
 		{name: "破魂打", level: 5, commandID: CommandFistBreakSoul, sourceType: "oneE", actionLabel: "w5/breakSoul", mpCost: 36, multiplier: 1.5, directBonus: 0.3, target: "enemy"},
 		{name: "移形换影", level: 4, commandID: CommandFistMoveShadow, sourceType: "own", actionLabel: "w5/moveShadow", mpCost: 36, multiplier: 0, target: "self"},
-		{name: "奥义.修罗幻翼拳", level: 4, commandID: CommandFistPowerAxeWing, sourceType: "oneE", actionLabel: "w5/PowerAxeWing", mpCost: 38, multiplier: 2.7, target: "enemy"},
+		{name: "奥义.修罗幻翼拳", level: 4, commandID: CommandFistPowerAxeWing, sourceType: "oneE", actionLabel: "w5/PowerAxeWing", mpCost: 38, multiplier: 2.7, directBonus: 0.25, target: "enemy"},
 	}
 
 	skills := make([]session.RoleSkill, 0, len(cases))
@@ -10151,7 +10183,7 @@ func TestWoodcutterFistUltimateRequiresSoulPower(t *testing.T) {
 		RoleSkills:       []session.RoleSkill{{Name: "奥义.修罗幻翼拳", Level: 4, Type: "oneE"}},
 		Cells: []CellInfoPush{
 			{BattleID: "battle-fist-ultimate", Handle: "player_fist", Camp: CampTeam, HP: 1000, MaxHP: 1000, MP: 100, MaxMP: 100, Attack: 100, Hit: 100},
-			{BattleID: "battle-fist-ultimate", Handle: "enemy_1", Camp: CampEnemy, HP: 1000, MaxHP: 1000, Defense: 0},
+			{BattleID: "battle-fist-ultimate", Handle: "enemy_1", Camp: CampEnemy, HP: 2000, MaxHP: 2000, Defense: 0},
 		},
 	}
 	request := ActionRequest{BattleID: runtime.BattleID, ActorHandle: "player_fist", CommandID: CommandFistPowerAxeWing, TargetHandle: "enemy_1", Round: 1, Sequence: 1}
@@ -10165,8 +10197,9 @@ func TestWoodcutterFistUltimateRequiresSoulPower(t *testing.T) {
 	}
 	action := result.Actions[0]
 	actor := runtime.cellByHandle("player_fist")
-	if action.SourceActionLabel != "w5/PowerAxeWing" || action.Damage != 810 || action.TargetHP != 190 || actor.MP != 62 {
-		t.Fatalf("expected 奥义.修罗幻翼拳 captured action and MP cost, action=%+v actor=%+v", action, actor)
+	// (2.7x + 0.25 direct) * 1.6 (+20%/soul, 3 souls) = 472; no extra x3 stored-power skill multiplier
+	if action.SourceActionLabel != "w5/PowerAxeWing" || action.Damage != 472 || action.TargetHP != 1528 || actor.MP != 62 {
+		t.Fatalf("expected 奥义.修罗幻翼拳 action with direct-attack bonus and per-soul damage, action=%+v actor=%+v", action, actor)
 	}
 }
 
@@ -10174,7 +10207,7 @@ func TestWoodcutter777SharedPhysicalFormulaUsesUnitRollBackfill(t *testing.T) {
 	previousRoll := sourceBattleAttackRoll
 	defer func() { sourceBattleAttackRoll = previousRoll }()
 
-	runtime := &Runtime{StoredPower: map[string]int{"acct-777-role-001": fistPowerAxeWingRequiredPower}}
+	runtime := &Runtime{StoredPower: map[string]int{}}
 	actor := &CellInfoPush{Handle: "acct-777-role-001", Camp: CampTeam, Attack: 361}
 	map52Robber := &CellInfoPush{Handle: "map52_robber", Camp: CampEnemy, Defense: 10}
 
@@ -10186,11 +10219,13 @@ func TestWoodcutter777SharedPhysicalFormulaUsesUnitRollBackfill(t *testing.T) {
 		t.Fatalf("expected unit-roll backfill to produce 645 for 777 Lv5 破魂打, got %.4f -> %d", breakSoul, got)
 	}
 
+	runtime.StoredPower["acct-777-role-001"] = fistPowerAxeWingRequiredPower
 	actor.Attack = 397
 	map48Robber := &CellInfoPush{Handle: "map48_robber", Camp: CampEnemy, Defense: 121}
 	sourceBattleAttackRoll = func(int) int { return 1000 }
-	ultimate := runtime.baseBattleDamageValue(actor, commandProfile{DamageMultiplier: 2.4, DamageUsesStoredPower: true}, runtime.effectiveBattleDefenseValue(actor, map48Robber, false, "physical"))
-	if got := int(math.Round(ultimate * 2)); got != 5596 {
-		t.Fatalf("expected unit-roll backfill to defer rounding until after ultimate critical, got %.4f -> %d", ultimate, got)
+	ultimate := runtime.baseBattleDamageValue(actor, commandProfile{DamageMultiplier: 2.4}, runtime.effectiveBattleDefenseValue(actor, map48Robber, false, "physical"))
+	// base without x3: (397*2.4 - 60.5) * 1.6 = 1427.68; crit after => round(2855.36) = 2855
+	if got := int(math.Round(ultimate * 2)); got != 2855 {
+		t.Fatalf("expected unit-roll backfill ultimate with per-soul bonus only after critical, got %.4f -> %d", ultimate, got)
 	}
 }

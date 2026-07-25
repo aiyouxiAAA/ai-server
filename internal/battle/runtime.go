@@ -107,7 +107,8 @@ const (
 	CommandEscape            = "battle-escape"
 	CommandItem              = "battle-item"
 
-	maxStoredPower                = 5
+	maxStoredPower                    = 5
+	storedPowerDamageBonusPerSoul = 0.2
 	leiHunZhanRequiredPower       = 3
 	leiLongQiangXiRequiredPower   = 2
 	huoShenZhouRequiredPower      = 2
@@ -532,7 +533,6 @@ type commandProfile struct {
 	SourceType            string
 	SourceActionLabel     string
 	DamageMultiplier      float64
-	DamageUsesStoredPower bool
 	MPCost                int
 	CanDodge              bool
 	CanFat                bool
@@ -2811,9 +2811,6 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		// 80% text is not the final runtime multiplier.
 		profile.DamageMultiplier = 1.5
 	}
-	if name == "奥义.修罗幻翼拳" {
-		profile.DamageUsesStoredPower = true
-	}
 	if name == "嗜血斩" {
 		profile.LifeStealChance = sourceBattleSkillLifeStealChance(description)
 		profile.LifeStealRatio = sourceBattleSkillLifeStealRatio(description)
@@ -4830,9 +4827,6 @@ func (runtime *Runtime) baseBattleDamageValue(actor *CellInfoPush, profile comma
 		attack *= 2
 	}
 	damageMultiplier := profile.DamageMultiplier
-	if profile.DamageUsesStoredPower {
-		damageMultiplier *= float64(runtime.powerFor(actor.Handle))
-	}
 	damage := attack*damageMultiplier - defense
 	if profile.AdditionalMagicBonus > 0 && actor.MagicAttack > 0 {
 		magicAttack := float64(actor.MagicAttack)
@@ -4844,6 +4838,14 @@ func (runtime *Runtime) baseBattleDamageValue(actor *CellInfoPush, profile comma
 	if profile.DirectAttackBonus > 0 {
 		if bonus := attack * profile.DirectAttackBonus; bonus > 0 {
 			damage += bonus
+		}
+	}
+	damage = math.Max(1, damage)
+	// Player-side only: each current soul orb adds +20% damage to every attack.
+	// Uses raw StoredPower (0..5), not powerFor(), which floors display power at 1.
+	if actor.Camp == CampTeam {
+		if souls := runtime.storedPowerCount(actor.Handle); souls > 0 {
+			damage *= 1 + storedPowerDamageBonusPerSoul*float64(souls)
 		}
 	}
 	return math.Max(1, damage)
@@ -6906,6 +6908,14 @@ func (runtime *Runtime) powerFor(handle string) int {
 		return 0
 	}
 	return clampInt(maxInt(1, runtime.StoredPower[handle]), 1, maxStoredPower)
+}
+
+// storedPowerCount returns the raw soul-orb count used by damage bonus (0 means no bonus).
+func (runtime *Runtime) storedPowerCount(handle string) int {
+	if runtime == nil || runtime.StoredPower == nil {
+		return 0
+	}
+	return clampInt(runtime.StoredPower[handle], 0, maxStoredPower)
 }
 
 func (runtime *Runtime) setStoredPower(handle string, value int) {

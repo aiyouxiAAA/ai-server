@@ -5209,6 +5209,9 @@ func TestHandlePacketClassicTownBuySkillRejectsMissingSkill(t *testing.T) {
 	if result.currencyPush != nil || len(result.skillInfos) != 0 {
 		t.Fatalf("expected missing skill not to mutate pushes, got currency=%+v skills=%+v", result.currencyPush, result.skillInfos)
 	}
+	if len(result.chatMessages) != 1 || result.chatMessages[0].Msg != "技能不存在。" || result.chatMessages[0].Color != "#ff0000" {
+		t.Fatalf("expected missing skill warning message, got %+v", result.chatMessages)
+	}
 }
 
 func TestHandlePacketClassicTownBuyItemDeductsCurrencyAndPushesBagItem(t *testing.T) {
@@ -5349,6 +5352,9 @@ func TestHandlePacketClassicTownBuyItemRejectsMissingMaterialWithoutMutation(t *
 	}
 	if result.currencyPush == nil || result.currencyPush.Currencies["铜钱"] != 5000 {
 		t.Fatalf("expected currency state unchanged, got %+v", result.currencyPush)
+	}
+	if len(result.chatMessages) != 1 || result.chatMessages[0].Msg != "造物魔晶不足。" || result.chatMessages[0].Color != "#ff0000" {
+		t.Fatalf("expected missing material warning message, got %+v", result.chatMessages)
 	}
 
 	listResult := handlePacketWithSession(store, protocol.Packet{

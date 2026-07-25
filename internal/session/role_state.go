@@ -1274,25 +1274,6 @@ func syncCapturedWoodcutterEquipmentItems(items []RoleItem) []RoleItem {
 	return normalizeRoleItems(result)
 }
 
-func isCapturedWoodcutterLocalRole(role RoleSummary) bool {
-	return strings.TrimSpace(role.DisplayName) == "222" || strings.Contains(role.RoleID, "-role-222")
-}
-
-func isCapturedWoodcutter333LocalRole(role RoleSummary) bool {
-	roleID := strings.TrimSpace(role.RoleID)
-	return strings.HasPrefix(roleID, "acct-333-role-") || strings.HasPrefix(roleID, "acct-33333333-role-")
-}
-
-func isCapturedAChaiLocalRole(role RoleSummary) bool {
-	roleID := strings.TrimSpace(role.RoleID)
-	return strings.HasPrefix(roleID, "acct-555-role-") || strings.HasPrefix(roleID, "acct-55555555-role-")
-}
-
-func isCapturedWoodcutter777LocalRole(role RoleSummary) bool {
-	roleID := strings.TrimSpace(role.RoleID)
-	return roleID == capturedWoodcutter777RoleID || roleID == capturedWoodcutter777LongRoleID
-}
-
 func withCapturedWoodcutter333RuntimeDefaults(role RoleSummary) RoleSummary {
 	role.Voc = "游侠"
 	role.DisplayName = "333"
@@ -1428,11 +1409,6 @@ func capturedWoodcutter777RolePhysique(roleID string) RolePhysique {
 		Fat:       597,
 		LastPoint: 0,
 	}
-}
-
-func isCapturedWarrior444LocalRole(role RoleSummary) bool {
-	roleID := strings.TrimSpace(role.RoleID)
-	return strings.HasPrefix(roleID, "acct-444-role-") || strings.HasPrefix(roleID, "acct-44444444-role-")
 }
 
 func capturedWarrior44SourceQuery() string {
@@ -2304,109 +2280,21 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	} else {
 		role.Voc = defaultRoleVoc
 	}
-	isWoodcutter222 := isCapturedWoodcutterLocalRole(role)
-	isWoodcutter333 := isCapturedWoodcutter333LocalRole(role)
-	isWoodcutter777 := isCapturedWoodcutter777LocalRole(role)
-	isWarrior444 := isCapturedWarrior444LocalRole(role)
-	isKonglongKanglang1 := isCapturedKonglongKanglang1LocalRole(role)
-	isAChai := isCapturedAChaiLocalRole(role)
-	if isWoodcutter333 {
-		role = withCapturedWoodcutter333RuntimeDefaults(role)
-	}
-	if isWoodcutter777 {
-		role = withCapturedWoodcutter777RuntimeDefaults(role)
-	}
-	if isWarrior444 {
-		role = withCapturedWarrior444RuntimeDefaults(role)
-	}
-	if isWarrior444 {
-		role.Skills = capturedWarrior444RoleSkills()
-	} else if isWoodcutter777 {
-		role.Skills = capturedWoodcutter777RoleSkills()
-	} else if isWoodcutter333 {
-		role.Skills = capturedWoodcutter333RoleSkills()
-	} else if isKonglongKanglang1 {
-		role.Skills = capturedKonglongKanglang1RoleSkills()
-	} else if isAChai {
-		role.SkillCap = maxInt(role.SkillCap, capturedAChaiSnapshot.Role.SkillCap)
-		role.Skills = cloneRoleSkills(capturedAChaiSnapshot.Role.Skills)
-	} else if isWoodcutter222 {
-		role.Voc = "游侠"
-		role.Skills = capturedWoodcutterRoleSkills()
-	} else if len(role.Skills) == 0 {
-		role.Skills = defaultRoleSkills()
-	} else {
-		role.Skills = cloneRoleSkills(role.Skills)
-	}
-	if isWarrior444 {
-		role.FastPanel = capturedWarrior444FastPanel()
-	} else if isWoodcutter777 {
-		role.FastPanel = syncCapturedWoodcutter777FastPanel(role.FastPanel)
-	} else if isWoodcutter333 {
-		role.FastPanel = capturedWoodcutter333FastPanel()
-	} else if isKonglongKanglang1 {
-		role.FastPanel = capturedKonglongKanglang1FastPanel()
-	} else if isAChai {
-		role.FastPanel = cloneRoleFastPanel(capturedAChaiSnapshot.Role.FastPanel)
-	} else if isWoodcutter222 {
-		role.FastPanel = capturedWoodcutterFastPanel()
-	} else if len(role.FastPanel) == 0 {
-		role.FastPanel = defaultRoleFastPanel()
-	} else {
-		role.FastPanel = normalizeRoleFastPanel(role.FastPanel)
-	}
+	role.Skills = cloneRoleSkills(role.Skills)
+	role.FastPanel = normalizeRoleFastPanel(role.FastPanel)
 	role.TownBuffs = normalizeRoleTownBuffs(role.TownBuffs)
 	role.ContainerCapacities = cloneRoleContainerCapacities(role.ContainerCapacities)
-	if len(role.Currencies) == 0 {
-		role.Currencies = defaultRoleCurrencies()
-	} else {
-		role.Currencies = normalizeRoleCurrencies(role.Currencies)
-	}
-	if isWoodcutter777 {
-		role.Currencies = syncCapturedWoodcutter777Currencies(role.Currencies)
-	}
-	if isWoodcutter222 {
-		role.Items = syncCapturedWoodcutterEquipmentItems(role.Items)
-	} else if len(role.Items) == 0 {
-		if isWoodcutter333 {
-			role.Items = syncCapturedWoodcutter333BattleConsumables(capturedWoodcutter333EquipmentItems())
-		} else if isWoodcutter777 {
-			role.Items = append(capturedWoodcutter777EquipmentItems(), capturedWoodcutter777BagItems()...)
-		} else if isWarrior444 {
-			role.Items = capturedWarrior444EquipmentItems()
-		} else {
-			role.Items = defaultRoleItems()
-		}
-	} else {
-		role.Items = ensureStarterAxeItem(removeCapturedDefaultBagSeeds(normalizeRoleItems(role.Items)))
-	}
-	if isWoodcutter333 {
-		role.Items = syncCapturedWoodcutter333EquipmentItems(role.Items)
-		role.Items = syncCapturedWoodcutter333BattleConsumables(role.Items)
-	}
-	if isWarrior444 {
-		role.Items = syncCapturedWarrior444EquipmentItems(role.Items)
-	}
+	role.Currencies = normalizeRoleCurrencies(role.Currencies)
+	role.Items = normalizeRoleItems(role.Items)
 	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
-	if isKonglongKanglang1 {
-		role.SourceQuery = capturedKonglongKanglang1SourceQuery()
-	} else if isWoodcutter222 {
-		role.SourceQuery = capturedWoodcutterBaseSourceQuery()
-	} else if isWoodcutter333 {
-		role.SourceQuery = capturedWoodcutter40BodySourceQuery()
-	} else if isWoodcutter777 {
-		role.SourceQuery = capturedWoodcutterBaseSourceQuery()
-	} else if isWarrior444 {
-		role.SourceQuery = capturedWarrior44BodySourceQuery()
-	}
-	if !isKonglongKanglang1 {
+	if strings.TrimSpace(role.SourceQuery) == "" {
 		role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
 		role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
 	}
-	// Battle cell DisplayURL prefers BattleSourceQuery. Keep it identical to the
-	// current rebuilt SourceQuery for every role, otherwise town/createPlayer and
-	// battle actors diverge after equip, fashion, or body appearance changes.
-	role.BattleSourceQuery = role.SourceQuery
+	// New rows may have no battle query; later equipment mutations update both queries.
+	if strings.TrimSpace(role.BattleSourceQuery) == "" {
+		role.BattleSourceQuery = role.SourceQuery
+	}
 	return role
 }
 

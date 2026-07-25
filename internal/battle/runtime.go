@@ -458,8 +458,6 @@ type Runtime struct {
 	PendingTeamActions    map[string]bool
 	PendingTeamSequences  map[string]int
 	DefendingHandles      map[string]bool
-	EnemyAttackRanges     map[string]battleAttackRange
-	EnemySweepSpearRanges map[string]battleAttackRange
 	StatusEffects         map[string]BattleStatusEffects
 	PendingConfusion      map[string]bool
 	StoredPower           map[string]int
@@ -471,11 +469,6 @@ type Runtime struct {
 	nextSequence          int
 	actionSequence        int
 	mu                    sync.Mutex
-}
-
-type battleAttackRange struct {
-	Min int
-	Max int
 }
 
 type BattleStatusEffect struct {
@@ -656,8 +649,6 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			CommandLabel: "普通攻击",
 		},
 	}
-	enemyAttackRanges := map[string]battleAttackRange{}
-	enemySweepSpearRanges := map[string]battleAttackRange{}
 	for index, enemyConfig := range enemyConfigs {
 		var cell CellInfoPush
 		if sourceMonsterHandle != "" {
@@ -666,42 +657,34 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			cell = enemyConfig.Cell.withBattleIDAndSlot(battleID, index)
 		}
 		cells = append(cells, cell)
-		if enemyConfig.AttackMin > 0 && enemyConfig.AttackMax >= enemyConfig.AttackMin {
-			enemyAttackRanges[cell.Handle] = battleAttackRange{Min: enemyConfig.AttackMin, Max: enemyConfig.AttackMax}
-		}
-		if enemyConfig.SweepSpearAttackMin > 0 && enemyConfig.SweepSpearAttackMax >= enemyConfig.SweepSpearAttackMin {
-			enemySweepSpearRanges[cell.Handle] = battleAttackRange{Min: enemyConfig.SweepSpearAttackMin, Max: enemyConfig.SweepSpearAttackMax}
-		}
 	}
 	runtime := &Runtime{
-		BattleID:              battleID,
-		RoleID:                role.RoleID,
-		MapID:                 mapID,
-		LastMapName:           mapName,
-		EncounterID:           "classic-wild-" + mapID,
-		EncounterLabel:        mapName + " " + encounterKind,
-		StageFocusX:           request.StageFocusX,
-		ReturnRoute:           defaultString(request.ReturnRoute, "town-placeholder"),
-		QueueIndexTeam:        firstEnemyConfig.QueueIndexTeam,
-		QueueIndexEnemy:       firstEnemyConfig.QueueIndexEnemy,
-		SourceMonsterHandle:   sourceMonsterHandle,
-		RoleSkills:            cloneBattleRoleSkills(role.Skills),
-		RoleSkillsByHandle:    map[string][]session.RoleSkill{role.RoleID: cloneBattleRoleSkills(role.Skills)},
-		RoleItems:             cloneBattleRoleItems(role.Items),
-		RoleItemsByHandle:     map[string][]session.RoleItem{role.RoleID: cloneBattleRoleItems(role.Items)},
-		Phase:                 PhaseCommand,
-		Round:                 1,
-		Cells:                 cells,
-		ActiveHandle:          role.RoleID,
-		ConsumedSequence:      map[int]bool{},
-		DefendingHandles:      map[string]bool{},
-		EnemyAttackRanges:     enemyAttackRanges,
-		EnemySweepSpearRanges: enemySweepSpearRanges,
-		StatusEffects:         map[string]BattleStatusEffects{},
-		PendingConfusion:      map[string]bool{},
-		PendingSkillSeal:      map[string]bool{},
-		StoredPower:           map[string]int{},
-		nextSequence:          1,
+		BattleID:            battleID,
+		RoleID:              role.RoleID,
+		MapID:               mapID,
+		LastMapName:         mapName,
+		EncounterID:         "classic-wild-" + mapID,
+		EncounterLabel:      mapName + " " + encounterKind,
+		StageFocusX:         request.StageFocusX,
+		ReturnRoute:         defaultString(request.ReturnRoute, "town-placeholder"),
+		QueueIndexTeam:      firstEnemyConfig.QueueIndexTeam,
+		QueueIndexEnemy:     firstEnemyConfig.QueueIndexEnemy,
+		SourceMonsterHandle: sourceMonsterHandle,
+		RoleSkills:          cloneBattleRoleSkills(role.Skills),
+		RoleSkillsByHandle:  map[string][]session.RoleSkill{role.RoleID: cloneBattleRoleSkills(role.Skills)},
+		RoleItems:           cloneBattleRoleItems(role.Items),
+		RoleItemsByHandle:   map[string][]session.RoleItem{role.RoleID: cloneBattleRoleItems(role.Items)},
+		Phase:               PhaseCommand,
+		Round:               1,
+		Cells:               cells,
+		ActiveHandle:        role.RoleID,
+		ConsumedSequence:    map[int]bool{},
+		DefendingHandles:    map[string]bool{},
+		StatusEffects:       map[string]BattleStatusEffects{},
+		PendingConfusion:    map[string]bool{},
+		PendingSkillSeal:    map[string]bool{},
+		StoredPower:         map[string]int{},
+		nextSequence:        1,
 	}
 	start := StartPush{
 		BattleID:        battleID,
@@ -4834,14 +4817,6 @@ func (runtime *Runtime) effectiveBattleDefenseValue(actor *CellInfoPush, target 
 	return effectiveDefense
 }
 
-func (runtime *Runtime) hasCaptureBackedEnemyAttackRange(actor *CellInfoPush) bool {
-	if runtime == nil || actor == nil || actor.Camp != CampEnemy {
-		return false
-	}
-	attackRange, ok := runtime.EnemyAttackRanges[actor.Handle]
-	return ok && attackRange.Min > 0 && attackRange.Max >= attackRange.Min
-}
-
 func (runtime *Runtime) baseBattleDamage(actor *CellInfoPush, profile commandProfile, defense int) int {
 	return maxInt(1, int(math.Round(runtime.baseBattleDamageValue(actor, profile, float64(defense)))))
 }
@@ -4895,10 +4870,8 @@ func (runtime *Runtime) applyTargetHPDamage(target *CellInfoPush, damage int) (i
 }
 
 const (
-	capturedWoodcutterPhysicalRollMinBasisPoints = 9500
-	capturedWoodcutterPhysicalRollMaxBasisPoints = 14000
-	capturedPvpMonsterRollMinBasisPoints         = 8000
-	capturedPvpMonsterRollMaxBasisPoints         = 12700
+	localBattleAttackRollMinBasisPoints = 9000
+	localBattleAttackRollMaxBasisPoints = 11000
 )
 
 func (runtime *Runtime) captureBackedAttack(actor *CellInfoPush, profile commandProfile) float64 {
@@ -4909,43 +4882,36 @@ func (runtime *Runtime) captureBackedAttack(actor *CellInfoPush, profile command
 	if profile.UseMagicAttack && actor.MagicAttack > 0 {
 		attack = float64(actor.MagicAttack)
 	}
-	if actor.Camp == CampTeam && !profile.UseMagicAttack && isCapturedWoodcutterPhysicalAttackActor(actor.Handle) {
-		basisPoints := capturedWoodcutterPhysicalRollMinBasisPoints + sourceBattleAttackRoll(
-			capturedWoodcutterPhysicalRollMaxBasisPoints-capturedWoodcutterPhysicalRollMinBasisPoints+1,
-		)
-		return attack * float64(basisPoints) / 10000
-	}
-	if actor.Camp != CampEnemy {
+	if !runtime.usesLocalAttackRoll(actor, profile) {
 		return attack
 	}
-	if !profile.UseMagicAttack && profile.SourceActionLabel == "sweepspear" {
-		if attackRange, ok := runtime.EnemySweepSpearRanges[actor.Handle]; ok && attackRange.Min > 0 && attackRange.Max >= attackRange.Min {
-			return float64(attackRange.Min + sourceBattleAttackRoll(attackRange.Max-attackRange.Min+1))
-		}
-	}
-	if !profile.UseMagicAttack && runtime.hasCaptureBackedEnemyAttackRange(actor) && profile.SourceActionLabel == "nomalAtk" {
-		attackRange := runtime.EnemyAttackRanges[actor.Handle]
-		return float64(attackRange.Min + sourceBattleAttackRoll(attackRange.Max-attackRange.Min+1))
-	}
-	if !runtime.usesPvpCaptureRollForWildEnemy(actor) {
-		return attack
-	}
-	basisPoints := capturedPvpMonsterRollMinBasisPoints + sourceBattleAttackRoll(
-		capturedPvpMonsterRollMaxBasisPoints-capturedPvpMonsterRollMinBasisPoints+1,
+	basisPoints := localBattleAttackRollMinBasisPoints + sourceBattleAttackRoll(
+		localBattleAttackRollMaxBasisPoints-localBattleAttackRollMinBasisPoints+1,
 	)
 	return attack * float64(basisPoints) / 10000
 }
 
-func (runtime *Runtime) usesPvpCaptureRollForWildEnemy(actor *CellInfoPush) bool {
-	if runtime == nil || actor == nil || actor.Camp != CampEnemy {
+func (runtime *Runtime) usesLocalAttackRoll(actor *CellInfoPush, profile commandProfile) bool {
+	if actor == nil {
 		return false
 	}
+	if actor.Camp == CampTeam {
+		return !profile.UseMagicAttack && isCapturedWoodcutterPhysicalAttackActor(actor.Handle)
+	}
+	if runtime == nil || actor.Camp != CampEnemy {
+		return false
+	}
+	sourceHandle := actor.Handle
+	if separator := strings.LastIndex(sourceHandle, "_"); separator > 0 {
+		sourceHandle = sourceHandle[:separator]
+	}
 	for _, config := range sourceEnemyConfigsForMap(runtime.MapID) {
-		if config.Cell.Handle == actor.Handle {
+		if config.Cell.Handle == sourceHandle {
 			return true
 		}
 	}
-	return false
+	_, ok := sourceVisibleMonsterConfigForHandle(runtime.MapID, sourceHandle)
+	return ok
 }
 
 func isCapturedWoodcutterPhysicalAttackActor(handle string) bool {

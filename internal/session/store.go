@@ -871,7 +871,11 @@ func (store *Store) CreateRole(request RoleCreateRequest) RoleCreateResponse {
 		PresetID:     request.PresetID,
 		SourceQuery:  request.SourceQuery,
 		Appearance:   request.Appearance,
+		SkillCap:     defaultSkillCap,
+		Skills:       defaultRoleSkills(),
+		FastPanel:    defaultRoleFastPanel(),
 		Currencies:   defaultRoleCurrencies(),
+		Items:        defaultRoleItems(),
 	}
 	store.rolesByPID[request.PlayerID] = append(roles, role)
 	if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
@@ -1231,12 +1235,6 @@ func (store *Store) GetRoleFastPanel(playerID string, roleID string) ([]RoleFast
 		}
 
 		role = withRoleRuntimeDefaults(role)
-		if isCapturedWoodcutter333LocalRole(role) {
-			return cloneRoleFastPanel(filterRoleFastPanelEntries(role.FastPanel, capturedWoodcutter333ShortcutSkills())), true
-		}
-		if isCapturedAChaiLocalRole(role) {
-			return cloneRoleFastPanel(normalizeRoleFastPanel(role.FastPanel)), true
-		}
 		return cloneRoleFastPanel(filterRoleFastPanelEntries(role.FastPanel, role.Skills)), true
 	}
 
@@ -4178,6 +4176,7 @@ func (store *Store) useEquipmentItemLocked(
 	updatedResultItems = append(updatedResultItems, normalizedEquippedItem)
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	roles[roleIndex].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[roleIndex].SourceQuery, roles[roleIndex].Items)
+	roles[roleIndex].BattleSourceQuery = roles[roleIndex].SourceQuery
 	roles[roleIndex] = syncRoleProgressionRuntimeData(roles[roleIndex])
 	store.rolesByPID[playerID] = roles
 	if err := store.persistPlayerStateLocked(playerID); err != nil {
@@ -4201,8 +4200,21 @@ func (store *Store) useEquipmentItemLocked(
 }
 
 func (store *Store) PurchaseMallProduct(playerID string, roleID string, product mall.Product, quantity int, requestID string) mall.PurchaseResult {
+	rolePersistLock := store.rolePersistenceLock(playerID, roleID)
+	rolePersistLock.Lock()
+	defer rolePersistLock.Unlock()
+
 	store.mu.Lock()
-	defer store.mu.Unlock()
+	var roleSnapshot RoleSummary
+	shouldPersist := false
+	defer func() {
+		store.mu.Unlock()
+		if shouldPersist {
+			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+				log.Printf("[session.Store] persist mall purchase failed: %v", err)
+			}
+		}
+	}()
 
 	requestID = strings.TrimSpace(requestID)
 	if requestID != "" {
@@ -4317,9 +4329,8 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 		roles[index].Currencies[payCurrency] -= totalPrice
 		roles[index].Items = normalizeRoleItems(append(roles[index].Items, purchasedItem))
 		store.rolesByPID[playerID] = roles
-		if err := store.persistPlayerStateLocked(playerID); err != nil {
-			log.Printf("[session.Store] persist mall purchase failed: %v", err)
-		}
+		roleSnapshot = roles[index]
+		shouldPersist = true
 		// Always report 玉币 to the mall shell when the product is source-priced in 玉币.
 		reportCurrency := product.Currency
 		reportBalance := roles[index].Currencies[reportCurrency]
@@ -4422,6 +4433,7 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 		updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[index].SourceQuery, roles[index].Items)
+		roles[index].BattleSourceQuery = roles[index].SourceQuery
 		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
@@ -4663,6 +4675,7 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		if sourceType == "装备" || targetType == "装备" {
 			roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[index].SourceQuery, roles[index].Items)
+			roles[index].BattleSourceQuery = roles[index].SourceQuery
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
 		store.rolesByPID[playerID] = roles

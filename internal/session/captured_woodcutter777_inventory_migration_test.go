@@ -5,14 +5,14 @@ import (
 	"testing"
 )
 
-func TestCapturedWoodcutter777RuntimeDefaultsOnlyTargetSnapshotRoles(t *testing.T) {
+func TestCapturedWoodcutter777InventoryMigrationOnlyTargetsSnapshotRoles(t *testing.T) {
 	for _, roleID := range []string{capturedWoodcutter777RoleID, capturedWoodcutter777LongRoleID} {
-		if !isCapturedWoodcutter777LocalRole(RoleSummary{RoleID: roleID}) {
+		if !isCapturedWoodcutter777InventoryMigrationRole(RoleSummary{RoleID: roleID}) {
 			t.Fatalf("expected captured 777 snapshot role %q", roleID)
 		}
 	}
-	if isCapturedWoodcutter777LocalRole(RoleSummary{RoleID: "acct-777-role-002"}) {
-		t.Fatal("expected later 777 account roles to keep their own runtime defaults")
+	if isCapturedWoodcutter777InventoryMigrationRole(RoleSummary{RoleID: "acct-777-role-002"}) {
+		t.Fatal("expected later 777 account roles not to receive the one-time migration")
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 //go:embed captured_konglongkanglang1_role.json
@@ -100,12 +99,6 @@ func capturedKonglongKanglang1FastPanel() []RoleFastPanelEntry {
 		entries = append(entries, RoleFastPanelEntry{Index: 7, Type: "skill", Name: "强贯式"})
 	}
 	return normalizeRoleFastPanel(entries)
-}
-
-func isCapturedKonglongKanglang1LocalRole(role RoleSummary) bool {
-	return strings.HasPrefix(role.RoleID, "acct-66666666-role-") ||
-		strings.HasPrefix(role.RoleID, "acct-666-role-") ||
-		role.DisplayName == "666"
 }
 
 // MigrateCapturedKonglongKanglang1Role replaces the requested local role with

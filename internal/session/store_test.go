@@ -2400,13 +2400,13 @@ func TestCapturedRecoveryItemTemplatesIncludeShopCaptureAmounts(t *testing.T) {
 		healHP int
 		healMP int
 	}{
-		"馒头":   {healHP: 200},
-		"包子":   {healHP: 600},
-		"花卷":   {healHP: 350},
+		"馒头":    {healHP: 200},
+		"包子":    {healHP: 600},
+		"花卷":    {healHP: 350},
 		"小包还元散": {healHP: 1500},
 		"小瓶甘露":  {healMP: 100},
-		"L花卷":  {healHP: 350},
-		"肉":    {healHP: 50},
+		"L花卷":   {healHP: 350},
+		"肉":     {healHP: 50},
 	}
 	for name, want := range expected {
 		item, ok := CapturedRoleItemTemplate(name)
@@ -4091,6 +4091,20 @@ func TestPersistentStoreHighFrequencyRoleMutationsDoNotRewriteSiblingRows(t *tes
 				result := store.PurchaseRoleItem(playerID, roleID, item, nil)
 				if !result.Found || !result.Purchased {
 					t.Fatalf("expected purchase item success, got %+v", result)
+				}
+			},
+		},
+		{
+			name: "purchase mall item",
+			mutate: func(t *testing.T, store *Store, playerID string, roleID string) {
+				t.Helper()
+				product, ok := store.Mall.FindProduct("dev-ginseng")
+				if !ok {
+					t.Fatal("expected development mall product")
+				}
+				result := store.PurchaseMallProduct(playerID, roleID, product, 1, "high-frequency-mall")
+				if !result.Success || result.Delivery == nil {
+					t.Fatalf("expected mall purchase success, got %+v", result)
 				}
 			},
 		},

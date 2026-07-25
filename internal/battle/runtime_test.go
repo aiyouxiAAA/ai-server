@@ -980,7 +980,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected map49 wild enemy config")
 	}
-	if enemy.Cell.Name != "盗贼" || enemy.Cell.DisplayURL != "monstermap/robber.swf" || enemy.Cell.MaxHP != 445 || enemy.Cell.MaxMP != 194 || enemy.Cell.Attack != 107 {
+	if enemy.Cell.Name != "盗贼" || enemy.Cell.DisplayURL != "monstermap/robber.swf" || enemy.Cell.MaxHP != 445 || enemy.Cell.MaxMP != 194 || enemy.Cell.Attack != 111 || enemy.Cell.Defense != 16 {
 		t.Fatalf("expected captured map49 robber config, got %+v", enemy)
 	}
 	if enemy.QueueIndexTeam != 1 || enemy.QueueIndexEnemy != 4 {
@@ -993,6 +993,15 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	}
 	if map4.QueueIndexTeam != 0 || map4.QueueIndexEnemy != 0 {
 		t.Fatalf("expected captured map4 queue indexes 0/0, got %+v", map4)
+	}
+
+	grassball, ok := sourceEnemyConfigForMap("222")
+	if !ok || grassball.Cell.Name != "草球蔓" || grassball.Cell.MgcDefense != 340 {
+		t.Fatalf("expected map222 grassball magic defense 340 from fire unit-roll backfill, got %+v", grassball)
+	}
+	robotMystic, ok := sourceEnemyConfigForMap("201")
+	if !ok || robotMystic.Cell.Name != "机木玄师" || robotMystic.Cell.MgcDefense != 287 {
+		t.Fatalf("expected map201 robot mystic magic defense 287 from fire unit-roll backfill, got %+v", robotMystic)
 	}
 
 	visibleBoss, ok := sourceVisibleMonsterConfigForHandle("143", "5176206909809579")
@@ -1113,7 +1122,7 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	if !ok {
 		t.Fatal("expected map171 visible 百年虫精 config")
 	}
-	if bainian.Cell.Name != "百年虫精" || bainian.Cell.DisplayURL != "monstermap/wocmon.swf" || bainian.Cell.Level != 30 || bainian.Cell.MaxHP != 8000 || bainian.Cell.MaxMP != 1500 || bainian.Cell.Attack != 202 || bainian.Cell.CommandLabel != "法术普通攻击" || bainian.Cell.DamageDefenseType != "magic" {
+	if bainian.Cell.Name != "百年虫精" || bainian.Cell.DisplayURL != "monstermap/wocmon.swf" || bainian.Cell.Level != 30 || bainian.Cell.MaxHP != 8000 || bainian.Cell.MaxMP != 1500 || bainian.Cell.Attack != 210 || bainian.Cell.CommandLabel != "法术普通攻击" || bainian.Cell.DamageDefenseType != "magic" {
 		t.Fatalf("unexpected 百年虫精 config: %+v", bainian.Cell)
 	}
 	group, ok := sourceVisibleMonsterConfigsForHandle("171", "7893833328746190")
@@ -1150,13 +1159,13 @@ func TestSourceBattleConfigTablesLoadCapturedRows(t *testing.T) {
 	}
 }
 
-func TestCaptureBackedYaozhisenNormalAttackUsesConfiguredRange(t *testing.T) {
+func TestCaptureBackedYaozhisenNormalAttackUsesUnitRoll(t *testing.T) {
 	defer useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
 	defer useSourceEncounterRoll(func(int) int { return 227 })()
 
 	enemy, ok := sourceEnemyConfigForMap("201")
-	if !ok || enemy.Cell.Attack != 193 || enemy.AttackMin != 186 || enemy.AttackMax != 374 {
-		t.Fatalf("expected map201 half-defense calibrated attack 193 and range 186..374, got %+v", enemy)
+	if !ok || enemy.Cell.Attack != 200 || enemy.Cell.Defense != 14 {
+		t.Fatalf("expected map201 unit-roll calibrated attack 200 and defense 14, got %+v", enemy)
 	}
 	runtime, bundle, started := NewWildBattle(
 		session.RoleSummary{RoleID: "player_yaozhisen_range", DisplayName: "测试女侠", Level: 34},
@@ -1167,14 +1176,14 @@ func TestCaptureBackedYaozhisenNormalAttackUsesConfiguredRange(t *testing.T) {
 		t.Fatalf("expected map201 capture-backed encounter, got started=%v bundle=%+v", started, bundle)
 	}
 	actor := runtime.cellByHandle(bundle.Cells[1].Handle)
-	if actor == nil || runtime.EnemyAttackRanges[actor.Handle] != (battleAttackRange{Min: 186, Max: 374}) {
-		t.Fatalf("expected map201 range to reach runtime actor, got actor=%+v ranges=%+v", actor, runtime.EnemyAttackRanges)
+	if actor == nil {
+		t.Fatalf("expected map201 runtime actor, got bundle=%+v", bundle)
 	}
-	if damage := runtime.baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 354 {
-		t.Fatalf("expected upper bound 374 minus defense 20, got %d", damage)
+	if damage := runtime.baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 200 {
+		t.Fatalf("expected 110%% of unit-roll attack 200 minus defense 20, got %d", damage)
 	}
-	if damage := (&Runtime{}).baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 173 {
-		t.Fatalf("expected missing range to retain fixed attack proxy 193 minus defense 20, got %d", damage)
+	if damage := (&Runtime{}).baseBattleDamage(actor, commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1}, 20); damage != 180 {
+		t.Fatalf("expected synthetic runtime to retain static attack 200 minus defense 20, got %d", damage)
 	}
 }
 
@@ -2313,9 +2322,9 @@ func TestNewWildBattleSupportsCaptureBackedGrasslandMaps(t *testing.T) {
 		maxMP      int
 		attack     int
 	}{
-		{mapID: "210", mapName: "草坝_4", enemyName: "草刺槐", displayURL: "monstermap/glassyx.swf", level: 38, maxHP: 1530, maxMP: 1034, attack: 264},
-		{mapID: "216", mapName: "草坝_11", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 40, maxHP: 1357, maxMP: 1500, attack: 281},
-		{mapID: "222", mapName: "草坝_16", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 42, maxHP: 1450, maxMP: 1518, attack: 290},
+		{mapID: "210", mapName: "草坝_4", enemyName: "草刺槐", displayURL: "monstermap/glassyx.swf", level: 38, maxHP: 1530, maxMP: 1034, attack: 273},
+		{mapID: "216", mapName: "草坝_11", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 40, maxHP: 1357, maxMP: 1500, attack: 291},
+		{mapID: "222", mapName: "草坝_16", enemyName: "草球蔓", displayURL: "monstermap/glassss.swf", level: 42, maxHP: 1450, maxMP: 1518, attack: 301},
 	}
 
 	for _, testCase := range testCases {
@@ -8610,33 +8619,24 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	if !ok || len(group) != 4 {
 		t.Fatalf("expected four-enemy 百年虫精 encounter, got %+v", group)
 	}
-	expectedAttackRanges := map[string]battleAttackRange{
-		"7893833328746190": {Min: 197, Max: 208},
-		"7895833328747103": {Min: 222, Max: 245},
-		"7897833328748728": {Min: 216, Max: 321},
-		"7899833328749140": {Min: 216, Max: 321},
-	}
-	expectedSweepSpearRanges := map[string]battleAttackRange{
-		"7895833328747103": {Min: 209, Max: 209},
-		"7897833328748728": {Min: 207, Max: 314},
-		"7899833328749140": {Min: 207, Max: 314},
+	expectedAttacks := map[string]int{
+		"7893833328746190": 210,
+		"7895833328747103": 228,
+		"7897833328748728": 236,
+		"7899833328749140": 236,
 	}
 	for _, enemy := range group {
-		if actual := (battleAttackRange{Min: enemy.AttackMin, Max: enemy.AttackMax}); actual != expectedAttackRanges[enemy.Cell.Handle] {
-			t.Fatalf("expected capture-backed 百年虫精 attack range for %s, got %+v", enemy.Cell.Handle, actual)
-		}
-		if actual := (battleAttackRange{Min: enemy.SweepSpearAttackMin, Max: enemy.SweepSpearAttackMax}); enemy.Cell.Name == "被控制的民兵" && actual != expectedSweepSpearRanges[enemy.Cell.Handle] {
-			t.Fatalf("expected capture-backed 百年虫精 sweepspear range for %s, got %+v", enemy.Cell.Handle, actual)
+		if enemy.Cell.Attack != expectedAttacks[enemy.Cell.Handle] {
+			t.Fatalf("expected unit-roll 百年虫精 attack for %s, got %+v", enemy.Cell.Handle, enemy.Cell)
 		}
 	}
 
 	runtime := &Runtime{
-		BattleID:              "battle-bainian-chongjing",
-		Round:                 1,
-		nextSequence:          1,
-		DefendingHandles:      map[string]bool{},
-		EnemyAttackRanges:     expectedAttackRanges,
-		EnemySweepSpearRanges: expectedSweepSpearRanges,
+		BattleID:         "battle-bainian-chongjing",
+		MapID:            "171",
+		Round:            1,
+		nextSequence:     1,
+		DefendingHandles: map[string]bool{},
 	}
 	actor := bainian.Cell.withBattleIDAndSlot(runtime.BattleID, 0)
 	rampage := runtime.resolveEnemyRampageActions(&actor)
@@ -8705,17 +8705,15 @@ func TestBainianChongjingUsesCapturedRampageAndChaosHit(t *testing.T) {
 	}
 	runtime.Cells = []CellInfoPush{targetOne, targetTwo, *ranger}
 	ranger = runtime.cellByHandle(ranger.Handle)
-	runtime.EnemyAttackRanges[ranger.Handle] = expectedAttackRanges["7895833328747103"]
-	runtime.EnemySweepSpearRanges[ranger.Handle] = expectedSweepSpearRanges["7895833328747103"]
 	ranger.Fat = 0
 	defer useSourceBattleAttackRoll(func(int) int { return 0 })()
 	normalAction := runtime.resolveAttack(ranger, runtime.cellByHandle(targetOne.Handle), CommandEnemyAttack)
-	if normalAction.Damage != 77 || normalAction.TargetHP != 923 {
-		t.Fatalf("expected militia normal attack to use its 222 minimum instead of sweepspear range, action=%+v", normalAction)
+	if normalAction.Damage != 60 || normalAction.TargetHP != 940 {
+		t.Fatalf("expected militia normal attack to use the 90%% unit-roll floor, action=%+v", normalAction)
 	}
 	runtime.cellByHandle(targetOne.Handle).HP = 1000
 	sweepActions := runtime.resolveEnemyCommandActions(ranger, runtime.cellByHandle(targetOne.Handle), CommandEnemySweepSpear)
-	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 873 || runtime.cellByHandle(targetTwo.Handle).HP != 878 {
+	if len(sweepActions) != 1 || sweepActions[0].ActionName != "单枪横扫" || sweepActions[0].TargetHandle != "all" || sweepActions[0].SourceActionLabel != "sweepspear" || len(sweepActions[0].TargetActionResults) != 2 || runtime.cellByHandle(ranger.Handle).MP != 570 || runtime.cellByHandle(targetOne.Handle).HP != 878 || runtime.cellByHandle(targetTwo.Handle).HP != 883 {
 		t.Fatalf("expected militia sweepspear all-target MP and half-defense behavior, actions=%+v cells=%+v", sweepActions, runtime.Cells)
 	}
 
@@ -8972,9 +8970,7 @@ func TestXiongluBeardeerAngleCurseCanApplySeal(t *testing.T) {
 }
 
 func TestAllDamageUsesUnifiedHalfDefense(t *testing.T) {
-	runtime := &Runtime{EnemyAttackRanges: map[string]battleAttackRange{
-		"enemy_wocmon": {Min: 389, Max: 399},
-	}}
+	runtime := &Runtime{}
 	enemy := &CellInfoPush{Handle: "enemy_wocmon", Camp: CampEnemy, Attack: 184}
 	target := &CellInfoPush{Handle: "player_21499", Camp: CampTeam, MgcDefense: 300}
 	profile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "magic"}
@@ -8983,15 +8979,8 @@ func TestAllDamageUsesUnifiedHalfDefense(t *testing.T) {
 	if defense != 150 {
 		t.Fatalf("expected half 阿柴 magic defense to mitigate enemy magic damage, got %d", defense)
 	}
-	restoreMinimumRoll := useSourceBattleAttackRoll(func(int) int { return 0 })
-	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 239 {
-		t.Fatalf("expected a 389 attack to deal 239 against half magic defense 150, got %d", damage)
-	}
-	restoreMinimumRoll()
-	restoreMaximumRoll := useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })
-	defer restoreMaximumRoll()
-	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 249 {
-		t.Fatalf("expected a 399 attack to deal 249 against half magic defense 150, got %d", damage)
+	if damage := runtime.baseBattleDamage(enemy, profile, defense); damage != 34 {
+		t.Fatalf("expected static synthetic attack 184 to deal 34 against half magic defense 150, got %d", damage)
 	}
 
 	player := &CellInfoPush{Handle: "player_mage", Camp: CampTeam, Attack: 184}
@@ -9000,14 +8989,12 @@ func TestAllDamageUsesUnifiedHalfDefense(t *testing.T) {
 	}
 
 	physicalEnemy := &CellInfoPush{Handle: "7895833328747103", Camp: CampEnemy, Name: "被控制的民兵", DisplayURL: "monstermap/militia.swf", Attack: 200}
-	runtime.EnemyAttackRanges[physicalEnemy.Handle] = battleAttackRange{Min: 209, Max: 245}
 	physicalTarget := &CellInfoPush{Handle: "player_21432", Camp: CampTeam, Defense: 300}
 	physicalProfile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
 	if defense := runtime.effectiveBattleDefense(physicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 150 {
 		t.Fatalf("expected enemy physical damage to use half defense, got %d", defense)
 	}
 	otherPhysicalEnemy := &CellInfoPush{Handle: "enemy_with_range_but_no_cross_target_evidence", Camp: CampEnemy, Attack: 200}
-	runtime.EnemyAttackRanges[otherPhysicalEnemy.Handle] = battleAttackRange{Min: 153, Max: 247}
 	if defense := runtime.effectiveBattleDefense(otherPhysicalEnemy, physicalTarget, false, physicalProfile.DefenseType); defense != 150 {
 		t.Fatalf("expected every enemy physical attack to use half defense, got %d", defense)
 	}
@@ -9020,20 +9007,36 @@ func TestAllDamageUsesUnifiedHalfDefense(t *testing.T) {
 	}
 }
 
-func TestMilitiaDamageAgainst777InfluxUsesFractionalHalfDefense(t *testing.T) {
-	runtime := &Runtime{
-		EnemyAttackRanges: map[string]battleAttackRange{
-			"militia-ranger":  {Min: 222, Max: 245},
-			"militia-warrior": {Min: 216, Max: 321},
-		},
-		EnemySweepSpearRanges: map[string]battleAttackRange{
-			"militia-ranger":  {Min: 209, Max: 209},
-			"militia-warrior": {Min: 207, Max: 314},
-		},
+func TestLocalBattleAttackRollUsesNinetyToOneHundredTenPercent(t *testing.T) {
+	runtime := &Runtime{MapID: "52"}
+	profile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
+	enemy := &CellInfoPush{Handle: "4241545370938745", Camp: CampEnemy, Attack: 100}
+	woodcutter := &CellInfoPush{Handle: "acct-777-role-001", Camp: CampTeam, Attack: 100}
+
+	restoreMinimumRoll := useSourceBattleAttackRoll(func(int) int { return 0 })
+	if attack := runtime.captureBackedAttack(enemy, profile); attack != 90 {
+		t.Fatalf("expected local enemy minimum roll to be 90%%, got %v", attack)
 	}
+	if attack := runtime.captureBackedAttack(woodcutter, profile); attack != 90 {
+		t.Fatalf("expected local player minimum roll to be 90%%, got %v", attack)
+	}
+	restoreMinimumRoll()
+
+	restoreMaximumRoll := useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })
+	defer restoreMaximumRoll()
+	if attack := runtime.captureBackedAttack(enemy, profile); attack != 110 {
+		t.Fatalf("expected local enemy maximum roll to be 110%%, got %v", attack)
+	}
+	if attack := runtime.captureBackedAttack(woodcutter, profile); attack != 110 {
+		t.Fatalf("expected local player maximum roll to be 110%%, got %v", attack)
+	}
+}
+
+func TestMilitiaDamageAgainst777InfluxUsesFractionalHalfDefense(t *testing.T) {
+	runtime := &Runtime{MapID: "171"}
 	target := &CellInfoPush{Handle: "acct-777-role-001", Camp: CampTeam, Defense: 509}
-	ranger := &CellInfoPush{Handle: "militia-ranger", Camp: CampEnemy, Attack: 234}
-	warrior := &CellInfoPush{Handle: "militia-warrior", Camp: CampEnemy, Attack: 269}
+	ranger := &CellInfoPush{Handle: "7895833328747103", Camp: CampEnemy, Attack: 228}
+	warrior := &CellInfoPush{Handle: "7897833328748728", Camp: CampEnemy, Attack: 236}
 	normalProfile := commandProfile{SourceActionLabel: "nomalAtk", DamageMultiplier: 1, DefenseType: "physical"}
 	sweepProfile := commandProfile{SourceActionLabel: "sweepspear", DamageMultiplier: enemySweepSpearDamageMultiplier, DefenseType: "physical"}
 	defense := runtime.effectiveBattleDefenseValue(ranger, target, false, normalProfile.DefenseType)
@@ -9045,27 +9048,30 @@ func TestMilitiaDamageAgainst777InfluxUsesFractionalHalfDefense(t *testing.T) {
 	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, normalProfile, defense)))); damage != 1 {
 		t.Fatalf("expected ranger militia minimum normal damage 1 against influx 777, got %d", damage)
 	}
-	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, sweepProfile, defense)))); damage != 17 {
-		t.Fatalf("expected ranger militia sweepspear damage 17 against influx 777, got %d", damage)
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, sweepProfile, defense)))); damage != 12 {
+		t.Fatalf("expected ranger militia 90%% sweepspear damage 12 against influx 777, got %d", damage)
 	}
 	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, normalProfile, defense)))); damage != 1 {
 		t.Fatalf("expected warrior militia minimum normal damage 1 against influx 777, got %d", damage)
 	}
-	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, sweepProfile, defense)))); damage != 15 {
-		t.Fatalf("expected warrior militia minimum sweepspear damage 15 against influx 777, got %d", damage)
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, sweepProfile, defense)))); damage != 22 {
+		t.Fatalf("expected warrior militia 90%% sweepspear damage 22 against influx 777, got %d", damage)
 	}
 	restoreMinimumRoll()
 
 	restoreMaximumRoll := useSourceBattleAttackRoll(func(maxExclusive int) int { return maxExclusive - 1 })
 	defer restoreMaximumRoll()
 	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, normalProfile, defense)))); damage != 1 {
-		t.Fatalf("expected ranger militia maximum normal damage 1 against influx 777, got %d", damage)
+		t.Fatalf("expected ranger militia 110%% normal damage 1 against influx 777, got %d", damage)
 	}
-	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, normalProfile, defense)))); damage != 67 {
-		t.Fatalf("expected warrior militia maximum normal damage 67 against influx 777, got %d", damage)
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, normalProfile, defense)))); damage != 5 {
+		t.Fatalf("expected warrior militia 110%% normal damage 5 against influx 777, got %d", damage)
 	}
-	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, sweepProfile, defense)))); damage != 154 {
-		t.Fatalf("expected warrior militia maximum sweepspear damage 154 against influx 777, got %d", damage)
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(ranger, sweepProfile, defense)))); damage != 72 {
+		t.Fatalf("expected ranger militia 110%% sweepspear damage 72 against influx 777, got %d", damage)
+	}
+	if damage := maxInt(1, int(math.Round(runtime.baseBattleDamageValue(warrior, sweepProfile, defense)))); damage != 83 {
+		t.Fatalf("expected warrior militia 110%% sweepspear damage 83 against influx 777, got %d", damage)
 	}
 }
 
@@ -9219,7 +9225,7 @@ func TestMagicpandaEnemyNormalAttackUsesCapturedBroadcastName(t *testing.T) {
 	if action.ActionName != "法术普通攻击" || action.SourceActionLabel != "nomalAtk" {
 		t.Fatalf("expected magicpanda normal attack to use CSV command_label while keeping source animation, config=%+v action=%+v", visibleMonster.Cell, action)
 	}
-	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 128 || action.TargetHP != 917 {
+	if visibleMonster.Cell.DamageDefenseType != "magic" || action.Damage != 133 || action.TargetHP != 912 {
 		t.Fatalf("expected magicpanda normal attack to use the half magic-defense path without stored power bonus, config=%+v action=%+v target=%+v", visibleMonster.Cell, action, target)
 	}
 }
@@ -10164,27 +10170,27 @@ func TestWoodcutterFistUltimateRequiresSoulPower(t *testing.T) {
 	}
 }
 
-func TestWoodcutter777SharedPhysicalFormulaReplaysCapturedDamage(t *testing.T) {
+func TestWoodcutter777SharedPhysicalFormulaUsesUnitRollBackfill(t *testing.T) {
 	previousRoll := sourceBattleAttackRoll
 	defer func() { sourceBattleAttackRoll = previousRoll }()
 
 	runtime := &Runtime{StoredPower: map[string]int{"acct-777-role-001": fistPowerAxeWingRequiredPower}}
 	actor := &CellInfoPush{Handle: "acct-777-role-001", Camp: CampTeam, Attack: 361}
-	map52Robber := &CellInfoPush{Handle: "map52_robber", Camp: CampEnemy, Defense: 321}
+	map52Robber := &CellInfoPush{Handle: "map52_robber", Camp: CampEnemy, Defense: 10}
 
-	// 113.96% is the captured p50 attack roll for Lv5 破魂打 against map52 盗贼.
-	sourceBattleAttackRoll = func(int) int { return 1896 }
+	// Table backfill fixes the capture roll at 1; runtime applies its 0.90..1.10
+	// variation separately through captureBackedAttack.
+	sourceBattleAttackRoll = func(int) int { return 1000 }
 	breakSoul := runtime.baseBattleDamageValue(actor, commandProfile{DamageMultiplier: 1.5, DirectAttackBonus: 0.3}, runtime.effectiveBattleDefenseValue(actor, map52Robber, false, "physical"))
-	if got := int(math.Round(breakSoul)); got != 580 {
-		t.Fatalf("expected shared formula to replay 777 Lv5 破魂打 p50=580, got %.4f -> %d", breakSoul, got)
+	if got := int(math.Round(breakSoul)); got != 645 {
+		t.Fatalf("expected unit-roll backfill to produce 645 for 777 Lv5 破魂打, got %.4f -> %d", breakSoul, got)
 	}
 
 	actor.Attack = 397
 	map48Robber := &CellInfoPush{Handle: "map48_robber", Camp: CampEnemy, Defense: 121}
-	// 96.98% with three stored soul power gives the captured 5423 critical exactly.
-	sourceBattleAttackRoll = func(int) int { return 198 }
+	sourceBattleAttackRoll = func(int) int { return 1000 }
 	ultimate := runtime.baseBattleDamageValue(actor, commandProfile{DamageMultiplier: 2.4, DamageUsesStoredPower: true}, runtime.effectiveBattleDefenseValue(actor, map48Robber, false, "physical"))
-	if got := int(math.Round(ultimate * 2)); got != 5423 {
-		t.Fatalf("expected shared formula to defer rounding until after 777 ultimate critical, got %.4f -> %d", ultimate, got)
+	if got := int(math.Round(ultimate * 2)); got != 5596 {
+		t.Fatalf("expected unit-roll backfill to defer rounding until after ultimate critical, got %.4f -> %d", ultimate, got)
 	}
 }

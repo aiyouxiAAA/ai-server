@@ -3102,7 +3102,8 @@ func buildClassicTownBuySkillResult(
 				ErrorCode:    "skill_missing",
 				ErrorMessage: "技能不存在。",
 			},
-			handled: true,
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage("技能不存在。")},
+			handled:      true,
 		}
 	}
 
@@ -3114,7 +3115,17 @@ func buildClassicTownBuySkillResult(
 	)
 	if !purchase.Found {
 		log.Printf("[ai-server] classic town BuySkill ignored missing role roleId=%s shopId=%s skillId=%d", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID)
-		return packetResult{handled: true}
+		return packetResult{
+			buySkillResult: &classicTownBuySkillResultPush{
+				Success:      false,
+				ShopID:       request.ShopID,
+				SkillID:      request.SkillID,
+				ErrorCode:    "role_missing",
+				ErrorMessage: "角色数据不存在。",
+			},
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage("角色数据不存在。")},
+			handled:      true,
+		}
 	}
 
 	socketSession.selectedRole = &purchase.Role
@@ -3154,6 +3165,7 @@ func buildClassicTownBuySkillResult(
 		}
 		log.Printf("[ai-server] classic town BuySkill purchased skill item roleId=%s shopId=%s skillId=%d skill=%s", purchase.Role.RoleID, request.ShopID, request.SkillID, entry.Name)
 	} else {
+		result.chatMessages = append(result.chatMessages, classicTownSystemWarningMessage(purchase.ErrorMessage))
 		log.Printf("[ai-server] classic town BuySkill rejected roleId=%s shopId=%s skillId=%d error=%s", purchase.Role.RoleID, request.ShopID, request.SkillID, purchase.ErrorCode)
 	}
 	return result
@@ -3174,7 +3186,8 @@ func buildClassicTownBuyItemResult(
 				ErrorCode:    "item_missing",
 				ErrorMessage: "商品不存在。",
 			},
-			handled: true,
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage("商品不存在。")},
+			handled:      true,
 		}
 	}
 
@@ -3186,7 +3199,17 @@ func buildClassicTownBuyItemResult(
 	)
 	if !purchase.Found {
 		log.Printf("[ai-server] classic town BuyItem ignored missing role roleId=%s shopId=%s itemId=%d", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID)
-		return packetResult{handled: true}
+		return packetResult{
+			buySkillResult: &classicTownBuySkillResultPush{
+				Success:      false,
+				ShopID:       request.ShopID,
+				SkillID:      request.SkillID,
+				ErrorCode:    "role_missing",
+				ErrorMessage: "角色数据不存在。",
+			},
+			chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage("角色数据不存在。")},
+			handled:      true,
+		}
 	}
 
 	socketSession.selectedRole = &purchase.Role
@@ -3226,6 +3249,7 @@ func buildClassicTownBuyItemResult(
 		}
 		log.Printf("[ai-server] classic town BuyItem purchased roleId=%s shopId=%s itemId=%d item=%s count=%d", purchase.Role.RoleID, request.ShopID, request.SkillID, row.name, row.count)
 	} else {
+		result.chatMessages = append(result.chatMessages, classicTownSystemWarningMessage(purchase.ErrorMessage))
 		log.Printf("[ai-server] classic town BuyItem rejected roleId=%s shopId=%s itemId=%d error=%s", purchase.Role.RoleID, request.ShopID, request.SkillID, purchase.ErrorCode)
 	}
 	return result

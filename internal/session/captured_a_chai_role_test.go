@@ -43,7 +43,7 @@ func TestPersistentCapturedAChai555MigrationKeepsFinalSnapshot(t *testing.T) {
 	if !ok {
 		t.Fatal("expected migrated role runtime data")
 	}
-	if role.DisplayName != "555" || role.Voc != "术士" || role.Level != 45 || role.Exp != 6299164 || role.MapID != 202 {
+	if role.DisplayName != "555" || role.Voc != "术士" || role.Level != 50 || role.Exp != 8269210 || role.MapID != 202 {
 		t.Fatalf("unexpected migrated role summary: %+v", role)
 	}
 	if role.Currencies["铜钱"] != 968 || role.Currencies["银元宝"] != 30 {
@@ -52,10 +52,10 @@ func TestPersistentCapturedAChai555MigrationKeepsFinalSnapshot(t *testing.T) {
 	if role.ContainerCapacities["背包"] != 42 || role.ContainerCapacities["仓库"] != 38 || role.ContainerCapacities["装备"] != 20 || role.ContainerCapacities["战斗"] != 18 {
 		t.Fatalf("unexpected captured container capacities: %+v", role.ContainerCapacities)
 	}
-	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1068 || playerBase.RoleState.MP != 3077 || playerBase.RoleState.Lv != 45 || playerBase.RoleState.Exp != 6299164 || playerBase.RoleState.Speed != 145 {
+	if playerBase.RoleState == nil || playerBase.RoleState.HP != 1177 || playerBase.RoleState.MP != 3479 || playerBase.RoleState.Lv != 50 || playerBase.RoleState.Exp != 8269210 || playerBase.RoleState.Speed != 145 {
 		t.Fatalf("unexpected captured role state: %+v", playerBase.RoleState)
 	}
-	if playerBase.RolePhysique == nil || playerBase.RolePhysique.AGI != 80 || playerBase.RolePhysique.INT != 177 || playerBase.RolePhysique.MaxHP != 1105 || playerBase.RolePhysique.MaxMP != 3273 || playerBase.RolePhysique.MgcAtk != 367 {
+	if playerBase.RolePhysique == nil || playerBase.RolePhysique.AGI != 91 || playerBase.RolePhysique.INT != 200 || playerBase.RolePhysique.MaxHP != 1205 || playerBase.RolePhysique.MaxMP != 3649 || playerBase.RolePhysique.MgcAtk != 398 || playerBase.RolePhysique.MgcDef != 328 {
 		t.Fatalf("unexpected captured role physique: %+v", playerBase.RolePhysique)
 	}
 	for _, expected := range []struct {
@@ -181,8 +181,13 @@ func TestPersistentCapturedAChai555SkillMigrationKeepsOtherRoleState(t *testing.
 	}
 }
 
-func TestCapturedAChaiRuntimeDefaultsSyncLatestSkillsForExisting555Role(t *testing.T) {
-	store := NewStore()
+func TestPersistentCapturedAChaiLevel50StatsAndSkillsMigrationRunsOnce(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("create persistent store: %v", err)
+	}
+
 	login := mustLogin(t, store, "55555555", "55555555")
 	created := store.CreateRole(RoleCreateRequest{
 		PlayerID:       login.PlayerID,
@@ -192,15 +197,87 @@ func TestCapturedAChaiRuntimeDefaultsSyncLatestSkillsForExisting555Role(t *testi
 		RoleTemplateID: 1,
 	})
 	if !created.Success {
-		t.Fatalf("create existing 555 role: %+v", created)
+		t.Fatalf("create target role: %+v", created)
+	}
+	if created.Role.RoleID != capturedAChaiLevel50StatsAndSkillsRoleID {
+		t.Fatalf("unexpected migration target role id: %s", created.Role.RoleID)
 	}
 
-	skills, skillCap, ok := store.GetRoleSkills(login.PlayerID, created.Role.RoleID)
-	if !ok || skillCap != 16 || len(skills) != 16 || skills[3].Name != "愈气术" || skills[9].Name != "圣光诀" || skills[10].Name != "回伤术" || skills[12].Name != "雷击" || skills[15].Name != "雷龙强袭" {
-		t.Fatalf("expected existing 555 role runtime skills to sync captured support skills, got %+v", skills)
+	store.mu.Lock()
+	roles := store.rolesByPID[login.PlayerID]
+	roles[0].Level = 45
+	roles[0].Exp = 6299164
+	roles[0].SkillCap = 12
+	roles[0].Skills = cloneRoleSkills(capturedAChaiSnapshot.Role.Skills[:12])
+	roles[0].FastPanel = []RoleFastPanelEntry{
+		{Index: 0, Type: "skill", Name: "普通攻击"},
+		{Index: 7, Type: "skill", Name: "石雨术"},
 	}
-	fastPanel, ok := store.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
-	if !ok || len(fastPanel) != 10 || fastPanel[3].Name != "圣光诀" {
-		t.Fatalf("expected existing 555 role runtime fast panel to match capture, got %+v", fastPanel)
+	store.rolesByPID[login.PlayerID] = roles
+	if err := store.persistRoleStateLocked(login.PlayerID, created.Role.RoleID); err != nil {
+		store.mu.Unlock()
+		t.Fatalf("persist legacy a chai state: %v", err)
+	}
+	store.mu.Unlock()
+	if err := store.Close(); err != nil {
+		t.Fatalf("close legacy store: %v", err)
+	}
+
+	migrated, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("reopen migration store: %v", err)
+	}
+	role, playerBase, ok := migrated.GetRoleRuntimeData(login.PlayerID, created.Role.RoleID)
+	if !ok || role.Level != 50 || role.Exp != 8269210 || playerBase.RoleState == nil || playerBase.RoleState.HP != 1177 || playerBase.RolePhysique == nil || playerBase.RolePhysique.INT != 200 {
+		migrated.Close()
+		t.Fatalf("expected captured level-50 state after migration, role=%+v base=%+v", role, playerBase)
+	}
+	skills, skillCap, ok := migrated.GetRoleSkills(login.PlayerID, created.Role.RoleID)
+	if !ok || skillCap != 16 || len(skills) != 16 || skills[12].Name != "雷击" || skills[15].Name != "雷龙强袭" {
+		migrated.Close()
+		t.Fatalf("expected restored two-page skill list, cap=%d skills=%+v", skillCap, skills)
+	}
+	fastPanel, ok := migrated.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
+	if !ok || len(fastPanel) != 2 || fastPanel[1].Index != 7 || fastPanel[1].Name != "石雨术" {
+		migrated.Close()
+		t.Fatalf("expected current fast panel to remain untouched, entries=%+v", fastPanel)
+	}
+	var migrationRows int
+	if err := migrated.db.QueryRow(
+		`SELECT COUNT(*) FROM role_snapshot_migrations WHERE role_id = ? AND migration_key = ?`,
+		created.Role.RoleID,
+		capturedAChaiLevel50StatsAndSkillsMigrationKey,
+	).Scan(&migrationRows); err != nil || migrationRows != 1 {
+		migrated.Close()
+		t.Fatalf("expected one migration marker, rows=%d err=%v", migrationRows, err)
+	}
+	if removed := migrated.RemoveRoleSkill(login.PlayerID, created.Role.RoleID, "雷龙强袭"); !removed.Removed {
+		migrated.Close()
+		t.Fatalf("remove migrated skill: %+v", removed)
+	}
+	if err := migrated.Close(); err != nil {
+		t.Fatalf("close migrated store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("reopen completed migration store: %v", err)
+	}
+	defer reopened.Close()
+	skills, skillCap, ok = reopened.GetRoleSkills(login.PlayerID, created.Role.RoleID)
+	if !ok || skillCap != 16 || len(skills) != 15 {
+		t.Fatalf("completed migration overwrote later skill mutation, cap=%d skills=%+v", skillCap, skills)
+	}
+	for _, skill := range skills {
+		if skill.Name == "雷龙强袭" {
+			t.Fatalf("completed migration restored deleted skill: %+v", skills)
+		}
+	}
+	if err := reopened.db.QueryRow(
+		`SELECT COUNT(*) FROM role_snapshot_migrations WHERE role_id = ? AND migration_key = ?`,
+		created.Role.RoleID,
+		capturedAChaiLevel50StatsAndSkillsMigrationKey,
+	).Scan(&migrationRows); err != nil || migrationRows != 1 {
+		t.Fatalf("expected one stable migration marker, rows=%d err=%v", migrationRows, err)
 	}
 }

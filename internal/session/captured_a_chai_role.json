@@ -16,6 +16,48 @@
     "rockRainAction": 37703,
     "thunderBombsPalsy": 41859
   },
+  "level50Stats": {
+    "sourceCapture": "D:\\yzhgame\\WOCClient\\instances\\instance3.staging\\tmp\\woc-proxy-captures\\20260725_123048_547_auto_move_session\\conn_0002\\server-to-client-0001.bin",
+    "roleInfoPacket": 546,
+    "roleStatePacket": 44,
+    "rolePhysiquePacket": 547,
+    "level": 50,
+    "exp": 8269210,
+    "state": {
+      "hp": 1177,
+      "mp": 3479,
+      "exp": 8269210,
+      "lv": 50,
+      "speed": 145,
+      "outG": 0,
+      "inG": 0
+    },
+    "physique": {
+      "AGI": 91,
+      "STR": 7,
+      "INT": 200,
+      "CON": 5,
+      "LCK": 6,
+      "maxHp": 1205,
+      "maxMp": 3649,
+      "phyAtk": 68,
+      "mgcAtk": 398,
+      "phyDef": 221,
+      "mgcDef": 328,
+      "hit": 422,
+      "dog": 218,
+      "fat": 192,
+      "lastPoint": 0,
+      "resPros": [
+        "眩晕|10",
+        "封印|10",
+        "外伤|10",
+        "混乱|10",
+        "迟钝|10",
+        "麻痹|10"
+      ]
+    }
+  },
   "role": {
     "vocation": "术士",
     "level": 45,

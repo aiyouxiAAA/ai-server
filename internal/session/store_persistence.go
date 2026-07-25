@@ -100,6 +100,7 @@ func (store *Store) initSchema() error {
 			battle_source_query TEXT NOT NULL DEFAULT '',
 			appearance_json TEXT NOT NULL DEFAULT '',
 			skills_json TEXT NOT NULL DEFAULT '',
+			skill_cap INTEGER NOT NULL DEFAULT 12,
 			fast_panel_json TEXT NOT NULL DEFAULT '',
 			currencies_json TEXT NOT NULL DEFAULT '',
 			container_capacities_json TEXT NOT NULL DEFAULT '',
@@ -150,6 +151,11 @@ func (store *Store) initSchema() error {
 	if _, err := store.db.Exec(`ALTER TABLE roles ADD COLUMN skills_json TEXT NOT NULL DEFAULT ''`); err != nil {
 		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
 			return fmt.Errorf("migrate roles skills_json column: %w", err)
+		}
+	}
+	if _, err := store.db.Exec(`ALTER TABLE roles ADD COLUMN skill_cap INTEGER NOT NULL DEFAULT 12`); err != nil {
+		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+			return fmt.Errorf("migrate roles skill_cap column: %w", err)
 		}
 	}
 	if _, err := store.db.Exec(`ALTER TABLE roles ADD COLUMN fast_panel_json TEXT NOT NULL DEFAULT ''`); err != nil {
@@ -282,7 +288,7 @@ func (store *Store) loadFromDB() error {
 	}
 
 	roleRows, err := store.db.Query(`
-		SELECT role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, map_x, map_y, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, fast_panel_json, currencies_json, container_capacities_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json
+		SELECT role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, map_x, map_y, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, skill_cap, fast_panel_json, currencies_json, container_capacities_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json
 		FROM roles
 		ORDER BY player_id ASC, role_id ASC
 	`)
@@ -326,6 +332,7 @@ func (store *Store) loadFromDB() error {
 			&role.BattleSourceQuery,
 			&appearanceJSON,
 			&skillsJSON,
+			&role.SkillCap,
 			&fastPanelJSON,
 			&currenciesJSON,
 			&containerCapacitiesJSON,
@@ -882,8 +889,8 @@ func buildRolePersistencePayload(role RoleSummary) (rolePersistencePayload, erro
 func upsertRolePersistencePayload(execer rolePersistenceExecer, playerID string, payload rolePersistencePayload) error {
 	role := payload.runtimeRole
 	_, err := execer.Exec(
-		`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, map_x, map_y, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, fast_panel_json, currencies_json, container_capacities_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, map_x, map_y, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, skill_cap, fast_panel_json, currencies_json, container_capacities_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(role_id) DO UPDATE SET
 		   player_id = excluded.player_id,
 		   display_name = excluded.display_name,
@@ -904,6 +911,7 @@ func upsertRolePersistencePayload(execer rolePersistenceExecer, playerID string,
 		   battle_source_query = excluded.battle_source_query,
 		   appearance_json = excluded.appearance_json,
 		   skills_json = excluded.skills_json,
+		   skill_cap = excluded.skill_cap,
 		   fast_panel_json = excluded.fast_panel_json,
 		   currencies_json = excluded.currencies_json,
 		   container_capacities_json = excluded.container_capacities_json,
@@ -932,6 +940,7 @@ func upsertRolePersistencePayload(execer rolePersistenceExecer, playerID string,
 		role.BattleSourceQuery,
 		payload.appearanceJSON,
 		payload.skillsJSON,
+		role.SkillCap,
 		payload.fastPanelJSON,
 		payload.currenciesJSON,
 		payload.containerCapacitiesJSON,
@@ -1035,7 +1044,7 @@ func (store *Store) saveLocked() error {
 				return fmt.Errorf("encode dungeon instances for %s: %w", role.RoleID, encodeErr)
 			}
 			if _, err = tx.Exec(
-				`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, map_x, map_y, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, fast_panel_json, currencies_json, container_capacities_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO roles (role_id, player_id, display_name, level, exp, voc, agi, str, intelligence, con, lck, map_id, map_x, map_y, visual_role_id, preset_id, source_query, battle_source_query, appearance_json, skills_json, skill_cap, fast_panel_json, currencies_json, container_capacities_json, items_json, town_buffs_json, role_state_json, role_physique_json, dungeon_instances_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				runtimeRole.RoleID,
 				playerID,
 				runtimeRole.DisplayName,
@@ -1056,6 +1065,7 @@ func (store *Store) saveLocked() error {
 				runtimeRole.BattleSourceQuery,
 				appearanceJSON,
 				skillsJSON,
+				runtimeRole.SkillCap,
 				fastPanelJSON,
 				currenciesJSON,
 				containerCapacitiesJSON,

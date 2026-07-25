@@ -1,6 +1,7 @@
 package session
 
 import (
+	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,17 @@ var capturedAChaiRoleJSON []byte
 
 type capturedAChaiRoleSnapshot struct {
 	SourceCapture string `json:"sourceCapture"`
-	Role          struct {
+	Level50Stats  struct {
+		SourceCapture      string       `json:"sourceCapture"`
+		RoleInfoPacket     int          `json:"roleInfoPacket"`
+		RoleStatePacket    int          `json:"roleStatePacket"`
+		RolePhysiquePacket int          `json:"rolePhysiquePacket"`
+		Level              int          `json:"level"`
+		Exp                int          `json:"exp"`
+		State              RoleState    `json:"state"`
+		Physique           RolePhysique `json:"physique"`
+	} `json:"level50Stats"`
+	Role struct {
 		Vocation          string                  `json:"vocation"`
 		Level             int                     `json:"level"`
 		Exp               int                     `json:"exp"`
@@ -39,6 +50,11 @@ type capturedAChaiQuestSnapshot struct {
 }
 
 var capturedAChaiSnapshot = mustLoadCapturedAChaiSnapshot()
+
+const (
+	capturedAChaiLevel50StatsAndSkillsMigrationKey = "captured-a-chai-555-level50-stats-skills-v1"
+	capturedAChaiLevel50StatsAndSkillsRoleID       = "acct-55555555-role-001"
+)
 
 func capturedAChaiRoleItemTemplate(name string) (RoleItem, bool) {
 	for _, item := range capturedAChaiSnapshot.Role.Items {
@@ -81,6 +97,89 @@ func applyCapturedAChaiSnapshot(role RoleSummary) RoleSummary {
 	rolePhysique.Handle = role.RoleID
 	role.RolePhysique = &rolePhysique
 	return role
+}
+
+// applyCapturedAChaiLevel50StatsAndSkills updates only the independently
+// captured level-50 state and the already captured two-page skill list.
+func applyCapturedAChaiLevel50StatsAndSkills(role RoleSummary) RoleSummary {
+	stats := capturedAChaiSnapshot.Level50Stats
+	role.Level = stats.Level
+	role.Exp = stats.Exp
+	role.AGI = stats.Physique.AGI
+	role.STR = stats.Physique.STR
+	role.INT = stats.Physique.INT
+	role.CON = stats.Physique.CON
+	role.LCK = stats.Physique.LCK
+	role.SkillCap = capturedAChaiSnapshot.Role.SkillCap
+	role.Skills = cloneRoleSkills(capturedAChaiSnapshot.Role.Skills)
+
+	roleState := stats.State
+	roleState.Handle = role.RoleID
+	role.RoleState = &roleState
+	rolePhysique := stats.Physique
+	rolePhysique.Handle = role.RoleID
+	role.RolePhysique = &rolePhysique
+	return role
+}
+
+// applyPendingCapturedAChaiLevel50StatsAndSkillsMigration runs only for the
+// explicitly synchronized local role. The role update and completion marker
+// share one SQLite transaction so a completed migration cannot replay on login.
+func (store *Store) applyPendingCapturedAChaiLevel50StatsAndSkillsMigration() (bool, error) {
+	if store.db == nil {
+		return false, nil
+	}
+
+	for playerID, roles := range store.rolesByPID {
+		for index := range roles {
+			if roles[index].RoleID != capturedAChaiLevel50StatsAndSkillsRoleID {
+				continue
+			}
+
+			var migrated int
+			err := store.db.QueryRow(
+				`SELECT 1 FROM role_snapshot_migrations WHERE role_id = ? AND migration_key = ?`,
+				roles[index].RoleID,
+				capturedAChaiLevel50StatsAndSkillsMigrationKey,
+			).Scan(&migrated)
+			if err == nil {
+				return false, nil
+			}
+			if err != sql.ErrNoRows {
+				return false, fmt.Errorf("check captured a chai level 50 migration roleId=%s: %w", roles[index].RoleID, err)
+			}
+
+			migratedRole := applyCapturedAChaiLevel50StatsAndSkills(roles[index])
+			payload, err := buildRolePersistencePayload(migratedRole)
+			if err != nil {
+				return false, fmt.Errorf("build captured a chai level 50 migration payload: %w", err)
+			}
+			tx, err := store.db.Begin()
+			if err != nil {
+				return false, fmt.Errorf("begin captured a chai level 50 migration: %w", err)
+			}
+			if err := upsertRolePersistencePayload(tx, playerID, payload); err != nil {
+				_ = tx.Rollback()
+				return false, fmt.Errorf("persist captured a chai level 50 migration: %w", err)
+			}
+			if _, err := tx.Exec(
+				`INSERT INTO role_snapshot_migrations (role_id, migration_key) VALUES (?, ?)`,
+				migratedRole.RoleID,
+				capturedAChaiLevel50StatsAndSkillsMigrationKey,
+			); err != nil {
+				_ = tx.Rollback()
+				return false, fmt.Errorf("record captured a chai level 50 migration: %w", err)
+			}
+			if err := tx.Commit(); err != nil {
+				return false, fmt.Errorf("commit captured a chai level 50 migration: %w", err)
+			}
+
+			roles[index] = migratedRole
+			store.rolesByPID[playerID] = roles
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // MigrateCapturedAChaiRole replaces the requested local role with the final

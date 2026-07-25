@@ -718,6 +718,10 @@ func NewPersistentStore(persistencePath string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if _, err := store.applyPendingCapturedAChaiLevel50StatsAndSkillsMigration(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	if err := store.saveLocked(); err != nil {
 		_ = db.Close()

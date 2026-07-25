@@ -4666,6 +4666,8 @@ func TestCapturedMageSkillProfilesAndLevelGates(t *testing.T) {
 		{name: "雷爆咒", level: 3, sourceType: "all", label: "w10/thunderBombs", mpCost: 90, multiplier: 0.86, hitMultiplier: 1.5},
 		{name: "雷爆咒", level: 4, sourceType: "all", label: "w10/thunderBombs", mpCost: 100, multiplier: 0.88, hitMultiplier: 1.5},
 		{name: "雷爆咒", level: 5, sourceType: "all", label: "w10/thunderBombs", mpCost: 110, multiplier: 0.9, hitMultiplier: 1.5},
+		{name: "火神咒", level: 5, sourceType: "all", label: "w10/fireFiend", mpCost: 260, multiplier: 1.2},
+		{name: "石雨术", level: 5, sourceType: "all", label: "w10/rockRain", mpCost: 95, multiplier: 0.9},
 		{name: "雷龙强袭", level: 1, sourceType: "oneE", label: "w10/thunderDrongAtk", mpCost: 125, multiplier: 2.8, hitMultiplier: 2},
 	}
 
@@ -4682,14 +4684,22 @@ func TestCapturedMageSkillProfilesAndLevelGates(t *testing.T) {
 		if profile.DefenseType != "magic" || !profile.UseMagicAttack || profile.HitMultiplier != testCase.hitMultiplier {
 			t.Fatalf("expected captured %s Lv%d magic/hit profile, got %+v", testCase.name, testCase.level, profile)
 		}
-		if testCase.name == "雷爆咒" && profile.StatusName != "" {
-			t.Fatalf("expected 雷爆咒 to omit uncaptured palsy state behavior, got %+v", profile)
-		}
+	}
+	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "雷爆咒", Level: 5, Type: "all"}); profile.StatusName != "麻痹" || profile.StatusRounds != 2 || profile.StatusChance != 20 || profile.StatusTickMin != 13 || profile.StatusTickMax != 15 || !profile.SkipTurn {
+		t.Fatalf("expected captured 雷爆咒 Lv5 palsy profile, got %+v", profile)
+	}
+	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "火神咒", Level: 5, Type: "all"}); profile.StatusName != "外伤" || profile.StatusRounds != 3 || profile.StatusChance != 90 || profile.StatusTickMin != 20 || profile.StatusTickMax != 25 {
+		t.Fatalf("expected captured 火神咒 Lv5 wound profile, got %+v", profile)
+	}
+	if profile := sourceBattleSkillProfile(session.RoleSkill{Name: "石雨术", Level: 5, Type: "all"}); profile.StatusName != "眩晕" || profile.StatusRounds != 2 || profile.StatusChance != 20 || !profile.SkipTurn {
+		t.Fatalf("expected captured 石雨术 Lv5 stun profile, got %+v", profile)
 	}
 
 	for _, skill := range []session.RoleSkill{
 		{Name: "炎狩术", Level: 4, Type: "oneE"},
 		{Name: "雷爆咒", Level: 6, Type: "all"},
+		{Name: "火神咒", Level: 6, Type: "all"},
+		{Name: "石雨术", Level: 6, Type: "all"},
 		{Name: "雷龙强袭", Level: 2, Type: "oneE"},
 	} {
 		if isSourceBattleSkillLevelCaptured(skill.Name, skill.Level) {
@@ -4730,9 +4740,26 @@ func TestSkillLevelTableLinksMasterSkillToCapturedMageLevel(t *testing.T) {
 	if sourceBattleSkillLevelExists("雷爆咒", 6) {
 		t.Fatal("unexpected unconfirmed 雷爆咒 Lv6 skill-level row")
 	}
+	for _, testCase := range []struct {
+		name       string
+		label      string
+		mpCost     int
+		multiplier float64
+	}{
+		{name: "火神咒", label: "w10/fireFiend", mpCost: 260, multiplier: 1.2},
+		{name: "石雨术", label: "w10/rockRain", mpCost: 95, multiplier: 0.9},
+	} {
+		profile, ok := sourceBattleSkillProfileFromConfig(testCase.name, 5)
+		if !ok || profile.SourceType != "all" || profile.SourceActionLabel != testCase.label || profile.MPCost != testCase.mpCost || profile.DamageMultiplier != testCase.multiplier {
+			t.Fatalf("expected %s Lv5 source table row, got %+v found=%t", testCase.name, profile, ok)
+		}
+		if !sourceBattleSkillLevelExists(testCase.name, 5) || sourceBattleSkillLevelExists(testCase.name, 6) {
+			t.Fatalf("expected %s captured levels 1-5 only", testCase.name)
+		}
+	}
 }
 
-func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
+func TestProcessActionUsesCapturedMageSkills(t *testing.T) {
 	newRuntime := func(skill session.RoleSkill, enemies ...CellInfoPush) *Runtime {
 		cells := []CellInfoPush{
 			{
@@ -4793,10 +4820,6 @@ func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
 	if thunderAction.TargetHandle != "all" || thunderAction.SourceActionLabel != "w10/thunderBombs" || len(thunderAction.TargetActionResults) != 2 || thunderAction.Damage != 74 || thunder.cellByHandle("enemy_thunder_1").HP != 926 || thunder.cellByHandle("enemy_thunder_2").HP != 931 || thunder.cellByHandle("player_mage").MP != 120 {
 		t.Fatalf("expected captured 雷爆咒 all-target action and one MP deduction, got %+v", thunderAction)
 	}
-	if len(thunderResult.BuffInfos) != 0 || len(thunderResult.ClearBuffInfos) != 0 {
-		t.Fatalf("expected 雷爆咒 to omit uncaptured palsy pushes, got %+v", thunderResult)
-	}
-
 	dragon := newRuntime(session.RoleSkill{Name: "雷龙强袭", Level: 1, Type: "oneE"}, newEnemy("enemy_dragon", 20))
 	insufficient := dragon.ProcessAction(ActionRequest{BattleID: dragon.BattleID, ActorHandle: "player_mage", CommandID: CommandLeiLongQiangXi, TargetHandle: "enemy_dragon", Round: 1, Sequence: 1})
 	if insufficient.ErrorCode != "insufficient_power" {
@@ -4816,6 +4839,86 @@ func TestProcessActionUsesCapturedMageSkillsWithoutGuessedPalsy(t *testing.T) {
 	unsupportedResult := unsupported.ProcessAction(ActionRequest{BattleID: unsupported.BattleID, ActorHandle: "player_mage", CommandID: CommandYanShouShu, TargetHandle: "enemy_invalid", Round: 1, Sequence: 1})
 	if unsupportedResult.ErrorCode != "unsupported_command" {
 		t.Fatalf("expected uncaptured 炎狩术 Lv4 to be rejected, got %+v", unsupportedResult)
+	}
+}
+
+func TestCapturedMageAllTargetStatusEffects(t *testing.T) {
+	newRuntime := func(battleID string, skill session.RoleSkill) (*Runtime, *CellInfoPush, *CellInfoPush) {
+		runtime := &Runtime{
+			BattleID:         battleID,
+			Round:            1,
+			DefendingHandles: map[string]bool{},
+			StoredPower:      map[string]int{},
+			RoleSkills:       []session.RoleSkill{skill},
+			Cells: []CellInfoPush{
+				{BattleID: battleID, Handle: "player_mage", Camp: CampTeam, HP: 600, MaxHP: 600, MP: 500, MaxMP: 500, MagicAttack: 100, Hit: 100},
+				{BattleID: battleID, Handle: "enemy_mage", Camp: CampEnemy, HP: 1000, MaxHP: 1000, MgcDefense: 20, Hit: 100},
+			},
+		}
+		return runtime, runtime.cellByHandle("player_mage"), runtime.cellByHandle("enemy_mage")
+	}
+	findAppliedStatus := func(skill session.RoleSkill, commandID string, status string) (*Runtime, *CellInfoPush) {
+		for index := 0; index < 300; index += 1 {
+			runtime, actor, target := newRuntime(fmt.Sprintf("battle-mage-%s-%d", skill.Name, index), skill)
+			runtime.resolveAllTargetAttack(actor, []*CellInfoPush{target}, commandID)
+			if effect, ok := runtime.StatusEffects[target.Handle].Effects[status]; ok {
+				if effect.SourceHandle != actor.Handle || effect.SourceSkill != skill.Name {
+					t.Fatalf("expected %s source ownership, got %+v", skill.Name, effect)
+				}
+				return runtime, target
+			}
+		}
+		return nil, nil
+	}
+
+	fireRuntime, fireTarget := findAppliedStatus(session.RoleSkill{Name: "火神咒", Level: 5, Type: "all"}, CommandHuoShenZhou, "外伤")
+	if fireRuntime == nil {
+		t.Fatal("expected deterministic 火神咒 external-injury application")
+	}
+	fireEffect := fireRuntime.StatusEffects[fireTarget.Handle].Effects["外伤"]
+	if fireEffect.Rounds != 3 || fireEffect.SourceAttack != 100 || fireEffect.TickMinPercent != 20 || fireEffect.TickMaxPercent != 25 || fireEffect.SkipTurn {
+		t.Fatalf("expected captured 火神咒 wound values, got %+v", fireEffect)
+	}
+	if len(fireRuntime.PendingBuffInfos) != 1 || fireRuntime.PendingBuffInfos[0].Description != "每回合减少对象20~25气力" {
+		t.Fatalf("expected 火神咒 BuffInfo damage range, got %+v", fireRuntime.PendingBuffInfos)
+	}
+	fireTicks, fireSkipped := fireRuntime.resolveStatusStartActions(fireTarget)
+	if fireSkipped || len(fireTicks) != 1 || fireTicks[0].ActionName != "外伤" || fireTicks[0].Damage < 20 || fireTicks[0].Damage > 25 {
+		t.Fatalf("expected 火神咒 magic external-injury tick, actions=%+v skip=%t", fireTicks, fireSkipped)
+	}
+
+	stoneRuntime, stoneTarget := findAppliedStatus(session.RoleSkill{Name: "石雨术", Level: 5, Type: "all"}, CommandShiYuShu, "眩晕")
+	if stoneRuntime == nil {
+		t.Fatal("expected deterministic 石雨术 stun application")
+	}
+	stoneTicks, stoneSkipped := stoneRuntime.resolveStatusStartActions(stoneTarget)
+	if !stoneSkipped || len(stoneTicks) != 1 || stoneTicks[0].ActionName != "眩晕" || stoneTicks[0].SourceActionLabel != "yun" {
+		t.Fatalf("expected 石雨术 captured stun skip action, actions=%+v skip=%t", stoneTicks, stoneSkipped)
+	}
+
+	thunderRuntime, thunderTarget := findAppliedStatus(session.RoleSkill{Name: "雷爆咒", Level: 5, Type: "all"}, CommandLeiBaoZhou, "麻痹")
+	if thunderRuntime == nil {
+		t.Fatal("expected deterministic 雷爆咒 palsy application")
+	}
+	thunderEffect := thunderRuntime.StatusEffects[thunderTarget.Handle].Effects["麻痹"]
+	if thunderEffect.Rounds != 2 || thunderEffect.SourceAttack != 100 || thunderEffect.TickMinPercent != 13 || thunderEffect.TickMaxPercent != 15 || !thunderEffect.SkipTurn {
+		t.Fatalf("expected captured 雷爆咒 palsy values, got %+v", thunderEffect)
+	}
+	if len(thunderRuntime.PendingBuffInfos) != 1 || thunderRuntime.PendingBuffInfos[0].Description != "眩晕&0;并在每回合造成13~15点伤害" {
+		t.Fatalf("expected 雷爆咒 BuffInfo damage range, got %+v", thunderRuntime.PendingBuffInfos)
+	}
+	thunderTicks, thunderSkipped := thunderRuntime.resolveStatusStartActions(thunderTarget)
+	if !thunderSkipped || len(thunderTicks) != 1 || thunderTicks[0].ActionName != "麻痹" || thunderTicks[0].Damage < 13 || thunderTicks[0].Damage > 15 {
+		t.Fatalf("expected 雷爆咒 magic palsy tick and skip action, actions=%+v skip=%t", thunderTicks, thunderSkipped)
+	}
+
+	powerRuntime, powerActor, powerTarget := newRuntime("battle-mage-fire-power", session.RoleSkill{Name: "火神咒", Level: 5, Type: "all"})
+	powerRuntime.Phase = PhaseCommand
+	powerRuntime.ActiveHandle = powerActor.Handle
+	powerRuntime.nextSequence = 1
+	powerRuntime.ConsumedSequence = map[int]bool{}
+	if result := powerRuntime.ProcessAction(ActionRequest{BattleID: powerRuntime.BattleID, ActorHandle: powerActor.Handle, CommandID: CommandHuoShenZhou, TargetHandle: powerTarget.Handle, Round: 1, Sequence: 1}); result.ErrorCode != "insufficient_power" {
+		t.Fatalf("expected 火神咒 to require two stored power before all-target attack, got %+v", result)
 	}
 }
 

@@ -52,6 +52,8 @@ const (
 	CommandChiYanMoZhou      = "skill-chi-yan-mo-zhou"
 	CommandLeiJi             = "skill-lei-ji"
 	CommandLeiBaoZhou        = "skill-lei-bao-zhou"
+	CommandHuoShenZhou       = "skill-huo-shen-zhou"
+	CommandShiYuShu          = "skill-shi-yu-shu"
 	CommandLeiLongQiangXi    = "skill-lei-long-qiang-xi"
 	CommandMoZhangShu        = "skill-mo-zhang-shu"
 	CommandLeiHunZhan        = "skill-lei-hun-zhan"
@@ -104,6 +106,7 @@ const (
 	maxStoredPower                = 5
 	leiHunZhanRequiredPower       = 3
 	leiLongQiangXiRequiredPower   = 2
+	huoShenZhouRequiredPower      = 2
 	aoYiHongLeiShiRequiredPower   = 2
 	aoYiAnShaZheRequiredPower     = 3
 	aoYiLiuHeGunFaRequiredPower   = 3
@@ -1123,6 +1126,9 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
 		return ActionResult{ErrorCode: "unsupported_command"}
 	}
+	if normalizeBattleCommandID(commandID) == CommandHuoShenZhou && runtime.powerFor(actor.Handle) < huoShenZhouRequiredPower {
+		return ActionResult{ErrorCode: "insufficient_power"}
+	}
 
 	if runtime.battleCommandProfile(actor, commandID).SourceType == "all" {
 		targets := runtime.livingCells(CampEnemy)
@@ -1596,6 +1602,8 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 		}
 		if strings.TrimSpace(effect.Name) == "迟钝" {
 			runtime.applySlownessStatusEffect(actor, target, effect)
+		} else if strings.TrimSpace(effect.Name) == "外伤" {
+			runtime.applyWoundStatusEffect(actor, target, effect)
 		} else if strings.TrimSpace(effect.Name) == "中毒" {
 			runtime.applyPoisonStatusEffect(actor, target, effect)
 		} else if strings.TrimSpace(effect.Name) == "内伤" {
@@ -1732,6 +1740,10 @@ func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID stri
 		return runtime.sourceSkillProfileForActor(actor.Handle, "雷击", 3)
 	case CommandLeiBaoZhou:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "雷爆咒", 1)
+	case CommandHuoShenZhou:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "火神咒", 1)
+	case CommandShiYuShu:
+		return runtime.sourceSkillProfileForActor(actor.Handle, "石雨术", 1)
 	case CommandLeiLongQiangXi:
 		return runtime.sourceSkillProfileForActor(actor.Handle, "雷龙强袭", 1)
 	case CommandMoZhangShu:
@@ -2589,6 +2601,10 @@ func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID 
 		return runtime.hasCapturedRoleSkillForActor(handle, "雷击")
 	case CommandLeiBaoZhou:
 		return runtime.hasCapturedRoleSkillForActor(handle, "雷爆咒")
+	case CommandHuoShenZhou:
+		return runtime.hasCapturedRoleSkillForActor(handle, "火神咒")
+	case CommandShiYuShu:
+		return runtime.hasCapturedRoleSkillForActor(handle, "石雨术")
 	case CommandLeiLongQiangXi:
 		return runtime.hasCapturedRoleSkillForActor(handle, "雷龙强袭")
 	case CommandMoZhangShu:
@@ -2644,7 +2660,7 @@ func (runtime *Runtime) hasCapturedRoleSkillForActor(handle string, name string)
 
 func isSourceBattleSkillLevelCaptured(name string, level int) bool {
 	switch strings.TrimSpace(name) {
-	case "炎狩术", "赤焰魔咒", "雷击", "雷爆咒", "雷龙强袭", "魔障术":
+	case "炎狩术", "赤焰魔咒", "雷击", "雷爆咒", "火神咒", "石雨术", "雷龙强袭", "魔障术":
 		return sourceBattleSkillLevelExists(name, level)
 	default:
 		return true
@@ -2805,7 +2821,34 @@ func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
 		profile.StatusHitDodgePercent = slowPercent
 		profile.HitMultiplier = 1.5
 	}
-if name == "强贯式" {
+	if name == "雷爆咒" {
+		profile.StatusName = "麻痹"
+		profile.StatusDisplay = "17.png"
+		profile.StatusRounds = 2
+		profile.StatusChance = sourceLeiBaoZhouPalsyChance(level)
+		profile.StatusDescription = "眩晕&0;并在每回合造成伤害"
+		profile.StatusTickMin = sourceLeiBaoZhouPalsyTickMin(level)
+		profile.StatusTickMax = sourceLeiBaoZhouPalsyTickMax(level)
+		profile.SkipTurn = true
+	}
+	if name == "火神咒" {
+		profile.StatusName = "外伤"
+		profile.StatusDisplay = "25.png"
+		profile.StatusRounds = 3
+		profile.StatusChance = sourceHuoShenZhouWoundChance(level)
+		profile.StatusDescription = "每回合损失气力为角色魔法攻击的20%~25%"
+		profile.StatusTickMin = 20
+		profile.StatusTickMax = 25
+	}
+	if name == "石雨术" {
+		profile.StatusName = "眩晕"
+		profile.StatusDisplay = "9.png"
+		profile.StatusRounds = 2
+		profile.StatusChance = sourceShiYuShuStunChance(level)
+		profile.StatusDescription = "眩晕无法行动"
+		profile.SkipTurn = true
+	}
+	if name == "强贯式" {
 		armorBreakPercent := sourceQiangGuanShiArmorBreakPercent(level)
 		profile.StatusName = "卸甲"
 		profile.StatusDisplay = "10.png"
@@ -2892,7 +2935,7 @@ if name == "强贯式" {
 		profile.StatusTickMax = 30
 		profile.SkipTurn = true
 	}
-	if name == "炎狩术" || name == "赤焰魔咒" || name == "雷击" || name == "雷爆咒" || name == "雷龙强袭" {
+	if name == "炎狩术" || name == "赤焰魔咒" || name == "雷击" || name == "雷爆咒" || name == "火神咒" || name == "石雨术" || name == "雷龙强袭" {
 		profile.DefenseType = "magic"
 		profile.UseMagicAttack = true
 	}
@@ -3065,6 +3108,10 @@ func sourceBattleSkillCommandID(name string) string {
 		return CommandYanShouShu
 	case "雷爆咒":
 		return CommandLeiBaoZhou
+	case "火神咒":
+		return CommandHuoShenZhou
+	case "石雨术":
+		return CommandShiYuShu
 	case "雷龙强袭":
 		return CommandLeiLongQiangXi
 	case "奥义.雷魂斩":
@@ -3089,7 +3136,7 @@ func sourceBattleSkillSourceType(name string, fallbackType string) string {
 		return "oneE"
 	case "狂爆", "解毒术", "力释棍术":
 		return "own"
-	case "红月斩", "盘龙棍法", "雷爆咒":
+	case "红月斩", "盘龙棍法", "雷爆咒", "火神咒", "石雨术":
 		return "all"
 	default:
 		return defaultString(strings.TrimSpace(fallbackType), "oneE")
@@ -3225,6 +3272,26 @@ func sourceLeiJiSlownessPercent(level int) int {
 	default:
 		return leiJiSlownessPercent
 	}
+}
+
+func sourceLeiBaoZhouPalsyChance(level int) int {
+	return 10 + level*2
+}
+
+func sourceLeiBaoZhouPalsyTickMin(level int) int {
+	return 3 + level*2
+}
+
+func sourceLeiBaoZhouPalsyTickMax(level int) int {
+	return sourceLeiBaoZhouPalsyTickMin(level) + 2
+}
+
+func sourceHuoShenZhouWoundChance(level int) int {
+	return 65 + level*5
+}
+
+func sourceShiYuShuStunChance(level int) int {
+	return 10 + level*2
 }
 
 func sourceMoZhangShuDamageToMPPercent(level int) int {
@@ -3451,6 +3518,28 @@ func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
 			Type:        "all",
 			Icon:        "706.png",
 			Description: fallbackLeiBaoZhouDescription(level),
+		}
+	case "火神咒":
+		if level < 1 || level > 5 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "火神咒",
+			Level:       level,
+			Type:        "all",
+			Icon:        "270.png",
+			Description: fallbackHuoShenZhouDescription(level),
+		}
+	case "石雨术":
+		if level < 1 || level > 5 {
+			return session.RoleSkill{}
+		}
+		return session.RoleSkill{
+			Name:        "石雨术",
+			Level:       level,
+			Type:        "all",
+			Icon:        "276.png",
+			Description: fallbackShiYuShuDescription(level),
 		}
 	case "雷龙强袭":
 		if level != 1 {
@@ -3946,6 +4035,20 @@ func fallbackLeiBaoZhouDescription(level int) string {
 	}
 }
 
+func fallbackHuoShenZhouDescription(level int) string {
+	mpCost := 210 + level*10
+	damagePercent := 95 + level*5
+	chance := sourceHuoShenZhouWoundChance(level)
+	return fmt.Sprintf("f_s_火神咒^00ccff&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@%d&4@<font color='#00cc00'>特殊发动条件:<br>需要2格魂元<br>需要【炎狩术lv.3】<br>需要【赤焰魔咒lv.4】</font><br>对所有敌人造成%d%%的魔法伤害&0;击中敌人后有%d%%的机率使其进入外伤状态3回合(每回合损失气力为魔法攻击的20%%~25%%)", mpCost, damagePercent, chance)
+}
+
+func fallbackShiYuShuDescription(level int) string {
+	mpCost := 45 + level*10
+	damagePercent := 65 + level*5
+	chance := sourceShiYuShuStunChance(level)
+	return fmt.Sprintf("f_s_石雨术^5BC46D&9@群体·攻击&8@术士 &10@法杖&22@战斗&2@%d&4@对所有敌人造成%d%%的魔法伤害&0;击中敌人时有%d%%的机率使其眩晕2回合.", mpCost, damagePercent, chance)
+}
+
 func sourceBattleSkillActionLabel(name string, level int) string {
 	switch strings.TrimSpace(name) {
 	case "密斩":
@@ -4002,6 +4105,10 @@ func sourceBattleSkillActionLabel(name string, level int) string {
 		return "w10/fire2"
 	case "雷爆咒":
 		return "w10/thunderBombs"
+	case "火神咒":
+		return "w10/fireFiend"
+	case "石雨术":
+		return "w10/rockRain"
 	case "雷龙强袭":
 		return "w10/thunderDrongAtk"
 	case "奥义.雷魂斩":
@@ -4225,6 +4332,16 @@ func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
 		default:
 			return 0
 		}
+	case "火神咒":
+		if level >= 1 && level <= 5 {
+			return 0.95 + float64(level)*0.05
+		}
+		return 0
+	case "石雨术":
+		if level >= 1 && level <= 5 {
+			return 0.65 + float64(level)*0.05
+		}
+		return 0
 	case "魔障术":
 		return 0
 	case "雷龙强袭":
@@ -4462,6 +4579,16 @@ func fallbackSourceBattleSkillMPCost(name string, level int) int {
 		default:
 			return 0
 		}
+	case "火神咒":
+		if level >= 1 && level <= 5 {
+			return 210 + level*10
+		}
+		return 0
+	case "石雨术":
+		if level >= 1 && level <= 5 {
+			return 45 + level*10
+		}
+		return 0
 	case "魔障术":
 		switch level {
 		case 2:
@@ -4960,13 +5087,33 @@ func (runtime *Runtime) applyPalsyStatusEffect(actor *CellInfoPush, target *Cell
 			sourceAttack = actor.Attack
 		}
 	}
-	tickDamage := runtime.resolveStatusTickDamage(target, effect, sourceAttack)
 	effect.Name = "麻痹"
 	if strings.TrimSpace(effect.Display) == "" {
 		effect.Display = "17.png"
 	}
-	if tickDamage > 0 {
-		effect.Description = fmt.Sprintf("眩晕&0;并在每回合造成%d点伤害", tickDamage)
+	if minDamage, maxDamage := statusTickDamageRange(effect, sourceAttack); minDamage > 0 {
+		if minDamage == maxDamage {
+			effect.Description = fmt.Sprintf("眩晕&0;并在每回合造成%d点伤害", minDamage)
+		} else {
+			effect.Description = fmt.Sprintf("眩晕&0;并在每回合造成%d~%d点伤害", minDamage, maxDamage)
+		}
+	}
+	effect.SourceAttack = sourceAttack
+	runtime.applyStatusEffect(target.Handle, effect)
+	runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
+	return true
+}
+
+func (runtime *Runtime) applyWoundStatusEffect(actor *CellInfoPush, target *CellInfoPush, effect BattleStatusEffect) bool {
+	if runtime == nil || target == nil || strings.TrimSpace(effect.Name) == "" || effect.Rounds <= 0 {
+		return false
+	}
+	sourceAttack := effect.SourceAttack
+	if sourceAttack <= 0 && actor != nil {
+		sourceAttack = actor.Attack
+	}
+	if minDamage, maxDamage := statusTickDamageRange(effect, sourceAttack); minDamage > 0 {
+		effect.Description = fmt.Sprintf("每回合减少对象%d~%d气力", minDamage, maxDamage)
 	}
 	effect.SourceAttack = sourceAttack
 	runtime.applyStatusEffect(target.Handle, effect)
@@ -5630,8 +5777,20 @@ func (runtime *Runtime) resolveSkipTurnStatusAction(target *CellInfoPush, effect
 }
 
 func (runtime *Runtime) resolveStatusTickDamage(target *CellInfoPush, effect BattleStatusEffect, sourceAttack int) int {
-	if sourceAttack <= 0 || effect.TickMinPercent <= 0 {
+	minDamage, maxDamage := statusTickDamageRange(effect, sourceAttack)
+	if minDamage <= 0 {
 		return 0
+	}
+	if minDamage == maxDamage || target == nil || runtime == nil {
+		return minDamage
+	}
+	roll := runtime.hashBattleRollWithSalt(target, target, "status-tick", effect.SourceHandle+":"+effect.SourceSkill+":"+effect.Name)
+	return minDamage + roll%(maxDamage-minDamage+1)
+}
+
+func statusTickDamageRange(effect BattleStatusEffect, sourceAttack int) (int, int) {
+	if sourceAttack <= 0 || effect.TickMinPercent <= 0 {
+		return 0, 0
 	}
 	minDamage := maxInt(1, int(math.Round(float64(sourceAttack)*float64(effect.TickMinPercent)/100)))
 	maxPercent := effect.TickMaxPercent
@@ -5639,11 +5798,7 @@ func (runtime *Runtime) resolveStatusTickDamage(target *CellInfoPush, effect Bat
 		maxPercent = effect.TickMinPercent
 	}
 	maxDamage := maxInt(minDamage, int(math.Round(float64(sourceAttack)*float64(maxPercent)/100)))
-	if minDamage == maxDamage || target == nil || runtime == nil {
-		return minDamage
-	}
-	roll := runtime.hashBattleRollWithSalt(target, target, "status-tick", effect.SourceHandle+":"+effect.SourceSkill+":"+effect.Name)
-	return minDamage + roll%(maxDamage-minDamage+1)
+	return minDamage, maxDamage
 }
 
 func sortedStatusEffectNames(effects map[string]BattleStatusEffect) []string {

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "skill",
   "source": "internal/classicdata/source/skill-table.csv",
-  "rowCount": 46,
+  "rowCount": 48,
   "rows": [
     {
       "skill_id": "skill-normal-attack",
@@ -242,6 +242,22 @@
       "label": "雷爆咒",
       "source_type": "all",
       "action_name": "雷爆咒",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-huo-shen-zhou",
+      "kind": "skill",
+      "label": "火神咒",
+      "source_type": "all",
+      "action_name": "火神咒",
+      "target": "enemy"
+    },
+    {
+      "skill_id": "skill-shi-yu-shu",
+      "kind": "skill",
+      "label": "石雨术",
+      "source_type": "all",
+      "action_name": "石雨术",
       "target": "enemy"
     },
     {

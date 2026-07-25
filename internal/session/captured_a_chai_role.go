@@ -93,6 +93,28 @@ func (store *Store) MigrateCapturedAChaiRole(playerID string, roleID string) (Ro
 	return RoleSummary{}, fmt.Errorf("captured a chai migration target role %q not found for player %q", roleID, playerID)
 }
 
+// MigrateCapturedAChaiSkills replaces only the captured role's skills and
+// fast panel, preserving its current role state, inventory, and quest data.
+func (store *Store) MigrateCapturedAChaiSkills(playerID string, roleID string) (RoleSummary, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	roles := store.rolesByPID[playerID]
+	for index := range roles {
+		if roles[index].RoleID != roleID {
+			continue
+		}
+		roles[index].Skills = cloneRoleSkills(capturedAChaiSnapshot.Role.Skills)
+		roles[index].FastPanel = cloneRoleFastPanel(capturedAChaiSnapshot.Role.FastPanel)
+		store.rolesByPID[playerID] = roles
+		if err := store.persistPlayerStateLocked(playerID); err != nil {
+			return RoleSummary{}, fmt.Errorf("persist captured a chai skills: %w", err)
+		}
+		return roles[index], nil
+	}
+	return RoleSummary{}, fmt.Errorf("captured a chai skill migration target role %q not found for player %q", roleID, playerID)
+}
+
 // MigrateCapturedAChaiQuests replaces the target role's active quest state
 // with the final captured quest snapshot after the role row is persisted.
 func (store *Store) MigrateCapturedAChaiQuests(playerID string, roleID string) error {

@@ -79,14 +79,14 @@ func TestPersistentCapturedAChai555MigrationKeepsFinalSnapshot(t *testing.T) {
 	}
 
 	skills, skillCap, ok := reopened.GetRoleSkills(login.PlayerID, created.Role.RoleID)
-	if !ok || skillCap != 12 || len(skills) != 11 {
+	if !ok || skillCap != 12 || len(skills) != 13 {
 		t.Fatalf("unexpected captured skills cap=%d skills=%+v", skillCap, skills)
 	}
-	if skills[1].Name != "赤焰魔咒" || skills[1].Level != 2 || skills[9].Name != "雷爆咒" || skills[9].Level != 4 || skills[10].Name != "雷龙强袭" {
+	if skills[1].Name != "赤焰魔咒" || skills[1].Level != 5 || skills[2].Name != "雷击" || skills[2].Level != 5 || skills[8].Name != "魔障术" || skills[8].Level != 5 || skills[9].Name != "雷爆咒" || skills[9].Level != 5 || skills[10].Name != "雷龙强袭" || skills[11].Name != "火神咒" || skills[11].Level != 5 || skills[12].Name != "石雨术" || skills[12].Level != 5 {
 		t.Fatalf("unexpected captured skill order: %+v", skills)
 	}
 	fastPanel, ok := reopened.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
-	if !ok || len(fastPanel) != 9 || fastPanel[1].Name != "炎狩术" || fastPanel[6].Name != "雷龙强袭" || fastPanel[7].Index != 8 || fastPanel[8].Name != "小瓶甘露" {
+	if !ok || len(fastPanel) != 10 || fastPanel[1].Name != "炎狩术" || fastPanel[6].Name != "火神咒" || fastPanel[7].Index != 7 || fastPanel[7].Name != "石雨术" || fastPanel[8].Index != 8 || fastPanel[9].Name != "小瓶甘露" {
 		t.Fatalf("unexpected captured fast panel: %+v", fastPanel)
 	}
 
@@ -110,5 +110,40 @@ func TestPersistentCapturedAChai555MigrationKeepsFinalSnapshot(t *testing.T) {
 	progress, ok := reopened.QuestProgress(login.PlayerID, created.Role.RoleID, "幻化白骨")
 	if !ok || progress != 11 {
 		t.Fatalf("unexpected captured quest progress=%d found=%t", progress, ok)
+	}
+}
+
+func TestPersistentCapturedAChai555SkillMigrationKeepsOtherRoleState(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("create persistent store: %v", err)
+	}
+	defer store.Close()
+
+	login := mustLogin(t, store, "55555555", "55555555")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "keep-current-state",
+		Gender:         "male",
+		RoleTemplateID: 1,
+	})
+	if !created.Success {
+		t.Fatalf("create target role: %+v", created)
+	}
+	before, _, ok := store.GetRoleRuntimeData(login.PlayerID, created.Role.RoleID)
+	if !ok {
+		t.Fatal("expected created role runtime data")
+	}
+	migrated, err := store.MigrateCapturedAChaiSkills(login.PlayerID, created.Role.RoleID)
+	if err != nil {
+		t.Fatalf("migrate captured skills: %v", err)
+	}
+	if migrated.DisplayName != before.DisplayName || migrated.Level != before.Level || migrated.MapID != before.MapID || migrated.Voc != before.Voc {
+		t.Fatalf("skill-only migration changed role state: before=%+v migrated=%+v", before, migrated)
+	}
+	if len(migrated.Skills) != 13 || migrated.Skills[11].Name != "火神咒" || migrated.Skills[12].Name != "石雨术" || len(migrated.FastPanel) != 10 || migrated.FastPanel[6].Name != "火神咒" || migrated.FastPanel[7].Name != "石雨术" {
+		t.Fatalf("unexpected migrated captured skills: %+v fastPanel=%+v", migrated.Skills, migrated.FastPanel)
 	}
 }

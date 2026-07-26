@@ -287,12 +287,12 @@ func TestClassicTeamDungeonSharesStateAndDefeatedMonsters(t *testing.T) {
 		Result: battle.ResultPayload{Winner: battle.CampTeam},
 	})
 	if len(removed) != 1 || removed[0] != monsterHandle {
-		t.Fatalf("expected team dungeon monster removal, got %+v", removed)
+		t.Fatalf("expected team dungeon to remove only the selected monster, got %+v", removed)
 	}
 
 	memberState := syncDungeonInstanceState(store, memberSession, 143)
 	if memberState == nil || len(memberState.DefeatedVisibleMonsterHandles) != 1 || memberState.DefeatedVisibleMonsterHandles[0] != monsterHandle {
-		t.Fatalf("expected member to receive shared defeated monster state, got %+v", memberState)
+		t.Fatalf("expected member to receive shared selected-monster state, got %+v", memberState)
 	}
 }
 

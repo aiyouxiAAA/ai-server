@@ -1606,23 +1606,9 @@ func visibleMonsterRemoveHandles(runtime *battle.Runtime, over *battle.OverPush)
 	if strings.TrimSpace(runtime.SourceMonsterHandle) == "" {
 		return nil
 	}
-	handles := make([]string, 0, len(runtime.Cells))
-	seen := map[string]bool{}
-	for _, cell := range runtime.Cells {
-		if cell.Camp != battle.CampEnemy {
-			continue
-		}
-		handle := strings.TrimSpace(cell.Handle)
-		if handle == "" || seen[handle] {
-			continue
-		}
-		seen[handle] = true
-		handles = append(handles, handle)
-	}
-	if len(handles) == 0 {
-		return []string{strings.TrimSpace(runtime.SourceMonsterHandle)}
-	}
-	return handles
+	// A visible monster battle consumes only the map monster selected at entry.
+	// Other members of the battle formation remain on the map after settlement.
+	return []string{strings.TrimSpace(runtime.SourceMonsterHandle)}
 }
 
 func classicBattleDefeatedEnemyNames(runtime *battle.Runtime, over *battle.OverPush) []string {

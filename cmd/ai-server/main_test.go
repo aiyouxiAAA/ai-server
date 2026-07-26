@@ -1177,10 +1177,10 @@ func TestHandlePacketClassicBattleOverAppliesSourceResultRewards(t *testing.T) {
 	}
 }
 
-func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T) {
+func TestHandlePacketClassicBattleOverRemovesOnlySelectedVisibleMonster(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	const visibleMonsterHandle = "5172206909807859"
-	expectedRemovedHandles := []string{"5172206909807859", "5174206909807286"}
+	expectedRemovedHandles := []string{visibleMonsterHandle}
 
 	startResult := handlePacketWithSession(store, protocol.Packet{
 		Cmd: cmdClassicBattleStartReq,
@@ -1214,7 +1214,7 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 		}),
 	}, socketSession)
 	if playOver.battleOver == nil || len(playOver.removeRoleHandles) != len(expectedRemovedHandles) {
-		t.Fatalf("expected visible monster group removeRole after BattlePlayOver, got %+v", playOver)
+		t.Fatalf("expected only selected visible monster removeRole after BattlePlayOver, got %+v", playOver)
 	}
 	for index, expectedHandle := range expectedRemovedHandles {
 		if playOver.removeRoleHandles[index] != expectedHandle {
@@ -1238,7 +1238,7 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 	for _, rolePush := range transfer.townBootstrap.CreateRoles {
 		for _, expectedHandle := range expectedRemovedHandles {
 			if rolePush.Handle == expectedHandle {
-				t.Fatalf("expected defeated visible monster group to stay removed from map143 bootstrap, got %+v", rolePush)
+				t.Fatalf("expected selected visible monster to stay removed from map143 bootstrap, got %+v", rolePush)
 			}
 		}
 	}
@@ -1267,7 +1267,7 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 	for _, rolePush := range selectAgain.townBootstrap.CreateRoles {
 		for _, expectedHandle := range expectedRemovedHandles {
 			if rolePush.Handle == expectedHandle {
-				t.Fatalf("expected defeated visible monster group to stay removed after reselect, got %+v", rolePush)
+				t.Fatalf("expected selected visible monster to stay removed after reselect, got %+v", rolePush)
 			}
 		}
 	}
@@ -1296,8 +1296,8 @@ func TestHandlePacketClassicBattleOverRemovesDefeatedVisibleMonster(t *testing.T
 			SourceMonsterHandle: "5174206909807286",
 		}),
 	}, socketSession)
-	if groupMateStart.battleStart != nil || socketSession.battleRuntime != nil {
-		t.Fatalf("expected defeated visible monster group mate battle to be rejected, got result=%+v runtime=%+v", groupMateStart, socketSession.battleRuntime)
+	if groupMateStart.battleStart == nil || socketSession.battleRuntime == nil || socketSession.battleRuntime.SourceMonsterHandle != "5174206909807286" {
+		t.Fatalf("expected remaining visible monster group mate battle to start, got result=%+v runtime=%+v", groupMateStart, socketSession.battleRuntime)
 	}
 
 	exitTransfer := buildClassicTownTransferResult(store, socketSession, "122", world.SpawnPoint{X: 1000, Y: 600})
@@ -1354,11 +1354,11 @@ func TestClassicTownGetMapSpecialUsesDungeonExpiry(t *testing.T) {
 	}
 }
 
-func TestHandlePacketClassicBattleOverRemovesHuangfengzhaiVisibleMonster(t *testing.T) {
+func TestHandlePacketClassicBattleOverRemovesOnlySelectedHuangfengzhaiVisibleMonster(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	grantRoleItemTemplateForTest(t, store, socketSession, "黄风寨通行证", 1)
 	const visibleMonsterHandle = "3218685759638239"
-	expectedRemovedHandles := []string{"3220685759639165", "3218685759638239"}
+	expectedRemovedHandles := []string{visibleMonsterHandle}
 
 	transfer := buildClassicTownTransferResult(store, socketSession, "149", world.SpawnPoint{X: 1451, Y: 403})
 	if transfer.townBootstrap == nil {
@@ -1403,7 +1403,7 @@ func TestHandlePacketClassicBattleOverRemovesHuangfengzhaiVisibleMonster(t *test
 		}),
 	}, socketSession)
 	if playOver.battleOver == nil || len(playOver.removeRoleHandles) != len(expectedRemovedHandles) {
-		t.Fatalf("expected huangfengzhai visible monster group removeRole after BattlePlayOver, got %+v", playOver)
+		t.Fatalf("expected only selected huangfengzhai visible monster removeRole after BattlePlayOver, got %+v", playOver)
 	}
 	for index, expectedHandle := range expectedRemovedHandles {
 		if playOver.removeRoleHandles[index] != expectedHandle {
@@ -1421,7 +1421,7 @@ func TestHandlePacketClassicBattleOverRemovesHuangfengzhaiVisibleMonster(t *test
 	for _, rolePush := range reenter.townBootstrap.CreateRoles {
 		for _, expectedHandle := range expectedRemovedHandles {
 			if rolePush.Handle == expectedHandle {
-				t.Fatalf("expected defeated huangfengzhai visible monster group to stay removed from map149 bootstrap, got %+v", rolePush)
+				t.Fatalf("expected selected huangfengzhai visible monster to stay removed from map149 bootstrap, got %+v", rolePush)
 			}
 		}
 	}
@@ -1446,7 +1446,7 @@ func TestHandlePacketClassicBattleOverRemovesHuangfengzhaiVisibleMonster(t *test
 	}
 }
 
-func TestHandlePacketClassicBattleOverRemovesFeixiandongVisibleMonster(t *testing.T) {
+func TestHandlePacketClassicBattleOverRemovesOnlySelectedFeixiandongVisibleMonster(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
 	role, playerBase, ok := store.UpdateRoleMap(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 18)
 	if !ok {
@@ -1457,7 +1457,7 @@ func TestHandlePacketClassicBattleOverRemovesFeixiandongVisibleMonster(t *testin
 	grantRoleItemTemplateForTest(t, store, socketSession, "飞仙洞通行证", 1)
 
 	const visibleMonsterHandle = "1048675671977626"
-	expectedRemovedHandles := []string{"1042675671973672", "1048675671977626"}
+	expectedRemovedHandles := []string{visibleMonsterHandle}
 
 	transfer := buildClassicTownTransferResult(store, socketSession, "76", world.SpawnPoint{X: 1576, Y: 515})
 	if transfer.townBootstrap == nil {
@@ -1499,7 +1499,7 @@ func TestHandlePacketClassicBattleOverRemovesFeixiandongVisibleMonster(t *testin
 		}),
 	}, socketSession)
 	if playOver.battleOver == nil || len(playOver.removeRoleHandles) != len(expectedRemovedHandles) {
-		t.Fatalf("expected feixiandong visible monster group removeRole after BattlePlayOver, got %+v", playOver)
+		t.Fatalf("expected only selected feixiandong visible monster removeRole after BattlePlayOver, got %+v", playOver)
 	}
 	for index, expectedHandle := range expectedRemovedHandles {
 		if playOver.removeRoleHandles[index] != expectedHandle {
@@ -1517,7 +1517,7 @@ func TestHandlePacketClassicBattleOverRemovesFeixiandongVisibleMonster(t *testin
 	for _, rolePush := range reenter.townBootstrap.CreateRoles {
 		for _, expectedHandle := range expectedRemovedHandles {
 			if rolePush.Handle == expectedHandle {
-				t.Fatalf("expected defeated feixiandong visible monster group to stay removed from map76 bootstrap, got %+v", rolePush)
+				t.Fatalf("expected selected feixiandong visible monster to stay removed from map76 bootstrap, got %+v", rolePush)
 			}
 		}
 	}
@@ -1543,7 +1543,7 @@ func TestHandlePacketClassicBattleOverRemovesFeixiandongVisibleMonster(t *testin
 	for _, rolePush := range selectAgain.townBootstrap.CreateRoles {
 		for _, expectedHandle := range expectedRemovedHandles {
 			if rolePush.Handle == expectedHandle {
-				t.Fatalf("expected defeated feixiandong visible monster group to stay removed after reselect, got %+v", rolePush)
+				t.Fatalf("expected selected feixiandong visible monster to stay removed after reselect, got %+v", rolePush)
 			}
 		}
 	}
@@ -1558,8 +1558,8 @@ func TestHandlePacketClassicBattleOverRemovesFeixiandongVisibleMonster(t *testin
 			SourceMonsterHandle: "1042675671973672",
 		}),
 	}, socketSession)
-	if groupMateStart.battleStart != nil || socketSession.battleRuntime != nil {
-		t.Fatalf("expected defeated feixiandong visible monster group mate battle to be rejected, got result=%+v runtime=%+v", groupMateStart, socketSession.battleRuntime)
+	if groupMateStart.battleStart == nil || socketSession.battleRuntime == nil || socketSession.battleRuntime.SourceMonsterHandle != "1042675671973672" {
+		t.Fatalf("expected remaining feixiandong visible monster group mate battle to start, got result=%+v runtime=%+v", groupMateStart, socketSession.battleRuntime)
 	}
 }
 

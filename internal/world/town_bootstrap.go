@@ -289,6 +289,9 @@ var sourceWildBattleMapIDs = map[int]struct{}{
 	202: {},
 	204: {},
 	205: {},
+	210: {},
+	216: {},
+	222: {},
 }
 
 var sourceCollectionPointsByHandle = map[string]SourceCollectionPoint{

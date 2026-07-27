@@ -40,8 +40,8 @@ func TestTownBootstrapAppliesCapturedSourceTransportPoints(t *testing.T) {
 			checked++
 		}
 	}
-	if checked != 333 {
-		t.Fatalf("expected 333 captured transport points, checked %d", checked)
+	if checked != 379 {
+		t.Fatalf("expected 379 captured transport points, checked %d", checked)
 	}
 }
 
@@ -1229,6 +1229,88 @@ func TestBuildTownBootstrapUsesCapturedBaiyuanTownTransportData(t *testing.T) {
 		{mapID: 205, transports: []expectedTransport{
 			{handle: "transp_202", spawn: SpawnPoint{X: 2939, Y: 580}, sourceQuery: "transp/flag2.swf"},
 			{handle: "transp_207", spawn: SpawnPoint{X: 26, Y: 550}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 187, transports: []expectedTransport{
+			{handle: "transp_188", spawn: SpawnPoint{X: 150, Y: 740}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_189", spawn: SpawnPoint{X: 2300, Y: 740}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_216", spawn: SpawnPoint{X: 1530, Y: 380}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 188, transports: []expectedTransport{
+			{handle: "transp_187", spawn: SpawnPoint{X: 1992, Y: 350}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_189", spawn: SpawnPoint{X: 2950, Y: 550}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_213", spawn: SpawnPoint{X: 1290, Y: 740}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 189, transports: []expectedTransport{
+			{handle: "transp_187", spawn: SpawnPoint{X: 1033, Y: 350}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_188", spawn: SpawnPoint{X: 50, Y: 550}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_210", spawn: SpawnPoint{X: 2950, Y: 550}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 207, transports: []expectedTransport{
+			{handle: "transp_205", spawn: SpawnPoint{X: 2939, Y: 580}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_208", spawn: SpawnPoint{X: 50, Y: 580}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 208, transports: []expectedTransport{
+			{handle: "transp_207", spawn: SpawnPoint{X: 2239, Y: 600}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_209", spawn: SpawnPoint{X: 960, Y: 492}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_211", spawn: SpawnPoint{X: 50, Y: 600}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 209, transports: []expectedTransport{
+			{handle: "transp_208", spawn: SpawnPoint{X: 2609, Y: 750}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_210", spawn: SpawnPoint{X: 143, Y: 521}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 210, transports: []expectedTransport{
+			{handle: "transp_189", spawn: SpawnPoint{X: 50, Y: 570}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_209", spawn: SpawnPoint{X: 2780, Y: 720}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_214", spawn: SpawnPoint{X: 1271, Y: 470}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 211, transports: []expectedTransport{
+			{handle: "transp_208", spawn: SpawnPoint{X: 2928, Y: 600}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_212", spawn: SpawnPoint{X: 50, Y: 600}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 212, transports: []expectedTransport{
+			{handle: "transp_211", spawn: SpawnPoint{X: 2948, Y: 600}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_213", spawn: SpawnPoint{X: 60, Y: 600}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 213, transports: []expectedTransport{
+			{handle: "transp_188", spawn: SpawnPoint{X: 410, Y: 454}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_212", spawn: SpawnPoint{X: 2948, Y: 620}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 214, transports: []expectedTransport{
+			{handle: "transp_210", spawn: SpawnPoint{X: 2700, Y: 750}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_215", spawn: SpawnPoint{X: 205, Y: 500}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 215, transports: []expectedTransport{
+			{handle: "transp_214", spawn: SpawnPoint{X: 1160, Y: 740}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_217", spawn: SpawnPoint{X: 50, Y: 600}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_223", spawn: SpawnPoint{X: 2850, Y: 580}, sourceQuery: "transp/fl.swf"},
+		}},
+		{mapID: 216, transports: []expectedTransport{
+			{handle: "transp_187", spawn: SpawnPoint{X: 1650, Y: 740}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_217", spawn: SpawnPoint{X: 2950, Y: 540}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_218", spawn: SpawnPoint{X: 284, Y: 480}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 217, transports: []expectedTransport{
+			{handle: "transp_215", spawn: SpawnPoint{X: 2950, Y: 580}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_216", spawn: SpawnPoint{X: 50, Y: 600}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_220", spawn: SpawnPoint{X: 1680, Y: 490}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 218, transports: []expectedTransport{
+			{handle: "transp_216", spawn: SpawnPoint{X: 1663, Y: 750}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_219", spawn: SpawnPoint{X: 263, Y: 480}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_221", spawn: SpawnPoint{X: 2470, Y: 470}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 219, transports: []expectedTransport{
+			{handle: "transp_218", spawn: SpawnPoint{X: 2863, Y: 750}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_222", spawn: SpawnPoint{X: 284, Y: 480}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 220, transports: []expectedTransport{
+			{handle: "transp_217", spawn: SpawnPoint{X: 2750, Y: 750}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_221", spawn: SpawnPoint{X: 50, Y: 580}, sourceQuery: "transp/flag2.swf"},
+		}},
+		{mapID: 222, transports: []expectedTransport{
+			{handle: "transp_219", spawn: SpawnPoint{X: 1133, Y: 750}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_221", spawn: SpawnPoint{X: 2800, Y: 750}, sourceQuery: "transp/flag2.swf"},
+			{handle: "transp_235", spawn: SpawnPoint{X: 290, Y: 410}, sourceQuery: "transp/fl3.swf"},
 		}},
 	}
 

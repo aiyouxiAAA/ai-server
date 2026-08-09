@@ -124,7 +124,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 51,transp_52,transp/flag2.swf,flag2,158,258,1880,464,52,1971,650,CrossRole,goto
 51,transp_54,transp/flag2.swf,flag2,158,258,2950,580,54,125,540,CrossRole,goto
 52,transp_47,transp/flag2.swf,flag2,158,258,47,584,47,3375,550,CrossRole,goto
-52,transp_51,transp/flag2.swf,flag2,158,258,1971,730,51,1880,464,CrossRole,goto
+52,transp_51,transp/flag2.swf,flag2,158,258,1971,730,51,1887,486,CrossRole,goto
 52,transp_53,transp/flag2.swf,flag2,158,258,2950,600,53,132,544,CrossRole,goto
 53,transp_360,transp/fl.swf,fl,139,147,2601,480,360,1000,600,CrossRole,goto
 53,transp_52,transp/flag2.swf,flag2,158,258,47,544,52,2865,600,CrossRole,goto
@@ -199,9 +199,9 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 85,transp_86,transp/flag2.swf,flag2,158,258,2950,560,86,175,540,CrossRole,goto
 86,transp_85,transp/flag2.swf,flag2,158,258,90,540,85,2865,560,CrossRole,goto
 86,transp_87,transp/flag2.swf,flag2,158,258,2950,560,87,175,540,CrossRole,goto
-86,transp_97,transp/flag2.swf,flag2,158,258,1630,420,97,1477,640,CrossRole,goto
+86,transp_97,transp/flag2.swf,flag2,158,258,1630,420,97,1477,613,CrossRole,goto
 87,transp_86,transp/flag2.swf,flag2,158,258,90,540,86,2865,560,CrossRole,goto
-87,transp_88,transp/flag2.swf,flag2,158,258,2680,720,88,1600,430,CrossRole,goto
+87,transp_88,transp/flag2.swf,flag2,158,258,2680,720,88,1604,470,CrossRole,goto
 88,transp_100,transp/flag2.swf,flag2,158,258,2950,560,100,1000,600,CrossRole,goto
 88,transp_87,transp/flag2.swf,flag2,158,258,1600,430,87,2595,640,CrossRole,goto
 88,transp_89,transp/flag2.swf,flag2,158,258,220,720,89,2735,430,CrossRole,goto
@@ -212,7 +212,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 90,transp_91,transp/flag2.swf,flag2,158,258,70,550,91,2865,560,CrossRole,goto
 91,transp_90,transp/flag2.swf,flag2,158,258,2950,560,90,155,550,CrossRole,goto
 91,transp_92,transp/flag2.swf,flag2,158,258,70,550,92,1000,600,CrossRole,goto
-97,transp_86,transp/flag2.swf,flag2,158,258,1477,720,86,1630,420,CrossRole,goto
+97,transp_86,transp/flag2.swf,flag2,158,258,1477,720,86,1630,470,CrossRole,goto
 97,transp_98,transp/flag2.swf,flag2,158,258,2950,560,98,1000,600,CrossRole,goto
 101,transp_100,transp/flag2.swf,flag2,158,258,90,540,100,1000,600,CrossRole,goto
 102,transp_103,transp/flag2.swf,flag2,158,258,47,584,103,1000,600,CrossRole,goto
@@ -325,7 +325,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 168,transp_62,transp/flag2.swf,flag2,158,258,45,504,62,2855,562,CrossRole,goto
 169,transp_168,transp/flag2.swf,flag2,158,258,45,564,168,2365,554,CrossRole,goto
 169,transp_170,transp/flag2.swf,flag2,158,258,2467,585,170,130,544,CrossRole,goto
-169,transp_173,transp/flag2.swf,flag2,158,258,1406,720,173,1019,441,CrossRole,goto
+169,transp_173,transp/flag2.swf,flag2,158,258,1406,720,173,1019,453,CrossRole,goto
 170,transp_169,transp/flag2.swf,flag2,158,258,45,544,169,2382,585,CrossRole,goto
 170,transp_171,transp/flag2.swf,flag2,158,258,2467,585,171,135,544,CrossRole,goto
 171,transp_170,transp/flag2.swf,flag2,158,258,50,544,170,2382,585,CrossRole,goto
@@ -333,7 +333,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 172,transp_171,transp/flag2.swf,flag2,158,258,2041,500,171,2545,642,CrossRole,goto
 172,transp_173,transp/flag2.swf,flag2,158,258,33,591,173,1875,569,CrossRole,goto
 172,transp_174,transp/flag2.swf,flag2,158,258,955,700,174,1962,451,CrossRole,goto
-173,transp_169,transp/flag2.swf,flag2,158,258,1019,441,169,1406,640,CrossRole,goto
+173,transp_169,transp/flag2.swf,flag2,158,258,1019,441,169,1406,622,CrossRole,goto
 173,transp_172,transp/flag2.swf,flag2,158,258,1960,569,172,118,591,CrossRole,goto
 174,transp_172,transp/flag2.swf,flag2,158,258,2047,451,172,955,620,CrossRole,goto
 174,transp_175,transp/flag2.swf,flag2,158,258,2704,720,175,2678,437,CrossRole,goto
@@ -362,7 +362,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 198,transp_200,transp/flag2.swf,flag2,158,258,1130,730,200,2755,420,CrossRole,goto
 199,transp_196,transp/flag2.swf,flag2,158,258,258,470,196,1517,650,CrossRole,goto
 199,transp_198,transp/flag2.swf,flag2,158,258,2450,590,198,125,600,CrossRole,goto
-200,transp_198,transp/flag2.swf,flag2,158,258,2840,420,198,1130,650,CrossRole,goto
+200,transp_198,transp/flag2.swf,flag2,158,258,2840,420,198,1125,590,CrossRole,goto
 200,transp_201,transp/flag2.swf,flag2,158,258,40,580,201,2854,550,CrossRole,goto
 201,transp_200,transp/flag2.swf,flag2,158,258,2939,550,200,125,580,CrossRole,goto
 201,transp_202,transp/flag2.swf,flag2,158,258,40,520,202,2715,650,CrossRole,goto
@@ -381,8 +381,8 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 180,transp_183,transp/flag2.swf,flag2,158,258,1099,484,183,1000,600,CrossRole,goto
 181,transp_180,transp/flag2.swf,flag2,158,258,31,610,180,2884,610,CrossRole,goto
 181,transp_182,transp/flag2.swf,flag2,158,258,1927,720,182,232,460,CrossRole,goto
-181,transp_185,transp/flag2.swf,flag2,158,258,2929,410,185,1671,650,CrossRole,goto
-182,transp_181,transp/flag2.swf,flag2,158,258,147,460,181,1927,640,CrossRole,goto
+181,transp_185,transp/flag2.swf,flag2,158,258,2929,410,185,1671,627,CrossRole,goto
+182,transp_181,transp/flag2.swf,flag2,158,258,147,460,181,1927,620,CrossRole,goto
 185,transp_181,transp/flag2.swf,flag2,158,258,1671,730,181,2844,410,CrossRole,goto
 185,transp_184,transp/flag2.swf,flag2,158,258,20,510,184,1000,600,CrossRole,goto
 185,transp_186,transp/flag2.swf,flag2,158,258,2969,561,186,116,610,CrossRole,goto
@@ -390,7 +390,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 186,transp_63,transp/fl.swf,fl,139,147,2096,562,63,1000,600,CrossRole,goto
 187,transp_188,transp/flag2.swf,flag2,158,258,150,740,188,1992,430,CrossRole,goto
 187,transp_189,transp/flag2.swf,flag2,158,258,2300,740,189,1118,430,CrossRole,goto
-187,transp_216,transp/flag2.swf,flag2,158,258,1530,380,216,1650,660,CrossRole,goto
+187,transp_216,transp/flag2.swf,flag2,158,258,1530,380,216,1650,605,CrossRole,goto
 188,transp_187,transp/flag2.swf,flag2,158,258,1992,350,187,235,660,CrossRole,goto
 188,transp_189,transp/flag2.swf,flag2,158,258,2950,550,189,135,550,CrossRole,goto
 188,transp_213,transp/flag2.swf,flag2,158,258,1290,740,213,495,454,CrossRole,goto
@@ -402,7 +402,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 208,transp_207,transp/flag2.swf,flag2,158,258,2239,600,207,135,580,CrossRole,goto
 208,transp_209,transp/flag2.swf,flag2,158,258,960,492,209,2524,670,CrossRole,goto
 208,transp_211,transp/flag2.swf,flag2,158,258,50,600,211,2843,600,CrossRole,goto
-209,transp_208,transp/flag2.swf,flag2,158,258,2609,750,208,960,492,CrossRole,goto
+209,transp_208,transp/flag2.swf,flag2,158,258,2609,750,208,704,625,CrossRole,goto
 209,transp_210,transp/flag2.swf,flag2,158,258,143,521,210,2695,640,CrossRole,goto
 210,transp_189,transp/flag2.swf,flag2,158,258,50,570,189,2865,550,CrossRole,goto
 210,transp_209,transp/flag2.swf,flag2,158,258,2780,720,209,228,521,CrossRole,goto
@@ -418,9 +418,9 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 215,transp_214,transp/flag2.swf,flag2,158,258,1160,740,214,290,500,CrossRole,goto
 215,transp_217,transp/flag2.swf,flag2,158,258,50,600,217,2865,580,CrossRole,goto
 215,transp_223,transp/fl.swf,fl,139,147,2850,580,223,1000,600,CrossRole,goto
-216,transp_187,transp/flag2.swf,flag2,158,258,1650,740,187,1530,380,CrossRole,goto
+216,transp_187,transp/flag2.swf,flag2,158,258,1650,740,187,1520,430,CrossRole,goto
 216,transp_217,transp/flag2.swf,flag2,158,258,2950,540,217,135,600,CrossRole,goto
-216,transp_218,transp/flag2.swf,flag2,158,258,284,480,218,1663,670,CrossRole,goto
+216,transp_218,transp/flag2.swf,flag2,158,258,284,480,218,1630,590,CrossRole,goto
 217,transp_215,transp/flag2.swf,flag2,158,258,2950,580,215,135,600,CrossRole,goto
 217,transp_216,transp/flag2.swf,flag2,158,258,50,600,216,2865,540,CrossRole,goto
 217,transp_220,transp/flag2.swf,flag2,158,258,1680,490,220,2665,670,CrossRole,goto
@@ -428,7 +428,7 @@ map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_i
 218,transp_219,transp/flag2.swf,flag2,158,258,263,480,219,2778,670,CrossRole,goto
 218,transp_221,transp/flag2.swf,flag2,158,258,2470,470,221,1000,600,CrossRole,goto
 219,transp_218,transp/flag2.swf,flag2,158,258,2863,750,218,348,480,CrossRole,goto
-219,transp_222,transp/flag2.swf,flag2,158,258,284,480,222,1133,670,CrossRole,goto
+219,transp_222,transp/flag2.swf,flag2,158,258,284,480,222,1130,600,CrossRole,goto
 220,transp_217,transp/flag2.swf,flag2,158,258,2750,750,217,1680,490,CrossRole,goto
 220,transp_221,transp/flag2.swf,flag2,158,258,50,580,221,1000,600,CrossRole,goto
 222,transp_219,transp/flag2.swf,flag2,158,258,1133,750,219,369,480,CrossRole,goto

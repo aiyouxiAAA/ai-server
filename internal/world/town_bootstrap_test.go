@@ -236,6 +236,41 @@ func TestResolveTownTransportAnswerUsesCapturedJiantingRoadSpawn(t *testing.T) {
 	}
 }
 
+func TestResolveTownTransportAnswerFromMapUsesCapturedArrivalSpawns(t *testing.T) {
+	testCases := []struct {
+		fromMapID int
+		handle    string
+		mapID     int
+		spawn     SpawnPoint
+	}{
+		{fromMapID: 52, handle: "transp_51", mapID: 51, spawn: SpawnPoint{X: 1887, Y: 486}},
+		{fromMapID: 86, handle: "transp_97", mapID: 97, spawn: SpawnPoint{X: 1477, Y: 613}},
+		{fromMapID: 87, handle: "transp_88", mapID: 88, spawn: SpawnPoint{X: 1604, Y: 470}},
+		{fromMapID: 97, handle: "transp_86", mapID: 86, spawn: SpawnPoint{X: 1630, Y: 470}},
+		{fromMapID: 169, handle: "transp_173", mapID: 173, spawn: SpawnPoint{X: 1019, Y: 453}},
+		{fromMapID: 173, handle: "transp_169", mapID: 169, spawn: SpawnPoint{X: 1406, Y: 622}},
+		{fromMapID: 181, handle: "transp_185", mapID: 185, spawn: SpawnPoint{X: 1671, Y: 627}},
+		{fromMapID: 182, handle: "transp_181", mapID: 181, spawn: SpawnPoint{X: 1927, Y: 620}},
+		{fromMapID: 200, handle: "transp_198", mapID: 198, spawn: SpawnPoint{X: 1125, Y: 590}},
+		{fromMapID: 209, handle: "transp_208", mapID: 208, spawn: SpawnPoint{X: 704, Y: 625}},
+		{fromMapID: 187, handle: "transp_216", mapID: 216, spawn: SpawnPoint{X: 1650, Y: 605}},
+		{fromMapID: 216, handle: "transp_187", mapID: 187, spawn: SpawnPoint{X: 1520, Y: 430}},
+		{fromMapID: 216, handle: "transp_218", mapID: 218, spawn: SpawnPoint{X: 1630, Y: 590}},
+		{fromMapID: 219, handle: "transp_222", mapID: 222, spawn: SpawnPoint{X: 1130, Y: 600}},
+	}
+
+	for _, testCase := range testCases {
+		destination, ok := ResolveTownTransportAnswerFromMap(testCase.fromMapID, testCase.handle, "goto")
+		if !ok {
+			t.Fatalf("expected map%d %s to resolve", testCase.fromMapID, testCase.handle)
+		}
+		if destination.MapID != testCase.mapID || destination.Spawn != testCase.spawn {
+			t.Fatalf("expected map%d %s -> map%d spawn %+v, got map%d spawn %+v",
+				testCase.fromMapID, testCase.handle, testCase.mapID, testCase.spawn, destination.MapID, destination.Spawn)
+		}
+	}
+}
+
 func TestResolveTownTransportAnswerUsesCapturedReturnHandleDestination(t *testing.T) {
 	destination, ok := ResolveTownTransportAnswer("transp_0", "goto")
 	if !ok {
@@ -2656,6 +2691,86 @@ func TestBuildTownBootstrapUsesCapturedBaiyuanTownNPCs(t *testing.T) {
 	foxSpeak := BuildAnswerSpeak("5060542617335713")
 	if !hasAnswerOption(foxSpeak.Answers, "3", "传送到【广青镇】(铜钱x500)") || !hasAnswerOption(foxSpeak.Answers, "5", "传送到【葬龙潭】(铜钱x500)") {
 		t.Fatalf("expected Baiyuan fox transport answers, got %+v", foxSpeak.Answers)
+	}
+}
+
+func TestBuildTownBootstrapUsesCapturedMuyuanTownNPCs(t *testing.T) {
+	type expectedRole struct {
+		mapID       int
+		handle      string
+		name        string
+		sourceQuery string
+		spriteName  string
+		spawn       SpawnPoint
+		questState  int
+	}
+	roles := []expectedRole{
+		{mapID: 187, handle: "7620542619919529", name: "莫坨坨", sourceQuery: "npc/莫坨坨.swf", spriteName: "motuotuo", spawn: SpawnPoint{X: 519, Y: 299}, questState: 4},
+		{mapID: 187, handle: "7640542620118422", name: "胡澈", sourceQuery: "npc/胡澈.swf", spriteName: "huche", spawn: SpawnPoint{X: 1130, Y: 423}, questState: 0},
+		{mapID: 187, handle: "7650542620201230", name: "骈釜子", sourceQuery: "npc/骈釜子.swf", spriteName: "pianfuzi", spawn: SpawnPoint{X: 2200, Y: 450}, questState: 4},
+		{mapID: 187, handle: "7660542620215960", name: "妖术狐狸", sourceQuery: "npc/狐狸.swf", spriteName: "huli", spawn: SpawnPoint{X: 735, Y: 400}, questState: 0},
+		{mapID: 187, handle: "7630542620072660", name: "胡涞", sourceQuery: "npc/胡涞.swf", spriteName: "hulai", spawn: SpawnPoint{X: 1881, Y: 445}, questState: 0},
+		{mapID: 188, handle: "7720542620445842", name: "郭菩", sourceQuery: "npc/郭菩.swf", spriteName: "guopu", spawn: SpawnPoint{X: 1388, Y: 433}, questState: 3},
+		{mapID: 188, handle: "7710542620292513", name: "介仕", sourceQuery: "npc/介仕.swf", spriteName: "jieshi", spawn: SpawnPoint{X: 826, Y: 384}, questState: 1},
+		{mapID: 188, handle: "7730542620459606", name: "矿点", sourceQuery: "npc/采矿点.swf", spriteName: "caikuangdian", spawn: SpawnPoint{X: 1171, Y: 385}, questState: 0},
+		{mapID: 189, handle: "7480542619653453", name: "杜可筠", sourceQuery: "npc/杜可筠.swf", spriteName: "dukeyun", spawn: SpawnPoint{X: 390, Y: 410}, questState: 0},
+		{mapID: 189, handle: "7470542619589250", name: "魁星泰斗", sourceQuery: "npc/魁星泰斗.swf", spriteName: "kuixingtai", spawn: SpawnPoint{X: 2685, Y: 365}, questState: 0},
+		{mapID: 189, handle: "7490542619656404", name: "通天八卦炉<ma>", sourceQuery: "npc/通天八卦炉.swf", spriteName: "bagualu", spawn: SpawnPoint{X: 2105, Y: 380}, questState: 0},
+		{mapID: 189, handle: "7460542619494385", name: "祝掌柜", sourceQuery: "npc/祝掌柜.swf", spriteName: "zhuzhanggui", spawn: SpawnPoint{X: 1626, Y: 407}, questState: 0},
+	}
+
+	for _, expected := range roles {
+		t.Run(expected.handle, func(t *testing.T) {
+			role := session.RoleSummary{RoleID: "role-muyuan-npc", DisplayName: "测试角色", Level: 30, MapID: expected.mapID}
+			playerBase := session.PlayerBaseData{PlayerID: "player-muyuan-npc", RoleID: role.RoleID, DisplayName: role.DisplayName, Level: role.Level, MapID: expected.mapID}
+			snapshot := BuildTownBootstrap(role, playerBase)
+			foundRole := false
+			for _, rolePush := range snapshot.CreateRoles {
+				if rolePush.Handle != expected.handle {
+					continue
+				}
+				if rolePush.DisplayName != expected.name || rolePush.SourceQuery != expected.sourceQuery || rolePush.SpawnFlash != expected.spawn {
+					t.Fatalf("expected captured Muyuan role %+v, got %+v", expected, rolePush)
+				}
+				expectedIRPath := "runtime/classic-npc/movieclips/" + expected.spriteName + "/" + expected.spriteName + "-movieclip-ir"
+				if rolePush.SourceNPCVisual == nil || rolePush.SourceNPCVisual.MovieClipIRPath != expectedIRPath {
+					t.Fatalf("expected %s source visual %s, got %+v", expected.handle, expectedIRPath, rolePush.SourceNPCVisual)
+				}
+				foundRole = true
+				break
+			}
+			if !foundRole {
+				t.Fatalf("expected map%d role %s", expected.mapID, expected.handle)
+			}
+
+			foundQuestState := false
+			for _, questState := range snapshot.QuestStates {
+				if questState.Handle != expected.handle {
+					continue
+				}
+				if questState.State != expected.questState {
+					t.Fatalf("expected %s quest state %d, got %+v", expected.handle, expected.questState, questState)
+				}
+				foundQuestState = true
+				break
+			}
+			if !foundQuestState {
+				t.Fatalf("expected map%d quest state for %s", expected.mapID, expected.handle)
+			}
+		})
+	}
+
+	motuotuoSpeak := BuildAnswerSpeak("7620542619919529")
+	if !hasAnswerOption(motuotuoSpeak.Answers, "7q12gs", "<m/>厨师与帅锅") || !hasAnswerOption(motuotuoSpeak.Answers, "3", "创建公会") {
+		t.Fatalf("expected Motuotuo captured dialogue, got %+v", motuotuoSpeak)
+	}
+	guopuSpeak := BuildAnswerSpeak("7720542620445842")
+	if !hasAnswerOption(guopuSpeak.Answers, "day_11gs", "<party><m/>提神香丸") || !hasAnswerOption(guopuSpeak.Answers, "2", "进行治疗") {
+		t.Fatalf("expected Guopu captured dialogue, got %+v", guopuSpeak)
+	}
+	mineSpeak := BuildAnswerSpeak("7730542620459606")
+	if !hasAnswerOption(mineSpeak.Answers, "st", "【操作】采集矿石") {
+		t.Fatalf("expected mining point captured action, got %+v", mineSpeak)
 	}
 }
 

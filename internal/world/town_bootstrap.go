@@ -226,6 +226,26 @@ var capturedTownTransportRouteDestinations = map[townTransportRouteKey]TownTrans
 	{FromMapID: 155, Handle: "transp_122"}: {MapID: 122, Spawn: SpawnPoint{X: 530, Y: 520}},
 	{FromMapID: 156, Handle: "transp_157"}: {MapID: 157, Spawn: SpawnPoint{X: 2890, Y: 494}},
 	{FromMapID: 157, Handle: "transp_154"}: {MapID: 154, Spawn: SpawnPoint{X: 920, Y: 159}},
+
+	// 20260711_205359 auto-move capture: these are the server-issued player
+	// arrival coordinates, not the reverse flag2 entity coordinates.
+	{FromMapID: 187, Handle: "transp_216"}: {MapID: 216, Spawn: SpawnPoint{X: 1650, Y: 605}},
+	{FromMapID: 216, Handle: "transp_187"}: {MapID: 187, Spawn: SpawnPoint{X: 1520, Y: 430}},
+
+	// Raw auto-move captures: preserve the server-issued self createRole spawn
+	// instead of inferring it from a flag2 on the destination map.
+	{FromMapID: 52, Handle: "transp_51"}:   {MapID: 51, Spawn: SpawnPoint{X: 1887, Y: 486}},
+	{FromMapID: 86, Handle: "transp_97"}:   {MapID: 97, Spawn: SpawnPoint{X: 1477, Y: 613}},
+	{FromMapID: 87, Handle: "transp_88"}:   {MapID: 88, Spawn: SpawnPoint{X: 1604, Y: 470}},
+	{FromMapID: 97, Handle: "transp_86"}:   {MapID: 86, Spawn: SpawnPoint{X: 1630, Y: 470}},
+	{FromMapID: 169, Handle: "transp_173"}: {MapID: 173, Spawn: SpawnPoint{X: 1019, Y: 453}},
+	{FromMapID: 173, Handle: "transp_169"}: {MapID: 169, Spawn: SpawnPoint{X: 1406, Y: 622}},
+	{FromMapID: 181, Handle: "transp_185"}: {MapID: 185, Spawn: SpawnPoint{X: 1671, Y: 627}},
+	{FromMapID: 182, Handle: "transp_181"}: {MapID: 181, Spawn: SpawnPoint{X: 1927, Y: 620}},
+	{FromMapID: 200, Handle: "transp_198"}: {MapID: 198, Spawn: SpawnPoint{X: 1125, Y: 590}},
+	{FromMapID: 209, Handle: "transp_208"}: {MapID: 208, Spawn: SpawnPoint{X: 704, Y: 625}},
+	{FromMapID: 216, Handle: "transp_218"}: {MapID: 218, Spawn: SpawnPoint{X: 1630, Y: 590}},
+	{FromMapID: 219, Handle: "transp_222"}: {MapID: 222, Spawn: SpawnPoint{X: 1130, Y: 600}},
 }
 
 type townMapsIndexFile struct {
@@ -697,6 +717,18 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 	mapOneSeventyOne := definitions[171]
 	mapOneSeventyOne.SourceMonsters = map171SourceMonsters
 	definitions[171] = mapOneSeventyOne
+
+	mapOneEightySeven := definitions[187]
+	mapOneEightySeven.SourceNPCs = map187SourceNPCs
+	definitions[187] = mapOneEightySeven
+
+	mapOneEightyEight := definitions[188]
+	mapOneEightyEight.SourceNPCs = map188SourceNPCs
+	definitions[188] = mapOneEightyEight
+
+	mapOneEightyNine := definitions[189]
+	mapOneEightyNine.SourceNPCs = map189SourceNPCs
+	definitions[189] = mapOneEightyNine
 
 	mapTwoZeroThree := definitions[203]
 	mapTwoZeroThree.SourceMonsters = map203SourceMonsters

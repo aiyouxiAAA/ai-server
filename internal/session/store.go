@@ -722,6 +722,7 @@ func NewPersistentStore(persistencePath string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	store.repairMountedFashionAppearanceSourceQueries()
 
 	if err := store.saveLocked(); err != nil {
 		_ = db.Close()
@@ -4179,7 +4180,7 @@ func (store *Store) useEquipmentItemLocked(
 	updatedItems = append(updatedItems, normalizedEquippedItem)
 	updatedResultItems = append(updatedResultItems, normalizedEquippedItem)
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
-	roles[roleIndex].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[roleIndex].SourceQuery, roles[roleIndex].Items)
+	roles[roleIndex].SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[roleIndex], roles[roleIndex].Items)
 	roles[roleIndex].BattleSourceQuery = roles[roleIndex].SourceQuery
 	roles[roleIndex] = syncRoleProgressionRuntimeData(roles[roleIndex])
 	store.rolesByPID[playerID] = roles
@@ -4436,7 +4437,7 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 		}
 		updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
 		roles[index].Items = normalizeRoleItems(updatedItems)
-		roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[index].SourceQuery, roles[index].Items)
+		roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[index], roles[index].Items)
 		roles[index].BattleSourceQuery = roles[index].SourceQuery
 		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
@@ -4543,7 +4544,7 @@ func (store *Store) PreviewTryEquip(playerID string, roleID string, itemName str
 		previewItem.Index = targetIndex
 		previewItems = append(previewItems, normalizeRoleItem(previewItem))
 
-		sourceQuery := rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, previewItems)
+		sourceQuery := rebuildRoleEquipmentAppearanceSourceQueryForRole(role, previewItems)
 		return RoleTryEquipPreviewResult{
 			Role:        role,
 			PlayerBase:  playerBaseDataFromRole(playerID, role),
@@ -4678,7 +4679,7 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		if sourceType == "装备" || targetType == "装备" {
-			roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(roles[index].SourceQuery, roles[index].Items)
+			roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[index], roles[index].Items)
 			roles[index].BattleSourceQuery = roles[index].SourceQuery
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
@@ -5487,8 +5488,10 @@ func roleItemIndexMatches(index int, candidates []int) bool {
 func applyRoleItemAppearanceToSourceQuery(sourceQuery string, item RoleItem) string {
 	if params, ok := capturedFashionAppearanceSourceParams(item, sourceQuery); ok {
 		// Captured full-fashion URLs do not retain ordinary head, shoulder,
-		// wrist, waist, clothing, pants, shoes, or mount source parameters.
-		for _, key := range []string{"h", "a", "wr", "b", "c", "p", "se", "r"} {
+		// wrist, waist, clothing, pants, or shoes source parameters. The ride
+		// parameter is independent and must remain so a mounted role can wear
+		// the fashion at the same time.
+		for _, key := range []string{"h", "a", "wr", "b", "c", "p", "se"} {
 			sourceQuery = removeSourceQueryParam(sourceQuery, key)
 		}
 		for _, param := range params {
@@ -5500,6 +5503,49 @@ func applyRoleItemAppearanceToSourceQuery(sourceQuery string, item RoleItem) str
 		return setSourceQueryParam(sourceQuery, key, value)
 	}
 	return sourceQuery
+}
+
+// repairMountedFashionAppearanceSourceQueries repairs persisted appearance
+// queries written before fashion and ride could coexist. Items are the source
+// of truth; only roles with both a mapped mount and captured fashion are
+// rebuilt, and the resulting battle query follows the town query.
+func (store *Store) repairMountedFashionAppearanceSourceQueries() bool {
+	changed := false
+	for playerID, roles := range store.rolesByPID {
+		for index := range roles {
+			if !hasMappedMountedFashion(roles[index].Items) {
+				continue
+			}
+			rebuilt := rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[index], roles[index].Items)
+			if rebuilt == roles[index].SourceQuery && rebuilt == roles[index].BattleSourceQuery {
+				continue
+			}
+			roles[index].SourceQuery = rebuilt
+			roles[index].BattleSourceQuery = rebuilt
+			roles[index] = syncRoleProgressionRuntimeData(roles[index])
+			changed = true
+		}
+		store.rolesByPID[playerID] = roles
+	}
+	return changed
+}
+
+func hasMappedMountedFashion(items []RoleItem) bool {
+	hasFashion := false
+	hasMount := false
+	for _, item := range items {
+		if item.Type != "装备" || item.ItemType != "equip" {
+			continue
+		}
+		if isCapturedFashionAppearanceItem(item) {
+			hasFashion = true
+		}
+		if item.Index == roleMountEquipIndex {
+			key, value, ok := roleItemAppearanceSourceParam(item)
+			hasMount = ok && key == "r" && value != ""
+		}
+	}
+	return hasFashion && hasMount
 }
 
 func applyRoleBodyAppearanceToSourceQuery(sourceQuery string, appearance RoleAppearance) string {
@@ -5562,6 +5608,11 @@ func rebuildRoleEquipmentAppearanceSourceQuery(sourceQuery string, items []RoleI
 		sourceQuery = applyRoleItemAppearanceToSourceQuery(sourceQuery, item)
 	}
 	return sourceQuery
+}
+
+func rebuildRoleEquipmentAppearanceSourceQueryForRole(role RoleSummary, items []RoleItem) string {
+	sourceQuery := applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
+	return rebuildRoleEquipmentAppearanceSourceQuery(sourceQuery, items)
 }
 
 func clearRoleEquipmentAppearanceSourceQuery(sourceQuery string) string {
@@ -5674,6 +5725,8 @@ func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
 		return "r", "xmj", true
 	case "萌兔宝宝":
 		return "r", "mengtubaobao", true
+	case "仙宝葫芦":
+		return "r", "baohulu", true
 	case "狰狞神骑":
 		return "r", "zn", true
 	case "蓝布衣":

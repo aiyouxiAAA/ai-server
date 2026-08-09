@@ -2903,6 +2903,7 @@ func TestStoreTryEquipSupportsCapturedTreasureAndMountSlots(t *testing.T) {
 	}{
 		{name: "筋斗云", expectedIndex: 14},
 		{name: "狰狞神骑", expectedIndex: 18, expectedQuery: "r=zn"},
+		{name: "仙宝葫芦", expectedIndex: 18, expectedQuery: "r=baohulu"},
 	} {
 		template, ok := CapturedRoleItemTemplate(spec.name)
 		if !ok {
@@ -3050,8 +3051,8 @@ func TestStoreEquipCapturedSpaceFortressAppliesAndRestoresFashionHair(t *testing
 	if strings.Contains(equipped.Role.SourceQuery, "h=") {
 		t.Fatalf("captured fashion has no hat field, got %q", equipped.Role.SourceQuery)
 	}
-	if strings.Contains(equipped.Role.SourceQuery, "&r=") {
-		t.Fatalf("captured fashion has no ride field, got %q", equipped.Role.SourceQuery)
+	if !strings.Contains(equipped.Role.SourceQuery, "r=zn") {
+		t.Fatalf("captured fashion must preserve the equipped ride field, got %q", equipped.Role.SourceQuery)
 	}
 	equippedFashion, ok := findRoleItem(equipped.Role.Items, "装备", roleFashionEquipIndex)
 	if !ok || equippedFashion.Name != "超时空要塞" {
@@ -3823,7 +3824,7 @@ func TestStoreOrdinaryRoleBattleSourceQueryFollowsFashionEquip(t *testing.T) {
 	if !equipped.Found || !equipped.Equipped {
 		t.Fatalf("expected fashion equip, got %+v", equipped)
 	}
-	for _, part := range []string{"w8=42", "c=88", "p=91", "se=79", "hr=46"} {
+	for _, part := range []string{"w8=42", "c=88", "p=91", "se=79", "hr=46", "r=zn"} {
 		if !strings.Contains(equipped.Role.SourceQuery, part) {
 			t.Fatalf("expected fashion source query to include %s, got %q", part, equipped.Role.SourceQuery)
 		}
@@ -4941,6 +4942,7 @@ func TestStorePromotedEquipmentAppearanceMappings(t *testing.T) {
 		{name: "珍元护腰", key: "b", value: "45"},
 		{name: "L小白马", key: "r", value: "xmj"},
 		{name: "萌兔宝宝", key: "r", value: "mengtubaobao"},
+		{name: "仙宝葫芦", key: "r", value: "baohulu"},
 		{name: "狰狞神骑", key: "r", value: "zn"},
 	} {
 		template, ok := CapturedRoleItemTemplate(spec.name)
@@ -5331,6 +5333,62 @@ func TestPersistentStoreKeepsRolesAfterRestart(t *testing.T) {
 	items, capacity, ok := secondStore.GetRoleItems(loginResponse.PlayerID, createResponse.Role.RoleID, "背包")
 	if !ok || capacity != 30 || len(items) != 1 || items[0].Name != "铁斧" || items[0].Index != 19 {
 		t.Fatalf("expected persistent starter axe inventory after restart, ok=%v capacity=%d items=%+v", ok, capacity, items)
+	}
+}
+
+func TestPersistentStoreRepairsMountedFashionAppearanceAfterRestart(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("create persistent store: %v", err)
+	}
+
+	login := mustLogin(t, firstStore, "mountedfashion", "magicpwd")
+	created := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "骑乘时装修复",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?n=0&sex=1&co=5&e=14&m=5&w8=42&c=88&se=79&p=91&hr=46&",
+	})
+	if !created.Success {
+		t.Fatalf("create role: %+v", created)
+	}
+
+	firstStore.mu.Lock()
+	roles := firstStore.rolesByPID[login.PlayerID]
+	roles[0].Items = []RoleItem{
+		{Type: "装备", ItemType: "equip", Name: "超时空要塞", Index: roleFashionEquipIndex},
+		{Type: "装备", ItemType: "equip", Name: "狰狞神骑", Index: roleMountEquipIndex},
+	}
+	roles[0].SourceQuery = removeSourceQueryParam(roles[0].SourceQuery, "r")
+	roles[0].BattleSourceQuery = roles[0].SourceQuery
+	firstStore.rolesByPID[login.PlayerID] = roles
+	err = firstStore.persistPlayerStateLocked(login.PlayerID)
+	firstStore.mu.Unlock()
+	if err != nil {
+		t.Fatalf("persist stale mounted-fashion query: %v", err)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("close first persistent store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, created.Role.RoleID)
+	if !ok {
+		t.Fatal("expected repaired role after restart")
+	}
+	for _, query := range []string{role.SourceQuery, role.BattleSourceQuery, playerBase.SourceQuery, playerBase.BattleSourceQuery} {
+		for _, expected := range []string{"c=88", "p=91", "se=79", "hr=46", "r=zn"} {
+			if !strings.Contains(query, expected) {
+				t.Fatalf("expected repaired mounted-fashion query to retain %s, got %q", expected, query)
+			}
+		}
 	}
 }
 

@@ -2288,8 +2288,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	role.Items = normalizeRoleItems(role.Items)
 	role.DungeonInstances = cloneDungeonInstances(role.DungeonInstances)
 	if strings.TrimSpace(role.SourceQuery) == "" {
-		role.SourceQuery = applyRoleBodyAppearanceToSourceQuery(role.SourceQuery, role.Appearance)
-		role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQuery(role.SourceQuery, role.Items)
+		role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(role, role.Items)
 	}
 	// New rows may have no battle query; later equipment mutations update both queries.
 	if strings.TrimSpace(role.BattleSourceQuery) == "" {
@@ -2784,6 +2783,17 @@ func capturedAdditionalRoleItemTemplates() []RoleItem {
 			Count:       1,
 			Index:       0,
 			ItemLevel:   2,
+		},
+		// Captured auction listing: classic_auction.go records this as a one-count equip in the mount slot.
+		{
+			Type:        "背包",
+			Name:        "仙宝葫芦",
+			ItemType:    "equip",
+			Display:     "1138.png",
+			Description: "f_i_仙宝葫芦^f9e000&23@限制装备至【坐骑】格。&24@坐骑&25@1&21@40&1@300&12@20&27@sitem_pet&19@精炼潜质:\n[精炼+1] 每升一级 物理攻击+3\n[精炼+3] 每升一级 物理攻击+5\n[精炼+8] 每升一级 物理攻击+10\n[精炼+14] 每升一级 物理攻击+15&103@0&104@0&105@&107@&108@0",
+			Count:       1,
+			Index:       0,
+			ItemLevel:   3,
 		},
 		{
 			Type:        "背包",

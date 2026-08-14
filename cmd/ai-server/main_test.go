@@ -865,7 +865,12 @@ func TestHandlePacketClassicTownGetContainerCapacityPushesBagCapacity(t *testing
 }
 
 func TestHandlePacketClassicTownBattleBootyContainerAndMove(t *testing.T) {
-	store, socketSession := seedSelectedRoleSession(t)
+	store, err := session.NewPersistentStore(filepath.Join(t.TempDir(), "ai-server.db"))
+	if err != nil {
+		t.Fatalf("create persistent store: %v", err)
+	}
+	defer store.Close()
+	socketSession, _ := seedSelectedRoleSessionInStore(t, store, "战利品领取测试")
 	socketSession.battleLoot = []session.RoleItem{{
 		Type:        "战斗",
 		Name:        "朽木",
@@ -913,6 +918,21 @@ func TestHandlePacketClassicTownBattleBootyContainerAndMove(t *testing.T) {
 	}
 	if len(socketSession.battleLoot) != 0 {
 		t.Fatalf("expected battle loot session container to be empty, got %+v", socketSession.battleLoot)
+	}
+	acquisitions, ok := store.ListRoleItemAcquisitions(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, 10)
+	if !ok {
+		t.Fatalf("expected battle booty acquisition audit query, rows=%+v", acquisitions)
+	}
+	var battleBootyAcquisition *session.RoleItemAcquisition
+	for index := range acquisitions {
+		acquisition := &acquisitions[index]
+		if acquisition.ItemName == "朽木" && acquisition.Source == "战利品领取" {
+			battleBootyAcquisition = acquisition
+			break
+		}
+	}
+	if battleBootyAcquisition == nil || battleBootyAcquisition.Quantity != 2 || battleBootyAcquisition.SourceDetail != "container:战斗->背包" {
+		t.Fatalf("expected traceable battle booty acquisition audit, got %+v", acquisitions)
 	}
 }
 
@@ -2621,6 +2641,76 @@ func TestHandlePacketClassicTownActiveItemExchangesSilverToCopper(t *testing.T) 
 	items := itemInfosByName(result.itemInfos)
 	if items["银元宝"].Count != 1 || items["铜钱"].Count != 1000 {
 		t.Fatalf("expected silver item down to 1 and copper x1000 push, got %+v", result.itemInfos)
+	}
+}
+
+func TestHandlePacketClassicTownActiveItemOpensClassicChest(t *testing.T) {
+	store := session.NewStore()
+	socketSession, role := seedSelectedRoleSessionInStore(t, store, "宝匣开启测试")
+	chest, ok := session.CapturedRoleItemTemplate("宝匣")
+	if !ok {
+		t.Fatal("expected treasure chest template")
+	}
+	chest.Type = "背包"
+	chest.Index = -1
+	chest.Count = 1
+	granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, role.RoleID, chest)
+	if !ok {
+		t.Fatal("expected treasure chest grant")
+	}
+
+	result := handlePacketWithSession(store, protocol.Packet{
+		Cmd: cmdClassicTownActiveItemReq,
+		Seq: 9,
+		Payload: mustJSON(t, classicTownActiveItemRequest{
+			Type:  granted.Type,
+			Index: granted.Index,
+		}),
+	}, socketSession)
+
+	if !result.handled {
+		t.Fatal("expected treasure chest ActiveItem to be handled")
+	}
+	if len(result.itemClears) != 1 || result.itemClears[0].Type != granted.Type || result.itemClears[0].Index != granted.Index {
+		t.Fatalf("expected opened treasure chest to clear its source slot, got %+v", result.itemClears)
+	}
+	if len(result.itemInfos) != 1 || result.itemInfos[0].Name == "宝匣" || result.itemInfos[0].Count <= 0 {
+		t.Fatalf("expected one granted treasure chest reward, got %+v", result.itemInfos)
+	}
+	if !packetChatMessagesContain(result.chatMessages, "打开[宝匣]获得了[") {
+		t.Fatalf("expected captured chest reward c_Speak, got %+v", result.chatMessages)
+	}
+	persisted, ok := store.GetRoleItem(socketSession.playerBase.PlayerID, role.RoleID, granted.Type, granted.Index)
+	if !ok || persisted.Name == "宝匣" {
+		t.Fatalf("expected reward to reuse the cleared source slot, got %+v", persisted)
+	}
+}
+
+func TestClassicChestWorldAnnouncementMessageOnlyIncludesImportantRewards(t *testing.T) {
+	tests := []struct {
+		chestName   string
+		rewardName  string
+		chestColor  string
+		rewardColor string
+	}{
+		{chestName: "宝匣", rewardName: "凿孔器", chestColor: "00ccff", rewardColor: "f9e000"},
+		{chestName: "魔匣", rewardName: "精炼宝石", chestColor: "c156c7", rewardColor: "f9e000"},
+		{chestName: "仙匣", rewardName: "贰级原石", chestColor: "f9e000", rewardColor: "f9e000"},
+		{chestName: "仙匣", rewardName: "高级精炼宝石", chestColor: "f9e000", rewardColor: "f9e000"},
+	}
+	for _, test := range tests {
+		announcement, ok := classicChestWorldAnnouncementMessage("开匣测试", test.chestName, session.RoleItem{Name: test.rewardName, Count: 2})
+		if !ok {
+			t.Fatalf("expected %s from %s to produce a world announcement", test.rewardName, test.chestName)
+		}
+		wantMessage := "<w>[开匣测试]打开<font color='#" + test.chestColor + "'>[" + test.chestName + "]</font>获得了<font color='#" + test.rewardColor + "'>[" + test.rewardName + "]</font>x2"
+		if announcement.Channel != "system" || !announcement.Bold || announcement.Msg != wantMessage {
+			t.Fatalf("unexpected %s announcement: %+v", test.rewardName, announcement)
+		}
+	}
+
+	if announcement, ok := classicChestWorldAnnouncementMessage("开匣测试", "宝匣", session.RoleItem{Name: "一级经验丹", Count: 2}); ok || announcement.Msg != "" {
+		t.Fatalf("ordinary chest reward must not produce a world announcement: %+v", announcement)
 	}
 }
 
@@ -9343,6 +9433,15 @@ func TestDevAddItemHandlerAddsCapturedShopItemByDisplayID(t *testing.T) {
 	decodeJSON(t, recorder.Body.Bytes(), &response)
 	if !response.Success || response.Item.Name != "宠物用营养水" || response.Item.Display != "210.png" || response.Item.Count != 3 {
 		t.Fatalf("expected captured grocery item count 3, got %+v", response)
+	}
+}
+
+func TestDevCapturedRoleItemTemplateByIDIncludesClassicDataItems(t *testing.T) {
+	for _, itemID := range []string{"魔匣", "仙匣", "壹级原石"} {
+		item, ok := devCapturedRoleItemTemplateByID(itemID)
+		if !ok || item.Name != itemID || item.Display == "" {
+			t.Fatalf("expected dev item resolver to include %s from classic data, got ok=%v item=%+v", itemID, ok, item)
+		}
 	}
 }
 

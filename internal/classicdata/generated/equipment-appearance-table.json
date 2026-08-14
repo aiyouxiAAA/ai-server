@@ -1,0 +1,632 @@
+{
+  "schemaVersion": 1,
+  "name": "equipment-appearance",
+  "source": "internal/classicdata/source/equipment-appearance-table.csv",
+  "rowCount": 104,
+  "rows": [
+    {
+      "equipment_name": "八极法冠",
+      "source_key": "h",
+      "source_value": "26",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "八极法靴",
+      "source_key": "se",
+      "source_value": "3",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "八极法衣",
+      "source_key": "c",
+      "source_value": "6",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "八极法杖",
+      "source_key": "w10",
+      "source_value": "21",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "八极护肩",
+      "source_key": "a",
+      "source_value": "3",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "八极护腿",
+      "source_key": "p",
+      "source_value": "6",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "八极护腕",
+      "source_key": "wr",
+      "source_value": "4",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "八极护腰",
+      "source_key": "b",
+      "source_value": "4",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "布鞋",
+      "source_key": "se",
+      "source_value": "1",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蚩颅王护肩",
+      "source_key": "a",
+      "source_value": "29",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "翠带护腰",
+      "source_key": "b",
+      "source_value": "32",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "刀客布衣",
+      "source_key": "c",
+      "source_value": "30",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "盗贼布衣",
+      "source_key": "c",
+      "source_value": "34",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "盗贼的鞋",
+      "source_key": "se",
+      "source_value": "27",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "盗贼护臂",
+      "source_key": "wr",
+      "source_value": "24",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "盗贼护腿",
+      "source_key": "p",
+      "source_value": "30",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "盗贼腰带",
+      "source_key": "b",
+      "source_value": "35",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "绯雨匕首",
+      "source_key": "w3",
+      "source_value": "49",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "光芒法杖",
+      "source_key": "w10",
+      "source_value": "65",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛤蟆布衣",
+      "source_key": "c",
+      "source_value": "37",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛤蟆法袍",
+      "source_key": "c",
+      "source_value": "35",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛤蟆精护腕",
+      "source_key": "wr",
+      "source_value": "26",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛤蟆精护腰",
+      "source_key": "b",
+      "source_value": "31",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛤蟆精战靴",
+      "source_key": "se",
+      "source_value": "29",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "寒影护腰",
+      "source_key": "b",
+      "source_value": "22",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "寒影锁甲",
+      "source_key": "c",
+      "source_value": "26",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "寒影靴",
+      "source_key": "se",
+      "source_value": "19",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "呼啸战靴",
+      "source_key": "se",
+      "source_value": "26",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "黄风护腕",
+      "source_key": "wr",
+      "source_value": "25",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "黄风围巾",
+      "source_key": "h",
+      "source_value": "30",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "黄风腰带",
+      "source_key": "b",
+      "source_value": "37",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "黄风战靴",
+      "source_key": "se",
+      "source_value": "28",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "机木护腿",
+      "source_key": "p",
+      "source_value": "64",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "机木护腕",
+      "source_key": "wr",
+      "source_value": "39",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "机木护腰",
+      "source_key": "b",
+      "source_value": "39",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "极.光芒法杖",
+      "source_key": "w10",
+      "source_value": "65",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蓝布裤",
+      "source_key": "p",
+      "source_value": "1",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蓝布衣",
+      "source_key": "c",
+      "source_value": "1",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蓝晶护肩",
+      "source_key": "a",
+      "source_value": "34",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "狼人护肩",
+      "source_key": "a",
+      "source_value": "32",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "狼人护腿",
+      "source_key": "p",
+      "source_value": "29",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "狼牙棒",
+      "source_key": "w8",
+      "source_value": "33",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "雷霆法杖",
+      "source_key": "w10",
+      "source_value": "51",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "雷霆冠",
+      "source_key": "h",
+      "source_value": "17",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "雷霆护肩",
+      "source_key": "a",
+      "source_value": "15",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "流云法杖",
+      "source_key": "w10",
+      "source_value": "58",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "流云护肩",
+      "source_key": "a",
+      "source_value": "16",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "流云之冠",
+      "source_key": "h",
+      "source_value": "20",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "龙颜单肩",
+      "source_key": "a",
+      "source_value": "19",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "龙颜护腿",
+      "source_key": "p",
+      "source_value": "22",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "龙颜护腕",
+      "source_key": "wr",
+      "source_value": "19",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "龙颜护腰",
+      "source_key": "b",
+      "source_value": "21",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力护甲",
+      "source_key": "c",
+      "source_value": "10",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力护腿",
+      "source_key": "p",
+      "source_value": "8",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力护腕",
+      "source_key": "wr",
+      "source_value": "7",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力护腰",
+      "source_key": "b",
+      "source_value": "5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力肩甲",
+      "source_key": "a",
+      "source_value": "4",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力面甲",
+      "source_key": "h",
+      "source_value": "8",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力战靴",
+      "source_key": "se",
+      "source_value": "4",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮族护腿",
+      "source_key": "p",
+      "source_value": "27",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "神风护甲",
+      "source_key": "c",
+      "source_value": "17",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "神风护肩",
+      "source_key": "a",
+      "source_value": "13",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "神风护腿",
+      "source_key": "p",
+      "source_value": "16",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "神风护腰",
+      "source_key": "b",
+      "source_value": "14",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "神风战靴",
+      "source_key": "se",
+      "source_value": "12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "剔骨刀",
+      "source_key": "w3",
+      "source_value": "34",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "天魁",
+      "source_key": "w1",
+      "source_value": "62",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "铁斧",
+      "source_key": "w8",
+      "source_value": "5",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "威武护肩",
+      "source_key": "a",
+      "source_value": "10",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "威武护腿",
+      "source_key": "p",
+      "source_value": "13",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "威武护腕",
+      "source_key": "wr",
+      "source_value": "11",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "威武面甲",
+      "source_key": "h",
+      "source_value": "12",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "威武皮甲",
+      "source_key": "c",
+      "source_value": "14",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "威武皮靴",
+      "source_key": "se",
+      "source_value": "10",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "威武腰带",
+      "source_key": "b",
+      "source_value": "11",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "刎刀",
+      "source_key": "w8",
+      "source_value": "42",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "无双护肩",
+      "source_key": "a",
+      "source_value": "14",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "无双护腿",
+      "source_key": "p",
+      "source_value": "18",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "无双铁腕",
+      "source_key": "wr",
+      "source_value": "15",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "无双铁腰带",
+      "source_key": "b",
+      "source_value": "16",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "无双头盔",
+      "source_key": "h",
+      "source_value": "16",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "牙刺",
+      "source_key": "w3",
+      "source_value": "43",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "岩化护腿",
+      "source_key": "p",
+      "source_value": "49",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "炎爆护手",
+      "source_key": "wr",
+      "source_value": "21",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "炎爆龙鳞甲",
+      "source_key": "c",
+      "source_value": "28",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "炎爆之靴",
+      "source_key": "se",
+      "source_value": "21",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "央月九影",
+      "source_key": "w8",
+      "source_value": "61",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "饮血刀",
+      "source_key": "w8",
+      "source_value": "47",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "寨夫人护腕",
+      "source_key": "wr",
+      "source_value": "31",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "寨夫人上衣",
+      "source_key": "c",
+      "source_value": "39",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "珍元护腿",
+      "source_key": "p",
+      "source_value": "69",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "珍元护腕",
+      "source_key": "wr",
+      "source_value": "44",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "珍元护腰",
+      "source_key": "b",
+      "source_value": "45",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "珍元面甲",
+      "source_key": "h",
+      "source_value": "57",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "珍元胸甲",
+      "source_key": "c",
+      "source_value": "67",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "L小白马",
+      "source_key": "r",
+      "source_value": "xmj",
+      "evidence_status": "packet_confirmed"
+    },
+    {
+      "equipment_name": "蛮力钢剑",
+      "source_key": "w8",
+      "source_value": "40",
+      "evidence_status": "legacy_capture_contract"
+    },
+    {
+      "equipment_name": "万相",
+      "source_key": "w1",
+      "source_value": "55",
+      "evidence_status": "legacy_capture_contract"
+    },
+    {
+      "equipment_name": "伏魔棍",
+      "source_key": "w11",
+      "source_value": "53",
+      "evidence_status": "legacy_capture_contract"
+    },
+    {
+      "equipment_name": "朽木断浪",
+      "source_key": "w11",
+      "source_value": "60",
+      "evidence_status": "legacy_capture_contract"
+    },
+    {
+      "equipment_name": "武雷拳套",
+      "source_key": "w5",
+      "source_value": "64",
+      "evidence_status": "legacy_capture_contract"
+    },
+    {
+      "equipment_name": "萌兔宝宝",
+      "source_key": "r",
+      "source_value": "mengtubaobao",
+      "evidence_status": "legacy_capture_contract"
+    },
+    {
+      "equipment_name": "仙宝葫芦",
+      "source_key": "r",
+      "source_value": "baohulu",
+      "evidence_status": "legacy_capture_contract"
+    },
+    {
+      "equipment_name": "狰狞神骑",
+      "source_key": "r",
+      "source_value": "zn",
+      "evidence_status": "legacy_capture_contract"
+    }
+  ]
+}

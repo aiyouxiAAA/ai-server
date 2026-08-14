@@ -2105,6 +2105,177 @@ func TestStoreUseRoleItemOpensCapturedLevel1GiftBox(t *testing.T) {
 	}
 }
 
+func TestClassicChestRewardSpecsCoverConfiguredWeights(t *testing.T) {
+	wants := map[string]int{
+		"宝匣": 100,
+		"魔匣": 100,
+		"仙匣": 100,
+	}
+
+	for chestName, totalWeight := range wants {
+		t.Run(chestName, func(t *testing.T) {
+			gotWeight := 0
+			for roll := 0; roll < totalWeight; roll += 1 {
+				reward, ok := classicChestRewardForRoll(chestName, roll)
+				if !ok {
+					t.Fatalf("expected configured reward for %s roll=%d", chestName, roll)
+				}
+				if reward.Name == "" || reward.Count <= 0 || reward.Weight <= 0 {
+					t.Fatalf("expected a complete configured reward for %s, got %+v", chestName, reward)
+				}
+				gotWeight += 1
+			}
+			if gotWeight != totalWeight {
+				t.Fatalf("expected %s configured total=%d, got %d", chestName, totalWeight, gotWeight)
+			}
+			if _, ok := classicChestRewardForRoll(chestName, totalWeight); ok {
+				t.Fatalf("expected %s roll beyond configured total to be rejected", chestName)
+			}
+			for _, spec := range classicChestRewardSpecs[chestName] {
+				if _, ok := CapturedRoleItemTemplate(spec.Name); !ok {
+					t.Fatalf("expected %s reward template for %s", spec.Name, chestName)
+				}
+			}
+		})
+	}
+	if _, ok := classicChestRewardForRoll("不存在的匣子", 0); ok {
+		t.Fatal("expected unknown chest to have no reward")
+	}
+}
+
+func TestStoreUseRoleItemOpensClassicChests(t *testing.T) {
+	for _, chestName := range []string{"宝匣", "魔匣", "仙匣"} {
+		t.Run(chestName, func(t *testing.T) {
+			store := NewStore()
+			login := mustLogin(t, store, "mockuser", "magicpwd")
+			createResponse := store.CreateRole(RoleCreateRequest{
+				PlayerID:       login.PlayerID,
+				SessionToken:   login.SessionToken,
+				DisplayName:    "classic-chest-" + chestName,
+				Gender:         "female",
+				RoleTemplateID: 1,
+			})
+			chest, ok := CapturedRoleItemTemplate(chestName)
+			if !ok {
+				t.Fatalf("expected %s item template", chestName)
+			}
+			chest.Type = "背包"
+			chest.Index = 7
+			chest.Count = 2
+			store.rolesByPID[login.PlayerID][0].Items = []RoleItem{chest}
+
+			result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, chest.Type, chest.Index)
+			if !result.Found || !result.Used || result.ErrorCode != "" || result.ChestReward == nil {
+				t.Fatalf("expected %s to open with a reward, got %+v", chestName, result)
+			}
+			matched := false
+			for _, spec := range classicChestRewardSpecs[chestName] {
+				if result.ChestReward.Name == spec.Name && result.ChestReward.Count == spec.Count {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				t.Fatalf("expected %s reward to match its configured pool, got %+v", chestName, result.ChestReward)
+			}
+			if len(result.ClearedItems) != 0 {
+				t.Fatalf("expected stacked %s to remain, got clears %+v", chestName, result.ClearedItems)
+			}
+			updated := testRoleItemsByName(result.UpdatedItems)
+			if updated[chestName].Count != 1 || updated[chestName].Index != chest.Index {
+				t.Fatalf("expected %s stack to decrement in place, got %+v", chestName, result.UpdatedItems)
+			}
+			items, _, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
+			if !ok {
+				t.Fatal("expected persisted bag items")
+			}
+			remaining, ok := testRoleItemByName(items, chestName)
+			if !ok || remaining.Count != 1 || remaining.Index != chest.Index {
+				t.Fatalf("expected persisted %s stack count=1 at index=%d, got %+v", chestName, chest.Index, items)
+			}
+		})
+	}
+}
+
+func TestStoreUseRoleItemRejectsClassicChestWhenBagHasNoRewardSlot(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "classic-chest-full",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	chest, ok := CapturedRoleItemTemplate("宝匣")
+	if !ok {
+		t.Fatal("expected treasure chest template")
+	}
+	chest.Type = "背包"
+	chest.Index = 7
+	chest.Count = 2
+	items := []RoleItem{chest}
+	for index := 0; index < 30; index += 1 {
+		if index == chest.Index {
+			continue
+		}
+		items = append(items, RoleItem{
+			Type:     "背包",
+			Name:     fmt.Sprintf("满背包占位-%d", index),
+			ItemType: "own",
+			Display:  "1.png",
+			Count:    1,
+			Index:    index,
+		})
+	}
+	store.rolesByPID[login.PlayerID][0].Items = items
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, chest.Type, chest.Index)
+	if !result.Found || result.Used || result.ErrorCode != "chest_bag_full" || result.ErrorMessage != "背包空间不足。" {
+		t.Fatalf("expected a full bag to retain the chest, got %+v", result)
+	}
+	remaining, ok := store.GetRoleItem(login.PlayerID, createResponse.Role.RoleID, chest.Type, chest.Index)
+	if !ok || remaining.Name != chest.Name || remaining.Count != 2 {
+		t.Fatalf("expected rejected chest use to leave source unchanged, got %+v", remaining)
+	}
+}
+
+func TestStoreUseRoleItemClassicChestKeepsRolledCountWhenRewardStacks(t *testing.T) {
+	store := NewStore()
+	login := mustLogin(t, store, "mockuser", "magicpwd")
+	createResponse := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "classic-chest-stacked-reward",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	chest, ok := CapturedRoleItemTemplate("仙匣")
+	if !ok {
+		t.Fatal("expected immortal chest template")
+	}
+	reward, ok := CapturedRoleItemTemplate("精炼宝石")
+	if !ok {
+		t.Fatal("expected refinement gem template")
+	}
+	chest.Type, chest.Index, chest.Count = "背包", 2, 1
+	reward.Type, reward.Index, reward.Count = "背包", 3, 11
+	store.rolesByPID[login.PlayerID][0].Items = []RoleItem{chest, reward}
+
+	originalSpecs := classicChestRewardSpecs["仙匣"]
+	classicChestRewardSpecs["仙匣"] = []classicChestRewardSpec{{Name: "精炼宝石", Count: 2, Weight: 100}}
+	defer func() { classicChestRewardSpecs["仙匣"] = originalSpecs }()
+
+	result := store.UseRoleItem(login.PlayerID, createResponse.Role.RoleID, chest.Type, chest.Index)
+	if !result.Used || result.ChestReward == nil || result.ChestReward.Name != "精炼宝石" || result.ChestReward.Count != 2 {
+		t.Fatalf("expected opened reward to preserve roll count=2, got %+v", result.ChestReward)
+	}
+	updated, ok := testRoleItemByName(result.UpdatedItems, "精炼宝石")
+	if !ok || updated.Count != 13 {
+		t.Fatalf("expected item update to keep merged stack count=13, got %+v", result.UpdatedItems)
+	}
+}
+
 func TestStoreUseRoleItemOpensCapturedLevel5GiftBox(t *testing.T) {
 	store := NewStore()
 	login := mustLogin(t, store, "mockuser", "magicpwd")
@@ -2920,6 +3091,9 @@ func TestStoreTryEquipSupportsCapturedTreasureAndMountSlots(t *testing.T) {
 		if spec.expectedQuery != "" && !strings.Contains(result.Role.SourceQuery, spec.expectedQuery) {
 			t.Fatalf("expected %s to rebuild appearance with %s, got %q", spec.name, spec.expectedQuery, result.Role.SourceQuery)
 		}
+		if spec.expectedQuery != "" && strings.Contains(result.Role.BattleSourceQuery, spec.expectedQuery) {
+			t.Fatalf("expected %s to stay out of battle appearance, got %q", spec.name, result.Role.BattleSourceQuery)
+		}
 	}
 }
 
@@ -3045,8 +3219,15 @@ func TestStoreEquipCapturedSpaceFortressAppliesAndRestoresFashionHair(t *testing
 			t.Fatalf("expected captured fashion equip query to include %s, got %q", part, equipped.Role.SourceQuery)
 		}
 	}
-	if equipped.Role.BattleSourceQuery != equipped.Role.SourceQuery || equipped.PlayerBase.BattleSourceQuery != equipped.Role.SourceQuery {
-		t.Fatalf("expected fashion battle source query to follow source query, source=%q roleBattle=%q baseBattle=%q", equipped.Role.SourceQuery, equipped.Role.BattleSourceQuery, equipped.PlayerBase.BattleSourceQuery)
+	for _, query := range []string{equipped.Role.BattleSourceQuery, equipped.PlayerBase.BattleSourceQuery} {
+		if strings.Contains(query, "r=zn") {
+			t.Fatalf("expected battle source query to exclude the town ride, got %q", query)
+		}
+		for _, part := range []string{"c=88", "p=91", "se=79", "hr=46"} {
+			if !strings.Contains(query, part) {
+				t.Fatalf("expected battle source query to retain %s, got %q", part, query)
+			}
+		}
 	}
 	if strings.Contains(equipped.Role.SourceQuery, "h=") {
 		t.Fatalf("captured fashion has no hat field, got %q", equipped.Role.SourceQuery)
@@ -3829,11 +4010,15 @@ func TestStoreOrdinaryRoleBattleSourceQueryFollowsFashionEquip(t *testing.T) {
 			t.Fatalf("expected fashion source query to include %s, got %q", part, equipped.Role.SourceQuery)
 		}
 	}
-	if equipped.Role.BattleSourceQuery != equipped.Role.SourceQuery {
-		t.Fatalf("expected battle source query to follow fashion equip, source=%q battle=%q", equipped.Role.SourceQuery, equipped.Role.BattleSourceQuery)
-	}
-	if equipped.PlayerBase.BattleSourceQuery != equipped.Role.SourceQuery {
-		t.Fatalf("expected player base battle source query to follow fashion equip, source=%q battle=%q", equipped.Role.SourceQuery, equipped.PlayerBase.BattleSourceQuery)
+	for _, query := range []string{equipped.Role.BattleSourceQuery, equipped.PlayerBase.BattleSourceQuery} {
+		if strings.Contains(query, "r=zn") {
+			t.Fatalf("expected battle source query to exclude the town ride, got %q", query)
+		}
+		for _, part := range []string{"w8=42", "c=88", "p=91", "se=79", "hr=46"} {
+			if !strings.Contains(query, part) {
+				t.Fatalf("expected battle source query to retain %s, got %q", part, query)
+			}
+		}
 	}
 }
 
@@ -3917,6 +4102,79 @@ func TestPersistentStoreConfiguresSQLiteForFrequentItemWrites(t *testing.T) {
 	}
 	if synchronous != 1 {
 		t.Fatalf("expected sqlite synchronous=NORMAL(1), got %d", synchronous)
+	}
+}
+
+func TestPersistentRoleItemAcquisitionAuditKeepsEventQuantityAndSurvivesRestart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-server.db")
+	store, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("new persistent store: %v", err)
+	}
+	login := mustLogin(t, store, "audituser", "magicpwd")
+	created := store.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "审计女侠",
+		Gender:         "female",
+		RoleTemplateID: 1,
+	})
+	if !created.Success {
+		t.Fatalf("create role: %+v", created)
+	}
+	item, ok := CapturedRoleItemTemplate("精炼宝石")
+	if !ok {
+		t.Fatal("expected captured refinement gem template")
+	}
+	item.Type = "背包"
+	item.Index = -1
+	item.Count = 3
+	if _, ok := store.GrantRoleItemWithSource(login.PlayerID, created.Role.RoleID, item, RoleItemAcquisitionSource{
+		Kind:   "开匣",
+		Detail: "魔匣",
+	}); !ok {
+		t.Fatal("expected first audited grant")
+	}
+	item.Count = 2
+	if _, ok := store.GrantRoleItemWithSource(login.PlayerID, created.Role.RoleID, item, RoleItemAcquisitionSource{
+		Kind:   "开匣",
+		Detail: "仙匣",
+	}); !ok {
+		t.Fatal("expected second audited grant")
+	}
+	acquisitions, ok := store.ListRoleItemAcquisitions(login.PlayerID, created.Role.RoleID, 100)
+	if !ok {
+		t.Fatal("expected acquisition query")
+	}
+	matching := make([]RoleItemAcquisition, 0, 2)
+	for _, acquisition := range acquisitions {
+		if acquisition.ItemName == "精炼宝石" {
+			matching = append(matching, acquisition)
+		}
+	}
+	if len(matching) != 2 {
+		t.Fatalf("expected two refinement gem acquisition events, got %+v", matching)
+	}
+	if matching[0].Quantity != 2 || matching[0].Source != "开匣" || matching[0].SourceDetail != "仙匣" {
+		t.Fatalf("expected newest event to keep rolled quantity/source, got %+v", matching[0])
+	}
+	if matching[1].Quantity != 3 || matching[1].SourceDetail != "魔匣" {
+		t.Fatalf("expected older event to keep rolled quantity/source, got %+v", matching[1])
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+	reopened, err := NewPersistentStore(path)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	reopenedAcquisitions, ok := reopened.ListRoleItemAcquisitions(login.PlayerID, created.Role.RoleID, 100)
+	if !ok || len(reopenedAcquisitions) < 2 {
+		t.Fatalf("expected acquisition events after restart, ok=%v rows=%+v", ok, reopenedAcquisitions)
+	}
+	if reopenedAcquisitions[0].Quantity != 2 || reopenedAcquisitions[0].SourceDetail != "仙匣" {
+		t.Fatalf("expected persisted newest event after restart, got %+v", reopenedAcquisitions[0])
 	}
 }
 
@@ -4911,6 +5169,10 @@ func TestStorePromotedEquipmentAppearanceMappings(t *testing.T) {
 		{name: "炎爆之靴", key: "se", value: "21"},
 		{name: "炎爆护手", key: "wr", value: "21"},
 		{name: "蛤蟆精护腕", key: "wr", value: "26"},
+		{name: "珍元胸甲", key: "c", value: "67"},
+		{name: "珍元护腿", key: "p", value: "69"},
+		{name: "珍元护腕", key: "wr", value: "44"},
+		{name: "极.光芒法杖", key: "w10", value: "65"},
 		{name: "八极法冠", key: "h", value: "26"},
 		{name: "八极法靴", key: "se", value: "3"},
 		{name: "八极法衣", key: "c", value: "6"},
@@ -4945,15 +5207,12 @@ func TestStorePromotedEquipmentAppearanceMappings(t *testing.T) {
 		{name: "仙宝葫芦", key: "r", value: "baohulu"},
 		{name: "狰狞神骑", key: "r", value: "zn"},
 	} {
-		template, ok := CapturedRoleItemTemplate(spec.name)
-		if !ok {
-			t.Fatalf("expected item-table template for %s", spec.name)
-		}
-		key, value, ok := roleItemAppearanceSourceParam(template)
+		item := RoleItem{Name: spec.name, ItemType: "equip"}
+		key, value, ok := roleItemAppearanceSourceParam(item)
 		if !ok || key != spec.key || value != spec.value {
 			t.Fatalf("expected %s appearance %s=%s, got %s=%s ok=%v", spec.name, spec.key, spec.value, key, value, ok)
 		}
-		query := applyRoleItemAppearanceToSourceQuery("human/human.swf?sex=1&", template)
+		query := applyRoleItemAppearanceToSourceQuery("human/human.swf?sex=1&", item)
 		if !strings.Contains(query, spec.key+"="+spec.value+"&") {
 			t.Fatalf("expected %s source query to include %s=%s, got %q", spec.name, spec.key, spec.value, query)
 		}
@@ -5383,11 +5642,82 @@ func TestPersistentStoreRepairsMountedFashionAppearanceAfterRestart(t *testing.T
 	if !ok {
 		t.Fatal("expected repaired role after restart")
 	}
-	for _, query := range []string{role.SourceQuery, role.BattleSourceQuery, playerBase.SourceQuery, playerBase.BattleSourceQuery} {
+	for _, query := range []string{role.SourceQuery, playerBase.SourceQuery} {
 		for _, expected := range []string{"c=88", "p=91", "se=79", "hr=46", "r=zn"} {
 			if !strings.Contains(query, expected) {
 				t.Fatalf("expected repaired mounted-fashion query to retain %s, got %q", expected, query)
 			}
+		}
+	}
+	for _, query := range []string{role.BattleSourceQuery, playerBase.BattleSourceQuery} {
+		for _, expected := range []string{"c=88", "p=91", "se=79", "hr=46"} {
+			if !strings.Contains(query, expected) {
+				t.Fatalf("expected repaired battle query to retain %s, got %q", expected, query)
+			}
+		}
+		if strings.Contains(query, "r=zn") {
+			t.Fatalf("expected repaired battle query to exclude town ride, got %q", query)
+		}
+	}
+}
+
+func TestPersistentStoreRemovesRideFromBattleSourceQueryAfterRestart(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "ai-server.db")
+	firstStore, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("create persistent store: %v", err)
+	}
+	login := mustLogin(t, firstStore, "mountedbattle", "magicpwd")
+	created := firstStore.CreateRole(RoleCreateRequest{
+		PlayerID:       login.PlayerID,
+		SessionToken:   login.SessionToken,
+		DisplayName:    "战斗坐骑隔离",
+		Gender:         "female",
+		RoleTemplateID: 1,
+		SourceQuery:    "human/human.swf?sex=1&hr=46&e=14&co=5&m=5&n=0&w8=42&c=88&p=91&se=79&",
+	})
+	if !created.Success {
+		t.Fatalf("create role: %+v", created)
+	}
+
+	firstStore.mu.Lock()
+	roles := firstStore.rolesByPID[login.PlayerID]
+	roles[0].Items = []RoleItem{
+		{Type: "装备", ItemType: "equip", Name: "刎刀", Index: 0},
+		{Type: "装备", ItemType: "equip", Name: "仙宝葫芦", Index: roleMountEquipIndex},
+	}
+	roles[0].SourceQuery = setSourceQueryParam(roles[0].SourceQuery, "r", "baohulu")
+	roles[0].BattleSourceQuery = roles[0].SourceQuery
+	firstStore.rolesByPID[login.PlayerID] = roles
+	err = firstStore.persistPlayerStateLocked(login.PlayerID)
+	firstStore.mu.Unlock()
+	if err != nil {
+		t.Fatalf("persist stale mounted battle query: %v", err)
+	}
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("close first store: %v", err)
+	}
+
+	reopened, err := NewPersistentStore(dbPath)
+	if err != nil {
+		t.Fatalf("reopen persistent store: %v", err)
+	}
+	defer reopened.Close()
+	role, playerBase, ok := reopened.GetRoleRuntimeData(login.PlayerID, created.Role.RoleID)
+	if !ok {
+		t.Fatal("expected repaired mounted role")
+	}
+	for _, query := range []string{role.SourceQuery, playerBase.SourceQuery} {
+		if !strings.Contains(query, "r=baohulu") {
+			t.Fatalf("expected town query to retain gourd ride, got %q", query)
+		}
+	}
+	for _, query := range []string{role.BattleSourceQuery, playerBase.BattleSourceQuery} {
+		if strings.Contains(query, "r=baohulu") {
+			t.Fatalf("expected battle query to exclude gourd ride, got %q", query)
+		}
+		if !strings.Contains(query, "w8=42") {
+			t.Fatalf("expected battle query to retain weapon appearance, got %q", query)
 		}
 	}
 }

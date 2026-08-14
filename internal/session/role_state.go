@@ -537,6 +537,7 @@ func normalizeRoleItem(item RoleItem) RoleItem {
 		}
 		item.PetState = &state
 	}
+	item = applyCapturedRoleItemQualityColor(item)
 	item = fillMissingRoleItemTemplateFields(item)
 	if item.Count < 0 {
 		item.Count = 0
@@ -2290,9 +2291,9 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	if strings.TrimSpace(role.SourceQuery) == "" {
 		role.SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(role, role.Items)
 	}
-	// New rows may have no battle query; later equipment mutations update both queries.
+	// Battle cells use the same role appearance except for town-only rides.
 	if strings.TrimSpace(role.BattleSourceQuery) == "" {
-		role.BattleSourceQuery = role.SourceQuery
+		role.BattleSourceQuery = buildBattleSourceQuery(role.SourceQuery)
 	}
 	return role
 }
@@ -2425,7 +2426,7 @@ func classicDataRoleItemTemplate(name string) (RoleItem, bool) {
 			ItemLevel:   itemLevel,
 		}, true
 	}
-	description := fmt.Sprintf("f_i_%s^5BC46D&24@%s&25@%s", name, category, maxStack)
+	description := fmt.Sprintf("f_i_%s^%s&24@%s&25@%s", name, CapturedRoleItemQualityColor(name, ""), category, maxStack)
 	if descriptionText != "" {
 		description += "&20@" + descriptionText
 	}

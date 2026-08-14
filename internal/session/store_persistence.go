@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 type rolePersistenceExecer interface {
@@ -141,6 +142,23 @@ func (store *Store) initSchema() error {
 			objectives_json TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (role_id, title)
 		)`,
+		`CREATE TABLE IF NOT EXISTS role_item_acquisitions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			occurred_at_unix_ms INTEGER NOT NULL,
+			player_id TEXT NOT NULL,
+			role_id TEXT NOT NULL,
+			item_name TEXT NOT NULL,
+			item_type TEXT NOT NULL DEFAULT '',
+			container_type TEXT NOT NULL DEFAULT '',
+			item_display TEXT NOT NULL DEFAULT '',
+			item_description TEXT NOT NULL DEFAULT '',
+			item_level INTEGER NOT NULL DEFAULT 0,
+			quantity INTEGER NOT NULL,
+			source TEXT NOT NULL,
+			source_detail TEXT NOT NULL DEFAULT ''
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_role_item_acquisitions_role_time
+			ON role_item_acquisitions (player_id, role_id, occurred_at_unix_ms DESC, id DESC)`,
 	}
 
 	for _, query := range queries {
@@ -752,6 +770,50 @@ func (store *Store) persistPlayerStateLocked(playerID string) error {
 	return nil
 }
 
+func (store *Store) persistPlayerStateWithItemAcquisitionsLocked(playerID string, acquisitions []RoleItemAcquisition) error {
+	if store.db == nil {
+		return nil
+	}
+
+	tx, err := store.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin player acquisition transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	nextRoleSeq := store.nextRoleSeqByPID[playerID]
+	if _, err = tx.Exec(
+		`INSERT INTO role_sequences (player_id, next_role_seq)
+		 VALUES (?, ?)
+		 ON CONFLICT(player_id) DO UPDATE SET next_role_seq = excluded.next_role_seq`,
+		playerID,
+		nextRoleSeq,
+	); err != nil {
+		return fmt.Errorf("upsert role sequence for %s: %w", playerID, err)
+	}
+	if _, err = tx.Exec(`DELETE FROM roles WHERE player_id = ?`, playerID); err != nil {
+		return fmt.Errorf("reset roles for %s: %w", playerID, err)
+	}
+	for _, role := range store.rolesByPID[playerID] {
+		payload, encodeErr := buildRolePersistencePayload(role)
+		if encodeErr != nil {
+			return encodeErr
+		}
+		if err = upsertRolePersistencePayload(tx, playerID, payload); err != nil {
+			return fmt.Errorf("insert role %s: %w", role.RoleID, err)
+		}
+	}
+	for _, acquisition := range acquisitions {
+		if err = insertRoleItemAcquisition(tx, acquisition); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit player acquisition transaction: %w", err)
+	}
+	return nil
+}
+
 func (store *Store) persistRoleStateLocked(playerID string, roleID string) error {
 	if store.db == nil {
 		return nil
@@ -781,6 +843,132 @@ func (store *Store) persistRoleStateSnapshot(playerID string, roleID string, rol
 		return fmt.Errorf("upsert role %s: %w", role.RoleID, err)
 	}
 	return nil
+}
+
+func (store *Store) persistRoleStateSnapshotWithItemAcquisitions(
+	playerID string,
+	roleID string,
+	role RoleSummary,
+	acquisitions []RoleItemAcquisition,
+) error {
+	if store.db == nil {
+		return nil
+	}
+	if role.RoleID != roleID {
+		return fmt.Errorf("role snapshot mismatch for player %s: got %s want %s", playerID, role.RoleID, roleID)
+	}
+	payload, err := buildRolePersistencePayload(role)
+	if err != nil {
+		return err
+	}
+	tx, err := store.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin role acquisition transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+	if err = upsertRolePersistencePayload(tx, playerID, payload); err != nil {
+		return fmt.Errorf("upsert role %s: %w", roleID, err)
+	}
+	for _, acquisition := range acquisitions {
+		if err = insertRoleItemAcquisition(tx, acquisition); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit role acquisition transaction: %w", err)
+	}
+	return nil
+}
+
+func insertRoleItemAcquisition(execer rolePersistenceExecer, acquisition RoleItemAcquisition) error {
+	if acquisition.Quantity <= 0 || strings.TrimSpace(acquisition.ItemName) == "" {
+		return fmt.Errorf("invalid role item acquisition")
+	}
+	acquisition.Source = strings.TrimSpace(acquisition.Source)
+	if acquisition.Source == "" {
+		acquisition.Source = "系统发放"
+	}
+	if acquisition.OccurredAtUnixMs <= 0 {
+		acquisition.OccurredAtUnixMs = time.Now().UnixMilli()
+	}
+	_, err := execer.Exec(
+		`INSERT INTO role_item_acquisitions (
+			occurred_at_unix_ms, player_id, role_id, item_name, item_type,
+			container_type, item_display, item_description, item_level, quantity,
+			source, source_detail
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		acquisition.OccurredAtUnixMs,
+		acquisition.PlayerID,
+		acquisition.RoleID,
+		acquisition.ItemName,
+		acquisition.ItemType,
+		acquisition.ContainerType,
+		acquisition.ItemDisplay,
+		acquisition.ItemDescription,
+		acquisition.ItemLevel,
+		acquisition.Quantity,
+		acquisition.Source,
+		acquisition.SourceDetail,
+	)
+	if err != nil {
+		return fmt.Errorf("insert role item acquisition roleId=%s item=%s: %w", acquisition.RoleID, acquisition.ItemName, err)
+	}
+	return nil
+}
+
+func (store *Store) ListRoleItemAcquisitions(playerID string, roleID string, limit int) ([]RoleItemAcquisition, bool) {
+	if store.db == nil || strings.TrimSpace(playerID) == "" || strings.TrimSpace(roleID) == "" {
+		return []RoleItemAcquisition{}, false
+	}
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	rows, err := store.db.Query(
+		`SELECT id, occurred_at_unix_ms, player_id, role_id, item_name, item_type,
+			container_type, item_display, item_description, item_level, quantity,
+			source, source_detail
+		 FROM role_item_acquisitions
+		 WHERE player_id = ? AND role_id = ?
+		 ORDER BY occurred_at_unix_ms DESC, id DESC
+		 LIMIT ?`,
+		playerID,
+		roleID,
+		limit,
+	)
+	if err != nil {
+		return []RoleItemAcquisition{}, false
+	}
+	defer rows.Close()
+	result := []RoleItemAcquisition{}
+	for rows.Next() {
+		var acquisition RoleItemAcquisition
+		if err := rows.Scan(
+			&acquisition.ID,
+			&acquisition.OccurredAtUnixMs,
+			&acquisition.PlayerID,
+			&acquisition.RoleID,
+			&acquisition.ItemName,
+			&acquisition.ItemType,
+			&acquisition.ContainerType,
+			&acquisition.ItemDisplay,
+			&acquisition.ItemDescription,
+			&acquisition.ItemLevel,
+			&acquisition.Quantity,
+			&acquisition.Source,
+			&acquisition.SourceDetail,
+		); err != nil {
+			return []RoleItemAcquisition{}, false
+		}
+		result = append(result, acquisition)
+	}
+	if err := rows.Err(); err != nil {
+		return []RoleItemAcquisition{}, false
+	}
+	return result, true
 }
 
 func (store *Store) persistRoleItemsLocked(playerID string, roleID string) error {

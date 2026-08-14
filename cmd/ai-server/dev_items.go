@@ -39,6 +39,10 @@ type devItemsStateResponse struct {
 	Templates []devItemTemplate `json:"templates"`
 }
 
+type devItemAuditResponse struct {
+	Acquisitions []session.RoleItemAcquisition `json:"acquisitions"`
+}
+
 type devAddItemRequest struct {
 	PlayerID string `json:"playerId"`
 	RoleID   string `json:"roleId"`
@@ -117,6 +121,33 @@ func registerDevItemHandlers(mux *http.ServeMux, store *session.Store) {
 			return
 		}
 		writeDevJSON(writer, buildDevItemsState(store))
+	})
+	mux.HandleFunc("/dev/items/audit", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		playerID := strings.TrimSpace(request.URL.Query().Get("playerId"))
+		roleID := strings.TrimSpace(request.URL.Query().Get("roleId"))
+		limit, _ := strconv.Atoi(request.URL.Query().Get("limit"))
+		if playerID == "" || roleID == "" {
+			writeDevJSONStatus(writer, http.StatusBadRequest, devAddItemResponse{
+				Success:      false,
+				ErrorCode:    "missing_field",
+				ErrorMessage: "需要 playerId 和 roleId。",
+			})
+			return
+		}
+		acquisitions, ok := store.ListRoleItemAcquisitions(playerID, roleID, limit)
+		if !ok {
+			writeDevJSONStatus(writer, http.StatusNotFound, devAddItemResponse{
+				Success:      false,
+				ErrorCode:    "audit_unavailable",
+				ErrorMessage: "没有可查询的道具获得记录。",
+			})
+			return
+		}
+		writeDevJSON(writer, devItemAuditResponse{Acquisitions: acquisitions})
 	})
 	mux.HandleFunc("/dev/items/add", func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodPost {
@@ -253,7 +284,10 @@ func handleDevAddItem(writer http.ResponseWriter, request *http.Request, store *
 	item.Type = "背包"
 	item.Index = -1
 	item.Count = payload.Count
-	granted, ok := store.GrantRoleItem(payload.PlayerID, payload.RoleID, item)
+	granted, ok := store.GrantRoleItemWithSource(payload.PlayerID, payload.RoleID, item, session.RoleItemAcquisitionSource{
+		Kind:   "开发工具",
+		Detail: "/dev/items/add",
+	})
 	if !ok {
 		writeDevJSONStatus(writer, http.StatusBadRequest, devAddItemResponse{
 			Success:      false,
@@ -414,7 +448,10 @@ func syncDevSilverItemToCurrency(store *session.Store, playerID string, roleID s
 	item.Type = "背包"
 	item.Index = -1
 	item.Count = missingCount
-	_, ok = store.GrantRoleItem(playerID, roleID, item)
+	_, ok = store.GrantRoleItemWithSource(playerID, roleID, item, session.RoleItemAcquisitionSource{
+		Kind:   "开发工具",
+		Detail: "/dev/items/add-currency",
+	})
 	return ok
 }
 
@@ -490,7 +527,7 @@ func devCapturedRoleItemTemplateByID(itemID string) (session.RoleItem, bool) {
 			return item, true
 		}
 	}
-	return session.RoleItem{}, false
+	return session.CapturedRoleItemTemplate(itemID)
 }
 
 func devCapturedRoleItemTemplates() []session.RoleItem {

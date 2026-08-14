@@ -107,7 +107,7 @@ const (
 	CommandEscape            = "battle-escape"
 	CommandItem              = "battle-item"
 
-	maxStoredPower                    = 5
+	maxStoredPower                = 5
 	storedPowerDamageBonusPerSoul = 0.2
 	leiHunZhanRequiredPower       = 3
 	leiLongQiangXiRequiredPower   = 2
@@ -6457,9 +6457,15 @@ func (runtime *Runtime) sourceBattleRewards(winner Camp, escaped bool) (int, []s
 		return reward.ExpDelta, runtime.appendSourceBattleRewardEquipmentDrops(items, reward.DropRates)
 	}
 
-	if reward, ok := runtime.sourceBattleRewardCandidate(); ok {
-		items := rollSourceBattleRewardItems(nil, reward.DropRates)
-		return reward.ExpDelta, runtime.appendSourceBattleRewardEquipmentDrops(items, reward.DropRates)
+	if rewards := runtime.sourceBattleRewardCandidates(); len(rewards) > 0 {
+		items := make([]string, 0)
+		for _, reward := range rewards {
+			items = append(items, rollSourceBattleRewardItems(nil, reward.Config.DropRates)...)
+			items = runtime.appendSourceBattleRewardEquipmentDropsForCell(items, reward.Config.DropRates, reward.Cell)
+		}
+		// Candidate experience is encounter-level capture evidence. Keep the first
+		// candidate's existing single-award behavior while each enemy rolls items.
+		return rewards[0].Config.ExpDelta, mergeSourceBattleRewardItemStacks(items)
 	}
 	return 0, []string{}
 }
@@ -6481,8 +6487,7 @@ func (runtime *Runtime) hasSourceBattleRewardSource() bool {
 	if reward, ok := runtime.sourceBattleRewardConfig(); ok && reward.Status == "confirmed" {
 		return true
 	}
-	_, ok := runtime.sourceBattleRewardCandidate()
-	return ok
+	return len(runtime.sourceBattleRewardCandidates()) > 0
 }
 
 func (runtime *Runtime) sourceBattleRewardConfig() (sourceBattleRewardConfig, bool) {
@@ -6503,16 +6508,31 @@ func (runtime *Runtime) sourceBattleRewardConfig() (sourceBattleRewardConfig, bo
 	return sourceBattleRewardConfigForMap(runtime.MapID)
 }
 
-func (runtime *Runtime) sourceBattleRewardCandidate() (sourceBattleRewardCandidateConfig, bool) {
+type sourceBattleRewardCandidateCell struct {
+	Cell   CellInfoPush
+	Config sourceBattleRewardCandidateConfig
+}
+
+func (runtime *Runtime) sourceBattleRewardCandidates() []sourceBattleRewardCandidateCell {
 	if runtime == nil {
-		return sourceBattleRewardCandidateConfig{}, false
+		return nil
 	}
+	rewards := make([]sourceBattleRewardCandidateCell, 0)
+	seenCandidates := map[string]bool{}
 	for _, cell := range runtime.sourceBattleRewardEnemyCells() {
 		if reward, ok := sourceBattleRewardCandidateForCell(runtime.MapID, cell.Name, cell.MaxHP); ok {
-			return reward, true
+			if reward.Status != "candidate" {
+				continue
+			}
+			candidateKey := battleRewardCandidateCellKey(runtime.MapID, cell.Name, cell.MaxHP)
+			if seenCandidates[candidateKey] {
+				continue
+			}
+			seenCandidates[candidateKey] = true
+			rewards = append(rewards, sourceBattleRewardCandidateCell{Cell: cell, Config: reward})
 		}
 	}
-	return sourceBattleRewardCandidateConfig{}, false
+	return rewards
 }
 
 func (runtime *Runtime) appendSourceBattleRewardEquipmentDrops(items []string, baseDropRates []sourceBattleRewardDropRate) []string {
@@ -6523,9 +6543,16 @@ func (runtime *Runtime) appendSourceBattleRewardEquipmentDrops(items []string, b
 	if !ok {
 		return items
 	}
+	return runtime.appendSourceBattleRewardEquipmentDropsForCell(items, baseDropRates, cell)
+}
+
+func (runtime *Runtime) appendSourceBattleRewardEquipmentDropsForCell(items []string, baseDropRates []sourceBattleRewardDropRate, cell CellInfoPush) []string {
+	if runtime == nil {
+		return items
+	}
 
 	stattedItems := sourceBattleRewardDropRateItemSet(baseDropRates)
-	if candidate, ok := sourceBattleRewardCandidateForCell(runtime.MapID, cell.Name, cell.MaxHP); ok {
+	if candidate, ok := sourceBattleRewardCandidateForCell(runtime.MapID, cell.Name, cell.MaxHP); ok && candidate.Status == "candidate" {
 		supplementalRates := sourceBattleRewardSupplementalEquipmentDropRates(candidate.DropRates, stattedItems)
 		items = append(items, rollSourceBattleRewardItems(nil, supplementalRates)...)
 	}
@@ -6604,6 +6631,26 @@ func rollSourceBattleRewardItems(fallbackItems []string, dropRates []sourceBattl
 		items = append(items, formatSourceBattleRewardItemStack(drop.ItemName, drop.Quantity))
 	}
 	return items
+}
+
+func mergeSourceBattleRewardItemStacks(items []string) []string {
+	quantities := map[string]int{}
+	order := make([]string, 0, len(items))
+	for _, item := range items {
+		name, quantity := parseSourceBattleRewardItemStack(item)
+		if name == "" || quantity <= 0 {
+			continue
+		}
+		if _, exists := quantities[name]; !exists {
+			order = append(order, name)
+		}
+		quantities[name] += quantity
+	}
+	merged := make([]string, 0, len(order))
+	for _, name := range order {
+		merged = append(merged, formatSourceBattleRewardItemStack(name, quantities[name]))
+	}
+	return merged
 }
 
 func formatSourceBattleRewardItemStack(name string, quantity int) string {

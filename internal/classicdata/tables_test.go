@@ -1,9 +1,14 @@
 package classicdata
 
 import (
+	"encoding/json"
+	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
+
+var classicItemQualityColorTestPattern = regexp.MustCompile(`^[0-9a-f]{6}$`)
 
 func TestGeneratedClassicTablesLoad(t *testing.T) {
 	tables, err := LoadAllTables()
@@ -29,6 +34,10 @@ func TestGeneratedClassicTablesContainKnownRows(t *testing.T) {
 	fashionAppearanceTable := MustLoadTable(TableFashionAppearance)
 	assertHasRow(t, fashionAppearanceTable, "fashion_name", "超时空要塞")
 	assertHasRow(t, fashionAppearanceTable, "fashion_name", "奥特曼")
+
+	equipmentAppearanceTable := MustLoadTable(TableEquipmentAppearance)
+	assertHasRow(t, equipmentAppearanceTable, "equipment_name", "刎刀")
+	assertHasRow(t, equipmentAppearanceTable, "equipment_name", "珍元胸甲")
 
 	skillTable := MustLoadTable(TableSkill)
 	assertHasRow(t, skillTable, "label", "投毒")
@@ -93,6 +102,35 @@ func TestGeneratedClassicItemEquipmentRowsKeepSourceDescriptions(t *testing.T) {
 	}
 }
 
+func TestGeneratedClassicItemRowsKeepCapturedQualityColors(t *testing.T) {
+	table := MustLoadTable(TableItem)
+	for _, row := range table.Rows {
+		color := strings.ToLower(strings.TrimSpace(row["quality_color"]))
+		evidence := strings.TrimSpace(row["quality_color_evidence"])
+		if !classicItemQualityColorTestPattern.MatchString(color) {
+			t.Fatalf("item %s has invalid quality_color %q", row["name"], row["quality_color"])
+		}
+		if !strings.HasPrefix(evidence, "captured:") && evidence != "source_default_white" {
+			t.Fatalf("item %s has invalid quality_color_evidence %q", row["name"], evidence)
+		}
+	}
+	focusColors := map[string]string{
+		"宝匣":     "00ccff",
+		"魔匣":     "c156c7",
+		"仙匣":     "f9e000",
+		"凿孔器":    "f9e000",
+		"精炼宝石":   "f9e000",
+		"贰级原石":   "f9e000",
+		"高级精炼宝石": "f9e000",
+	}
+	for name, want := range focusColors {
+		item, found := findTableRowByName(table.Rows, name)
+		if !found || item["quality_color"] != want {
+			t.Fatalf("item %s quality_color=%q, want %s", name, item["quality_color"], want)
+		}
+	}
+}
+
 func TestGeneratedFashionAppearanceTableKeepsCapturedSexCoverage(t *testing.T) {
 	table := MustLoadTable(TableFashionAppearance)
 	if table.RowCount != 107 {
@@ -118,6 +156,51 @@ func TestGeneratedFashionAppearanceTableKeepsCapturedSexCoverage(t *testing.T) {
 	}
 }
 
+func TestGeneratedEquipmentAppearanceTableKeepsCaptureEvidence(t *testing.T) {
+	table := MustLoadTable(TableEquipmentAppearance)
+	if table.RowCount != 104 {
+		t.Fatalf("equipment appearance row count = %d, want 104", table.RowCount)
+	}
+	packetConfirmed := 0
+	legacyContract := 0
+	seenNames := make(map[string]struct{}, table.RowCount)
+	for _, row := range table.Rows {
+		if row["equipment_name"] == "" || row["source_key"] == "" || row["source_value"] == "" {
+			t.Fatalf("invalid equipment appearance row: %+v", row)
+		}
+		if _, duplicate := seenNames[row["equipment_name"]]; duplicate {
+			t.Fatalf("duplicate equipment appearance row: %s", row["equipment_name"])
+		}
+		seenNames[row["equipment_name"]] = struct{}{}
+		switch row["evidence_status"] {
+		case "packet_confirmed":
+			packetConfirmed++
+		case "legacy_capture_contract":
+			legacyContract++
+		default:
+			t.Fatalf("invalid equipment appearance evidence status: %+v", row)
+		}
+	}
+	if packetConfirmed != 96 || legacyContract != 8 {
+		t.Fatalf("equipment appearance evidence coverage packet_confirmed=%d legacy_capture_contract=%d, want 96/8", packetConfirmed, legacyContract)
+	}
+	for name, expected := range map[string]struct {
+		key    string
+		value  string
+		status string
+	}{
+		"刎刀":     {key: "w8", value: "42", status: "packet_confirmed"},
+		"珍元胸甲":   {key: "c", value: "67", status: "packet_confirmed"},
+		"极.光芒法杖": {key: "w10", value: "65", status: "packet_confirmed"},
+		"仙宝葫芦":   {key: "r", value: "baohulu", status: "legacy_capture_contract"},
+	} {
+		row, found, err := FindEquipmentAppearanceByName(name)
+		if err != nil || !found || row["source_key"] != expected.key || row["source_value"] != expected.value || row["evidence_status"] != expected.status {
+			t.Fatalf("equipment appearance %s = %+v found=%t err=%v, want %+v", name, row, found, err, expected)
+		}
+	}
+}
+
 func TestGeneratedClassicItemTablePromotesTrialSealFromCapturedEquipment(t *testing.T) {
 	item, ok, err := FindItemByName("试炼印")
 	if err != nil {
@@ -128,6 +211,127 @@ func TestGeneratedClassicItemTablePromotesTrialSealFromCapturedEquipment(t *test
 	}
 	if item["item_type"] != "equip" || item["icon"] != "1605.png" || !strings.HasPrefix(item["description"], "f_i_试炼印^f9e000") {
 		t.Fatalf("expected captured trial-seal equipment metadata, got %+v", item)
+	}
+}
+
+func TestGeneratedClassicItemTableKeepsAuctionAndMallEquipmentMetadata(t *testing.T) {
+	cases := map[string]struct {
+		icon     string
+		category string
+		evidence string
+		color    string
+	}{
+		"钢筋铁骨": {icon: "996.png", category: "武器·弓系", evidence: "packet:auction", color: "c156c7"},
+		"小白马":  {icon: "957.png", category: "坐骑", evidence: "packet:mall_catalog", color: "00ccff"},
+	}
+	for name, want := range cases {
+		item, found, err := FindItemByName(name)
+		if err != nil || !found {
+			t.Fatalf("captured item %s found=%t err=%v", name, found, err)
+		}
+		if item["item_type"] != "equip" || item["icon"] != want.icon || item["category"] != want.category || item["evidence_sources"] != want.evidence || item["quality_color"] != want.color || !strings.HasPrefix(item["description"], "f_i_"+name+"^") {
+			t.Fatalf("captured item %s = %+v, want icon=%s category=%s evidence=%s color=%s", name, item, want.icon, want.category, want.evidence, want.color)
+		}
+	}
+}
+
+func TestGeneratedClassicItemTableExposesStructuredEquipmentProperties(t *testing.T) {
+	table := MustLoadTable(TableItem)
+	equipmentRows := 0
+	for _, row := range table.Rows {
+		if row["item_type"] != "equip" {
+			continue
+		}
+		equipmentRows++
+		if !strings.HasPrefix(row["property_parse_status"], "template_") {
+			t.Fatalf("equipment %s has invalid property parse status %q", row["name"], row["property_parse_status"])
+		}
+		for _, key := range []string{"required_level", "phy_atk", "mgc_atk", "phy_def", "mgc_def", "special_effects", "refinement_rules"} {
+			if _, exists := row[key]; !exists {
+				t.Fatalf("equipment %s is missing structured property field %s", row["name"], key)
+			}
+		}
+	}
+	if equipmentRows != 380 {
+		t.Fatalf("structured equipment rows = %d, want 380", equipmentRows)
+	}
+
+	cases := map[string]struct {
+		level          string
+		vocation       string
+		phyAtk         string
+		phyDef         string
+		mgcDef         string
+		strength       string
+		instanceBonus  map[string]string
+		parseStatus    string
+		refinementText string
+	}{
+		"傲雪凝霜": {
+			level: "90", vocation: "战士", phyAtk: "202", strength: "38<$jstr>",
+			parseStatus: "template_with_variables", refinementText: "每升一级 物理攻击+10",
+		},
+		"御影护甲": {
+			level: "90", vocation: "游侠", phyDef: "108", mgcDef: "60",
+			strength:      "16",
+			instanceBonus: map[string]string{"phy_def": "+416", "mgc_def": "+224", "strength": "+40", "agility": "+112", "constitution": "+35", "luck": "+72", "dodge": "+162"},
+			parseStatus:   "template_static_with_captured_instance", refinementText: "每升一级 物理防御+26",
+		},
+		"狰狞神骑": {
+			level: "90", strength: "50", parseStatus: "template_static", refinementText: "每升一级 物理攻击+160",
+		},
+	}
+	for name, want := range cases {
+		row, found := findTableRowByName(table.Rows, name)
+		if !found {
+			t.Fatalf("missing structured equipment row %s", name)
+		}
+		if row["required_level"] != want.level || row["required_vocation"] != want.vocation ||
+			row["phy_atk"] != want.phyAtk || row["phy_def"] != want.phyDef || row["mgc_def"] != want.mgcDef ||
+			row["strength"] != want.strength ||
+			row["property_parse_status"] != want.parseStatus || !strings.Contains(row["refinement_rules"], want.refinementText) {
+			t.Fatalf("structured equipment %s = %+v, want %+v", name, row, want)
+		}
+		if want.instanceBonus != nil {
+			var got map[string]string
+			if err := json.Unmarshal([]byte(row["captured_instance_bonus_attributes"]), &got); err != nil {
+				t.Fatalf("structured equipment %s instance bonus is invalid JSON: %v", name, err)
+			}
+			if !reflect.DeepEqual(got, want.instanceBonus) {
+				t.Fatalf("structured equipment %s instance bonus = %+v, want %+v", name, got, want.instanceBonus)
+			}
+		}
+	}
+}
+
+func TestGeneratedClassicItemTableCoversZanglongtanRewardTemplates(t *testing.T) {
+	table := MustLoadTable(TableItem)
+	expected := map[string]struct {
+		icon     string
+		color    string
+		itemType string
+	}{
+		"骷髅面甲":   {icon: "457.png", color: "00ccff", itemType: "equip"},
+		"妖兵护腕":   {icon: "556.png", color: "5bc46d", itemType: "equip"},
+		"锁纹护腰":   {icon: "478.png", color: "5bc46d", itemType: "equip"},
+		"鬼面护肩":   {icon: "483.png", color: "00ccff", itemType: "equip"},
+		"青鳞护腰":   {icon: "475.png", color: "5bc46d", itemType: "equip"},
+		"黑钢刃":    {icon: "507.png", color: "c156c7", itemType: "equip"},
+		"黑钢链":    {icon: "434.png", color: "5bc46d", itemType: "null"},
+		"大龙骨":    {icon: "432.png", color: "5bc46d", itemType: "null"},
+		"初级精炼宝石": {icon: "616.png", color: "c156c7", itemType: "oneI"},
+		"精炼宝石":   {icon: "435.png", color: "f9e000", itemType: "oneI"},
+		"力之玄文":   {icon: "153.png", color: "5bc46d", itemType: "null"},
+		"风火轮":    {icon: "952.png", color: "f9e000", itemType: "equip"},
+	}
+	for name, want := range expected {
+		item, found := findTableRowByName(table.Rows, name)
+		if !found || item["icon"] != want.icon || item["quality_color"] != want.color || item["item_type"] != want.itemType {
+			t.Fatalf("expected Zanglongtan template %s=%+v, got %+v, found=%t", name, want, item, found)
+		}
+		if want.itemType == "equip" && !strings.HasPrefix(item["description"], "f_i_"+name+"^") {
+			t.Fatalf("expected source equipment description for %s, got %q", name, item["description"])
+		}
 	}
 }
 
@@ -256,6 +460,15 @@ func assertHasRow(t *testing.T, table Table, key string, value string) {
 		}
 	}
 	t.Fatalf("table %s missing row with %s=%s", table.Name, key, value)
+}
+
+func findTableRowByName(rows []map[string]string, name string) (map[string]string, bool) {
+	for _, row := range rows {
+		if row["name"] == name {
+			return row, true
+		}
+	}
+	return nil, false
 }
 
 func assertBuffDescription(t *testing.T, table Table, buffID string, description string, kind string) {

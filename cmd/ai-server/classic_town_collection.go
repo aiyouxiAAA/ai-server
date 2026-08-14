@@ -106,7 +106,10 @@ func buildClassicTownCollectionRewardResult(
 		}
 	}
 
-	rewardItem, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, buildCollectionRewardItem(point))
+	rewardItem, ok := store.GrantRoleItemWithSource(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, buildCollectionRewardItem(point), session.RoleItemAcquisitionSource{
+		Kind:   "采集",
+		Detail: fmt.Sprintf("map:%d handle:%s", point.MapID, point.Handle),
+	})
 	if !ok {
 		message := "背包空间不足，采集物未能放入背包。"
 		return packetResult{

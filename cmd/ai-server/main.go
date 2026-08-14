@@ -392,6 +392,9 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		for _, worldChatMessage := range result.worldChatMessages {
+			worldSceneHub.broadcastChatToAll(worldChatMessage)
+		}
 		for _, errorMessage := range result.errorMessages {
 			if err := socketWriter.writePush(cmdClassicTownErrorPush, encodePayload(errorMessage)); err != nil {
 				log.Printf("[ai-server] write classic town error message failed: %v", err)

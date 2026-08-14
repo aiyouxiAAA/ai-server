@@ -41,12 +41,17 @@ $tables = @(
   @{
     Name = 'item'
     Source = 'item-table.csv'
-    RequiredColumns = @('status', 'confidence', 'icon', 'name', 'item_type', 'category')
+    RequiredColumns = @('status', 'confidence', 'icon', 'name', 'item_type', 'category', 'quality_color', 'quality_color_evidence')
   },
   @{
     Name = 'fashion-appearance'
     Source = 'fashion-appearance-table.csv'
     RequiredColumns = @('fashion_name', 'sex', 'source_params', 'evidence_status')
+  },
+  @{
+    Name = 'equipment-appearance'
+    Source = 'equipment-appearance-table.csv'
+    RequiredColumns = @('equipment_name', 'source_key', 'source_value', 'evidence_status')
   },
   @{
     Name = 'skill'

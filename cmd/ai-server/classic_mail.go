@@ -283,7 +283,10 @@ func buildClassicMailContainerMoveResult(store *session.Store, socketSession *pa
 		moved := item
 		moved.Type = classicTownBagContainerType
 		moved.Index = -1
-		granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, moved)
+		granted, ok := store.GrantRoleItemWithSource(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, moved, session.RoleItemAcquisitionSource{
+			Kind:   "邮件领取",
+			Detail: socketSession.currentMailHandle,
+		})
 		if !ok {
 			moveFailures += 1
 			continue

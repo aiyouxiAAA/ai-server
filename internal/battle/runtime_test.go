@@ -851,6 +851,117 @@ func TestGrasslandRewardCandidatesUseCapturedAutoMoveStatistics(t *testing.T) {
 	}
 }
 
+func TestZanglongtanRewardCandidatesUseDualCaptureWindowStatistics(t *testing.T) {
+	testCases := []struct {
+		mapID       string
+		monsterName string
+		maxHP       int
+		itemName    string
+		numerator   int
+		denominator int
+	}{
+		{mapID: "179", monsterName: "骷髅妖兵", maxHP: 4900, itemName: "兽骨", numerator: 20, denominator: 25},
+		{mapID: "179", monsterName: "骷髅妖兵", maxHP: 5400, itemName: "骷髅面甲", numerator: 1, denominator: 73},
+		{mapID: "180", monsterName: "骷髅妖兵", maxHP: 4900, itemName: "妖兵护腕", numerator: 1, denominator: 65},
+		{mapID: "180", monsterName: "骷髅妖兵", maxHP: 5400, itemName: "兽血", numerator: 1, denominator: 11},
+		{mapID: "181", monsterName: "白骨枪兵", maxHP: 8400, itemName: "力之玄文", numerator: 1, denominator: 30},
+		{mapID: "181", monsterName: "骷髅妖兵", maxHP: 5000, itemName: "L小喇叭", numerator: 1, denominator: 3},
+		{mapID: "182", monsterName: "白骨枪兵", maxHP: 8400, itemName: "头骨", numerator: 5, denominator: 7},
+		{mapID: "182", monsterName: "骷髅妖兵", maxHP: 5300, itemName: "兽骨", numerator: 3, denominator: 4},
+		{mapID: "182", monsterName: "灭阎首领", maxHP: 5500, itemName: "图腾面具", numerator: 1, denominator: 4},
+		{mapID: "185", monsterName: "白骨枪兵", maxHP: 8700, itemName: "鬼面护肩", numerator: 1, denominator: 30},
+		{mapID: "185", monsterName: "骷髅妖兵", maxHP: 5400, itemName: "锁纹护腰", numerator: 1, denominator: 8},
+		{mapID: "186", monsterName: "骷髅妖兵", maxHP: 5400, itemName: "兽骨", numerator: 7, denominator: 9},
+		{mapID: "186", monsterName: "白骨枪兵", maxHP: 8700, itemName: "黑钢刃", numerator: 3, denominator: 65},
+		{mapID: "186", monsterName: "龙娃", maxHP: 13000, itemName: "宝匣", numerator: 4, denominator: 5},
+		{mapID: "186", monsterName: "龙娃", maxHP: 13000, itemName: "初级精炼宝石", numerator: 10, denominator: 59},
+		{mapID: "186", monsterName: "龙娃", maxHP: 13000, itemName: "精炼宝石", numerator: 3, denominator: 59},
+		{mapID: "186", monsterName: "龙娃", maxHP: 13000, itemName: "力之玄文", numerator: 2, denominator: 59},
+		{mapID: "186", monsterName: "龙娃", maxHP: 13000, itemName: "风火轮", numerator: 1, denominator: 59},
+		{mapID: "186", monsterName: "灭阎法师", maxHP: 5150, itemName: "兽血", numerator: 4, denominator: 6},
+	}
+
+	for _, testCase := range testCases {
+		config, ok := sourceBattleRewardCandidateForCell(testCase.mapID, testCase.monsterName, testCase.maxHP)
+		if !ok || config.Status != "candidate" {
+			t.Fatalf("expected active Zanglongtan candidate %+v, got %+v", testCase, config)
+		}
+		rate := requireSourceBattleRewardDropRate(t, config.DropRates, testCase.itemName)
+		if rate.Numerator != testCase.numerator || rate.Denominator != testCase.denominator {
+			t.Fatalf("expected Zanglongtan rate %+v, got %+v", testCase, rate)
+		}
+	}
+}
+
+func TestBuildOverUsesZanglongtanDragonsonCandidateRewardBounds(t *testing.T) {
+	lowRollRuntime := &Runtime{
+		BattleID: "battle-zanglongtan-dragonson-low-roll",
+		MapID:    "186",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 35},
+			{Camp: CampEnemy, Handle: "enemy_dragonson", Name: "龙娃", Level: 35, MaxHP: 13000, HP: 0},
+		},
+	}
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+	lowRollOver := lowRollRuntime.buildOver(CampTeam)
+	if lowRollOver == nil {
+		t.Fatal("expected Zanglongtan dragonson OverBattle push")
+	}
+	expectedLowRollItems := []string{"魂之石x2", "黑钢链x1", "大龙骨x1", "铜钱x1000", "宝匣x1", "初级精炼宝石x1", "精炼宝石x1", "力之玄文x1", "风火轮x1", "头骨x1", "兽骨x2", "银元宝x5"}
+	if !reflect.DeepEqual(lowRollOver.Result.Items, expectedLowRollItems) {
+		t.Fatalf("expected low-roll dragonson candidate items %+v, got %+v", expectedLowRollItems, lowRollOver.Result.Items)
+	}
+}
+
+func TestBuildOverUsesZanglongtanBonelanceBlackSteelBladeCandidate(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+	over := (&Runtime{
+		BattleID: "battle-zanglongtan-bonelance-black-steel-blade",
+		MapID:    "186",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 35},
+			{Camp: CampEnemy, Handle: "enemy_bonelance", Name: "白骨枪兵", Level: 35, MaxHP: 8700, HP: 0},
+		},
+	}).buildOver(CampTeam)
+	if over == nil || !containsSourceBattleRewardItem(over.Result.Items, "黑钢刃x1") {
+		t.Fatalf("expected map186 白骨枪兵 low-roll candidate to emit 黑钢刃, got %+v", over)
+	}
+}
+
+func TestBuildOverZanglongtanDragonsonHighRollSkipsNonGuaranteedDrops(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return maxExclusive - 1 })()
+	over := (&Runtime{
+		BattleID: "battle-zanglongtan-dragonson-high-roll",
+		MapID:    "186",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 35},
+			{Camp: CampEnemy, Handle: "enemy_dragonson", Name: "龙娃", Level: 35, MaxHP: 13000, HP: 0},
+		},
+	}).buildOver(CampTeam)
+	if over == nil || len(over.Result.Items) != 0 {
+		t.Fatalf("expected high-roll dragonson candidate to skip every non-guaranteed drop, got %+v", over)
+	}
+}
+
+func TestBuildOverDoesNotUseZanglongtanAuditOnlyCandidates(t *testing.T) {
+	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
+	over := (&Runtime{
+		BattleID: "battle-zanglongtan-map183-audit-only",
+		MapID:    "183",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 35},
+			{Camp: CampEnemy, Handle: "enemy_dhwarrior", Name: "骷髅妖兵", Level: 35, MaxHP: 5300, HP: 0},
+		},
+	}).buildOver(CampTeam)
+	if over == nil || len(over.Result.Items) != 0 {
+		t.Fatalf("expected map183 audit-only candidate not to resolve at runtime, got %+v", over)
+	}
+}
+
 func TestBuildOverUsesCaptureBackedWuliangYaozhisenCandidateRewards(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 
@@ -876,7 +987,7 @@ func TestBuildOverUsesCaptureBackedWuliangYaozhisenCandidateRewards(t *testing.T
 	}
 }
 
-func TestBuildOverWuliangYaozhisenCandidateRewardDoesNotDuplicateForDoubleMystics(t *testing.T) {
+func TestBuildOverRollsEachDistinctCandidateAndDoesNotDuplicateMatchingEnemies(t *testing.T) {
 	defer useSourceEncounterRoll(func(maxExclusive int) int { return 0 })()
 
 	over := (&Runtime{
@@ -890,10 +1001,38 @@ func TestBuildOverWuliangYaozhisenCandidateRewardDoesNotDuplicateForDoubleMystic
 		},
 	}).buildOver(CampTeam)
 	if over == nil || over.Result.ExpDelta != 2576 {
-		t.Fatalf("expected one map201 candidate reward, got %+v", over)
+		t.Fatalf("expected one encounter-level map201 experience reward, got %+v", over)
+	}
+	for _, expected := range []string{"木材x1", "暗力之源x1", "机木护腰x1"} {
+		if !containsSourceBattleRewardItem(over.Result.Items, expected) {
+			t.Fatalf("expected matching mystics to roll the candidate once and emit %s, got %+v", expected, over.Result.Items)
+		}
 	}
 	if containsSourceBattleRewardItem(over.Result.Items, "木材x2") {
-		t.Fatalf("expected one encounter reward roll, not combined double-mystic stacks, got %+v", over.Result.Items)
+		t.Fatalf("expected matching mystics not to duplicate candidate drops, got %+v", over.Result.Items)
+	}
+}
+
+func TestBuildOverRollsEachDistinctCandidateEnemy(t *testing.T) {
+	defer useSourceEncounterRoll(func(int) int { return 0 })()
+
+	over := (&Runtime{
+		BattleID: "battle-zanglongtan-distinct-candidate-rewards",
+		MapID:    "186",
+		Round:    1,
+		Cells: []CellInfoPush{
+			{Camp: CampTeam, Handle: "player_1", Name: "玩家", Level: 35},
+			{Camp: CampEnemy, Handle: "enemy_bonelance", Name: "白骨枪兵", Level: 35, MaxHP: 8700, HP: 0},
+			{Camp: CampEnemy, Handle: "enemy_dragonson", Name: "龙娃", Level: 35, MaxHP: 13000, HP: 0},
+		},
+	}).buildOver(CampTeam)
+	if over == nil {
+		t.Fatal("expected distinct-candidate OverBattle push")
+	}
+	for _, expected := range []string{"黑钢刃x1", "风火轮x1"} {
+		if !containsSourceBattleRewardItem(over.Result.Items, expected) {
+			t.Fatalf("expected distinct candidate reward %s, got %+v", expected, over.Result.Items)
+		}
 	}
 }
 
@@ -3168,11 +3307,11 @@ func TestProcessActionAllowsCapturedRangerBowSkills(t *testing.T) {
 			expectedMP:     85,
 		},
 		{
-			name:           "奥义.轰雷矢",
-			level:          1,
-			description:    "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
-			commandID:      CommandAoYiHongLeiShi,
-			label:          "w1/bombThunderShoot",
+			name:        "奥义.轰雷矢",
+			level:       1,
+			description: "f_s_奥义.轰雷矢^00ccff&9@单体·攻击&8@游侠 &10@弓&22@战斗&2@26&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升120%的魔法伤害&0;击中敌人时有20%的机率使敌人进入麻痹状态(每回合使其损失气力为魔法攻击的30%)2回合",
+			commandID:   CommandAoYiHongLeiShi,
+			label:       "w1/bombThunderShoot",
 			// base 74.2 with 2 souls (+40%) => round(103.88) = 104
 			expectedDamage: 104,
 			expectedMP:     74,

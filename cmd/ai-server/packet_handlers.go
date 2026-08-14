@@ -32,6 +32,7 @@ type packetResult struct {
 	roleState              *session.RoleState
 	rolePhysique           *session.RolePhysique
 	chatMessages           []classicTownChatMessagePush
+	worldChatMessages      []classicTownChatMessagePush
 	errorMessages          []classicTownErrorPush
 	chatBroadcasts         []classicTownChatBroadcast
 	abilityCount           *classicTownAbilityCountPush
@@ -2025,7 +2026,17 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 			moved := item
 			moved.Type = "背包"
 			moved.Index = -1
-			granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, moved)
+			acquisitionDetail := "container:战斗->背包"
+			if socketSession.battleRuntime != nil {
+				battleID := strings.TrimSpace(socketSession.battleRuntime.BattleID)
+				if battleID != "" {
+					acquisitionDetail += " battle:" + battleID
+				}
+			}
+			granted, ok := store.GrantRoleItemWithSource(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, moved, session.RoleItemAcquisitionSource{
+				Kind:   "战利品领取",
+				Detail: acquisitionDetail,
+			})
 			if !ok {
 				moveFailures += 1
 				remaining = append(remaining, item)
@@ -2288,7 +2299,10 @@ func buildClassicTownSourceQuestRewardResult(store *session.Store, socketSession
 	rewardItems := sourceYeMeiGiftRewardItems()
 	itemInfos := make([]classicTownItemInfoPush, 0, len(rewardItems))
 	for _, item := range rewardItems {
-		granted, ok := store.GrantRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, item)
+		granted, ok := store.GrantRoleItemWithSource(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, item, session.RoleItemAcquisitionSource{
+			Kind:   "任务奖励",
+			Detail: "npc:4000542609162635 answer:3q3a_1_1",
+		})
 		if !ok {
 			continue
 		}
@@ -2486,6 +2500,18 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		item.Handle = useResult.Role.RoleID
 		result.itemInfos = append(result.itemInfos, classicTownItemInfoPushFromRoleItem(item))
 	}
+	if useResult.ChestReward != nil {
+		result.chatMessages = append(result.chatMessages, classicTownSystemChatMessage(
+			"打开["+useResult.Item.Name+"]获得了["+useResult.ChestReward.Name+"]x"+strconv.Itoa(useResult.ChestReward.Count),
+		))
+		if announcement, ok := classicChestWorldAnnouncementMessage(
+			useResult.Role.DisplayName,
+			useResult.Item.Name,
+			*useResult.ChestReward,
+		); ok {
+			result.worldChatMessages = append(result.worldChatMessages, announcement)
+		}
+	}
 	if useResult.Item.Name == classicTownActiveItemLevel1GiftBoxName {
 		result.chatMessages = append(result.chatMessages, classicTownLevel1GiftBoxRewardMessages()...)
 	}
@@ -2624,7 +2650,7 @@ func classicTownActiveItemTownBuffMessage(buff session.RoleTownBuff, sourceItemN
 		return "\u4f7f\u7528\u4e86\u907f\u602a\u7b26"
 	case classicTownInitialExperienceBoostName:
 		switch sourceItemName {
-		case classicTownInitialExperienceCardName:
+		case classicTownInitialExperienceCardName, "初阶经验卡":
 			return classicTownInitialExperienceBoostMessage
 		case classicTownAdvancedExperienceCardName:
 			return classicTownAdvancedExperienceBoostMessage
@@ -3093,11 +3119,12 @@ func buildClassicTownBuySkillResult(
 		}
 	}
 
-	purchase := store.PurchaseRoleItem(
+	purchase := store.PurchaseRoleItemWithSource(
 		socketSession.playerBase.PlayerID,
 		socketSession.selectedRole.RoleID,
 		sourceSkillEntryToRoleItem(entry),
 		sourceSkillRequirementsToRoleItemRequirements(entry.Requirements),
+		session.RoleItemAcquisitionSource{Kind: "技能商店购买", Detail: request.ShopID + ":" + strconv.Itoa(request.SkillID)},
 	)
 	if !purchase.Found {
 		log.Printf("[ai-server] classic town BuySkill ignored missing role roleId=%s shopId=%s skillId=%d", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID)
@@ -3177,11 +3204,12 @@ func buildClassicTownBuyItemResult(
 		}
 	}
 
-	purchase := store.PurchaseRoleItem(
+	purchase := store.PurchaseRoleItemWithSource(
 		socketSession.playerBase.PlayerID,
 		socketSession.selectedRole.RoleID,
 		sourceItemShopRowToRoleItem(row),
 		sourceItemShopRequirementsToRoleItemRequirements(row.requirements),
+		session.RoleItemAcquisitionSource{Kind: "道具商店购买", Detail: request.ShopID + ":" + strconv.Itoa(request.SkillID)},
 	)
 	if !purchase.Found {
 		log.Printf("[ai-server] classic town BuyItem ignored missing role roleId=%s shopId=%s itemId=%d", socketSession.selectedRole.RoleID, request.ShopID, request.SkillID)
@@ -3288,11 +3316,12 @@ func buildClassicTownBuyBackResult(
 		}
 	}
 
-	purchase := store.PurchaseRoleItem(
+	purchase := store.PurchaseRoleItemWithSource(
 		socketSession.playerBase.PlayerID,
 		socketSession.selectedRole.RoleID,
 		classicTownSourceBuyBackEntryToRoleItem(entry),
 		classicTownSourceBuyBackRequirements(entry),
+		session.RoleItemAcquisitionSource{Kind: "回购", Detail: strconv.Itoa(request.Index)},
 	)
 	if !purchase.Found {
 		log.Printf("[ai-server] classic town BuyBack ignored missing role roleId=%s index=%d", socketSession.selectedRole.RoleID, request.Index)

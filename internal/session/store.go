@@ -128,6 +128,11 @@ type RoleItem struct {
 	PetState    *RolePetItemState `json:"petState,omitempty"`
 }
 
+const (
+	roleItemAcquisitionSourceSystemGrant  = "系统发放"
+	roleItemAcquisitionSourceInitialItems = "角色创建"
+)
+
 type RolePetItemState struct {
 	Level    int    `json:"level"`
 	Exp      int    `json:"exp"`
@@ -447,6 +452,7 @@ type RoleUseItemResult struct {
 	Role              RoleSummary
 	PlayerBase        PlayerBaseData
 	Item              RoleItem
+	ChestReward       *RoleItem
 	LearnedSkill      *RoleSkill
 	TownBuff          *RoleTownBuff
 	UpdatedItem       *RoleItem
@@ -883,7 +889,18 @@ func (store *Store) CreateRole(request RoleCreateRequest) RoleCreateResponse {
 		Items:        defaultRoleItems(),
 	}
 	store.rolesByPID[request.PlayerID] = append(roles, role)
-	if err := store.persistPlayerStateLocked(request.PlayerID); err != nil {
+	acquisitions := make([]RoleItemAcquisition, 0, len(role.Items))
+	for _, item := range role.Items {
+		acquisition := roleItemAcquisitionFromItem(
+			request.PlayerID,
+			role.RoleID,
+			item,
+			RoleItemAcquisitionSource{Kind: roleItemAcquisitionSourceInitialItems, Detail: "new_role"},
+		)
+		acquisition.OccurredAtUnixMs = store.now().UnixMilli()
+		acquisitions = append(acquisitions, acquisition)
+	}
+	if err := store.persistPlayerStateWithItemAcquisitionsLocked(request.PlayerID, acquisitions); err != nil {
 		log.Printf("[session.Store] persist created role failed: %v", err)
 	}
 
@@ -2024,6 +2041,12 @@ func (store *Store) GetRoleItem(playerID string, roleID string, containerType st
 }
 
 func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem) (granted RoleItem, ok bool) {
+	return store.GrantRoleItemWithSource(playerID, roleID, item, RoleItemAcquisitionSource{
+		Kind: roleItemAcquisitionSourceSystemGrant,
+	})
+}
+
+func (store *Store) GrantRoleItemWithSource(playerID string, roleID string, item RoleItem, source RoleItemAcquisitionSource) (granted RoleItem, ok bool) {
 	item = normalizeRoleItem(item)
 	if item.Type == "" {
 		item.Type = "背包"
@@ -2034,6 +2057,7 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 	if item.Name == "" {
 		return RoleItem{}, false
 	}
+	source = normalizeRoleItemAcquisitionSource(source)
 
 	baseCapacity, supported := roleContainerCapacity(item.Type)
 	if !supported {
@@ -2046,11 +2070,12 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 
 	store.mu.Lock()
 	var roleSnapshot RoleSummary
+	var acquisitions []RoleItemAcquisition
 	shouldPersist := false
 	defer func() {
 		store.mu.Unlock()
 		if shouldPersist {
-			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+			if err := store.persistRoleStateSnapshotWithItemAcquisitions(playerID, roleID, roleSnapshot, acquisitions); err != nil {
 				log.Printf("[session.Store] persist granted item failed: %v", err)
 			}
 		}
@@ -2074,6 +2099,9 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 		}
 		store.rolesByPID[playerID] = roles
 		roleSnapshot = roles[index]
+		acquisition := roleItemAcquisitionFromItem(playerID, roleID, item, source)
+		acquisition.OccurredAtUnixMs = store.now().UnixMilli()
+		acquisitions = []RoleItemAcquisition{acquisition}
 		shouldPersist = true
 		return grantedItem, true
 	}
@@ -2081,6 +2109,12 @@ func (store *Store) GrantRoleItem(playerID string, roleID string, item RoleItem)
 }
 
 func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleItem, requirements []RoleItemRequirement) (result RoleItemPurchaseResult) {
+	return store.PurchaseRoleItemWithSource(playerID, roleID, item, requirements, RoleItemAcquisitionSource{
+		Kind: "商店购买",
+	})
+}
+
+func (store *Store) PurchaseRoleItemWithSource(playerID string, roleID string, item RoleItem, requirements []RoleItemRequirement, source RoleItemAcquisitionSource) (result RoleItemPurchaseResult) {
 	item = normalizeRoleItem(item)
 	if item.Type == "" {
 		item.Type = "背包"
@@ -2097,6 +2131,7 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 			ErrorMessage: "物品不存在。",
 		}
 	}
+	source = normalizeRoleItemAcquisitionSource(source)
 	baseCapacity, supported := roleContainerCapacity(item.Type)
 	if !supported {
 		return RoleItemPurchaseResult{
@@ -2111,11 +2146,12 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 
 	store.mu.Lock()
 	var roleSnapshot RoleSummary
+	var acquisitions []RoleItemAcquisition
 	shouldPersist := false
 	defer func() {
 		store.mu.Unlock()
 		if shouldPersist {
-			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+			if err := store.persistRoleStateSnapshotWithItemAcquisitions(playerID, roleID, roleSnapshot, acquisitions); err != nil {
 				log.Printf("[session.Store] persist purchased item failed: %v", err)
 			}
 		}
@@ -2207,6 +2243,9 @@ func (store *Store) PurchaseRoleItem(playerID string, roleID string, item RoleIt
 		roles[index] = currentRole
 		store.rolesByPID[playerID] = roles
 		roleSnapshot = roles[index]
+		acquisition := roleItemAcquisitionFromItem(playerID, roleID, item, source)
+		acquisition.OccurredAtUnixMs = store.now().UnixMilli()
+		acquisitions = []RoleItemAcquisition{acquisition}
 		shouldPersist = true
 
 		role := withRoleRuntimeDefaults(roles[index])
@@ -3258,6 +3297,9 @@ func (store *Store) UseRoleItem(playerID string, roleID string, sourceType strin
 			}
 		}
 
+		if isClassicChest(sourceItem.Name) {
+			return store.useClassicChestLocked(playerID, roles, index, sourceItem)
+		}
 		if sourceItem.Name == classicTownLevel1GiftBoxName && roles[index].Level >= 1 {
 			return store.useLevel1GiftBoxLocked(playerID, roles, index, sourceItem)
 		}
@@ -3281,7 +3323,7 @@ func (store *Store) UseRoleItem(playerID string, roleID string, sourceType strin
 		if sourceItem.Name == classicTownBagCapacityPatchName {
 			return store.useBagCapacityPatchLocked(playerID, roles, index, sourceItem)
 		}
-		if sourceItem.Name == classicTownInitialExperienceCardName {
+		if sourceItem.Name == classicTownInitialExperienceCardName || sourceItem.Name == "初阶经验卡" {
 			return store.useInitialExperienceCardLocked(playerID, roles, index, sourceItem)
 		}
 		if sourceItem.Name == classicTownAdvancedExperienceCardName {
@@ -3421,7 +3463,16 @@ func (store *Store) useLevel1GiftBoxLocked(playerID string, roles []RoleSummary,
 
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	store.rolesByPID[playerID] = roles
-	if err := store.persistPlayerStateLocked(playerID); err != nil {
+	if err := store.persistPlayerStateWithItemAcquisitionsLocked(
+		playerID,
+		roleItemAcquisitionsForRewards(
+			playerID,
+			roles[roleIndex].RoleID,
+			rewardItems,
+			RoleItemAcquisitionSource{Kind: "等级礼盒", Detail: classicTownLevel1GiftBoxName},
+			store.now().UnixMilli(),
+		),
+	); err != nil {
 		log.Printf("[session.Store] persist used level 1 gift box failed: %v", err)
 	}
 
@@ -3515,7 +3566,16 @@ func (store *Store) useLevel5GiftBoxLocked(playerID string, roles []RoleSummary,
 
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	store.rolesByPID[playerID] = roles
-	if err := store.persistPlayerStateLocked(playerID); err != nil {
+	if err := store.persistPlayerStateWithItemAcquisitionsLocked(
+		playerID,
+		roleItemAcquisitionsForRewards(
+			playerID,
+			roles[roleIndex].RoleID,
+			rewardItems,
+			RoleItemAcquisitionSource{Kind: "等级礼盒", Detail: classicTownLevel5GiftBoxName},
+			store.now().UnixMilli(),
+		),
+	); err != nil {
 		log.Printf("[session.Store] persist used level 5 gift box failed: %v", err)
 	}
 
@@ -3610,7 +3670,16 @@ func (store *Store) useLevel10GiftBoxLocked(playerID string, roles []RoleSummary
 
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	store.rolesByPID[playerID] = roles
-	if err := store.persistPlayerStateLocked(playerID); err != nil {
+	if err := store.persistPlayerStateWithItemAcquisitionsLocked(
+		playerID,
+		roleItemAcquisitionsForRewards(
+			playerID,
+			roles[roleIndex].RoleID,
+			rewardItems,
+			RoleItemAcquisitionSource{Kind: "等级礼盒", Detail: classicTownLevel10GiftBoxName},
+			store.now().UnixMilli(),
+		),
+	); err != nil {
 		log.Printf("[session.Store] persist used level 10 gift box failed: %v", err)
 	}
 
@@ -4124,7 +4193,14 @@ func (store *Store) useCurrencyExchangeItemLocked(
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	roles[roleIndex].Currencies = normalizeRoleCurrencies(currencies)
 	store.rolesByPID[playerID] = roles
-	if err := store.persistPlayerStateLocked(playerID); err != nil {
+	acquisition := roleItemAcquisitionFromItem(
+		playerID,
+		roles[roleIndex].RoleID,
+		targetTemplate,
+		RoleItemAcquisitionSource{Kind: "货币兑换", Detail: sourceItem.Name + "->" + targetName},
+	)
+	acquisition.OccurredAtUnixMs = store.now().UnixMilli()
+	if err := store.persistPlayerStateWithItemAcquisitionsLocked(playerID, []RoleItemAcquisition{acquisition}); err != nil {
 		log.Printf("[session.Store] persist used role item failed: %v", err)
 	}
 
@@ -4181,7 +4257,7 @@ func (store *Store) useEquipmentItemLocked(
 	updatedResultItems = append(updatedResultItems, normalizedEquippedItem)
 	roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 	roles[roleIndex].SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[roleIndex], roles[roleIndex].Items)
-	roles[roleIndex].BattleSourceQuery = roles[roleIndex].SourceQuery
+	roles[roleIndex].BattleSourceQuery = buildBattleSourceQuery(roles[roleIndex].SourceQuery)
 	roles[roleIndex] = syncRoleProgressionRuntimeData(roles[roleIndex])
 	store.rolesByPID[playerID] = roles
 	if err := store.persistPlayerStateLocked(playerID); err != nil {
@@ -4211,11 +4287,12 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 
 	store.mu.Lock()
 	var roleSnapshot RoleSummary
+	var acquisitions []RoleItemAcquisition
 	shouldPersist := false
 	defer func() {
 		store.mu.Unlock()
 		if shouldPersist {
-			if err := store.persistRoleStateSnapshot(playerID, roleID, roleSnapshot); err != nil {
+			if err := store.persistRoleStateSnapshotWithItemAcquisitions(playerID, roleID, roleSnapshot, acquisitions); err != nil {
 				log.Printf("[session.Store] persist mall purchase failed: %v", err)
 			}
 		}
@@ -4335,6 +4412,14 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 		roles[index].Items = normalizeRoleItems(append(roles[index].Items, purchasedItem))
 		store.rolesByPID[playerID] = roles
 		roleSnapshot = roles[index]
+		acquisition := roleItemAcquisitionFromItem(
+			playerID,
+			roleID,
+			purchasedItem,
+			RoleItemAcquisitionSource{Kind: "商城购买", Detail: product.ProductID},
+		)
+		acquisition.OccurredAtUnixMs = store.now().UnixMilli()
+		acquisitions = []RoleItemAcquisition{acquisition}
 		shouldPersist = true
 		// Always report 玉币 to the mall shell when the product is source-priced in 玉币.
 		reportCurrency := product.Currency
@@ -4438,7 +4523,7 @@ func (store *Store) EquipRoleItem(playerID string, roleID string, sourceType str
 		updatedItems = append(updatedItems, normalizeRoleItem(equippedItem))
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[index], roles[index].Items)
-		roles[index].BattleSourceQuery = roles[index].SourceQuery
+		roles[index].BattleSourceQuery = buildBattleSourceQuery(roles[index].SourceQuery)
 		roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		store.rolesByPID[playerID] = roles
 		if err := store.persistPlayerStateLocked(playerID); err != nil {
@@ -4680,7 +4765,7 @@ func (store *Store) MoveRoleItem(playerID string, roleID string, sourceType stri
 		roles[index].Items = normalizeRoleItems(updatedItems)
 		if sourceType == "装备" || targetType == "装备" {
 			roles[index].SourceQuery = rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[index], roles[index].Items)
-			roles[index].BattleSourceQuery = roles[index].SourceQuery
+			roles[index].BattleSourceQuery = buildBattleSourceQuery(roles[index].SourceQuery)
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 		}
 		store.rolesByPID[playerID] = roles
@@ -5505,23 +5590,23 @@ func applyRoleItemAppearanceToSourceQuery(sourceQuery string, item RoleItem) str
 	return sourceQuery
 }
 
-// repairMountedFashionAppearanceSourceQueries repairs persisted appearance
-// queries written before fashion and ride could coexist. Items are the source
-// of truth; only roles with both a mapped mount and captured fashion are
-// rebuilt, and the resulting battle query follows the town query.
+// repairMountedFashionAppearanceSourceQueries repairs persisted mounted-role
+// queries. Items are the source of truth; town queries retain the ride while
+// battle queries exclude it.
 func (store *Store) repairMountedFashionAppearanceSourceQueries() bool {
 	changed := false
 	for playerID, roles := range store.rolesByPID {
 		for index := range roles {
-			if !hasMappedMountedFashion(roles[index].Items) {
+			if !hasMappedMount(roles[index].Items) {
 				continue
 			}
 			rebuilt := rebuildRoleEquipmentAppearanceSourceQueryForRole(roles[index], roles[index].Items)
-			if rebuilt == roles[index].SourceQuery && rebuilt == roles[index].BattleSourceQuery {
+			battleQuery := buildBattleSourceQuery(rebuilt)
+			if rebuilt == roles[index].SourceQuery && battleQuery == roles[index].BattleSourceQuery {
 				continue
 			}
 			roles[index].SourceQuery = rebuilt
-			roles[index].BattleSourceQuery = rebuilt
+			roles[index].BattleSourceQuery = battleQuery
 			roles[index] = syncRoleProgressionRuntimeData(roles[index])
 			changed = true
 		}
@@ -5530,22 +5615,19 @@ func (store *Store) repairMountedFashionAppearanceSourceQueries() bool {
 	return changed
 }
 
-func hasMappedMountedFashion(items []RoleItem) bool {
-	hasFashion := false
-	hasMount := false
+func hasMappedMount(items []RoleItem) bool {
 	for _, item := range items {
 		if item.Type != "装备" || item.ItemType != "equip" {
 			continue
 		}
-		if isCapturedFashionAppearanceItem(item) {
-			hasFashion = true
-		}
 		if item.Index == roleMountEquipIndex {
 			key, value, ok := roleItemAppearanceSourceParam(item)
-			hasMount = ok && key == "r" && value != ""
+			if ok && key == "r" && value != "" {
+				return true
+			}
 		}
 	}
-	return hasFashion && hasMount
+	return false
 }
 
 func applyRoleBodyAppearanceToSourceQuery(sourceQuery string, appearance RoleAppearance) string {
@@ -5615,6 +5697,10 @@ func rebuildRoleEquipmentAppearanceSourceQueryForRole(role RoleSummary, items []
 	return rebuildRoleEquipmentAppearanceSourceQuery(sourceQuery, items)
 }
 
+func buildBattleSourceQuery(sourceQuery string) string {
+	return removeSourceQueryParam(sourceQuery, "r")
+}
+
 func clearRoleEquipmentAppearanceSourceQuery(sourceQuery string) string {
 	for _, key := range roleEquipmentAppearanceSourceKeys() {
 		sourceQuery = removeSourceQueryParam(sourceQuery, key)
@@ -5636,191 +5722,8 @@ type roleItemAppearanceSourceParamPair struct {
 }
 
 func roleItemAppearanceSourceParam(item RoleItem) (string, string, bool) {
-	switch item.Name {
-	case "铁斧":
-		return "w8", "5", true
-	case "蛮力钢剑":
-		return "w8", "40", true
-	case "刎刀":
-		return "w8", "42", true
-	case "剔骨刀":
-		return "w3", "34", true
-	case "牙刺":
-		return "w3", "43", true
-	case "绯雨匕首":
-		return "w3", "49", true
-	case "万相":
-		return "w1", "55", true
-	case "伏魔棍":
-		return "w11", "53", true
-	case "朽木断浪":
-		return "w11", "60", true
-	case "天魁":
-		return "w1", "62", true
-	case "武雷拳套":
-		return "w5", "64", true
-	case "央月九影":
-		return "w8", "61", true
-	case "八极法冠":
-		return "h", "26", true
-	case "八极法靴":
-		return "se", "3", true
-	case "八极法衣":
-		return "c", "6", true
-	case "八极法杖":
-		return "w10", "21", true
-	case "流云法杖":
-		return "w10", "58", true
-	case "八极护肩":
-		return "a", "3", true
-	case "八极护腿":
-		return "p", "6", true
-	case "八极护腰":
-		return "b", "4", true
-	case "翠带护腰":
-		return "b", "32", true
-	case "刀客布衣":
-		return "c", "30", true
-	case "盗贼布衣":
-		return "c", "34", true
-	case "盗贼护腿":
-		return "p", "30", true
-	case "盗贼腰带":
-		return "b", "35", true
-	case "蛤蟆布衣":
-		return "c", "37", true
-	case "机木护腰":
-		return "b", "39", true
-	case "狼牙棒":
-		return "w8", "33", true
-	case "雷霆法杖":
-		return "w10", "51", true
-	case "雷霆冠":
-		return "h", "17", true
-	case "雷霆护肩":
-		return "a", "15", true
-	case "神风护肩":
-		return "a", "13", true
-	case "威武皮甲":
-		return "c", "14", true
-	case "威武皮靴":
-		return "se", "10", true
-	case "威武腰带":
-		return "b", "11", true
-	case "无双护肩":
-		return "a", "14", true
-	case "无双护腿":
-		return "p", "18", true
-	case "无双铁腰带":
-		return "b", "16", true
-	case "无双头盔":
-		return "h", "16", true
-	case "岩化护腿":
-		return "p", "49", true
-	case "饮血刀":
-		return "w8", "47", true
-	case "珍元护腰":
-		return "b", "45", true
-	case "L小白马":
-		return "r", "xmj", true
-	case "萌兔宝宝":
-		return "r", "mengtubaobao", true
-	case "仙宝葫芦":
-		return "r", "baohulu", true
-	case "狰狞神骑":
-		return "r", "zn", true
-	case "蓝布衣":
-		return "c", "1", true
-	case "蛮力护甲":
-		return "c", "10", true
-	case "蛤蟆法袍":
-		return "c", "35", true
-	case "神风护甲":
-		return "c", "17", true
-	case "寒影锁甲":
-		return "c", "26", true
-	case "炎爆龙鳞甲":
-		return "c", "28", true
-	case "寨夫人上衣":
-		return "c", "39", true
-	case "蓝布裤":
-		return "p", "1", true
-	case "蛮力护腿":
-		return "p", "8", true
-	case "威武护腿":
-		return "p", "13", true
-	case "神风护腿":
-		return "p", "16", true
-	case "机木护腿":
-		return "p", "64", true
-	case "龙颜护腿":
-		return "p", "22", true
-	case "狼人护腿":
-		return "p", "29", true
-	case "蛮族护腿":
-		return "p", "27", true
-	case "布鞋":
-		return "se", "1", true
-	case "蛮力战靴":
-		return "se", "4", true
-	case "蛤蟆精战靴":
-		return "se", "29", true
-	case "盗贼的鞋":
-		return "se", "27", true
-	case "呼啸战靴":
-		return "se", "26", true
-	case "神风战靴":
-		return "se", "12", true
-	case "寒影靴":
-		return "se", "19", true
-	case "炎爆之靴":
-		return "se", "21", true
-	case "蛮力面甲":
-		return "h", "8", true
-	case "威武面甲":
-		return "h", "12", true
-	case "珍元面甲":
-		return "h", "57", true
-	case "黄风围巾":
-		return "h", "30", true
-	case "蛮力护腰":
-		return "b", "5", true
-	case "蛤蟆精护腰":
-		return "b", "31", true
-	case "神风护腰":
-		return "b", "14", true
-	case "寒影护腰":
-		return "b", "22", true
-	case "龙颜护腰":
-		return "b", "21", true
-	case "蛮力肩甲":
-		return "a", "4", true
-	case "威武护肩":
-		return "a", "10", true
-	case "流云护肩":
-		return "a", "16", true
-	case "蓝晶护肩":
-		return "a", "34", true
-	case "蚩颅王护肩":
-		return "a", "29", true
-	case "狼人护肩":
-		return "a", "32", true
-	case "龙颜单肩":
-		return "a", "19", true
-	case "蛮力护腕":
-		return "wr", "7", true
-	case "威武护腕":
-		return "wr", "11", true
-	case "黄风护腕":
-		return "wr", "25", true
-	case "机木护腕":
-		return "wr", "39", true
-	case "龙颜护腕":
-		return "wr", "19", true
-	case "炎爆护手":
-		return "wr", "21", true
-	case "蛤蟆精护腕":
-		return "wr", "26", true
+	if key, value, ok := capturedEquipmentAppearanceSourceParam(item); ok {
+		return key, value, true
 	}
 	if item.ItemType == "equip" && strings.TrimSpace(item.Display) == "29.png" {
 		return "w8", "5", true

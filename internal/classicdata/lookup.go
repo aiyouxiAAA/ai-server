@@ -75,6 +75,10 @@ func FindFashionAppearanceByNameAndSex(name string, sex string) (map[string]stri
 	return nil, false, nil
 }
 
+func FindEquipmentAppearanceByName(name string) (map[string]string, bool, error) {
+	return FindRow(TableEquipmentAppearance, "equipment_name", strings.TrimSpace(name))
+}
+
 func FindSkillByLabel(label string) (map[string]string, bool, error) {
 	return FindRow(TableSkill, "label", label)
 }

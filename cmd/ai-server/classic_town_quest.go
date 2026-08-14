@@ -576,7 +576,10 @@ func applyClassicQuestReward(store *session.Store, socketSession *packetSession,
 		case quest.RewardEntryKindItem:
 			item := classicQuestRewardItemFromEntry(entry)
 			rewardItem := classicQuestRewardRoleItem(item)
-			granted, ok := store.GrantRoleItem(playerID, roleID, rewardItem)
+			granted, ok := store.GrantRoleItemWithSource(playerID, roleID, rewardItem, session.RoleItemAcquisitionSource{
+				Kind:   "任务奖励",
+				Detail: info.ID,
+			})
 			if !ok {
 				log.Printf("[ai-server] classic quest reward item grant failed roleId=%s questId=%s item=%s count=%d", roleID, info.ID, item.Name, item.Count)
 				continue

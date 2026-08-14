@@ -611,6 +611,16 @@ func mustLoadSourceBattleRewardEquipmentPools() map[string][]string {
 
 	itemRows := classicdata.MustRows(classicdata.TableItem)
 	for monsterName, set := range sets {
+		hasCapturedNamePrefixEquipment := false
+		for itemName := range set {
+			if strings.HasPrefix(itemName, monsterName) {
+				hasCapturedNamePrefixEquipment = true
+				break
+			}
+		}
+		if !hasCapturedNamePrefixEquipment {
+			continue
+		}
 		for _, row := range itemRows {
 			if classicDataOptionalString(row, "item_type") != "equip" {
 				continue

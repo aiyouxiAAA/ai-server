@@ -20,7 +20,7 @@ import (
 const (
 	defaultRoleVoc         = "新手"
 	defaultSkillCap        = 12
-	defaultBagCap          = 30
+	defaultBagCap          = 90
 	bagCapacityStep        = 6
 	defaultEquipCap        = 20
 	defaultMallCap         = 30

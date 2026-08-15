@@ -1164,8 +1164,8 @@ func TestStoreRoleInventoryDefaultsAndCapacity(t *testing.T) {
 	})
 
 	capacity, ok := store.GetRoleContainerCapacity(login.PlayerID, createResponse.Role.RoleID, "背包")
-	if !ok || capacity != 30 {
-		t.Fatalf("expected default bag capacity 30, got ok=%v capacity=%d", ok, capacity)
+	if !ok || capacity != 90 {
+		t.Fatalf("expected default bag capacity 90, got ok=%v capacity=%d", ok, capacity)
 	}
 
 	warehouseCapacity, ok := store.GetRoleContainerCapacity(login.PlayerID, createResponse.Role.RoleID, "\u4ed3\u5e93")
@@ -1174,8 +1174,8 @@ func TestStoreRoleInventoryDefaultsAndCapacity(t *testing.T) {
 	}
 
 	items, itemCapacity, ok := store.GetRoleItems(login.PlayerID, createResponse.Role.RoleID, "背包")
-	if !ok || itemCapacity != 30 {
-		t.Fatalf("expected default bag item capacity 30, got ok=%v capacity=%d", ok, itemCapacity)
+	if !ok || itemCapacity != 90 {
+		t.Fatalf("expected default bag item capacity 90, got ok=%v capacity=%d", ok, itemCapacity)
 	}
 	if len(items) != 1 {
 		t.Fatalf("expected default bag seed to contain only the starter axe, got %+v", items)

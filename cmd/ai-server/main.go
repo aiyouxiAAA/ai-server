@@ -61,6 +61,8 @@ const (
 	cmdClassicTownOtherEquipmentReq  = 1245
 	cmdClassicTownOtherEquipmentPush = 1246
 	cmdClassicTownGameTipPush        = 1248
+	cmdClassicTownInlayRequest       = 1250
+	cmdClassicTownInlayResponse      = 1251
 	cmdClassicTownGetCapacityReq     = 1119
 	cmdClassicTownGetItemListReq     = 1120
 	cmdClassicTownCapacityPush       = 1121

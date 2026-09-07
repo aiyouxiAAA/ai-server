@@ -57,6 +57,12 @@ func FindItemByName(name string) (map[string]string, bool, error) {
 	return FindRow(TableItem, "name", name)
 }
 
+// ItemIsMetadataOnly keeps captured descriptions out of grant/drop defaults
+// until their instance and acquisition contracts have been verified.
+func ItemIsMetadataOnly(row map[string]string) bool {
+	return row["runtime_availability"] == "metadata_only"
+}
+
 func FindFashionAppearanceRowsByName(name string) ([]map[string]string, error) {
 	return FindRows(TableFashionAppearance, "fashion_name", strings.TrimSpace(name))
 }

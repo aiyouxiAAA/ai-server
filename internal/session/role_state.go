@@ -573,7 +573,7 @@ func fillMissingRoleItemTemplateFields(item RoleItem) RoleItem {
 	if item.Display == "" {
 		item.Display = template.Display
 	}
-	if item.ItemType == "" || (item.ItemType == "own" && template.ItemType != "" && template.ItemType != item.ItemType && usesTemplateDisplay && usesTemplateDescription) {
+	if item.ItemType == "" || isStaleRefinementStoneType(item, template) || (item.ItemType == "own" && template.ItemType != "" && template.ItemType != item.ItemType && usesTemplateDisplay && usesTemplateDescription) {
 		item.ItemType = template.ItemType
 	}
 	if item.Description == "" || item.Description == genericCollectionRewardDescription(item.Name) || staleDescription {
@@ -2390,7 +2390,7 @@ func CapturedRoleItemTemplates() []RoleItem {
 
 func classicDataRoleItemTemplate(name string) (RoleItem, bool) {
 	row, ok, err := classicdata.FindItemByName(name)
-	if err != nil || !ok {
+	if err != nil || !ok || classicdata.ItemIsMetadataOnly(row) {
 		return RoleItem{}, false
 	}
 	icon := strings.TrimSpace(row["icon"])

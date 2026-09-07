@@ -188,7 +188,7 @@ func sourceItemShopEquipmentDescription(name string) string {
 		panic(fmt.Sprintf("load captured item metadata for shop equipment %s: %v", name, err))
 	}
 	description := strings.TrimSpace(row["description"])
-	if !ok || row["item_type"] != "equip" || description == "" {
+	if !ok || row["item_type"] != "equip" || description == "" || classicdata.ItemIsMetadataOnly(row) {
 		panic(fmt.Sprintf("missing captured item metadata for shop equipment %s", name))
 	}
 	return description

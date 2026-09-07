@@ -8,6 +8,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const schema = require('./classic-equipment-property-schema');
 
 const serverRoot = path.resolve(__dirname, "..");
 const itemTablePath = path.join(serverRoot, "internal/classicdata/source/item-table.csv");
@@ -39,6 +40,10 @@ const propertyHeaders = [
   "special_effects",
   "refinement_rules",
   "property_parse_status",
+  "restore_hp", "restore_mp", "max_socket_count", "captured_socket_count",
+  "equipment_attributes", "refinement_steps", "equipment_effect_text",
+  "refinement_parse_status",
+  "sell_price", "equipment_notice", "equipment_subtype", "flavor_text",
 ];
 
 const sourceFieldToColumn = {
@@ -48,6 +53,8 @@ const sourceFieldToColumn = {
   4: "mgc_def",
   5: "max_hp",
   6: "max_mp",
+  7: "restore_hp",
+  8: "restore_mp",
   9: "hit",
   10: "dodge",
   11: "crit",
@@ -263,6 +270,20 @@ function enrichEquipmentRow(row) {
   row.special_effects = extractSpecialEffects(row.refinement_rules);
   row.captured_instance_attributes = serializeAttributes(capturedInstanceAttributes);
   row.captured_instance_bonus_attributes = serializeAttributes(capturedInstanceBonuses);
+  row.equipment_attributes = JSON.stringify(schema.equipmentAttributes(templateFields, splitBaseValueAndInstanceBonus));
+  const steps = schema.refinementSteps(allFields.filter(field => field.code === "19").map(field => field.value).join("\n"));
+  row.refinement_steps = JSON.stringify(steps);
+  row.refinement_parse_status = steps.length === 0 ? "none" : steps.some(step => step.kind === "text_only") ? "partial" : "parsed";
+  row.equipment_effect_text = schema.effectText(allFields);
+  const socketLimit = allFields.filter(field => field.code === "23").map(field => field.value).join("\n").match(/凿孔上限\s*(\d+)\s*格/);
+  row.max_socket_count = socketLimit ? socketLimit[1] : "";
+  const socketFields = allFields.filter(field => field.code === "18");
+  row.captured_socket_count = socketFields.length ? socketFields[socketFields.length - 1].value : "";
+  const primaryFields = firstFieldsByCode(allFields);
+  row.sell_price = primaryFields["108"] || "";
+  row.equipment_notice = allFields.filter(field => field.code === "23").map(field => field.value).join("\n");
+  row.equipment_subtype = primaryFields["26"] || "";
+  row.flavor_text = primaryFields["20"] || "";
 
   const hasInstance = Object.keys(capturedInstanceAttributes).length > 0
     || Object.keys(capturedInstanceBonuses).length > 0;
@@ -316,4 +337,9 @@ function main() {
   console.log(JSON.stringify(report, null, 2));
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = {
+  readCsv, writeCsv, primaryItemSegment, descriptionFields, firstFieldsByCode,
+  splitBaseValueAndInstanceBonus, enrichEquipmentRow, propertyHeaders, sourceFieldToColumn,
+};

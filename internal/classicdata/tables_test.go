@@ -252,8 +252,8 @@ func TestGeneratedClassicItemTableExposesStructuredEquipmentProperties(t *testin
 			}
 		}
 	}
-	if equipmentRows != 380 {
-		t.Fatalf("structured equipment rows = %d, want 380", equipmentRows)
+	if equipmentRows != 563 {
+		t.Fatalf("structured equipment rows = %d, want 563", equipmentRows)
 	}
 
 	cases := map[string]struct {

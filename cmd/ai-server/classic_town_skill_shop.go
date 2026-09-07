@@ -88,6 +88,7 @@ type classicTownActiveItemRequest struct {
 	Index       int    `json:"index"`
 	TargetType  string `json:"targetType,omitempty"`
 	TargetIndex *int   `json:"targetIndex,omitempty"`
+	TargetLevel *int   `json:"targetLevel,omitempty"`
 }
 
 type classicTownDestroyItemRequest struct {

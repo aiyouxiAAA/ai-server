@@ -563,7 +563,7 @@ func sourceBattleRewardEquipmentFallbackPool(monsterName string, excluded map[st
 func mustLoadSourceBattleRewardEquipmentItemNames() map[string]bool {
 	items := map[string]bool{}
 	for _, row := range classicdata.MustRows(classicdata.TableItem) {
-		if classicDataOptionalString(row, "item_type") != "equip" {
+		if classicDataOptionalString(row, "item_type") != "equip" || classicdata.ItemIsMetadataOnly(row) {
 			continue
 		}
 		name := classicDataOptionalString(row, "name")
@@ -578,7 +578,7 @@ func mustLoadSourceBattleRewardEquipmentItemNames() map[string]bool {
 func mustLoadSourceBattleRewardEquipmentItemOrder() map[string]int {
 	order := map[string]int{}
 	for index, row := range classicdata.MustRows(classicdata.TableItem) {
-		if classicDataOptionalString(row, "item_type") != "equip" {
+		if classicDataOptionalString(row, "item_type") != "equip" || classicdata.ItemIsMetadataOnly(row) {
 			continue
 		}
 		name := classicDataOptionalString(row, "name")
@@ -622,7 +622,7 @@ func mustLoadSourceBattleRewardEquipmentPools() map[string][]string {
 			continue
 		}
 		for _, row := range itemRows {
-			if classicDataOptionalString(row, "item_type") != "equip" {
+			if classicDataOptionalString(row, "item_type") != "equip" || classicdata.ItemIsMetadataOnly(row) {
 				continue
 			}
 			itemName := classicDataOptionalString(row, "name")

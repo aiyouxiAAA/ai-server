@@ -644,6 +644,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		return buildClassicTownAddPointResult(store, socketSession, request)
+	case cmdClassicTownInlayRequest:
+		var request session.EquipmentInlayRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{handled: true, responseCmd: cmdClassicTownInlayResponse, responsePayload: encodePayload(classicTownInlayResponse{Message: "镶嵌参数无效。"})}
+		}
+		return buildClassicTownInlayResult(store, socketSession, request)
 	case cmdClassicTownActiveItemReq:
 		var request classicTownActiveItemRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -2441,7 +2447,11 @@ func buildClassicTownActiveItemResult(store *session.Store, socketSession *packe
 		log.Printf("[ai-server] classic town ActiveItem ignored without selected role type=%s index=%d", request.Type, request.Index)
 		return packetResult{handled: true}
 	}
-	if request.TargetType != "" || request.TargetIndex != nil {
+	if request.TargetType != "" || request.TargetIndex != nil || request.TargetLevel != nil {
+		item, found := store.GetRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index)
+		if found && item.Name == "凿孔器" {
+			return buildClassicTownEquipmentSocketResult(store, socketSession, request)
+		}
 		return buildClassicTownEquipmentRefinementResult(store, socketSession, request)
 	}
 
@@ -2575,6 +2585,10 @@ func buildClassicTownEquipmentRefinementResult(store *session.Store, socketSessi
 		}
 	}
 
+	var targetLevels []int
+	if request.TargetLevel != nil {
+		targetLevels = append(targetLevels, *request.TargetLevel)
+	}
 	refinement := store.RefineRoleEquipment(
 		socketSession.playerBase.PlayerID,
 		socketSession.selectedRole.RoleID,
@@ -2582,6 +2596,7 @@ func buildClassicTownEquipmentRefinementResult(store *session.Store, socketSessi
 		request.Index,
 		request.TargetType,
 		*request.TargetIndex,
+		targetLevels...,
 	)
 	if !refinement.Found {
 		log.Printf("[ai-server] classic town refinement ignored missing role roleId=%s source=%s:%d target=%s:%d", socketSession.selectedRole.RoleID, request.Type, request.Index, request.TargetType, *request.TargetIndex)
@@ -2597,11 +2612,15 @@ func buildClassicTownEquipmentRefinementResult(store *session.Store, socketSessi
 
 	socketSession.selectedRole = &refinement.Role
 	socketSession.playerBase = &refinement.PlayerBase
+	resultMessage := refinement.ResultMessage + "（暂定概率，非原版行为）"
+	if request.TargetLevel != nil {
+		resultMessage = refinement.ResultMessage + "（暂定概率）"
+	}
 	result := packetResult{
 		itemInfos:  make([]classicTownItemInfoPush, 0, len(refinement.UpdatedItems)),
 		itemClears: make([]classicTownItemInfoClearPush, 0, len(refinement.ClearedItems)),
 		chatMessages: []classicTownChatMessagePush{
-			classicTownSystemChatMessage(refinement.ResultMessage + "（暂定概率，非原版行为）"),
+			classicTownSystemChatMessage(resultMessage),
 		},
 		createPlayer: buildClassicTownCreatePlayerPush(refinement.Role, refinement.PlayerBase),
 		rolePhysique: refinement.PlayerBase.RolePhysique,

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -22,7 +23,21 @@ var classicEquipmentRefinementAttributeCodes = []struct {
 	{name: "爆击", code: "11"},
 }
 
-func (store *Store) RefineRoleEquipment(playerID string, roleID string, sourceType string, sourceIndex int, targetType string, targetIndex int) RoleEquipmentRefinementResult {
+// Legacy shop grants used null for stones whose captured inventory type is oneI.
+// Keep the repair restricted to configured stones with the same captured icon.
+func isStaleRefinementStoneType(item RoleItem, template RoleItem) bool {
+	if item.ItemType != "null" || template.ItemType != "oneI" || item.Display != template.Display {
+		return false
+	}
+	for _, rule := range classicEquipmentRefinementRules {
+		if item.Name == rule.ItemName {
+			return true
+		}
+	}
+	return false
+}
+
+func (store *Store) RefineRoleEquipment(playerID string, roleID string, sourceType string, sourceIndex int, targetType string, targetIndex int, targetLevels ...int) RoleEquipmentRefinementResult {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
@@ -68,17 +83,52 @@ func (store *Store) RefineRoleEquipment(playerID string, roleID string, sourceTy
 				ErrorMessage: "该精炼宝石不能用于当前装备精炼等级。",
 			})
 		}
+		batch := len(targetLevels) > 0
+		goal := targetItem.Level + 1
+		if batch {
+			goal = targetLevels[0]
+			if sourceType != "背包" || (targetType != "背包" && targetType != "装备") || goal <= targetItem.Level || goal > rule.MaxRefineLevel+1 {
+				return equipmentRefinementResultForRole(playerID, roles[roleIndex], RoleEquipmentRefinementResult{
+					Found: true, ErrorCode: "refinement_goal_invalid", ErrorMessage: "目标精炼等级无效或超出当前宝石范围。",
+				})
+			}
+		}
+		budget := sourceItem.Count
+		if batch {
+			budget = 0
+			for _, item := range roles[roleIndex].Items {
+				if item.Type == sourceType && item.Name == sourceItem.Name && item.ItemType == "oneI" && item.Count > 0 {
+					budget += item.Count
+				}
+			}
+		}
+		if budget <= 0 {
+			return equipmentRefinementResultForRole(playerID, roles[roleIndex], RoleEquipmentRefinementResult{
+				Found: true, ErrorCode: "refinement_item_missing", ErrorMessage: "精炼材料或目标装备不存在。",
+			})
+		}
 
 		roll := defaultEquipmentRefinementRoll
 		if store.refinementRoll != nil {
 			roll = store.refinementRoll
 		}
-		succeeded := roll(10000) < rule.SuccessRateBps
 		previousLevel := targetItem.Level
-		if succeeded {
-			targetItem.Level++
-		} else {
-			targetItem.Level = maxInt(rule.FailureFloor, targetItem.Level-1)
+		succeeded, attempts := false, 0
+		for attempts < budget {
+			currentRule, available := classicEquipmentRefinementRuleFor(sourceItem.Name, targetItem.Level, equipmentLevel)
+			if !available {
+				break
+			}
+			succeeded = roll(10000) < currentRule.SuccessRateBps
+			if succeeded {
+				targetItem.Level++
+			} else {
+				targetItem.Level = maxInt(currentRule.FailureFloor, targetItem.Level-1)
+			}
+			attempts++
+			if !batch || targetItem.Level >= goal {
+				break
+			}
 		}
 		targetItem.Description = rewriteClassicEquipmentRefinementDescription(targetItem.Description, targetItem.Level)
 		targetItem = normalizeRoleItem(targetItem)
@@ -86,12 +136,18 @@ func (store *Store) RefineRoleEquipment(playerID string, roleID string, sourceTy
 		updatedItems := make([]RoleItem, 0, len(roles[roleIndex].Items))
 		updatedResults := make([]RoleItem, 0, 2)
 		clearedItems := make([]RoleItemClear, 0, 1)
+		remainingCost := attempts
 		for _, item := range roles[roleIndex].Items {
 			switch {
-			case item.Type == sourceType && item.Index == sourceIndex:
-				item.Count--
+			case item.Type == sourceType && remainingCost > 0 && ((!batch && item.Index == sourceIndex) || (batch && item.Name == sourceItem.Name && item.ItemType == "oneI" && item.Count > 0)):
+				cost := remainingCost
+				if cost > item.Count {
+					cost = item.Count
+				}
+				item.Count -= cost
+				remainingCost -= cost
 				if item.Count <= 0 {
-					clearedItems = append(clearedItems, RoleItemClear{Type: sourceType, Index: sourceIndex})
+					clearedItems = append(clearedItems, RoleItemClear{Type: sourceType, Index: item.Index})
 					continue
 				}
 				item = normalizeRoleItem(item)
@@ -105,10 +161,12 @@ func (store *Store) RefineRoleEquipment(playerID string, roleID string, sourceTy
 			}
 		}
 
+		originalRole := roles[roleIndex]
 		roles[roleIndex].Items = normalizeRoleItems(updatedItems)
 		roles[roleIndex] = syncRoleProgressionRuntimeData(roles[roleIndex])
 		store.rolesByPID[playerID] = roles
 		if err := store.persistRoleStateLocked(playerID, roleID); err != nil {
+			roles[roleIndex] = originalRole
 			return equipmentRefinementResultForRole(playerID, roles[roleIndex], RoleEquipmentRefinementResult{
 				Found:        true,
 				ErrorCode:    "refinement_persist_failed",
@@ -121,6 +179,14 @@ func (store *Store) RefineRoleEquipment(playerID string, roleID string, sourceTy
 			message = "精炼失败&0;等级下降1"
 		} else if !succeeded {
 			message = "精炼失败&0;等级不变"
+		}
+		if batch {
+			succeeded = targetItem.Level >= goal
+			stop := "宝石耗尽"
+			if succeeded {
+				stop = "已达目标"
+			}
+			message = fmt.Sprintf("一键精炼完成：+%d→+%d，消耗%d颗，%s", previousLevel, targetItem.Level, attempts, stop)
 		}
 		return equipmentRefinementResultForRole(playerID, roles[roleIndex], RoleEquipmentRefinementResult{
 			SourceItem:    sourceItem,

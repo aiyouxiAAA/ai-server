@@ -601,6 +601,7 @@ type Store struct {
 	Mall                 *mall.Service
 	mallRequests         map[string]mall.PurchaseResult
 	refinementRoll       func(max int) int
+	socketRoll           func(max int) int
 }
 
 type DevRoleSummary struct {

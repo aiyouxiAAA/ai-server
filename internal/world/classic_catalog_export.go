@@ -1,6 +1,9 @@
 package world
 
-import "sort"
+import (
+	"ai-server/internal/classicdata"
+	"sort"
+)
 
 type ClassicMapCatalogExportRow struct {
 	ID                 int
@@ -39,6 +42,7 @@ type ClassicMapSceneTransportCatalogExportRow struct {
 	TargetSpawn  SpawnPoint
 	Protocol     string
 	AnswerHandle string
+	Source       string
 }
 
 type ClassicMapCollectionCatalogExportRow struct {
@@ -113,10 +117,11 @@ func ExportClassicMapSceneTransportCatalogRows() []ClassicMapSceneTransportCatal
 			if npc.RoleID != "-3" {
 				continue
 			}
-			destination, ok := resolveTownTransportDestinationFromLegacyData(mapID, npc.Handle)
+			destination, ok := resolveClassicMapSceneTransportDestination(mapID, npc.Handle)
 			if !ok {
 				panic("Classic scene transport has no destination: " + itoa(mapID) + "/" + npc.Handle)
 			}
+			catalogRow, _ := classicdata.FindClassicMapSceneTransportSpawn(mapID, npc.Handle)
 			result = append(result, ClassicMapSceneTransportCatalogExportRow{
 				MapID:        mapID,
 				Handle:       npc.Handle,
@@ -129,6 +134,7 @@ func ExportClassicMapSceneTransportCatalogRows() []ClassicMapSceneTransportCatal
 				TargetSpawn:  destination.Spawn,
 				Protocol:     "CrossRole",
 				AnswerHandle: "goto",
+				Source:       catalogRow.Source,
 			})
 		}
 	}

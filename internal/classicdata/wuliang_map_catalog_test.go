@@ -20,8 +20,8 @@ func TestClassicWorldCatalogHasCompleteMapAndStaticNPCCoverage(t *testing.T) {
 			}
 		}
 	}
-	if staticNPCs != 81 {
-		t.Fatalf("expected 81 static Classic NPC catalog rows, got %d", staticNPCs)
+	if staticNPCs != 93 {
+		t.Fatalf("expected 93 static Classic NPC catalog rows, got %d", staticNPCs)
 	}
 }
 
@@ -48,16 +48,16 @@ func TestClassicWorldCatalogLinksSceneTransportsCollectionsAndMapPageTransfers(t
 			}
 		}
 	}
-	if sceneTransports != 389 {
-		t.Fatalf("expected 389 scene transport catalog rows, got %d", sceneTransports)
+	if sceneTransports != 464 {
+		t.Fatalf("expected 464 scene transport catalog rows, got %d", sceneTransports)
 	}
 	if collectionPoints != 2 {
 		t.Fatalf("expected 2 collection catalog rows, got %d", collectionPoints)
 	}
 
 	pageTransfers := ClassicMapPageTransfers()
-	if len(pageTransfers) != 414 {
-		t.Fatalf("expected 414 map-page transfer catalog rows, got %d", len(pageTransfers))
+	if len(pageTransfers) != 540 {
+		t.Fatalf("expected 540 map-page transfer catalog rows, got %d", len(pageTransfers))
 	}
 	for _, transfer := range pageTransfers {
 		if _, ok := FindClassicMap(transfer.MapID); !ok {

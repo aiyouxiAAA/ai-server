@@ -10,12 +10,6 @@ func applyClassicMapSceneTransportCatalog(definitions map[int]townMapBootstrapDe
 	for mapID, definition := range definitions {
 		rows := classicdata.ClassicMapSceneTransportSpawns(mapID)
 		legacyEntries, preservedEntries := splitClassicSceneTransportEntries(definition.SourceNPCs)
-		if len(legacyEntries) == 0 {
-			if len(rows) != 0 {
-				panic(fmt.Sprintf("Classic map %d scene transport catalog has rows but legacy data is empty", mapID))
-			}
-			continue
-		}
 		definition.SourceNPCs = append(preservedEntries, buildClassicSceneTransports(mapID, rows, legacyEntries)...)
 		definitions[mapID] = definition
 	}
@@ -35,9 +29,6 @@ func splitClassicSceneTransportEntries(entries []sourceNPCEntry) ([]sourceNPCEnt
 }
 
 func buildClassicSceneTransports(mapID int, rows []classicdata.ClassicMapSceneTransportSpawn, legacyEntries []sourceNPCEntry) []sourceNPCEntry {
-	if len(rows) != len(legacyEntries) {
-		panic(fmt.Sprintf("Classic map %d scene transport coverage mismatch: table=%d legacy=%d", mapID, len(rows), len(legacyEntries)))
-	}
 	legacyByHandle := make(map[string]sourceNPCEntry, len(legacyEntries))
 	for _, entry := range legacyEntries {
 		if _, exists := legacyByHandle[entry.Handle]; exists {
@@ -48,13 +39,18 @@ func buildClassicSceneTransports(mapID int, rows []classicdata.ClassicMapSceneTr
 
 	result := make([]sourceNPCEntry, 0, len(rows))
 	for _, row := range rows {
+		authored := row.Source == "nine_wilds_terrain_20260909"
 		legacy, ok := legacyByHandle[row.Handle]
-		if !ok {
+		if !ok && !authored {
 			panic(fmt.Sprintf("Classic map %d scene transport row %s has no legacy dialogue entry", mapID, row.Handle))
 		}
-		if legacy.SourceQuery != row.SourceQuery || legacy.SpriteName != row.SpriteName || legacy.Width != row.Width || legacy.Height != row.Height || legacy.SpawnFlash != (SpawnPoint{X: row.SpawnX, Y: row.SpawnY}) {
+		if !ok {
+			legacy = sourceNPCEntry{SourceQuery: "transp/flag2.swf", SpriteName: "flag2", Width: 158, Height: 258, IsGeneratedSourceTransport: true, Dialogue: &sourceTransportDialogue}
+		}
+		if legacy.SourceQuery != row.SourceQuery || legacy.SpriteName != row.SpriteName || legacy.Width != row.Width || legacy.Height != row.Height || (!authored && legacy.SpawnFlash != (SpawnPoint{X: row.SpawnX, Y: row.SpawnY})) {
 			panic(fmt.Sprintf("Classic map %d scene transport row %s disagrees with legacy entity data", mapID, row.Handle))
 		}
+		delete(legacyByHandle, row.Handle)
 		result = append(result, sourceNPCEntry{
 			Handle:                     row.Handle,
 			RoleID:                     "-3",
@@ -66,6 +62,9 @@ func buildClassicSceneTransports(mapID int, rows []classicdata.ClassicMapSceneTr
 			IsGeneratedSourceTransport: legacy.IsGeneratedSourceTransport,
 			Dialogue:                   legacy.Dialogue,
 		})
+	}
+	if len(legacyByHandle) != 0 {
+		panic(fmt.Sprintf("Classic map %d scene transport catalog lost %d legacy entries", mapID, len(legacyByHandle)))
 	}
 	return result
 }
@@ -88,6 +87,9 @@ func resolveTownTransportDestinationFromLegacyData(fromMapID int, handle string)
 func init() {
 	for _, mapEntry := range classicdata.ClassicMaps() {
 		for _, row := range classicdata.ClassicMapSceneTransportSpawns(mapEntry.ID) {
+			if row.Source == "nine_wilds_terrain_20260909" {
+				continue
+			}
 			legacyDestination, ok := resolveLegacyTownTransportDestinationFromMap(row.MapID, row.Handle)
 			if !ok || legacyDestination.MapID != row.TargetMapID || legacyDestination.Spawn != (SpawnPoint{X: row.TargetSpawnX, Y: row.TargetSpawnY}) {
 				panic(fmt.Sprintf("Classic map %d scene transport row %s disagrees with legacy destination", row.MapID, row.Handle))

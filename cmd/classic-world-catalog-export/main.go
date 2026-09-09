@@ -88,7 +88,7 @@ func writeMapSceneTransportCatalog(output string) {
 	defer file.Close()
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	mustWrite(writer, []string{"map_id", "handle", "source_query", "sprite_name", "width", "height", "spawn_x", "spawn_y", "target_map_id", "target_spawn_x", "target_spawn_y", "protocol", "answer_handle"})
+	mustWrite(writer, []string{"map_id", "handle", "source_query", "sprite_name", "width", "height", "spawn_x", "spawn_y", "target_map_id", "target_spawn_x", "target_spawn_y", "protocol", "answer_handle", "source"})
 	for _, row := range world.ExportClassicMapSceneTransportCatalogRows() {
 		mustWrite(writer, []string{
 			strconv.Itoa(row.MapID),
@@ -104,6 +104,7 @@ func writeMapSceneTransportCatalog(output string) {
 			strconv.Itoa(row.TargetSpawn.Y),
 			row.Protocol,
 			row.AnswerHandle,
+			row.Source,
 		})
 	}
 }

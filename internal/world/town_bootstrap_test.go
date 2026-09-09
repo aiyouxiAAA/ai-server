@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"ai-server/internal/classicactivity"
+	"ai-server/internal/classicdata"
 	"ai-server/internal/session"
 )
 
@@ -27,6 +28,9 @@ func TestTownBootstrapAppliesCapturedSourceTransportPoints(t *testing.T) {
 			t.Fatalf("expected captured transport map%d to exist", mapID)
 		}
 		for _, expected := range expectedTransports {
+			if row, found := classicdata.FindClassicMapSceneTransportSpawn(mapID, expected.Handle); found && row.Source == "nine_wilds_terrain_20260909" {
+				expected.SpawnFlash = SpawnPoint{X: row.SpawnX, Y: row.SpawnY}
+			}
 			actual, ok := findSourceNPCInDefinition(definition, expected.Handle)
 			if !ok {
 				t.Fatalf("expected map%d captured transport %s to exist", mapID, expected.Handle)
@@ -244,9 +248,9 @@ func TestResolveTownTransportAnswerFromMapUsesCapturedArrivalSpawns(t *testing.T
 		spawn     SpawnPoint
 	}{
 		{fromMapID: 52, handle: "transp_51", mapID: 51, spawn: SpawnPoint{X: 1887, Y: 486}},
-		{fromMapID: 86, handle: "transp_97", mapID: 97, spawn: SpawnPoint{X: 1477, Y: 613}},
-		{fromMapID: 87, handle: "transp_88", mapID: 88, spawn: SpawnPoint{X: 1604, Y: 470}},
-		{fromMapID: 97, handle: "transp_86", mapID: 86, spawn: SpawnPoint{X: 1630, Y: 470}},
+		{fromMapID: 86, handle: "transp_97", mapID: 97, spawn: SpawnPoint{X: 1477, Y: 573}},
+		{fromMapID: 87, handle: "transp_88", mapID: 88, spawn: SpawnPoint{X: 1604, Y: 540}},
+		{fromMapID: 97, handle: "transp_86", mapID: 86, spawn: SpawnPoint{X: 1780, Y: 540}},
 		{fromMapID: 169, handle: "transp_173", mapID: 173, spawn: SpawnPoint{X: 1019, Y: 453}},
 		{fromMapID: 173, handle: "transp_169", mapID: 169, spawn: SpawnPoint{X: 1406, Y: 622}},
 		{fromMapID: 181, handle: "transp_185", mapID: 185, spawn: SpawnPoint{X: 1671, Y: 627}},
@@ -923,15 +927,15 @@ func TestBuildTownTransferBootstrapUsesMapFourScene(t *testing.T) {
 	}
 }
 
-func TestBuildTownBootstrapDoesNotGenerateStaleYunyinRoadBranch(t *testing.T) {
+func TestBuildTownBootstrapUsesAuthoredWanglantaiRoadBranches(t *testing.T) {
 	cases := []struct {
 		mapID   int
 		mapName string
 		handles []string
 		spawns  []SpawnPoint
 	}{
-		{mapID: 13, mapName: "云隐山道_1", handles: []string{"transp_14", "transp_9"}, spawns: []SpawnPoint{{X: 1420, Y: 260}, {X: 80, Y: 560}}},
-		{mapID: 19, mapName: "树海_1", handles: []string{"transp_20", "transp_9"}, spawns: []SpawnPoint{{X: 2920, Y: 530}, {X: 67, Y: 524}}},
+		{mapID: 13, mapName: "云隐山道_1", handles: []string{"transp_14", "transp_9", "transp_19"}, spawns: []SpawnPoint{{X: 100, Y: 280}, {X: 80, Y: 560}, {X: 1420, Y: 640}}},
+		{mapID: 19, mapName: "树海_1", handles: []string{"transp_20", "transp_9", "transp_13"}, spawns: []SpawnPoint{{X: 2920, Y: 530}, {X: 67, Y: 524}, {X: 500, Y: 460}}},
 	}
 
 	for _, testCase := range cases {
@@ -1689,7 +1693,7 @@ func TestBuildTownBootstrapUsesCapturedShuiliandongTransportData(t *testing.T) {
 		handles []string
 		spawns  []SpawnPoint
 	}{
-		{mapID: 127, mapName: "观瀑台", handles: []string{"transp_131", "transp_126"}, spawns: []SpawnPoint{{X: 1020, Y: 300}, {X: 1950, Y: 570}}},
+		{mapID: 127, mapName: "观瀑台", handles: []string{"transp_131", "transp_126"}, spawns: []SpawnPoint{{X: 1120, Y: 390}, {X: 1920, Y: 610}}},
 		{mapID: 131, mapName: "水帘洞_1", handles: []string{"transp_132", "transp_127"}, spawns: []SpawnPoint{{X: 2950, Y: 550}, {X: 44, Y: 530}}},
 		{mapID: 133, mapName: "水帘洞_3", handles: []string{"transp_132", "transp_137", "transp_134"}, spawns: []SpawnPoint{{X: 44, Y: 530}, {X: 2960, Y: 530}, {X: 1909, Y: 720}}},
 		{mapID: 137, mapName: "水帘洞_7", handles: []string{"transp_133", "transp_144", "transp_138"}, spawns: []SpawnPoint{{X: 40, Y: 555}, {X: 2960, Y: 570}, {X: 1740, Y: 380}}},
@@ -1760,7 +1764,7 @@ func TestBuildTownBootstrapUsesCapturedHuangfengzhaiTransportData(t *testing.T) 
 		spawns        []SpawnPoint
 		sourceQueries []string
 	}{
-		{mapID: 122, mapName: "黄风寨口", handles: []string{"transp_121", "transp_146"}, spawns: []SpawnPoint{{X: 1460, Y: 520}, {X: 329, Y: 480}}, sourceQueries: []string{"transp/flag2.swf", "transp/fl.swf"}},
+		{mapID: 122, mapName: "黄风寨口", handles: []string{"transp_121", "transp_146"}, spawns: []SpawnPoint{{X: 1420, Y: 580}, {X: 329, Y: 480}}, sourceQueries: []string{"transp/flag2.swf", "transp/fl.swf"}},
 		{mapID: 146, mapName: "黄风寨_1", handles: []string{"transp_122", "transp_147", "transp_152"}, spawns: []SpawnPoint{{X: 1950, Y: 488}, {X: 55, Y: 507}, {X: 409, Y: 185}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf", "transp/flag2.swf"}},
 		{mapID: 147, mapName: "黄风寨_2", handles: []string{"transp_146", "transp_148"}, spawns: []SpawnPoint{{X: 2964, Y: 529}, {X: 31, Y: 561}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
 		{mapID: 148, mapName: "黄风寨_3", handles: []string{"transp_147", "transp_149"}, spawns: []SpawnPoint{{X: 1969, Y: 505}, {X: 424, Y: 379}}, sourceQueries: []string{"transp/flag2.swf", "transp/flag2.swf"}},
@@ -2346,7 +2350,7 @@ func TestBuildTownBootstrapUsesCapturedMapThreeData(t *testing.T) {
 	assertRole("4950542616589339", "熊猫竹生", "npc/熊猫竹生.swf", 2862, 426)
 	assertRole("4960542616750900", "介象", "npc/介象.swf", 3051, 442)
 	assertRole("4980542616799322", "排行告示", "npc/公告牌.swf", 3325, 420)
-	assertRole("transp_10", "", "transp/flag2.swf", 3566, 522)
+	assertRole("transp_10", "", "transp/flag2.swf", 3520, 500)
 }
 
 func TestBuildAnswerSpeakMap3PandaHealerIncludesTreatment(t *testing.T) {

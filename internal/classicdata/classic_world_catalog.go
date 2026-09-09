@@ -53,6 +53,7 @@ type ClassicMapSceneTransportSpawn struct {
 	TargetSpawnY int
 	Protocol     string
 	AnswerHandle string
+	Source       string
 }
 
 type ClassicMapCollectionPoint struct {
@@ -384,6 +385,7 @@ func readClassicMapSceneTransportSpawns() ([]ClassicMapSceneTransportSpawn, erro
 			TargetSpawnY: readClassicInt(row, "target_spawn_y"),
 			Protocol:     readClassicField(row, "protocol"),
 			AnswerHandle: readClassicField(row, "answer_handle"),
+			Source:       readClassicField(row, "source"),
 		})
 	}
 	return result, nil

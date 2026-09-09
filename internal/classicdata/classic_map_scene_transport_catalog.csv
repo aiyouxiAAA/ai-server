@@ -1,13 +1,13 @@
 map_id,handle,source_query,sprite_name,width,height,spawn_x,spawn_y,target_map_id,target_spawn_x,target_spawn_y,protocol,answer_handle,source
 1,transp_4,transp/flag2.swf,flag2,158,258,3160,570,4,175,380,CrossRole,goto,nine_wilds_terrain_20260909
-2,transp_6,transp/flag2.swf,flag2,158,258,3000,500,6,130,450,CrossRole,goto,
+2,transp_6,transp/flag2.swf,flag2,158,258,3280,488,6,130,450,CrossRole,goto,nine_wilds_terrain_20260909
 3,transp_10,transp/flag2.swf,flag2,158,258,3520,500,10,165,540,CrossRole,goto,nine_wilds_terrain_20260909
 4,transp_1,transp/flag2.swf,flag2,158,258,90,300,1,3075,570,CrossRole,goto,nine_wilds_terrain_20260909
 4,transp_5,transp/flag2.swf,flag2,158,258,2908,570,5,160,419,CrossRole,goto,
 5,transp_4,transp/flag2.swf,flag2,158,258,75,419,4,2823,570,CrossRole,goto,
 5,transp_9,transp/flag2.swf,flag2,158,258,2827,518,9,160,512,CrossRole,goto,
 6,transp_116,transp/flag2.swf,flag2,158,258,1213,300,116,200,560,CrossRole,goto,nine_wilds_terrain_20260909
-6,transp_2,transp/flag2.swf,flag2,158,258,45,450,2,2915,500,CrossRole,goto,
+6,transp_2,transp/flag2.swf,flag2,158,258,45,450,2,2915,500,CrossRole,goto,nine_wilds_terrain_20260909
 6,transp_7,transp/flag2.swf,flag2,158,258,2950,490,7,165,600,CrossRole,goto,nine_wilds_terrain_20260909
 7,transp_6,transp/flag2.swf,flag2,158,258,80,600,6,2865,490,CrossRole,goto,nine_wilds_terrain_20260909
 7,transp_8,transp/flag2.swf,flag2,158,258,2920,620,8,165,580,CrossRole,goto,nine_wilds_terrain_20260909

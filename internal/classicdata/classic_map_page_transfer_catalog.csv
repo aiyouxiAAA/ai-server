@@ -202,7 +202,7 @@ spawn,81,81,黄泉路_3,2828,429,captured_underworld
 spawn,82,82,奈何桥,2809,433,captured_underworld
 spawn,83,83,重生台,2788,456,captured_underworld
 role,transp_4,1,云隐村,3160,570,nine_wilds_terrain_20260909
-role,transp_6,2,大佛村,3000,500,captured_transport_role
+role,transp_6,2,大佛村,3280,488,nine_wilds_terrain_20260909
 role,transp_10,3,涧庭村,3520,500,nine_wilds_terrain_20260909
 role,transp_1,4,云隐村口,90,300,captured_transport_role
 role,transp_5,4,云隐村口,2908,570,captured_transport_role

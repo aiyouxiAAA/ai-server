@@ -1036,7 +1036,8 @@ func TestBuildTownBootstrapUsesCapturedMapTwoTransportData(t *testing.T) {
 	assertRole("4170542615108676", "妖术狐狸", "npc/狐狸.swf", 2370, 465)
 	assertRole("4140542615070416", "噌痴", "npc/噌痴.swf", 407, 360)
 	assertRole("4100542614427315", "娴无禄", "npc/娴无录.swf", 2450, 400)
-	assertRole("transp_6", "", "transp/flag2.swf", 3000, 500)
+	// User-authored snow village exit; the captured visual/protocol stays the same.
+	assertRole("transp_6", "", "transp/flag2.swf", 3280, 488)
 
 	foxSpeak := BuildAnswerSpeak("4170542615108676")
 	if foxSpeak.MsgHandle != "1" || foxSpeak.Msg != `知道((广青镇))吗？它可是方圆百里最繁华的集市哦~` {

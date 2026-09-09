@@ -48,7 +48,7 @@ func TestSceneTransportExportKeepsCanonicalAuthoredCoordinates(t *testing.T) {
 			count++
 		}
 	}
-	if count != 90 {
-		t.Fatalf("authored export coverage = %d, want 90", count)
+	if count != 92 {
+		t.Fatalf("authored export coverage = %d, want 92", count)
 	}
 }

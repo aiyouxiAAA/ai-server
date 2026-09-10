@@ -1,0 +1,2 @@
+quest_id,title,level,type,map_id,start_key,start_name,start_x,start_y,finish_key,finish_name,finish_x,finish_y,description,experience,offer_dialogue,reminder_dialogue,finish_dialogue,completed_dialogue
+XZ-M001,初到雪栈,1,main,2,lu-xiaoman,陆小满,1340,440,guan-boheng,关伯衡,1500,400,去关驿石阶上找关伯衡报到。陆小满已经替你指好了路。,100,你是头一回来雪栈吧？我叫陆小满，替驿站跑腿的。先去石阶上找关伯衡登记，省得他又念叨我把客人领丢了。等我练好本事，也想跟你一起走远些。,关伯衡就在石阶上，拿着登记簿的那位。去跟他打个招呼吧。,小满领你来的？名字记下了。雪栈的路不好走，先认清村里的人，出门才知道该找谁帮忙。,路上小心。雪栈有人等你回来。

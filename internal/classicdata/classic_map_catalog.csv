@@ -1,10 +1,10 @@
 map_id,name,xml_url,default_spawn_x,default_spawn_y,supports_transfer_in
 1,云隐村,xml/1.xml,820,451,true
-2,大佛村,xml/2.xml,1000,600,true
+2,雪栈村,xml/2.xml,1000,600,true
 3,涧庭村,xml/3.xml,825,624,true
 4,云隐村口,xml/4.xml,1000,600,true
 5,云隐村口_1,xml/5.xml,1000,450,true
-6,大佛村口,xml/6.xml,1000,600,true
+6,村外雪径,xml/6.xml,1000,600,true
 7,卧佛谷_1,xml/7.xml,1000,680,true
 8,卧佛谷_2,xml/8.xml,1000,600,true
 9,云隐村口_2,xml/9.xml,1000,450,true

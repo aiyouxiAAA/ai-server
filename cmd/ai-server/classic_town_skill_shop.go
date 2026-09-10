@@ -18,10 +18,11 @@ const (
 )
 
 type classicTownRoleInteractionRequest struct {
-	Handle string `json:"handle"`
-	RoleID string `json:"roleId"`
-	Kind   string `json:"kind"`
-	MapID  string `json:"mapId"`
+	NavigationToken string `json:"navigationToken,omitempty"`
+	Handle          string `json:"handle"`
+	RoleID          string `json:"roleId"`
+	Kind            string `json:"kind"`
+	MapID           string `json:"mapId"`
 }
 
 type classicTownAnswerRequest struct {

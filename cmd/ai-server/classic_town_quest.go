@@ -81,6 +81,7 @@ func buildClassicQuestLogResult(store *session.Store, socketSession *packetSessi
 	}
 	return packetResult{
 		questInfos: infos,
+		questGuide: buildQuestGuideSnapshot(store, socketSession),
 		handled:    true,
 	}
 }
@@ -105,6 +106,11 @@ func buildClassicQuestRemoveResult(store *session.Store, socketSession *packetSe
 	if !ok || title == "" {
 		log.Printf("[ai-server] classic quest RemoveQuest ignored missing title=%s questId=%s", request.Title, request.QuestID)
 		return packetResult{handled: true}
+	}
+	if _, authored := quest.FindAuthored(info.ID); authored {
+		return packetResult{handled: true, chatMessages: []classicTownChatMessagePush{
+			classicTownSystemChatMessage("序章主线请前往指定人物处完成，不能直接放弃或结算。"),
+		}}
 	}
 
 	if request.Complete {
@@ -383,6 +389,7 @@ func appendQuestStateForHandle(result *packetResult, handle string, state int) {
 
 func applyAcceptedQuestStatesToBootstrap(snapshot *world.TownBootstrapSnapshot, store *session.Store, socketSession *packetSession) {
 	applyQuestStateOverrides(snapshot, acceptedQuestStatePushes(store, socketSession))
+	applyAuthoredVillageQuestBootstrap(snapshot, store, socketSession)
 }
 
 func acceptedQuestStatePushes(store *session.Store, socketSession *packetSession) []world.QuestStatePush {

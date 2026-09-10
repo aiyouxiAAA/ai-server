@@ -529,6 +529,12 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 				return
 			}
 		}
+		if result.questGuide != nil {
+			if err := socketWriter.writePush(cmdQuestGuideSnapshotPush, encodePayload(*result.questGuide)); err != nil {
+				log.Printf("[ai-server] write quest guide snapshot failed: %v", err)
+				return
+			}
+		}
 		if result.dungeonInstance != nil {
 			if err := socketWriter.writePush(cmdClassicTownDungeonInstance, encodePayload(*result.dungeonInstance)); err != nil {
 				log.Printf("[ai-server] write classic town DungeonInstance failed: %v", err)

@@ -9,7 +9,7 @@
     },
     {
       "id": "2",
-      "name": "大佛村",
+      "name": "雪栈村",
       "sourceXml": "mapdefined/xml/2.xml"
     },
     {
@@ -29,7 +29,7 @@
     },
     {
       "id": "6",
-      "name": "大佛村口",
+      "name": "村外雪径",
       "sourceXml": "mapdefined/xml/6.xml"
     },
     {

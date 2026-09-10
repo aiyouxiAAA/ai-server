@@ -997,7 +997,7 @@ func TestBuildTownBootstrapUsesCapturedMapTwoTransportData(t *testing.T) {
 	}
 
 	snapshot := BuildTownBootstrap(role, playerBase)
-	if snapshot.LoadMap.MapID != "2" || snapshot.LoadMap.MapName != "大佛村" || snapshot.LoadMap.XMLURL != "xml/2.xml" {
+	if snapshot.LoadMap.MapID != "2" || snapshot.LoadMap.MapName != "雪栈村" || snapshot.LoadMap.XMLURL != "xml/2.xml" {
 		t.Fatalf("expected map2 loadMap, got %+v", snapshot.LoadMap)
 	}
 	if snapshot.LoadMap.EnemyShow {

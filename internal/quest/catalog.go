@@ -108,6 +108,9 @@ func All() []Info {
 	if err != nil {
 		panic(err)
 	}
+	for _, authored := range Authored() {
+		rows = append(rows, authored.Info)
+	}
 	return cloneInfos(rows)
 }
 

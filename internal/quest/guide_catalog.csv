@@ -1,0 +1,3 @@
+quest_id,phase,objective_id,action,target_role,map_id,objective_text,location,hint_id,priority
+XZ-M001,available,meet-start,npc_dialogue,start,2,与陆小满交谈,雪栈村 · 驿站前,quest-navigation-v1,100
+XZ-M001,accepted,report-finish,npc_dialogue,finish,2,向关伯衡报到,雪栈村 · 驿站石阶,,100

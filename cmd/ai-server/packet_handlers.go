@@ -53,6 +53,7 @@ type packetResult struct {
 	otherEquipment         *classicTownOtherEquipmentPush
 	tryEquip               *classicTownTryEquipPush
 	questInfos             []classicQuestInfoPush
+	questGuide             *questGuideSnapshot
 	questClears            []classicQuestClearPush
 	questStates            []world.QuestStatePush
 	dungeonInstance        *classicTownDungeonInstancePush
@@ -418,6 +419,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if destination, ok := resolveClassicTownTransportAnswer(socketSession, request.MapID, request.Handle, "goto"); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
 		}
+		if result, ok := buildAuthoredQuestOpenResult(store, socketSession, request.Handle); ok {
+			if result.answerSpeak != nil {
+				result.answerSpeak.NavigationToken = request.NavigationToken
+			}
+			return result
+		}
 		answerSpeak := buildClassicTownQuestAwareAnswerSpeak(store, socketSession, request.Handle)
 		return packetResult{
 			answerSpeak: &answerSpeak,
@@ -490,6 +497,9 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			}
 		}
 		if result, ok := buildClassicTownVocationResult(store, socketSession, request); ok {
+			return result
+		}
+		if result, ok := buildAuthoredQuestAnswerResult(store, socketSession, request); ok {
 			return result
 		}
 		if result, ok := buildClassicQuestAnswerResult(store, socketSession, request); ok {

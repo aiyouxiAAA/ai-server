@@ -81,10 +81,18 @@ type AnswerOption struct {
 }
 
 type AnswerSpeakPush struct {
-	Handle    string         `json:"handle"`
-	MsgHandle string         `json:"msgHandle"`
-	Msg       string         `json:"msg"`
-	Answers   []AnswerOption `json:"answers"`
+	NavigationToken string         `json:"navigationToken,omitempty"`
+	Handle          string         `json:"handle"`
+	MsgHandle       string         `json:"msgHandle"`
+	Msg             string         `json:"msg"`
+	Answers         []AnswerOption `json:"answers"`
+	DialogueLines   []DialogueLine `json:"dialogueLines,omitempty"`
+}
+
+// Authored dialogue presentation only; accepting/completing still uses Answer.
+type DialogueLine struct {
+	Speaker string `json:"speaker"`
+	Text    string `json:"text"`
 }
 
 type TownBootstrapSnapshot struct {
@@ -366,7 +374,7 @@ func buildTownMapBootstrapDefinitions() map[int]townMapBootstrapDefinition {
 
 	mapTwo := definitions[2]
 	mapTwo.ID = 2
-	mapTwo.Name = "大佛村"
+	mapTwo.Name = "雪栈村"
 	mapTwo.XMLURL = "xml/2.xml"
 	mapTwo.DefaultSpawn = SpawnPoint{X: 1000, Y: 600}
 	mapTwo.SourceNPCs = map2SourceNPCs

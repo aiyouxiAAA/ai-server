@@ -356,7 +356,8 @@ func TestCatalogIncludesInstanceCaptureQuestExpansion(t *testing.T) {
 
 func TestAllCatalogRowsHaveGrantRewardMarker(t *testing.T) {
 	for _, info := range All() {
-		if len(info.Routes) == 0 {
+		_, authored := FindAuthored(info.ID)
+		if len(info.Routes) == 0 && !authored {
 			t.Fatalf("expected captured NPC route for %s %s", info.ID, info.Title)
 		}
 		if info.Reward.Experience <= 0 && len(info.Reward.Items) == 0 && len(info.Reward.Skills) == 0 {

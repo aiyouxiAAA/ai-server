@@ -113,19 +113,21 @@ type RoleFastPanelEntry struct {
 }
 
 type RoleItem struct {
-	Handle      string            `json:"handle,omitempty"`
-	Type        string            `json:"type"`
-	Name        string            `json:"name"`
-	ItemType    string            `json:"itemType"`
-	Display     string            `json:"display"`
-	Description string            `json:"description"`
-	Count       int               `json:"count"`
-	Index       int               `json:"index"`
-	Level       int               `json:"level"`
-	EndTime     int               `json:"endTime"`
-	Owner       string            `json:"owner"`
-	ItemLevel   int               `json:"itemLevel"`
-	PetState    *RolePetItemState `json:"petState,omitempty"`
+	Star        *EquipmentStarState `json:"star,omitempty"`
+	Locked      bool                `json:"locked,omitempty"`
+	Handle      string              `json:"handle,omitempty"`
+	Type        string              `json:"type"`
+	Name        string              `json:"name"`
+	ItemType    string              `json:"itemType"`
+	Display     string              `json:"display"`
+	Description string              `json:"description"`
+	Count       int                 `json:"count"`
+	Index       int                 `json:"index"`
+	Level       int                 `json:"level"`
+	EndTime     int                 `json:"endTime"`
+	Owner       string              `json:"owner"`
+	ItemLevel   int                 `json:"itemLevel"`
+	PetState    *RolePetItemState   `json:"petState,omitempty"`
 }
 
 const (

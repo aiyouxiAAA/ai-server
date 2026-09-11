@@ -330,6 +330,12 @@ func handlePacket(store *session.Store, packet protocol.Packet) packetResult {
 
 func handlePacketWithSession(store *session.Store, packet protocol.Packet, socketSession *packetSession) packetResult {
 	switch packet.Cmd {
+	case cmdEquipmentStarRequest:
+		var request session.EquipmentStarRequest
+		if !decodePayload(packet.Payload, &request) {
+			return packetResult{handled: true, responseCmd: cmdEquipmentStarResponse, responsePayload: encodePayload(classicTownInlayResponse{Message: "升星参数无效。"})}
+		}
+		return buildEquipmentStarResult(store, socketSession, request)
 	case cmdHeartbeat:
 		return packetResult{handled: true}
 	case cmdAuthLoginRequest:

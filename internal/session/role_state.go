@@ -377,6 +377,9 @@ func cloneRoleItems(items []RoleItem) []RoleItem {
 
 	result := make([]RoleItem, len(items))
 	copy(result, items)
+	for i := range result {
+		result[i].Star = cloneEquipmentStar(result[i].Star)
+	}
 	return result
 }
 
@@ -2134,6 +2137,30 @@ func roleEquipmentStats(items []RoleItem) roleEquipmentStatBonus {
 		bonus.hit += parseClassicDescriptionEquipmentStat(item.Description, "9")
 		bonus.dog += parseClassicDescriptionEquipmentStat(item.Description, "10")
 		bonus.fat += parseClassicDescriptionEquipmentStat(item.Description, "11")
+		if item.Star != nil {
+			for _, a := range item.Star.Attributes {
+				switch a.Code {
+				case "1":
+					bonus.phyAtk += a.Value
+				case "2":
+					bonus.mgcAtk += a.Value
+				case "3":
+					bonus.phyDef += a.Value
+				case "4":
+					bonus.mgcDef += a.Value
+				case "5":
+					bonus.maxHP += a.Value
+				case "6":
+					bonus.maxMP += a.Value
+				case "9":
+					bonus.hit += a.Value
+				case "10":
+					bonus.dog += a.Value
+				case "11":
+					bonus.fat += a.Value
+				}
+			}
+		}
 	}
 	return bonus
 }

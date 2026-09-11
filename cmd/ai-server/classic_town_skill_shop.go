@@ -224,18 +224,20 @@ type classicTownContainerCapacityPush struct {
 }
 
 type classicTownItemInfoPush struct {
-	Handle      string `json:"handle"`
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	ItemType    string `json:"itemType"`
-	Display     string `json:"display"`
-	Description string `json:"description"`
-	Count       int    `json:"count"`
-	Index       int    `json:"index"`
-	Level       int    `json:"level"`
-	EndTime     int    `json:"endTime"`
-	Owner       string `json:"owner"`
-	ItemLevel   int    `json:"itemLevel"`
+	Star        *session.EquipmentStarState `json:"star,omitempty"`
+	Locked      bool                        `json:"locked,omitempty"`
+	Handle      string                      `json:"handle"`
+	Type        string                      `json:"type"`
+	Name        string                      `json:"name"`
+	ItemType    string                      `json:"itemType"`
+	Display     string                      `json:"display"`
+	Description string                      `json:"description"`
+	Count       int                         `json:"count"`
+	Index       int                         `json:"index"`
+	Level       int                         `json:"level"`
+	EndTime     int                         `json:"endTime"`
+	Owner       string                      `json:"owner"`
+	ItemLevel   int                         `json:"itemLevel"`
 }
 
 type classicTownItemInfoClearPush struct {
@@ -1088,6 +1090,7 @@ func classicTownSkillInfoPushFromRoleSkill(roleID string, skill session.RoleSkil
 
 func classicTownItemInfoPushFromRoleItem(item session.RoleItem) classicTownItemInfoPush {
 	return classicTownItemInfoPush{
+		Star: item.Star, Locked: item.Locked,
 		Handle:      item.Handle,
 		Type:        item.Type,
 		Name:        item.Name,

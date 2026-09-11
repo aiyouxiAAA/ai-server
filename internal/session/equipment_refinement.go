@@ -87,7 +87,11 @@ func (store *Store) RefineRoleEquipment(playerID string, roleID string, sourceTy
 		goal := targetItem.Level + 1
 		if batch {
 			goal = targetLevels[0]
-			if sourceType != "背包" || (targetType != "背包" && targetType != "装备") || goal <= targetItem.Level || goal > rule.MaxRefineLevel+1 {
+			goalAvailable := goal > targetItem.Level
+			for level := targetItem.Level; goalAvailable && level < goal; level++ {
+				_, goalAvailable = classicEquipmentRefinementRuleFor(sourceItem.Name, level, equipmentLevel)
+			}
+			if sourceType != "背包" || (targetType != "背包" && targetType != "装备") || !goalAvailable {
 				return equipmentRefinementResultForRole(playerID, roles[roleIndex], RoleEquipmentRefinementResult{
 					Found: true, ErrorCode: "refinement_goal_invalid", ErrorMessage: "目标精炼等级无效或超出当前宝石范围。",
 				})

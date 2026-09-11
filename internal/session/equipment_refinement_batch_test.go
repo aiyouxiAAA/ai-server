@@ -28,7 +28,7 @@ func TestBatchRefinementGoalAndFailures(t *testing.T) {
 		level, count, goal, roll, wantLevel, consumed int
 		reached                                       bool
 	}{
-		{"goal", 0, 5, 2, 0, 2, 2, true}, {"exhausted", 0, 1, 2, 0, 1, 1, false},
+		{"goal", 0, 5, 2, 0, 2, 2, true}, {"cross rate segment", 0, 5, 3, 0, 3, 3, true}, {"exhausted", 0, 1, 2, 0, 1, 1, false},
 		{"failure then retries", 2, 3, 3, 9999, 1, 3, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

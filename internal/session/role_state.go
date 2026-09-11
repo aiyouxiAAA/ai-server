@@ -542,6 +542,9 @@ func normalizeRoleItem(item RoleItem) RoleItem {
 	}
 	item = applyCapturedRoleItemQualityColor(item)
 	item = fillMissingRoleItemTemplateFields(item)
+	if description, repaired := missingEquipmentRefinementDescription(item); repaired {
+		item.Description = description
+	}
 	if item.Count < 0 {
 		item.Count = 0
 	}
@@ -649,6 +652,9 @@ func repairEquipmentTemplateRefinementLineBreaks(item RoleItem, template RoleIte
 
 func roleItemsNeedEquipmentTemplateRefinementLineBreakRepair(items []RoleItem) bool {
 	for _, item := range items {
+		if _, repaired := missingEquipmentRefinementDescription(item); repaired {
+			return true
+		}
 		template, ok := CapturedRoleItemTemplate(item.Name)
 		if !ok {
 			continue

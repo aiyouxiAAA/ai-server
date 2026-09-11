@@ -8,6 +8,11 @@ const cmdEquipmentStarResponse = 1261
 func buildEquipmentStarResult(store *session.Store, connection *packetSession, request session.EquipmentStarRequest) packetResult {
 	response := classicTownInlayResponse{Message: "请先选择角色。", UpdatedItems: []classicTownItemInfoPush{}, ClearedItems: []classicTownItemInfoClearPush{}}
 	result := packetResult{handled: true, responseCmd: cmdEquipmentStarResponse}
+	if connection != nil && connection.battleRuntime != nil && connection.battleRuntime.BattleID != "" {
+		response.Message = "请在战斗结束后操作装备。"
+		result.responsePayload = encodePayload(response)
+		return result
+	}
 	if connection != nil && connection.playerBase != nil && connection.selectedRole != nil {
 		operation := store.EquipmentStar(connection.playerBase.PlayerID, connection.selectedRole.RoleID, request)
 		response.Success = operation.Success

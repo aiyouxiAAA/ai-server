@@ -1,2 +1,2 @@
-profession_id,name,enabled,default_level,spawn_map_id,town_manifest,battle_manifest,portrait_bundle,portrait_path,description
-blade-dancer,刃舞者,1,1,2,frame-sequence/duanyue-town-20260907,config/duanyue-battle,shared,ui/warm-sand-hud/hud-portrait/spriteFrame,橙发青黑服装长刀女性；近战连斩与刀气
+profession_id,name,enabled,default_level,spawn_map_id,town_manifest,town_bundle,town_trim_offsets,town_fps,battle_manifest,portrait_bundle,portrait_path,description
+blade-dancer,刃舞者,1,1,2,frame-sequence/duanyue-town-20260907,characters-player,frame-sequence/frame-trim-offsets,24,config/duanyue-battle,shared,ui/warm-sand-hud/hud-portrait/spriteFrame,橙发青黑服装长刀女性；近战连斩与刀气

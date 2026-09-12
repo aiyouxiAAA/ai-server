@@ -1,0 +1,2 @@
+monster_id,display_url,normal_name,skill_command,skill_name,skill_label,opening_attacks,skill_interval,damage_multiplier
+snow-spider,original-monster/snow-spider,螯牙刺击,enemy-snow-spider-silk,蓄力吐丝,snow-spider/silk,2,3,1.35

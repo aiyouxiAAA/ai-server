@@ -27,14 +27,14 @@ func TestStoreLoginAccountSuccess(t *testing.T) {
 	if !response.Success {
 		t.Fatalf("expected login success, got failure: %+v", response)
 	}
-	if response.PlayerID != "mock-player-001" {
-		t.Fatalf("expected player id mock-player-001, got %q", response.PlayerID)
+	if response.PlayerID != "acct-mockuser" {
+		t.Fatalf("expected player id acct-mockuser, got %q", response.PlayerID)
 	}
-	if response.SessionToken != "mock-session-token-001" {
-		t.Fatalf("expected session token mock-session-token-001, got %q", response.SessionToken)
+	if response.SessionToken != "session-mockuser" {
+		t.Fatalf("expected session token session-mockuser, got %q", response.SessionToken)
 	}
-	if response.DisplayName != "Mock Swordswoman" {
-		t.Fatalf("expected display name Mock Swordswoman, got %q", response.DisplayName)
+	if response.DisplayName != "mockuser" {
+		t.Fatalf("expected display name mockuser, got %q", response.DisplayName)
 	}
 }
 
@@ -85,6 +85,7 @@ func TestStoreLoginAccountAutoRegister(t *testing.T) {
 
 func TestStoreLoginAccountWrongPassword(t *testing.T) {
 	store := NewStore()
+	mustLogin(t, store, "mockuser", "magicpwd")
 
 	response := store.Login(LoginRequest{
 		UserName: "mockuser",
@@ -99,24 +100,6 @@ func TestStoreLoginAccountWrongPassword(t *testing.T) {
 	}
 	if response.ErrorMessage != "密码错误!" {
 		t.Fatalf("expected wrong password message, got %q", response.ErrorMessage)
-	}
-}
-
-func TestStoreLoginPlatformFallback(t *testing.T) {
-	store := NewStore()
-
-	response := store.Login(LoginRequest{
-		Platform: "guest",
-	})
-
-	if !response.Success {
-		t.Fatalf("expected guest login success, got failure: %+v", response)
-	}
-	if response.PlayerID != "guest-player-local" {
-		t.Fatalf("expected guest player id, got %q", response.PlayerID)
-	}
-	if response.SessionToken != "local-session-guest-player-local" {
-		t.Fatalf("expected guest session token, got %q", response.SessionToken)
 	}
 }
 
@@ -1177,11 +1160,8 @@ func TestStoreRoleInventoryDefaultsAndCapacity(t *testing.T) {
 	if !ok || itemCapacity != 90 {
 		t.Fatalf("expected default bag item capacity 90, got ok=%v capacity=%d", ok, itemCapacity)
 	}
-	if len(items) != 1 {
-		t.Fatalf("expected default bag seed to contain only the starter axe, got %+v", items)
-	}
-	if items[0].Name != "铁斧" || items[0].Display != "29.png" || items[0].ItemType != "equip" || items[0].Index != 19 {
-		t.Fatalf("expected starter axe at bag index 19, got %+v", items[0])
+	if len(items) != 0 {
+		t.Fatalf("expected empty bag before quest grants, got %+v", items)
 	}
 }
 
@@ -5512,7 +5492,7 @@ func TestStoreRoleOperationsRejectInvalidSession(t *testing.T) {
 	selectResponse := store.SelectRole(RoleSelectRequest{
 		PlayerID:     login.PlayerID,
 		SessionToken: invalidSessionToken,
-		RoleID:       "mock-player-001-role-001",
+		RoleID:       "acct-mockuser-role-001",
 	})
 	assertInvalidSessionFailure(t, selectResponse.Success, selectResponse.ErrorCode, selectResponse.ErrorMessage)
 	if selectResponse.PlayerBase.PlayerID != login.PlayerID {
@@ -5522,7 +5502,7 @@ func TestStoreRoleOperationsRejectInvalidSession(t *testing.T) {
 	removeResponse := store.RemoveRole(RoleRemoveRequest{
 		PlayerID:     login.PlayerID,
 		SessionToken: invalidSessionToken,
-		RoleID:       "mock-player-001-role-001",
+		RoleID:       "acct-mockuser-role-001",
 		Password:     "magicpwd",
 	})
 	assertInvalidSessionFailure(t, removeResponse.Success, removeResponse.ErrorCode, removeResponse.ErrorMessage)
@@ -6091,14 +6071,14 @@ func TestStoreListRolesNormalizesDuplicatedRoleIDs(t *testing.T) {
 
 	store.rolesByPID[login.PlayerID] = []RoleSummary{
 		{
-			RoleID:       "mock-player-001-role-001",
+			RoleID:       "acct-mockuser-role-001",
 			DisplayName:  "甲",
 			Level:        1,
 			MapID:        1,
 			VisualRoleID: 1,
 		},
 		{
-			RoleID:       "mock-player-001-role-001",
+			RoleID:       "acct-mockuser-role-001",
 			DisplayName:  "乙",
 			Level:        1,
 			MapID:        1,
@@ -6124,14 +6104,14 @@ func TestStoreRemoveRoleRemovesAllDuplicatedMatches(t *testing.T) {
 
 	store.rolesByPID[login.PlayerID] = []RoleSummary{
 		{
-			RoleID:       "mock-player-001-role-001",
+			RoleID:       "acct-mockuser-role-001",
 			DisplayName:  "甲",
 			Level:        1,
 			MapID:        1,
 			VisualRoleID: 1,
 		},
 		{
-			RoleID:       "mock-player-001-role-001",
+			RoleID:       "acct-mockuser-role-001",
 			DisplayName:  "乙",
 			Level:        1,
 			MapID:        1,
@@ -6142,7 +6122,7 @@ func TestStoreRemoveRoleRemovesAllDuplicatedMatches(t *testing.T) {
 	removeResponse := store.RemoveRole(RoleRemoveRequest{
 		PlayerID:     login.PlayerID,
 		SessionToken: login.SessionToken,
-		RoleID:       "mock-player-001-role-001",
+		RoleID:       "acct-mockuser-role-001",
 		Password:     "magicpwd",
 	})
 

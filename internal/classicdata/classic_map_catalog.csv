@@ -6,7 +6,7 @@ map_id,name,xml_url,default_spawn_x,default_spawn_y,supports_transfer_in
 5,云隐村口_1,xml/5.xml,1000,450,true
 6,村外雪径,xml/6.xml,1000,600,true
 7,卧佛谷_1,xml/7.xml,1000,680,true
-8,卧佛谷_2,xml/8.xml,1000,600,true
+8,听雪坡,xml/8.xml,1000,600,true
 9,云隐村口_2,xml/9.xml,1000,450,true
 10,涧庭村口,xml/10.xml,180,500,true
 11,涧庭道_1,xml/11.xml,200,482,true
@@ -106,12 +106,12 @@ map_id,name,xml_url,default_spawn_x,default_spawn_y,supports_transfer_in
 105,云帝陵_3,xml/105.xml,1000,600,true
 106,竹林_15,xml/106.xml,1000,600,true
 107,竹林_16,xml/107.xml,1000,600,true
-108,卧佛谷_3,xml/108.xml,1000,600,true
+108,冻溪桥,xml/108.xml,1000,600,true
 109,卧佛谷_4,xml/109.xml,1000,600,true
 110,卧佛谷_5,xml/110.xml,1000,600,true
 111,卧佛谷_6,xml/111.xml,1000,600,true
 112,卧佛谷_7,xml/112.xml,1000,600,true
-113,卧佛谷_8,xml/113.xml,1000,600,true
+113,冰镜湖,xml/113.xml,1000,600,true
 114,卧佛谷_10,xml/114.xml,1000,600,true
 115,卧佛谷_9,xml/115.xml,1000,600,true
 116,卧佛谷_11,xml/116.xml,1000,600,true

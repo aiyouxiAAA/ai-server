@@ -286,6 +286,13 @@ func classicQuestInfoFromCatalog(info quest.Info) classicQuestInfoPush {
 
 func classicQuestInfoForRole(store *session.Store, socketSession *packetSession, info quest.Info) classicQuestInfoPush {
 	push := classicQuestInfoFromCatalog(info)
+	if q, authored := quest.FindAuthored(info.ID); authored && q.Rule.Kind != "kill" {
+		push.State = q.ReminderDialogue
+		if store != nil && socketSession != nil && socketSession.playerBase != nil && socketSession.selectedRole != nil && store.AuthoredQuestReady(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, q.Info.ID) {
+			push.State = "<over>向" + q.Finish.Name + "交付"
+		}
+		return push
+	}
 	if info.Objective == nil {
 		return push
 	}
@@ -329,6 +336,9 @@ func advanceClassicQuestProgressForTargets(store *session.Store, socketSession *
 	pushes := []classicQuestInfoPush{}
 	for _, info := range quest.All() {
 		if !accepted[info.Title] || info.Objective == nil || info.Objective.Kind != kind {
+			continue
+		}
+		if q, authored := quest.FindAuthored(info.ID); authored && q.Rule.Kind == "kill" && socketSession.playerBase.MapID != q.Rule.TargetMap {
 			continue
 		}
 		delta := countByTarget[classicQuestObjectiveTargetKey(info.Objective.Target)]
@@ -390,6 +400,7 @@ func appendQuestStateForHandle(result *packetResult, handle string, state int) {
 func applyAcceptedQuestStatesToBootstrap(snapshot *world.TownBootstrapSnapshot, store *session.Store, socketSession *packetSession) {
 	applyQuestStateOverrides(snapshot, acceptedQuestStatePushes(store, socketSession))
 	applyAuthoredVillageQuestBootstrap(snapshot, store, socketSession)
+	world.AppendAuthoredServiceNPCs(snapshot)
 }
 
 func acceptedQuestStatePushes(store *session.Store, socketSession *packetSession) []world.QuestStatePush {

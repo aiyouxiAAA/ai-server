@@ -77,7 +77,7 @@ func TestAuthoredVillageQuestLifecycle(t *testing.T) {
 	snapshot := world.TownBootstrapSnapshot{}
 	snapshot.LoadMap.MapID = "2"
 	applyAuthoredVillageQuestBootstrap(&snapshot, store, socket)
-	if len(snapshot.CreateRoles) != 2 || snapshot.QuestStates[0].State != 4 || snapshot.QuestStates[1].State != 1 {
+	if len(snapshot.CreateRoles) != 5 || snapshot.QuestStates[0].State != 4 || snapshot.QuestStates[1].State != 1 {
 		t.Fatalf("accepted restore %+v", snapshot)
 	}
 	completed := send(q.Finish.Handle(), "complete")

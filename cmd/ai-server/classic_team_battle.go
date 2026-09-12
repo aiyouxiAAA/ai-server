@@ -132,7 +132,9 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 			}
 			result.battleOver = &memberBattleOver
 			roleState, rolePhysique := finalizeClassicBattleOver(store, connection.session, memberBattleOver.Result)
-			connection.session.battleLoot = buildClassicBattleLoot(connection.session, memberBattleOver.Result)
+			memberBattleOver.Result.RewardItems = nil
+			memberBattleOver.Result.RewardDeliveryComplete = false
+			appendClassicBattleRewardDelivery(store, connection.session, &result)
 			result.roleState = roleState
 			result.rolePhysique = rolePhysique
 			result.questInfos = advanceClassicQuestProgressForTargets(
@@ -148,6 +150,7 @@ func (hub *classicTeamConnectionHub) syncSharedBattle(store *session.Store, sync
 			updatePlayerBaseRoleStateFromBattle(connection.session)
 		}
 		if connection.writer != nil {
+			refreshAuthoredQuestResult(store, connection.session, &result)
 			writeClassicTeamBattleResult(connection.writer, roleID, result)
 		}
 		hub.broadcast(classicTeamMemberSnapshotEventsIfChanged(beforeMember, connection.session))
@@ -238,6 +241,12 @@ func writeClassicTeamBattleResult(writer *websocketWriter, recipientRoleID strin
 	for _, questInfo := range result.questInfos {
 		if err := writer.writePush(cmdClassicTownQuestInfoPush, encodePayload(questInfo)); err != nil {
 			log.Printf("[ai-server] write classic team battle QuestInfo failed: %v", err)
+			return
+		}
+	}
+	if result.questGuide != nil {
+		if err := writer.writePush(cmdQuestGuideSnapshotPush, encodePayload(*result.questGuide)); err != nil {
+			log.Printf("[ai-server] write team quest guide: %v", err)
 			return
 		}
 	}

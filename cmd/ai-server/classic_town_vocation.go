@@ -4,7 +4,7 @@ import (
 	"log"
 	"strings"
 
-	"ai-server/internal/classicdata"
+	"ai-server/internal/profession"
 	"ai-server/internal/session"
 	"ai-server/internal/world"
 )
@@ -12,15 +12,9 @@ import (
 var classicTownVocationByAnswerHandle = mustLoadClassicTownVocationsByAnswerHandle()
 
 func mustLoadClassicTownVocationsByAnswerHandle() map[string]string {
-	rows := classicdata.MustRows(classicdata.TableProfession)
-	result := make(map[string]string, len(rows))
-	for _, row := range rows {
-		answerHandle := strings.TrimSpace(row["answer_handle"])
-		name := strings.TrimSpace(row["name"])
-		if answerHandle == "" || name == "" {
-			continue
-		}
-		result[answerHandle] = name
+	result := make(map[string]string, len(profession.Definitions))
+	for _, definition := range profession.Definitions {
+		result["job_"+definition.ID] = definition.Name
 	}
 	return result
 }

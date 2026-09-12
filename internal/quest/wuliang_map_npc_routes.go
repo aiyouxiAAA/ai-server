@@ -14,8 +14,12 @@ type ClassicMapNPCQuestRoute struct {
 }
 
 func ClassicMapNPCQuestRoutes() []ClassicMapNPCQuestRoute {
+	return classicMapNPCQuestRoutesFor(All())
+}
+
+func classicMapNPCQuestRoutesFor(infos []Info) []ClassicMapNPCQuestRoute {
 	result := []ClassicMapNPCQuestRoute{}
-	for _, info := range All() {
+	for _, info := range infos {
 		for _, route := range info.Routes {
 			for _, npc := range classicdata.FindClassicMapNPCSpawnsByHandle(route.Handle) {
 				mapEntry, ok := classicdata.FindClassicMap(npc.MapID)

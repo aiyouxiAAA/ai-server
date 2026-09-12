@@ -9,8 +9,6 @@ import (
 	"ai-server/internal/world"
 )
 
-const classicSocialFriendSeedCapture = "tmp/capture-timeline-feature-gap-audit.json#GetFrienInfos(132)+c_friendInfo(50028):恐龙抗狼1|45|29|战士"
-
 type classicSocialEntryBase struct {
 	RoleID   string `json:"roleId"`
 	RoleName string `json:"roleName"`
@@ -96,7 +94,6 @@ func buildClassicSocialGetFriendListResult(store *session.Store, socketSession *
 		log.Printf("[ai-server] classic social GetFrienInfos ignored without selected role")
 		return packetResult{handled: true}
 	}
-	ensureClassicSocialCapturedFriendSeed(socketSession)
 	entries := make([]classicSocialFriendEntry, 0, len(socketSession.friends))
 	for key, entry := range socketSession.friends {
 		// 列表拉取时按在线 hub / store 刷新等级、地图与在线态，对齐源码 friendMsg 后按 mapId 段判定在线。
@@ -189,24 +186,6 @@ func buildClassicSocialTradeRequestResult(socketSession *packetSession, request 
 	}
 }
 
-func ensureClassicSocialCapturedFriendSeed(socketSession *packetSession) {
-	if socketSession == nil || socketSession.friends != nil {
-		return
-	}
-	socketSession.friends = map[string]classicSocialFriendEntry{
-		"social-恐龙抗狼1": {
-			classicSocialEntryBase: classicSocialEntryBase{
-				RoleID:   "social-恐龙抗狼1",
-				RoleName: "恐龙抗狼1",
-				Level:    29,
-				MapName:  "广青镇_1",
-				Online:   true,
-			},
-			Relation: "friend",
-		},
-	}
-}
-
 func normalizeFriendEntry(store *session.Store, request classicSocialMutateRequest) (classicSocialFriendEntry, bool) {
 	base, ok := resolveSocialEntryBase(store, request)
 	if !ok {
@@ -229,7 +208,7 @@ func normalizeBlackEntry(store *session.Store, request classicSocialMutateReques
 	}, true
 }
 
-// resolveSocialEntryBase 按 在线 hub → store → 最小离线占位 解析目标角色。
+// resolveSocialEntryBase 只解析在线或已保存的真实角色。
 // 源码 AddFriend(roleName) 只带名字；玩家菜单可带 roleId。抓包 c_friendInfo 为 name|mapId|level|voc。
 func resolveSocialEntryBase(store *session.Store, request classicSocialMutateRequest) (classicSocialEntryBase, bool) {
 	roleName := strings.TrimSpace(request.RoleName)
@@ -244,7 +223,7 @@ func resolveSocialEntryBase(store *session.Store, request classicSocialMutateReq
 	if base, ok := resolveSocialEntryFromStore(store, roleID, roleName); ok {
 		return base, true
 	}
-	return fallbackSocialEntryBase(roleID, roleName), true
+	return classicSocialEntryBase{}, false
 }
 
 func resolveSocialEntryFromOnline(roleID string, roleName string) (classicSocialEntryBase, bool) {
@@ -334,22 +313,6 @@ func socialEntryFromStoredRole(role session.RoleSummary, online bool) classicSoc
 	}
 }
 
-func fallbackSocialEntryBase(roleID string, roleName string) classicSocialEntryBase {
-	if roleName == "" {
-		roleName = roleID
-	}
-	if roleID == "" {
-		roleID = "social-" + roleName
-	}
-	return classicSocialEntryBase{
-		RoleID:   roleID,
-		RoleName: roleName,
-		Level:    1,
-		MapName:  "云隐村",
-		Online:   false,
-	}
-}
-
 func refreshFriendEntry(store *session.Store, entry classicSocialFriendEntry) classicSocialFriendEntry {
 	base := refreshSocialEntryBase(store, entry.classicSocialEntryBase)
 	entry.classicSocialEntryBase = base
@@ -381,7 +344,8 @@ func refreshSocialEntryBase(store *session.Store, entry classicSocialEntryBase) 
 		}
 		return base
 	}
-	// 抓包 seed / 未知名占位：保留上次快照（含 online/map/level），不强行改写。
+	// 已离线且不再存在的角色不保持在线标记。
+	entry.Online = false
 	if entry.Level <= 0 {
 		entry.Level = 1
 	}

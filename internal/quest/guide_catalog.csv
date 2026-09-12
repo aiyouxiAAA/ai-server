@@ -1,3 +1,16 @@
 quest_id,phase,objective_id,action,target_role,map_id,objective_text,location,hint_id,priority
 XZ-M001,available,meet-start,npc_dialogue,start,2,与陆小满交谈,雪栈村 · 驿站前,quest-navigation-v1,100
 XZ-M001,accepted,report-finish,npc_dialogue,finish,2,向关伯衡报到,雪栈村 · 驿站石阶,,100
+XZ-M002,available,meet-smith,npc_dialogue,start,2,找石砺领取入门太刀,雪栈村 · 铁匠铺,,100
+XZ-M002,accepted,equip-tachi,open_page,bag,2,打开背包装备雪栈铁刀,背包 · 点击铁刀后装备,,100
+XZ-M002,ready,show-tachi,npc_dialogue,finish,2,请石砺检查装备,雪栈村 · 铁匠铺,,100
+XZ-M003,available,ask-healer,npc_dialogue,start,2,请石砺引荐村医,雪栈村 · 铁匠铺,,100
+XZ-M003,accepted,learn-healing,npc_dialogue,finish,2,向叶知冬了解治疗,雪栈村 · 药庐,,100
+XZ-M004,available,meet-patrol,npc_dialogue,start,2,找霍长缨领取首战任务,雪栈村 · 巡山队,,100
+XZ-M004,accepted,fight-spider,open_page,map,6,村外雪径击败雪蛛 {progress}/1,村外雪径 · 行走遇敌,,100
+XZ-M004,ready,report-battle,npc_dialogue,finish,2,向霍长缨回报首战,雪栈村 · 巡山队,,100
+XZ-M005,available,check-injury,npc_dialogue,start,2,听霍长缨安排调息,雪栈村 · 巡山队,,100
+XZ-M005,accepted,restore-state,npc_dialogue,finish,2,找叶知冬疗伤并补满状态,雪栈村 · 药庐,,100
+XZ-M005,ready,confirm-health,npc_dialogue,finish,2,向叶知冬交付恢复检查,雪栈村 · 药庐,,100
+XZ-M006,available,return-report,npc_dialogue,start,2,向叶知冬告辞,雪栈村 · 药庐,,100
+XZ-M006,accepted,report-village,npc_dialogue,finish,2,向关伯衡报平安,雪栈村 · 驿站石阶,,100

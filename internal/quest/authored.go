@@ -23,6 +23,7 @@ type AuthoredQuest struct {
 	MapID                                                              int
 	Start, Finish                                                      AuthoredNPC
 	OfferDialogue, ReminderDialogue, FinishDialogue, CompletedDialogue string
+	Rule                                                               AuthoredRule
 }
 
 // Original content joins the existing quest provider; captured rows stay intact.
@@ -33,6 +34,7 @@ func Authored() []AuthoredQuest {
 	}
 	result := make([]AuthoredQuest, 0, len(rows)-1)
 	seen := map[string]bool{}
+	rules := authoredRules()
 	for _, row := range rows[1:] {
 		if len(row) != 19 {
 			panic("authored quest column mismatch")
@@ -57,12 +59,21 @@ func Authored() []AuthoredQuest {
 				State:       "<over>向" + row[10] + "报到", Reward: Reward{Experience: number(14)}},
 		}
 		entry.Info.QuestStateHandle = entry.Start.Handle()
+		entry.Rule = rules[entry.Info.ID]
+		if entry.Rule.Kind == "" {
+			panic("missing authored quest rule: " + entry.Info.ID)
+		}
+		if entry.Rule.Kind == "kill" {
+			entry.Info.Objective = &Objective{Kind: ObjectiveKindKill, Target: entry.Rule.Target, Required: entry.Rule.Count}
+			entry.Info.State = entry.Info.Objective.StateForProgress(0)
+		}
 		entry.Info.RewardEntries = BuildRewardEntries(RewardEntrySourceQuest, entry.Info.ID, entry.Info.Reward)
-		if entry.MapID <= 0 || entry.Info.Level < 1 || entry.Info.Reward.Experience < 0 || entry.Start.Key == entry.Finish.Key {
+		if entry.MapID <= 0 || entry.Info.Level < 1 || entry.Info.Reward.Experience < 0 {
 			panic("invalid authored quest design")
 		}
 		result = append(result, entry)
 	}
+	validateAuthoredRules(result, rules)
 	return result
 }
 

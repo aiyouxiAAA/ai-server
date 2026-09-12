@@ -16,7 +16,7 @@ func TestEquipmentMetadataPreservesStructuredUnitsAndRuntimeBoundary(t *testing.
 			if row["captured_metadata"] == "" {
 				t.Fatalf("metadata-only equipment %s lacks provenance", row["name"])
 			}
-		} else {
+		} else if row["status"] != "authored" {
 			runtime++
 		}
 		for _, key := range []string{"equipment_attributes", "refinement_steps"} {

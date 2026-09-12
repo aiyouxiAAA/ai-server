@@ -871,11 +871,11 @@ func TestClassicTeamSharedBattleOverGrantsRewardAndLootToEachOnlineMember(t *tes
 	}
 	classicTeamHub.syncSharedBattle(store, *playOver.teamBattleSync)
 
-	assertClassicTeamSharedBattleRewardState(t, leaderSession, "leader")
-	assertClassicTeamSharedBattleRewardState(t, memberSession, "member")
+	assertClassicTeamSharedBattleRewardState(t, store, leaderSession, "leader")
+	assertClassicTeamSharedBattleRewardState(t, store, memberSession, "member")
 	memberLootList := buildClassicTownItemListResult(store, memberSession, classicBattleLootType)
-	if !memberLootList.handled || len(memberLootList.itemInfos) != 1 || memberLootList.itemInfos[0].Name != "朽木" {
-		t.Fatalf("expected member battle loot container to list shared reward, got %+v", memberLootList)
+	if !memberLootList.handled || len(memberLootList.itemInfos) != 0 {
+		t.Fatalf("expected no overflow with bag space, got %+v", memberLootList)
 	}
 }
 
@@ -1198,7 +1198,7 @@ func assertClassicTeamMemberSnapshot(t *testing.T, result packetResult, roleID s
 	t.Fatalf("expected team member snapshot for roleId=%s, got %+v", roleID, result.teamEvents)
 }
 
-func assertClassicTeamSharedBattleRewardState(t *testing.T, socketSession *packetSession, label string) {
+func assertClassicTeamSharedBattleRewardState(t *testing.T, store *session.Store, socketSession *packetSession, label string) {
 	t.Helper()
 	if socketSession == nil || socketSession.selectedRole == nil || socketSession.playerBase == nil {
 		t.Fatalf("expected %s session to stay selected after shared battle", label)
@@ -1206,8 +1206,9 @@ func assertClassicTeamSharedBattleRewardState(t *testing.T, socketSession *packe
 	if socketSession.selectedRole.Exp != 37 || socketSession.playerBase.Exp != 37 {
 		t.Fatalf("expected %s shared battle exp reward 37, got role=%+v playerBase=%+v", label, socketSession.selectedRole, socketSession.playerBase)
 	}
-	if len(socketSession.battleLoot) != 1 || socketSession.battleLoot[0].Name != "朽木" || socketSession.battleLoot[0].Type != classicBattleLootType {
-		t.Fatalf("expected %s shared battle loot in battle container, got %+v", label, socketSession.battleLoot)
+	bag := buildClassicTownItemListResult(store, socketSession, "背包")
+	if len(socketSession.battleLoot) != 0 || !classicTownItemInfosContain(bag.itemInfos, "朽木", 1) {
+		t.Fatalf("expected %s shared reward in bag, got %+v", label, bag)
 	}
 }
 

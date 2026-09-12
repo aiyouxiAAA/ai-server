@@ -110,7 +110,7 @@ func TestGeneratedClassicItemRowsKeepCapturedQualityColors(t *testing.T) {
 		if !classicItemQualityColorTestPattern.MatchString(color) {
 			t.Fatalf("item %s has invalid quality_color %q", row["name"], row["quality_color"])
 		}
-		if !strings.HasPrefix(evidence, "captured:") && evidence != "source_default_white" {
+		if !strings.HasPrefix(evidence, "captured:") && evidence != "source_default_white" && !(row["status"] == "authored" && strings.HasPrefix(evidence, "authored:")) {
 			t.Fatalf("item %s has invalid quality_color_evidence %q", row["name"], evidence)
 		}
 	}
@@ -242,7 +242,9 @@ func TestGeneratedClassicItemTableExposesStructuredEquipmentProperties(t *testin
 		if row["item_type"] != "equip" {
 			continue
 		}
-		equipmentRows++
+		if row["status"] != "authored" {
+			equipmentRows++
+		}
 		if !strings.HasPrefix(row["property_parse_status"], "template_") {
 			t.Fatalf("equipment %s has invalid property parse status %q", row["name"], row["property_parse_status"])
 		}

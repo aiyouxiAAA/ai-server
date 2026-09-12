@@ -1237,7 +1237,7 @@ func pointCouponThiefSourceMonster(spawn classicactivity.PointCouponThiefSpawn) 
 
 func isSourceWildBattleMap(mapID int) bool {
 	_, ok := sourceWildBattleMapIDs[mapID]
-	return ok
+	return ok || originalWildBattleMapIDs[mapID]
 }
 
 func resolveTownMapBootstrapDefinition(mapID string) townMapBootstrapDefinition {
@@ -1286,6 +1286,9 @@ func FindSourceCollectionPoint(handle string) (SourceCollectionPoint, bool) {
 }
 
 func BuildAnswerReply(handle string, msgHandle string, answerHandle string) *AnswerSpeakPush {
+	if reply := buildOriginalProfessionReply(handle, msgHandle, answerHandle); reply != nil {
+		return reply
+	}
 	key := sourceNPCDialogueReplyKey{
 		Handle:       handle,
 		MsgHandle:    msgHandle,

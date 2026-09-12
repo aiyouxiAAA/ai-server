@@ -1,0 +1,4 @@
+map_id,key,name,x,y,dialogue,services
+2,ye-zhidong,叶知冬,1940,480,能走回来，不等于没有受伤。先让我看看你的伤势，出门前也记得备些药。,heal|medicine
+2,shi-li,石砺,840,480,拿得稳，再谈使得快。兵器和护具分开放，需要什么就看看。,weapon|armor
+2,luo-qiancheng,罗千程,660,500,买卖算得清，人情可不能算没了。路上的杂货在这里，多余的战利品也可以卖给我。,grocery

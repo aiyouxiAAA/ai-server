@@ -1,0 +1,7 @@
+quest_id,previous,kind,target,count,target_map,accept_item
+XZ-M001,,visit,,0,0,
+XZ-M002,XZ-M001,equip,雪栈铁刀,1,0,雪栈铁刀
+XZ-M003,XZ-M002,visit,,0,0,
+XZ-M004,XZ-M003,kill,雪蛛,1,6,
+XZ-M005,XZ-M004,recover,,0,0,
+XZ-M006,XZ-M005,visit,,0,0,

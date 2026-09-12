@@ -1192,8 +1192,8 @@ func TestHandlePacketClassicBattleOverAppliesSourceResultRewards(t *testing.T) {
 	if socketSession.playerBase.Level != 2 || socketSession.selectedRole.Level != 2 {
 		t.Fatalf("expected source RoleConvert exp table to level role to 2, got role=%+v playerBase=%+v", socketSession.selectedRole, socketSession.playerBase)
 	}
-	if len(socketSession.battleLoot) != 1 || socketSession.battleLoot[0].Name != "朽木" || socketSession.battleLoot[0].Type != "战斗" {
-		t.Fatalf("expected result items to enter battle loot container, got %+v", socketSession.battleLoot)
+	if len(socketSession.battleLoot) != 0 || !playOver.battleOver.Result.RewardDeliveryComplete || !classicTownItemInfosContain(playOver.itemInfos, "朽木", 1) {
+		t.Fatalf("expected automatic bag delivery with receipt, got %+v", playOver)
 	}
 }
 
@@ -3411,6 +3411,7 @@ func TestHandlePacketClassicTownActiveItemAppliesCapturedAdvancedExperienceBuff(
 
 func TestHandlePacketClassicTownBuyBackListAndTakeDeductsCopper(t *testing.T) {
 	store, socketSession := seedSelectedRoleSession(t)
+	socketSession.buyBackSoldEntries = append([]classicTownSourceBuyBackEntry(nil), classicTownSourceBuyBackEntries...)
 	beforeCopper := roleCurrenciesOrEmpty(
 		store,
 		socketSession.playerBase.PlayerID,
@@ -3907,8 +3908,8 @@ func TestHandlePacketClassicTownSaleItemAddsCopperAndConsumesCount(t *testing.T)
 			break
 		}
 	}
-	if soldBuyBackIndex < len(classicTownSourceBuyBackEntries) {
-		t.Fatalf("expected dynamic sold buyback row after static captures, index=%d rows=%+v", soldBuyBackIndex, result.buyBackInfos)
+	if soldBuyBackIndex != 0 || len(result.buyBackInfos) != 1 {
+		t.Fatalf("expected only the actual sold item in buyback, index=%d rows=%+v", soldBuyBackIndex, result.buyBackInfos)
 	}
 
 	takeSold := handlePacketWithSession(store, protocol.Packet{
@@ -8353,30 +8354,6 @@ func TestHandlePacketClassicSocialGetFriendListReturnsCurrentSnapshot(t *testing
 	}, &packetSession{})
 	if !withoutRole.handled || len(withoutRole.friendInfos) != 0 {
 		t.Fatalf("expected GetFrienInfos without selected role to return no entries, got %+v", withoutRole)
-	}
-}
-
-func TestHandlePacketClassicSocialGetFriendListSeedsCapturedFriendInfo(t *testing.T) {
-	_, socketSession := seedSelectedRoleSession(t)
-
-	result := handlePacketWithSession(session.NewStore(), protocol.Packet{
-		Cmd: cmdClassicSocialGetFriendListReq,
-		Seq: 2,
-	}, socketSession)
-	if !result.handled || len(result.friendInfos) != 1 {
-		t.Fatalf("expected captured FriendInfo seed, got %+v", result)
-	}
-	friend := result.friendInfos[0]
-	if friend.RoleName != "恐龙抗狼1" || friend.Level != 29 || friend.MapName != "广青镇_1" || !friend.Online || friend.Relation != "friend" {
-		t.Fatalf("expected captured 恐龙抗狼1|45|29|战士 friend mapping, got %+v", friend)
-	}
-
-	replay := handlePacketWithSession(session.NewStore(), protocol.Packet{
-		Cmd: cmdClassicSocialGetFriendListReq,
-		Seq: 3,
-	}, socketSession)
-	if !replay.handled || len(replay.friendInfos) != 1 || replay.friendInfos[0].RoleName != "恐龙抗狼1" {
-		t.Fatalf("expected captured friend seed to persist in current session snapshot, got %+v", replay)
 	}
 }
 

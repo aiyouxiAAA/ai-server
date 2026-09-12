@@ -14,6 +14,7 @@ import (
 
 	"ai-server/internal/guild"
 	"ai-server/internal/mall"
+	"ai-server/internal/profession"
 	_ "modernc.org/sqlite"
 )
 
@@ -625,15 +626,7 @@ func NewStore() *Store {
 		rolesByPID:           make(map[string][]RoleSummary),
 		teamDungeonInstances: make(map[string]map[string]DungeonInstanceState),
 		nextRoleSeqByPID:     make(map[string]int),
-		accountsByName: map[string]AccountRecord{
-			"mockuser": {
-				UserName:     "mockuser",
-				Password:     "magicpwd",
-				PlayerID:     "mock-player-001",
-				DisplayName:  "Mock Swordswoman",
-				SessionToken: "mock-session-token-001",
-			},
-		},
+		accountsByName:       make(map[string]AccountRecord),
 		now:                  time.Now,
 		Guilds:               guild.NewMemoryService(),
 		Mall:                 mall.NewService(),
@@ -722,27 +715,7 @@ func NewPersistentStore(persistencePath string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	migratedCaptured777RoleIDs, err := store.applyPendingCapturedWoodcutter777InventoryMigration()
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	if _, err := store.applyPendingCapturedAChaiLevel50StatsAndSkillsMigration(); err != nil {
-		_ = db.Close()
-		return nil, err
-	}
 	store.repairMountedFashionAppearanceSourceQueries()
-
-	if err := store.saveLocked(); err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	for _, roleID := range migratedCaptured777RoleIDs {
-		if err := store.recordCapturedWoodcutter777InventoryMigration(roleID); err != nil {
-			_ = db.Close()
-			return nil, err
-		}
-	}
 
 	return store, nil
 }
@@ -752,17 +725,8 @@ func (store *Store) Login(request LoginRequest) LoginResponse {
 		return store.loginByAccount(request.UserName, request.Password)
 	}
 
-	platform := request.Platform
-	if platform == "" {
-		platform = "guest"
-	}
-
-	playerID := fmt.Sprintf("%s-player-local", platform)
 	return LoginResponse{
-		PlayerID:     playerID,
-		SessionToken: fmt.Sprintf("local-session-%s", playerID),
-		DisplayName:  "本地女侠",
-		Success:      true,
+		Success: false, ErrorCode: "6", ErrorMessage: "请输入账号和密码登录。",
 	}
 }
 
@@ -891,6 +855,8 @@ func (store *Store) CreateRole(request RoleCreateRequest) RoleCreateResponse {
 		Currencies:   defaultRoleCurrencies(),
 		Items:        defaultRoleItems(),
 	}
+	role = applyOriginalProfession(role)
+	role.MapID = profession.Definitions[0].SpawnMapID
 	store.rolesByPID[request.PlayerID] = append(roles, role)
 	acquisitions := make([]RoleItemAcquisition, 0, len(role.Items))
 	for _, item := range role.Items {
@@ -2512,7 +2478,8 @@ func (store *Store) SetRoleVocation(playerID string, roleID string, vocation str
 	store.mu.Lock()
 	defer store.mu.Unlock()
 
-	vocation, ok := normalizeRoleVocation(vocation)
+	definition, ok := profession.ByName(vocation)
+	vocation = definition.Name
 	if !ok {
 		return RoleVocationResult{
 			ErrorCode:    "invalid_vocation",
@@ -2528,7 +2495,9 @@ func (store *Store) SetRoleVocation(playerID string, roleID string, vocation str
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
 		changed := roles[index].Voc != vocation
-		roles[index].Voc = vocation
+		if changed {
+			roles[index] = applyOriginalProfession(roles[index])
+		}
 		store.rolesByPID[playerID] = roles
 		if changed {
 			if err := store.persistPlayerStateLocked(playerID); err != nil {
@@ -3877,7 +3846,8 @@ func (store *Store) useSkillItemLocked(
 	skill RoleSkill,
 ) RoleUseItemResult {
 	skill = normalizeRoleSkill(skill)
-	if skill.Name == "" {
+	_, registered := profession.BySkillName(skill.Name)
+	if !registered {
 		role := withRoleRuntimeDefaults(roles[roleIndex])
 		return RoleUseItemResult{
 			Role:         role,
@@ -4335,16 +4305,8 @@ func (store *Store) PurchaseMallProduct(playerID string, roleID string, product 
 		}
 		roles[index] = withRoleRuntimeDefaults(roles[index])
 		totalPrice := product.Price * quantity
-		// Source mall spends 玉币. Older development roles only seeded 银元宝;
-		// allow that balance as a temporary fallback so the safe shell can purchase.
 		payCurrency := product.Currency
 		payBalance := roles[index].Currencies[payCurrency]
-		if payCurrency == mall.SourceYubiCurrencyName && payBalance < totalPrice {
-			if roles[index].Currencies[mall.DevCurrencyName] >= totalPrice {
-				payCurrency = mall.DevCurrencyName
-				payBalance = roles[index].Currencies[payCurrency]
-			}
-		}
 		if payBalance < totalPrice {
 			return mall.PurchaseResult{
 				Success:         false,
@@ -5804,7 +5766,8 @@ func (store *Store) LearnRoleSkill(playerID string, roleID string, skill RoleSki
 
 		roles[index] = withRoleRuntimeDefaults(roles[index])
 		skill = normalizeRoleSkill(skill)
-		if skill.Name == "" {
+		_, registered := profession.BySkillName(skill.Name)
+		if !registered {
 			return cloneRoleSkills(roles[index].Skills), roles[index].SkillCap, true, false
 		}
 
@@ -5921,7 +5884,8 @@ func (store *Store) PurchaseRoleSkill(playerID string, roleID string, skill Role
 		maxLevel := normalizeSkillMaxLevel(skill.MaxLevel)
 		currentSkills := cloneRoleSkills(roles[index].Skills)
 		currentCurrencies := cloneRoleCurrencies(roles[index].Currencies)
-		if skill.Name == "" {
+		_, registered := profession.BySkillName(skill.Name)
+		if !registered {
 			return RoleSkillPurchaseResult{
 				Skills:       currentSkills,
 				SkillCap:     roles[index].SkillCap,
@@ -6126,14 +6090,6 @@ func (store *Store) validateRoleAccessLockedWithAccountLocked(playerID string, s
 			}, false
 		}
 		return account, RoleRemoveResponse{}, true
-	}
-
-	localSessionToken := fmt.Sprintf("local-session-%s", trimmedPlayerID)
-	if trimmedSessionToken == localSessionToken {
-		return AccountRecord{
-			PlayerID:     trimmedPlayerID,
-			SessionToken: trimmedSessionToken,
-		}, RoleRemoveResponse{}, true
 	}
 
 	return AccountRecord{}, RoleRemoveResponse{

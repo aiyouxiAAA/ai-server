@@ -33,7 +33,9 @@ func Guides() []Guide {
 		mapID, e1 := strconv.Atoi(row[5])
 		priority, e2 := strconv.Atoi(row[9])
 		key := row[0] + ":" + row[1]
-		if !ok || seen[key] || e1 != nil || e2 != nil || mapID != q.MapID || row[2] == "" || row[6] == "" || row[3] != "npc_dialogue" || (row[4] != "start" && row[4] != "finish") || (row[1] != "available" && row[1] != "accepted") {
+		validTarget := row[3] == "npc_dialogue" && (row[4] == "start" || row[4] == "finish") && mapID == q.MapID
+		validTarget = validTarget || row[3] == "open_page" && ((row[4] == "bag" && q.Rule.Kind == "equip" && mapID == q.MapID) || (row[4] == "map" && q.Rule.Kind == "kill" && mapID == q.Rule.TargetMap))
+		if !ok || seen[key] || e1 != nil || e2 != nil || row[2] == "" || row[6] == "" || !validTarget || (row[1] != "available" && row[1] != "accepted" && row[1] != "ready") {
 			panic("invalid quest guide: " + key)
 		}
 		seen[key] = true

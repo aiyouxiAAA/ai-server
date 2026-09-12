@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"ai-server/internal/profession"
 	"ai-server/internal/session"
 )
 
@@ -298,6 +299,7 @@ type CellInfoPush struct {
 	DisplayURL        string `json:"displayUrl"`
 	Level             int    `json:"level,omitempty"`
 	Vocation          string `json:"vocation,omitempty"`
+	ProfessionID      string `json:"professionId,omitempty"`
 	XScale            int    `json:"xScale"`
 	YScale            int    `json:"yScale"`
 	MaxHP             int    `json:"maxHp"`
@@ -393,8 +395,9 @@ type ActionPush struct {
 }
 
 type ActionResultCodeEntry struct {
-	Handle    string `json:"handle"`
-	StateCode string `json:"stateCode"`
+	Handle      string `json:"handle"`
+	StateCode   string `json:"stateCode"`
+	TargetInDef bool   `json:"targetInDef,omitempty"`
 }
 
 type BuffInfoPush struct {
@@ -422,12 +425,14 @@ type OverPush struct {
 }
 
 type ResultPayload struct {
-	Winner        Camp     `json:"winner"`
-	Rounds        int      `json:"rounds"`
-	ExpDelta      int      `json:"expDelta"`
-	CurrencyDelta int      `json:"currencyDelta"`
-	Items         []string `json:"items"`
-	Escaped       bool     `json:"escaped,omitempty"`
+	Winner                 Camp         `json:"winner"`
+	Rounds                 int          `json:"rounds"`
+	ExpDelta               int          `json:"expDelta"`
+	CurrencyDelta          int          `json:"currencyDelta"`
+	Items                  []string     `json:"items"`
+	Escaped                bool         `json:"escaped,omitempty"`
+	RewardItems            []RewardItem `json:"rewardItems,omitempty"`
+	RewardDeliveryComplete bool         `json:"rewardDeliveryComplete,omitempty"`
 }
 
 type TeamActor struct {
@@ -463,6 +468,8 @@ type Runtime struct {
 	PendingConfusion      map[string]bool
 	StoredPower           map[string]int
 	PendingBuffInfos      []BuffInfoPush
+	guardCounters         []guardCounter
+	originalMonsterTurns  map[string]int
 	PendingClearBuffInfos []ClearBuffInfoPush
 	PendingSkillSeal      map[string]bool
 	PendingStarts         []StartCommandPush
@@ -632,6 +639,7 @@ func NewWildBattle(role session.RoleSummary, playerBase session.PlayerBaseData, 
 			DisplayURL:   battleRoleDisplayURL(role, playerBase),
 			Level:        playerLevel,
 			Vocation:     defaultString(playerBase.Voc, role.Voc),
+			ProfessionID: profession.IDForName(role.Voc),
 			XScale:       100,
 			YScale:       100,
 			MaxHP:        playerMaxHP,
@@ -841,6 +849,7 @@ func buildTeamActorCell(battleID string, role session.RoleSummary, playerBase se
 		DisplayURL:   battleRoleDisplayURL(role, playerBase),
 		Level:        playerLevel,
 		Vocation:     defaultString(playerBase.Voc, role.Voc),
+		ProfessionID: profession.IDForName(role.Voc),
 		XScale:       100,
 		YScale:       100,
 		MaxHP:        playerMaxHP,
@@ -888,6 +897,11 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 	runtime.PendingBuffInfos = nil
 	runtime.PendingClearBuffInfos = nil
 	commandID := strings.TrimSpace(request.CommandID)
+
+	normalizedRequest := normalizeBattleCommandID(commandID)
+	if normalizedRequest != CommandEscape && normalizedRequest != CommandDefense && normalizedRequest != CommandStore && !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
+		return ActionResult{ErrorCode: "unsupported_command"}
+	}
 	if runtime.consumePendingConfusion(actor.Handle) {
 		runtime.consumePendingSkillSeal(actor.Handle)
 		runtime.ConsumedSequence[request.Sequence] = true
@@ -900,6 +914,17 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return runtime.resolveEnemyTurnAndNextCommand(actor, actions)
 	}
 	normalizedCommandID := normalizeBattleCommandID(commandID)
+	if skill, ok := profession.BySkillID(normalizedCommandID); ok && actor.ProfessionID != "" {
+		if skill.Kind != "skill" || skill.ProfessionID != actor.ProfessionID || !runtime.hasRoleSkillForActor(actor.Handle, skill.Name) {
+			return ActionResult{ErrorCode: "unsupported_command"}
+		}
+		if actor.MP < skill.MPCost {
+			return ActionResult{ErrorCode: "insufficient_mp"}
+		}
+		if runtime.powerFor(actor.Handle) < skill.RequiredPower {
+			return ActionResult{ErrorCode: "insufficient_power"}
+		}
+	}
 	if runtime.hasPendingSkillSeal(actor.Handle) && isBattleSkillCommandBlockedBySeal(normalizedCommandID) {
 		return ActionResult{ErrorCode: "sealed_skill"}
 	}
@@ -943,217 +968,11 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
 			runtime.resolveSelfAction(actor, commandID, "蓄力", "def"),
 		})
-	case CommandKuangBao:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.sourceSkillProfileForActor(actor.Handle, "狂爆", 1)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		runtime.applyKuangBao(actor.Handle)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveSelfAction(actor, commandID, "狂爆", "w8/kb"),
-		})
-		result.BuffInfos = append(result.BuffInfos, runtime.resolveKuangBaoBuffInfo(actor))
-		return result
-	case CommandJieDuShu:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.sourceSkillProfileForActor(actor.Handle, "解毒术", 1)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		runtime.clearStatusEffect(actor.Handle, "中毒")
-		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveSelfAction(actor, commandID, "解毒术", "w3/releaseDrug"),
-		})
-	case CommandLiShiGunShu:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.sourceSkillProfileForActor(actor.Handle, "力释棍术", 1)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		buffInfo := runtime.applyFightingSpiritStatusEffect(actor)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveSelfAction(actor, commandID, "力释棍术", "w11/releasePower"),
-		})
-		result.BuffInfos = append(result.BuffInfos, buffInfo)
-		return result
-	case CommandTaunt:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.battleCommandProfile(actor, commandID)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		buffInfo := runtime.applyTauntStatusEffect(actor)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveCapturedTauntAction(actor, commandID, profile),
-		})
-		result.BuffInfos = append(result.BuffInfos, buffInfo)
-		return result
-	case CommandNingShenShi:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.battleCommandProfile(actor, commandID)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		buffInfos := runtime.applyNingShenStatusEffects(actor)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveProfileSelfAction(actor, commandID, profile),
-		})
-		result.BuffInfos = append(result.BuffInfos, buffInfos...)
-		return result
-	case CommandQiYuShi:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.battleCommandProfile(actor, commandID)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		buffInfo := runtime.applyQiYuStatusEffect(actor)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveProfileSelfAction(actor, commandID, profile),
-		})
-		result.BuffInfos = append(result.BuffInfos, buffInfo)
-		return result
-	case CommandYuQiShu, CommandHuiShangShu, CommandShengGuangJue, CommandHuanHunShu:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		target := runtime.cellByHandle(request.TargetHandle)
-		normalizedCommandID := normalizeBattleCommandID(commandID)
-		if target == nil || target.Camp != CampTeam || (normalizedCommandID == CommandHuanHunShu && target.HP > 0) || (normalizedCommandID != CommandHuanHunShu && target.HP <= 0) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		profile := runtime.battleCommandProfile(actor, commandID)
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.consumePendingSkillSeal(actor.Handle)
-		runtime.setStoredPower(actor.Handle, 0)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		switch normalizedCommandID {
-		case CommandYuQiShu:
-			target.HP = clampInt(target.HP+yuQiShuCapturedHealAmount, 0, target.MaxHP)
-		case CommandHuiShangShu:
-			runtime.clearStatusEffect(target.Handle, "内伤")
-			runtime.clearStatusEffect(target.Handle, "外伤")
-			runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.applyHuiShangShuQiLiaoStatusEffect(actor, target))
-		case CommandShengGuangJue:
-			for _, statusName := range []string{"混乱", "眩晕", "冰冻", "麻痹"} {
-				runtime.clearStatusEffect(target.Handle, statusName)
-			}
-		case CommandHuanHunShu:
-			target.HP = (target.MaxHP + 1) / 2
-		}
-		action := runtime.resolveProfileFriendlyAction(actor, target, commandID, profile)
-		if normalizedCommandID == CommandHuanHunShu {
-			action.SourceMode = "1"
-		}
-		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{action})
-	case CommandFistInfluxGas:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		profile := runtime.battleCommandProfile(actor, commandID)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		runtime.setStoredPower(actor.Handle, runtime.powerFor(actor.Handle)+1)
-		buffInfos := runtime.applyFistInfluxGasStatusEffects(actor)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveProfileSelfAction(actor, commandID, profile),
-		})
-		result.BuffInfos = append(result.BuffInfos, buffInfos...)
-		return result
-	case CommandFistMoveShadow:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.battleCommandProfile(actor, commandID)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		buffInfo := runtime.applyFistMoveShadowStatusEffect(actor)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveProfileSelfAction(actor, commandID, profile),
-		})
-		result.BuffInfos = append(result.BuffInfos, buffInfo)
-		return result
-	case CommandMoZhangShu:
-		if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
-			return ActionResult{ErrorCode: "unsupported_command"}
-		}
-		if !runtime.isSelfTarget(actor, request.TargetHandle) {
-			return ActionResult{ErrorCode: "invalid_target"}
-		}
-		runtime.ConsumedSequence[request.Sequence] = true
-		runtime.setStoredPower(actor.Handle, 0)
-		profile := runtime.battleCommandProfile(actor, commandID)
-		if profile.MPCost > 0 {
-			actor.MP = maxInt(0, actor.MP-profile.MPCost)
-		}
-		buffInfo := runtime.applyMagicBarrierStatusEffect(actor)
-		result := runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{
-			runtime.resolveProfileSelfAction(actor, commandID, profile),
-		})
-		result.BuffInfos = append(result.BuffInfos, buffInfo)
-		return result
+
 	}
 
 	if !runtime.isBattleCommandAllowedForActor(actor.Handle, commandID) {
 		return ActionResult{ErrorCode: "unsupported_command"}
-	}
-	if normalizeBattleCommandID(commandID) == CommandHuoShenZhou && runtime.powerFor(actor.Handle) < huoShenZhouRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
 	}
 
 	if runtime.battleCommandProfile(actor, commandID).SourceType == "all" {
@@ -1165,27 +984,6 @@ func (runtime *Runtime) ProcessAction(request ActionRequest) ActionResult {
 		action := runtime.resolveAllTargetAttack(actor, targets, commandID)
 		runtime.setStoredPower(actor.Handle, 0)
 		return runtime.resolveEnemyTurnAndNextCommand(actor, []ActionPush{action})
-	}
-	if normalizeBattleCommandID(commandID) == CommandLeiHunZhan && runtime.powerFor(actor.Handle) < leiHunZhanRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
-	}
-	if normalizeBattleCommandID(commandID) == CommandLeiLongQiangXi && runtime.powerFor(actor.Handle) < leiLongQiangXiRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
-	}
-	if normalizeBattleCommandID(commandID) == CommandAoYiHongLeiShi && runtime.powerFor(actor.Handle) < aoYiHongLeiShiRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
-	}
-	if normalizeBattleCommandID(commandID) == CommandAoYiAnShaZhe && runtime.powerFor(actor.Handle) < aoYiAnShaZheRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
-	}
-	if normalizeBattleCommandID(commandID) == CommandAoYiLiuHeGunFa && runtime.powerFor(actor.Handle) < aoYiLiuHeGunFaRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
-	}
-	if normalizeBattleCommandID(commandID) == CommandAoYiPiaoXue && runtime.powerFor(actor.Handle) < aoYiPiaoXueRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
-	}
-	if normalizeBattleCommandID(commandID) == CommandFistPowerAxeWing && runtime.powerFor(actor.Handle) < fistPowerAxeWingRequiredPower {
-		return ActionResult{ErrorCode: "insufficient_power"}
 	}
 
 	target := runtime.cellByHandle(request.TargetHandle)
@@ -1389,7 +1187,6 @@ func (runtime *Runtime) resolveEnemyTurnAndNextCommand(actor *CellInfoPush, acti
 			if team == nil {
 				break
 			}
-			actions = append(actions, runtime.resolveEnemyRampageActions(enemy)...)
 			targetHandle := team.Handle
 			commandID := runtime.enemyBattleCommand(enemy, team)
 			if runtime.consumePendingSkillSeal(enemy.Handle) {
@@ -1500,8 +1297,9 @@ func (runtime *Runtime) resolveAllTargetAttack(actor *CellInfoPush, targets []*C
 		action := runtime.resolveAttackWithMPCost(actor, target, commandID, len(actions) == 0)
 		actions = append(actions, action)
 		results = append(results, ActionResultCodeEntry{
-			Handle:    target.Handle,
-			StateCode: action.TargetActionStateCode,
+			Handle:      target.Handle,
+			StateCode:   action.TargetActionStateCode,
+			TargetInDef: action.TargetInDef,
 		})
 		for _, refresh := range action.RefreshInfos {
 			if refresh.Handle == actor.Handle {
@@ -1525,6 +1323,9 @@ func (runtime *Runtime) resolveAllTargetAttack(actor *CellInfoPush, targets []*C
 
 func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *CellInfoPush, commandID string, consumeMP bool) ActionPush {
 	profile := runtime.battleCommandProfile(actor, commandID)
+	if guarded, ok := runtime.tryProfessionGuard(actor, target, commandID, consumeMP, profile); ok {
+		return guarded
+	}
 	targetInDef := runtime.DefendingHandles[target.Handle]
 	defense := runtime.effectiveBattleDefenseValue(actor, target, targetInDef, profile.DefenseType)
 	sourceActionLabel := profile.SourceActionLabel
@@ -1643,7 +1444,6 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 			runtime.PendingBuffInfos = append(runtime.PendingBuffInfos, runtime.resolveStatusBuffInfo(actor, target, effect))
 		}
 	}
-	runtime.applyCapturedStunOnHit(actor, target, commandID)
 	if target.HP > 0 {
 		runtime.applyEquipmentInnerInjuryOnHit(actor, target, commandID)
 	}
@@ -1675,469 +1475,28 @@ func (runtime *Runtime) resolveAttackWithMPCost(actor *CellInfoPush, target *Cel
 }
 
 func (runtime *Runtime) battleCommandProfile(actor *CellInfoPush, commandID string) commandProfile {
-	profile := commandProfile{
-		ActionName:        "普通攻击",
-		SourceType:        "oneE",
-		SourceActionLabel: "nomalAtk",
-		DamageMultiplier:  1,
-		CanDodge:          true,
-		CanFat:            true,
-		DefenseType:       "physical",
-	}
-	if actor != nil && strings.TrimSpace(actor.CommandLabel) != "" {
-		profile.ActionName = actor.CommandLabel
-	}
-	switch normalizeBattleCommandID(commandID) {
-	case CommandMiZhan:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "密斩", 1)
-	case CommandDuoDuanZhan:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "多段斩", 1)
-	case CommandDuoDuanCi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "多段刺", 5)
-	case CommandShiXueZhan:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "嗜血斩", 1)
-	case CommandKuangBao:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "狂爆", 1)
-	case CommandHongYueZhan:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "红月斩", 1)
-	case CommandXueQie:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "血切", 1)
-	case CommandTaunt:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "挑衅", 1)
-	case CommandJuanYeShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "卷叶式", 5)
-	case CommandQiangGuanShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "强贯式", 5)
-	case CommandNingShenShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "凝神式", 5)
-	case CommandKuangWuShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "狂舞式", 5)
-	case CommandQiYuShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "气愈式", 5)
-	case CommandAoYiPiaoXue:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.飘血", 4)
-	case CommandFistDoubleAtk:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "连击", 5)
-	case CommandFistPowHit:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "重烈", 5)
-	case CommandFistInfluxGas:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "气运丹田", 5)
-	case CommandFistBreakSoul:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "破魂打", 5)
-	case CommandFistMoveShadow:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "移形换影", 4)
-	case CommandFistPowerAxeWing:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.修罗幻翼拳", 4)
-	case CommandPiShanGunFa:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "劈山棍法", 5)
-	case CommandYeChaGunFa:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "夜叉棍法", 1)
-	case CommandLiShiGunShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "力释棍术", 1)
-	case CommandPanLongGunFa:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "盘龙棍法", 1)
-	case CommandQiangLiFeiBiao:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "强力飞镖", 2)
-	case CommandTouDu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "投毒", 1)
-	case CommandMoLiTuCi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "魔力突刺", 1)
-	case CommandJiFengCi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "疾风刺", 1)
-	case CommandJieDuShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "解毒术", 1)
-	case CommandQiangShe:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "强射", 5)
-	case CommandGuanJiaLianShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "贯甲连矢", 2)
-	case CommandBingJianSuShe:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "冰箭速射", 5)
-	case CommandMoLiSuShe:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "魔力速射", 5)
-	case CommandAnYingJian:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "暗影箭", 1)
-	case CommandDuShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "毒矢", 1)
-	case CommandYanShouShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "炎狩术", 5)
-	case CommandChiYanMoZhou:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "赤焰魔咒", 2)
-	case CommandLeiJi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "雷击", 3)
-	case CommandLeiBaoZhou:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "雷爆咒", 1)
-	case CommandHuoShenZhou:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "火神咒", 1)
-	case CommandShiYuShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "石雨术", 1)
-	case CommandLeiLongQiangXi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "雷龙强袭", 1)
-	case CommandMoZhangShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "魔障术", 2)
-	case CommandYuQiShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "愈气术", 5)
-	case CommandHuiShangShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "回伤术", 1)
-	case CommandShengGuangJue:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "圣光诀", 1)
-	case CommandHuanHunShu:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "还魂术", 5)
-	case CommandLeiHunZhan:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.雷魂斩", 1)
-	case CommandAoYiHongLeiShi:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.轰雷矢", 1)
-	case CommandAoYiAnShaZhe:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.暗杀者", 1)
-	case CommandAoYiLiuHeGunFa:
-		return runtime.sourceSkillProfileForActor(actor.Handle, "奥义.六合棍法", 1)
-	case CommandEnemySlideCut:
-		return commandProfile{
-			ActionName:        "滑行斩",
-			SourceType:        "oneE",
-			SourceActionLabel: "slideCut",
-			DamageMultiplier:  1,
-			MPCost:            enemySlideCutMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyShadeCut:
-		return commandProfile{
-			ActionName:        "影刃",
-			SourceType:        "oneE",
-			SourceActionLabel: "shadeCut",
-			DamageMultiplier:  1,
-			MPCost:            enemyShadeCutMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyHelixAtk:
-		return commandProfile{
-			ActionName:        "螺旋锤杀",
-			SourceType:        "oneE",
-			SourceActionLabel: "helixAtk",
-			DamageMultiplier:  enemyHelixAtkDamageMultiplier,
-			MPCost:            enemyHelixAtkMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyPalsyAtk:
-		return commandProfile{
-			ActionName:        "蜂刺",
-			SourceType:        "oneE",
-			SourceActionLabel: "palsyAtk",
-			DamageMultiplier:  1,
-			CanDodge:          true,
-			CanFat:            true,
-			StatusName:        "麻痹",
-			StatusDisplay:     "17.png",
-			StatusRounds:      2,
-			StatusChance:      enemyPalsyAtkStatusChance,
-			StatusDescription: "眩晕并每回合损失气力",
-			SkipTurn:          true,
-		}
-	case CommandEnemyFirePower:
-		return commandProfile{
-			ActionName:        "赤焰击",
-			SourceType:        "all",
-			SourceActionLabel: "firePower",
-			DamageMultiplier:  enemyFirePowerDamageMultiplier,
-			MPCost:            enemyFirePowerMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-			DefenseType:       "direct",
-		}
-	case CommandEnemyDeadLight:
-		return commandProfile{
-			ActionName:        "死亡射线",
-			SourceType:        "all",
-			SourceActionLabel: "deadLight",
-			DamageMultiplier:  enemyDeadLightDamageMultiplier,
-			MPCost:            enemyDeadLightMPCost,
-			CanDodge:          true,
-			CanFat:            false,
-			DefenseType:       "direct",
-		}
-	case CommandEnemyDoubleHit:
-		return commandProfile{
-			ActionName:        "双锤打",
-			SourceType:        "oneE",
-			SourceActionLabel: "doubleHit",
-			DamageMultiplier:  enemyDoubleHitDamageMultiplier,
-			MPCost:            enemyDoubleHitMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyRollAtk:
-		return commandProfile{
-			ActionName:        "滑行连击",
-			SourceType:        "oneE",
-			SourceActionLabel: "rollAttack",
-			DamageMultiplier:  enemyRollAtkDamageMultiplier,
-			MPCost:            enemyRollAtkMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyRockRain:
-		return commandProfile{
-			ActionName:        "落石",
-			SourceType:        "all",
-			SourceActionLabel: "rockRain",
-			DamageMultiplier:  1,
-			MPCost:            enemyRockRainMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-			DefenseType:       "magic",
-		}
-	case CommandEnemyDarkMoon:
-		return commandProfile{
-			ActionName:        "暗月斩",
-			SourceType:        "oneE",
-			SourceActionLabel: "darkMoonCut",
-			DamageMultiplier:  1,
-			MPCost:            enemyDarkMoonMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyEarthShock:
-		return commandProfile{
-			ActionName:        "裂震击",
-			SourceType:        "all",
-			SourceActionLabel: "earthShockAtk",
-			DamageMultiplier:  1,
-			MPCost:            enemyEarthShockMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyDelude:
-		return commandProfile{
-			ActionName:        "魅惑术",
-			SourceType:        "oneE",
-			SourceActionLabel: "delude",
-			MPCost:            enemyDeludeMPCost,
-		}
-	case CommandEnemyPieceAtk:
-		profile := commandProfile{
-			ActionName:        "撕裂",
-			SourceType:        "oneE",
-			SourceActionLabel: "pieceAttack",
-			DamageMultiplier:  enemyShihukuPieceDamageMultiplier,
-			MPCost:            enemyShihukuSkillMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-		if minPercent, maxPercent, ok := sourceEnemyShihukuPieceAttackWoundPercents(actor); ok {
-			profile.StatusName = "外伤"
-			profile.StatusDisplay = "25.png"
-			profile.StatusRounds = enemyShihukuPieceWoundRounds
-			profile.StatusChance = 100
-			profile.StatusTickMin = minPercent
-			profile.StatusTickMax = maxPercent
-			profile.StatusDescription = fmt.Sprintf("每回合损失气力为角色物理攻击的%d%%~%d%%", minPercent, maxPercent)
-		}
+	commandID = normalizeBattleCommandID(commandID)
+	if profile, ok := originalMonsterProfile(actor, commandID); ok {
 		return profile
-	case CommandEnemyLionRoars:
-		return commandProfile{
-			ActionName:        "狮吼",
-			SourceType:        "oneE",
-			SourceActionLabel: "lionroars",
-			DamageMultiplier:  enemyShihukuLionDamageMultiplier,
-			MPCost:            enemyShihukuSkillMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyGoldHit:
-		return commandProfile{
-			ActionName:        "黄金穿刺",
-			SourceType:        "all",
-			SourceActionLabel: "goldhit",
-			DamageMultiplier:  enemyShihukuGoldDamageMultiplier,
-			MPCost:            enemyShihukuSkillMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyRoundAtk:
-		return commandProfile{
-			ActionName:        "轮转刺伤",
-			SourceType:        "oneE",
-			SourceActionLabel: "roundatk",
-			DamageMultiplier:  1,
-			MPCost:            enemyRobotSkillMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-			StatusName:        "卸甲",
-			StatusDisplay:     "10.png",
-			StatusRounds:      enemyRobotawlArmorBreakRounds,
-			StatusChance:      enemyRobotawlArmorBreakChance,
-			StatusDescription: "降低对象物理防御力",
-		}
-	case CommandEnemyRulingAx:
-		return commandProfile{
-			ActionName:            "裁决之斧",
-			SourceType:            "all",
-			SourceActionLabel:     "rulingax",
-			DamageMultiplier:      1,
-			MPCost:                enemyRobotSkillMPCost,
-			CanDodge:              true,
-			CanFat:                true,
-			StatusName:            "迟钝",
-			StatusDisplay:         "16.png",
-			StatusDescription:     "降低对象命中和回避",
-			StatusRounds:          enemyRobotaxRulingAxSlownessRounds,
-			StatusChance:          enemyRobotaxRulingAxSlownessChance,
-			StatusHitDodgePercent: enemyRobotaxRulingAxSlownessPct,
-		}
-	case CommandEnemyVacuumKill:
-		return commandProfile{
-			ActionName:        "真空猎杀",
-			SourceType:        "all",
-			SourceActionLabel: "vacuumkilled",
-			DamageMultiplier:  1,
-			MPCost:            enemyRobotSkillMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-		}
-	case CommandEnemyRobotUp:
-		return commandProfile{
-			ActionName:        "机木修复",
-			SourceType:        "oneO",
-			SourceActionLabel: "robotup",
-			MPCost:            enemyRobotupMPCost,
-		}
-	case CommandEnemyChaosHit:
-		// Capture: 混沌击 keeps nomalAtk animation and magic normal-attack damage path; only broadcast name changes.
-		profile.ActionName = "混沌击"
-		profile.SourceType = "oneE"
-		profile.SourceActionLabel = "nomalAtk"
-		profile.DamageMultiplier = 1
-		profile.CanDodge = true
-		profile.CanFat = true
-		if actor != nil && strings.TrimSpace(actor.DamageDefenseType) != "" {
-			profile.DefenseType = strings.TrimSpace(actor.DamageDefenseType)
-		} else {
-			profile.DefenseType = "magic"
-		}
-	case CommandEnemyThunderstorm:
-		return commandProfile{
-			ActionName:        "雷鸣怒吼",
-			SourceType:        "all",
-			SourceActionLabel: "thunderstorm",
-			DamageMultiplier:  enemyThunderstormDamageMultiplier,
-			MPCost:            enemyThunderstormMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-			DefenseType:       "magic",
-		}
-	case CommandEnemyAngleCurse:
-		return commandProfile{
-			ActionName:        "角念",
-			SourceType:        "oneE",
-			SourceActionLabel: "anglecurse",
-			DamageMultiplier:  1,
-			MPCost:            enemyAngleCurseMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-			DefenseType:       "magic",
-			StatusName:        "封印",
-			StatusDisplay:     "19.png",
-			StatusDescription: "作用时间内对象无法使用技能",
-			StatusRounds:      enemyAngleCurseSealRounds,
-			StatusChance:      enemyAngleCurseSealChance,
-			// 封印 does not skip turns; it only blocks skill commands via PendingSkillSeal.
-			SkipTurn: false,
-		}
-	case CommandEnemySweepSpear:
-		return commandProfile{
-			ActionName:        "单枪横扫",
-			SourceType:        "all",
-			SourceActionLabel: "sweepspear",
-			DamageMultiplier:  enemySweepSpearDamageMultiplier,
-			MPCost:            enemySweepSpearMPCost,
-			CanDodge:          true,
-			CanFat:            true,
-			DefenseType:       "physical",
-		}
-	case CommandNormalAttack, CommandEnemyAttack:
-		if actor == nil || strings.TrimSpace(actor.CommandLabel) == "" {
-			profile.ActionName = "普通攻击"
-		}
-		if actor != nil && strings.TrimSpace(actor.DamageDefenseType) != "" {
-			profile.DefenseType = strings.TrimSpace(actor.DamageDefenseType)
-		}
+	}
+	if skill, ok := profession.BySkillID(commandID); ok && skill.Kind == "skill" {
+		return originalSkillProfile(skill)
+	}
+	if commandID != CommandEnemyAttack {
+		panic("unregistered battle skill: " + commandID)
+	}
+	// Legacy creatures retain the shared basic attack; their retired skill AI is removed.
+	profile := commandProfile{ActionName: "普通攻击", SourceType: "oneE", SourceActionLabel: "nomalAtk",
+		DamageMultiplier: 1, CanDodge: true, CanFat: true, DefenseType: "physical"}
+	if actor != nil && strings.TrimSpace(actor.DamageDefenseType) != "" {
+		profile.DefenseType = strings.TrimSpace(actor.DamageDefenseType)
 	}
 	return profile
 }
 
 func (runtime *Runtime) enemyBattleCommand(enemy *CellInfoPush, target *CellInfoPush) string {
-	if sourceEnemyCanRobothyunRobotUp(enemy) && enemy.MP >= enemyRobotupMPCost {
-		if repairTarget := runtime.lowestLivingRobothyun(enemy.Camp); repairTarget != nil && runtime.resolveRobotupUse(enemy, repairTarget) {
-			return CommandEnemyRobotUp
-		}
-	}
-	if sourceEnemyCanRobothmarshalVacuumKill(enemy) && enemy.MP >= enemyRobotSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyVacuumKill, enemyRobothmarshalVacuumKillChance) {
-		return CommandEnemyVacuumKill
-	}
-	if sourceEnemyCanRobotaxRulingAx(enemy) && enemy.MP >= enemyRobotSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRulingAx, enemyRobotaxRulingAxChance) {
-		return CommandEnemyRulingAx
-	}
-	if sourceEnemyCanShihukuGoldHit(enemy) && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyGoldHit, enemyShihukuGoldHitChance) {
-		return CommandEnemyGoldHit
-	}
-	if sourceEnemyCanRobotawlRoundAtk(enemy) && enemy.MP >= enemyRobotSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRoundAtk, enemyRobotawlRoundAtkChance) {
-		return CommandEnemyRoundAtk
-	}
-	if sourceEnemyCanShihukuLionRoars(enemy) && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyLionRoars, enemyShihukuLionRoarsChance) {
-		return CommandEnemyLionRoars
-	}
-	if pieceChance := sourceEnemyShihukuPieceAttackChance(enemy); pieceChance > 0 && enemy.MP >= enemyShihukuSkillMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyPieceAtk, pieceChance) {
-		return CommandEnemyPieceAtk
-	}
-	if sourceEnemyCanFirePower(enemy) && enemy.MP >= enemyFirePowerMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyFirePower, enemyFirePowerChance) {
-		return CommandEnemyFirePower
-	}
-	if sourceEnemyCanRollAtk(enemy) && enemy.MP >= enemyRollAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRollAtk, enemyRollAtkChance) {
-		return CommandEnemyRollAtk
-	}
-	if sourceEnemyCanEarthShock(enemy) && enemy.MP >= enemyEarthShockMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyEarthShock, enemyEarthShockChance) {
-		return CommandEnemyEarthShock
-	}
-	if sourceEnemyCanDelude(enemy) && enemy.MP >= enemyDeludeMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDelude, enemyDeludeChance) {
-		return CommandEnemyDelude
-	}
-	if sourceEnemyCanDeadLight(enemy) && enemy.MP >= enemyDeadLightMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDeadLight, enemyDeadLightChance) {
-		return CommandEnemyDeadLight
-	}
-	if sourceEnemyCanDoubleHit(enemy) && enemy.MP >= enemyDoubleHitMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDoubleHit, enemyDoubleHitChance) {
-		return CommandEnemyDoubleHit
-	}
-	if sourceEnemyCanRockRain(enemy) && enemy.MP >= enemyRockRainMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyRockRain, enemyRockRainChance) {
-		return CommandEnemyRockRain
-	}
-	if sourceEnemyCanDarkMoon(enemy) && enemy.MP >= enemyDarkMoonMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyDarkMoon, enemyDarkMoonChance) {
-		return CommandEnemyDarkMoon
-	}
-	if sourceEnemyCanHelixAtk(enemy) && enemy.MP >= enemyHelixAtkMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyHelixAtk, enemyHelixAtkChance) {
-		return CommandEnemyHelixAtk
-	}
-	if sourceEnemyCanShadeCut(enemy) && enemy.MP >= enemyShadeCutMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyShadeCut, enemyShadeCutChance) {
-		return CommandEnemyShadeCut
-	}
-	if sourceEnemyCanSlideCut(enemy) && enemy.MP >= enemySlideCutMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemySlideCut, enemySlideCutChance) {
-		return CommandEnemySlideCut
-	}
-	if sourceEnemyCanPalsyAtk(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyPalsyAtk, enemyPalsyAtkChance) {
-		return CommandEnemyPalsyAtk
-	}
-	if sourceEnemyCanChaosHit(enemy) && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyChaosHit, enemyChaosHitChance) {
-		return CommandEnemyChaosHit
-	}
-	if sourceEnemyCanThunderstorm(enemy) && enemy.MP >= enemyThunderstormMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyThunderstorm, enemyThunderstormChance) {
-		return CommandEnemyThunderstorm
-	}
-	if sourceEnemyCanAngleCurse(enemy) && enemy.MP >= enemyAngleCurseMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemyAngleCurse, enemyAngleCurseChance) {
-		return CommandEnemyAngleCurse
-	}
-	if sourceEnemyCanMilitiaSweepSpear(enemy) && enemy.MP >= enemySweepSpearMPCost && runtime.resolveEnemySkillUse(enemy, target, CommandEnemySweepSpear, enemySweepSpearChance) {
-		return CommandEnemySweepSpear
+	if command, ok := runtime.originalMonsterCommand(enemy); ok {
+		return command
 	}
 	return CommandEnemyAttack
 }
@@ -2334,24 +1693,9 @@ func sourceEnemyCanShihukuGoldHit(enemy *CellInfoPush) bool {
 	return strings.TrimSpace(enemy.Name) == "蚩颅王" || strings.Contains(normalizedDisplay, "monstermap/chiluking.swf")
 }
 
-func (runtime *Runtime) resolveEnemyCommandActions(enemy *CellInfoPush, target *CellInfoPush, commandID string) []ActionPush {
+func (runtime *Runtime) resolveEnemyCommandActionsBase(enemy *CellInfoPush, target *CellInfoPush, commandID string) []ActionPush {
 	if runtime == nil || enemy == nil || target == nil {
 		return nil
-	}
-	if normalizeBattleCommandID(commandID) == CommandEnemyRobotUp {
-		repairTarget := runtime.lowestLivingRobothyun(enemy.Camp)
-		action := runtime.resolveEnemyRobotupAction(enemy, repairTarget)
-		if strings.TrimSpace(action.ActionName) == "" {
-			return nil
-		}
-		return []ActionPush{action}
-	}
-	if normalizeBattleCommandID(commandID) == CommandEnemyDelude {
-		action := runtime.resolveEnemyDeludeAction(enemy, target)
-		if strings.TrimSpace(action.ActionName) == "" {
-			return nil
-		}
-		return []ActionPush{action}
 	}
 	profile := runtime.battleCommandProfile(enemy, commandID)
 	if strings.TrimSpace(profile.SourceType) == "all" {
@@ -2551,117 +1895,15 @@ func (runtime *Runtime) isBattleCommandAllowed(commandID string) bool {
 }
 
 func (runtime *Runtime) isBattleCommandAllowedForActor(handle string, commandID string) bool {
-	switch normalizeBattleCommandID(commandID) {
-	case CommandNormalAttack:
-		return true
-	case CommandMiZhan:
-		if len(runtime.skillsForHandle(handle)) == 0 {
-			return true
-		}
-		return runtime.hasRoleSkillForActor(handle, "密斩")
-	case CommandDuoDuanZhan:
-		return runtime.hasRoleSkillForActor(handle, "多段斩")
-	case CommandDuoDuanCi:
-		return runtime.hasRoleSkillForActor(handle, "多段刺")
-	case CommandShiXueZhan:
-		return runtime.hasRoleSkillForActor(handle, "嗜血斩")
-	case CommandKuangBao:
-		return runtime.hasRoleSkillForActor(handle, "狂爆")
-	case CommandHongYueZhan:
-		return runtime.hasRoleSkillForActor(handle, "红月斩")
-	case CommandXueQie:
-		return runtime.hasRoleSkillForActor(handle, "血切")
-	case CommandTaunt:
-		return runtime.hasCapturedRoleSkillForActor(handle, "挑衅")
-	case CommandJuanYeShi:
-		return runtime.hasCapturedRoleSkillForActor(handle, "卷叶式")
-	case CommandQiangGuanShi:
-		return runtime.hasCapturedRoleSkillForActor(handle, "强贯式")
-	case CommandNingShenShi:
-		return runtime.hasCapturedRoleSkillForActor(handle, "凝神式")
-	case CommandKuangWuShi:
-		return runtime.hasCapturedRoleSkillForActor(handle, "狂舞式")
-	case CommandQiYuShi:
-		return runtime.hasCapturedRoleSkillForActor(handle, "气愈式")
-	case CommandAoYiPiaoXue:
-		return runtime.hasCapturedRoleSkillForActor(handle, "奥义.飘血")
-	case CommandFistDoubleAtk:
-		return runtime.hasRoleSkillForActor(handle, "连击")
-	case CommandFistPowHit:
-		return runtime.hasRoleSkillForActor(handle, "重烈")
-	case CommandFistInfluxGas:
-		return runtime.hasRoleSkillForActor(handle, "气运丹田")
-	case CommandFistBreakSoul:
-		return runtime.hasRoleSkillForActor(handle, "破魂打")
-	case CommandFistMoveShadow:
-		return runtime.hasRoleSkillForActor(handle, "移形换影")
-	case CommandFistPowerAxeWing:
-		return runtime.hasRoleSkillForActor(handle, "奥义.修罗幻翼拳")
-	case CommandPiShanGunFa:
-		return runtime.hasRoleSkillForActor(handle, "劈山棍法")
-	case CommandYeChaGunFa:
-		return runtime.hasRoleSkillForActor(handle, "夜叉棍法")
-	case CommandLiShiGunShu:
-		return runtime.hasRoleSkillForActor(handle, "力释棍术")
-	case CommandPanLongGunFa:
-		return runtime.hasRoleSkillForActor(handle, "盘龙棍法")
-	case CommandQiangLiFeiBiao:
-		return runtime.hasRoleSkillForActor(handle, "强力飞镖")
-	case CommandTouDu:
-		return runtime.hasRoleSkillForActor(handle, "投毒")
-	case CommandMoLiTuCi:
-		return runtime.hasRoleSkillForActor(handle, "魔力突刺")
-	case CommandJiFengCi:
-		return runtime.hasRoleSkillForActor(handle, "疾风刺")
-	case CommandJieDuShu:
-		return runtime.hasRoleSkillForActor(handle, "解毒术")
-	case CommandQiangShe:
-		return runtime.hasRoleSkillForActor(handle, "强射")
-	case CommandGuanJiaLianShi:
-		return runtime.hasRoleSkillForActor(handle, "贯甲连矢")
-	case CommandBingJianSuShe:
-		return runtime.hasRoleSkillForActor(handle, "冰箭速射")
-	case CommandMoLiSuShe:
-		return runtime.hasRoleSkillForActor(handle, "魔力速射")
-	case CommandAnYingJian:
-		return runtime.hasRoleSkillForActor(handle, "暗影箭")
-	case CommandDuShi:
-		return runtime.hasRoleSkillForActor(handle, "毒矢")
-	case CommandYanShouShu:
-		return runtime.hasCapturedRoleSkillForActor(handle, "炎狩术")
-	case CommandChiYanMoZhou:
-		return runtime.hasCapturedRoleSkillForActor(handle, "赤焰魔咒")
-	case CommandLeiJi:
-		return runtime.hasCapturedRoleSkillForActor(handle, "雷击")
-	case CommandLeiBaoZhou:
-		return runtime.hasCapturedRoleSkillForActor(handle, "雷爆咒")
-	case CommandHuoShenZhou:
-		return runtime.hasCapturedRoleSkillForActor(handle, "火神咒")
-	case CommandShiYuShu:
-		return runtime.hasCapturedRoleSkillForActor(handle, "石雨术")
-	case CommandLeiLongQiangXi:
-		return runtime.hasCapturedRoleSkillForActor(handle, "雷龙强袭")
-	case CommandMoZhangShu:
-		return runtime.hasCapturedRoleSkillForActor(handle, "魔障术")
-	case CommandYuQiShu:
-		return runtime.hasCapturedRoleSkillForActor(handle, "愈气术")
-	case CommandHuiShangShu:
-		return runtime.hasCapturedRoleSkillForActor(handle, "回伤术")
-	case CommandShengGuangJue:
-		return runtime.hasCapturedRoleSkillForActor(handle, "圣光诀")
-	case CommandHuanHunShu:
-		return runtime.hasCapturedRoleSkillForActor(handle, "还魂术")
-	case CommandLeiHunZhan:
-		return runtime.hasRoleSkillForActor(handle, "奥义.雷魂斩")
-	case CommandAoYiHongLeiShi:
-		return runtime.hasRoleSkillForActor(handle, "奥义.轰雷矢")
-	case CommandAoYiAnShaZhe:
-		return runtime.hasRoleSkillForActor(handle, "奥义.暗杀者")
-	case CommandAoYiLiuHeGunFa:
-		return runtime.hasRoleSkillForActor(handle, "奥义.六合棍法")
-	default:
+	skill, ok := profession.BySkillID(normalizeBattleCommandID(commandID))
+	if !ok || skill.Kind != "skill" {
 		return false
 	}
+	actor := runtime.cellByHandle(handle)
+	if skill.ID == CommandNormalAttack {
+		return actor == nil || actor.Camp == CampTeam
+	}
+	return actor != nil && actor.Camp == CampTeam && actor.ProfessionID == skill.ProfessionID && runtime.hasRoleSkillForActor(handle, skill.Name)
 }
 
 func (runtime *Runtime) sourceSkillProfile(name string, fallbackLevel int) commandProfile {
@@ -2757,259 +1999,10 @@ func (runtime *Runtime) itemsForHandle(handle string) []session.RoleItem {
 }
 
 func sourceBattleSkillProfile(skill session.RoleSkill) commandProfile {
-	name := strings.TrimSpace(skill.Name)
-	level := skill.Level
-	if level <= 0 {
-		level = 1
+	if definition, ok := profession.BySkillName(skill.Name); ok && definition.Kind == "skill" {
+		return originalSkillProfile(definition)
 	}
-	description := sourceBattleSkillProfileDescription(name, level, skill.Description)
-	tableProfile, hasTableProfile := sourceBattleSkillProfileFromConfig(name, level)
-	sourceType := sourceBattleSkillSourceType(name, skill.Type)
-	if hasTableProfile && strings.TrimSpace(tableProfile.SourceType) != "" {
-		sourceType = strings.TrimSpace(tableProfile.SourceType)
-	}
-	actionName := name
-	if hasTableProfile && strings.TrimSpace(tableProfile.ActionName) != "" {
-		actionName = strings.TrimSpace(tableProfile.ActionName)
-	}
-	actionLabel := ""
-	if hasTableProfile {
-		actionLabel = strings.TrimSpace(tableProfile.SourceActionLabel)
-	}
-	if actionLabel == "" {
-		actionLabel = sourceBattleSkillActionLabel(name, level)
-	}
-	profile := commandProfile{
-		ActionName:        actionName,
-		SourceType:        sourceType,
-		SourceActionLabel: actionLabel,
-		DamageMultiplier:  sourceBattleSkillDamageMultiplier(description),
-		MPCost:            sourceBattleSkillMPCost(description),
-		CanDodge:          true,
-		CanFat:            true,
-	}
-	if hasTableProfile {
-		profile.DirectAttackBonus = tableProfile.DirectAttackBonus
-	}
-	if directAttackBonus := sourceBattleSkillDirectAttackBonus(description); directAttackBonus > 0 && profile.DirectAttackBonus <= 0 {
-		profile.DirectAttackBonus = directAttackBonus
-	}
-	if hasTableProfile && tableProfile.DamageMultiplier > 0 {
-		profile.DamageMultiplier = tableProfile.DamageMultiplier
-	}
-	if profile.DamageMultiplier <= 0 && sourceType != "own" && name != "挑衅" {
-		profile.DamageMultiplier = fallbackSourceBattleSkillMultiplier(name, level)
-	}
-	if hasTableProfile && tableProfile.MPCost > 0 {
-		profile.MPCost = tableProfile.MPCost
-	}
-	if profile.MPCost <= 0 {
-		profile.MPCost = fallbackSourceBattleSkillMPCost(name, level)
-	}
-	if name == "破魂打" {
-		// Raw 777 HP deltas require a 1.5x mitigated component; the description's
-		// 80% text is not the final runtime multiplier.
-		profile.DamageMultiplier = 1.5
-	}
-	if name == "嗜血斩" {
-		profile.LifeStealChance = sourceBattleSkillLifeStealChance(description)
-		profile.LifeStealRatio = sourceBattleSkillLifeStealRatio(description)
-		if hasTableProfile && tableProfile.LifeStealChance > 0 {
-			profile.LifeStealChance = tableProfile.LifeStealChance
-		}
-		if hasTableProfile && tableProfile.LifeStealRatio > 0 {
-			profile.LifeStealRatio = tableProfile.LifeStealRatio
-		}
-		if profile.LifeStealChance <= 0 {
-			profile.LifeStealChance = fallbackShiXueLifeStealChance(level)
-		}
-		if profile.LifeStealRatio <= 0 {
-			profile.LifeStealRatio = 0.7
-		}
-	}
-	if name == "血切" {
-		profile.StatusName = "外伤"
-		profile.StatusDisplay = "25.png"
-		profile.StatusRounds = 4
-		profile.StatusChance = fallbackXueQieWoundChance(level)
-		profile.StatusDescription = "每回合损失气力为角色物理攻击的25%~30%"
-		profile.StatusTickMin = 25
-		profile.StatusTickMax = 30
-	}
-	if name == "疾风刺" {
-		profile.StatusName = "迟钝"
-		profile.StatusDisplay = "16.png"
-		profile.StatusRounds = jiFengCiSlownessRounds
-		profile.StatusChance = jiFengCiSlownessChance
-		profile.StatusDescription = "降低对象50%命中和回避"
-	}
-	if name == "赤焰魔咒" {
-		profile.StatusName = "诅咒"
-		profile.StatusDisplay = "780.png"
-		profile.StatusRounds = chiYanMoZhouCurseRounds
-		profile.StatusChance = sourceChiYanMoZhouCurseChance(level)
-		profile.StatusDescription = "作用时间内无法增加魂元。"
-	}
-	if name == "雷击" {
-		slowPercent := sourceLeiJiSlownessPercent(level)
-		profile.StatusName = "迟钝"
-		profile.StatusDisplay = "16.png"
-		profile.StatusRounds = leiJiSlownessRounds
-		profile.StatusChance = sourceLeiJiSlownessChance(level)
-		profile.StatusDescription = fmt.Sprintf("降低对象%d%%命中和回避", slowPercent)
-		profile.StatusHitDodgePercent = slowPercent
-		profile.HitMultiplier = 1.5
-	}
-	if name == "雷爆咒" {
-		profile.StatusName = "麻痹"
-		profile.StatusDisplay = "17.png"
-		profile.StatusRounds = 2
-		profile.StatusChance = sourceLeiBaoZhouPalsyChance(level)
-		profile.StatusDescription = "眩晕&0;并在每回合造成伤害"
-		profile.StatusTickMin = sourceLeiBaoZhouPalsyTickMin(level)
-		profile.StatusTickMax = sourceLeiBaoZhouPalsyTickMax(level)
-		profile.SkipTurn = true
-	}
-	if name == "火神咒" {
-		profile.StatusName = "外伤"
-		profile.StatusDisplay = "25.png"
-		profile.StatusRounds = 3
-		profile.StatusChance = sourceHuoShenZhouWoundChance(level)
-		profile.StatusDescription = "每回合损失气力为角色魔法攻击的20%~25%"
-		profile.StatusTickMin = 20
-		profile.StatusTickMax = 25
-	}
-	if name == "石雨术" {
-		profile.StatusName = "眩晕"
-		profile.StatusDisplay = "9.png"
-		profile.StatusRounds = 2
-		profile.StatusChance = sourceShiYuShuStunChance(level)
-		profile.StatusDescription = "眩晕无法行动"
-		profile.SkipTurn = true
-	}
-	if name == "强贯式" {
-		armorBreakPercent := sourceQiangGuanShiArmorBreakPercent(level)
-		profile.StatusName = "卸甲"
-		profile.StatusDisplay = "10.png"
-		profile.StatusRounds = qiangGuanShiArmorBreakRounds
-		profile.StatusChance = 100
-		profile.StatusDescription = fmt.Sprintf("降低对象%d%%物理防御力", armorBreakPercent)
-		profile.StatusDefensePercent = armorBreakPercent
-	}
-	if name == "狂舞式" {
-		stunChance := sourceKuangWuShiStunChance(level)
-		profile.StatusName = "眩晕"
-		profile.StatusDisplay = "9.png"
-		profile.StatusRounds = kuangWuShiStunRounds
-		profile.StatusChance = stunChance
-		profile.StatusDescription = "眩晕无法行动"
-		profile.SkipTurn = true
-	}
-	if name == "重烈" {
-		profile.StatusName = "眩晕"
-		profile.StatusDisplay = "9.png"
-		profile.StatusRounds = fistPowHitStunRounds
-		profile.StatusChance = fistPowHitStunChance
-		profile.StatusDescription = "眩晕无法行动"
-		profile.SkipTurn = true
-	}
-	if name == "投毒" {
-		profile.StatusName = "中毒"
-		profile.StatusDisplay = "8.png"
-		profile.StatusRounds = touDuPoisonRounds
-		profile.StatusChance = touDuPoisonChance
-		profile.StatusDescription = "降低对象15%魔防和物防，每回合内减少对象20%~25%气力"
-		profile.StatusDefensePercent = touDuPoisonDefensePercent
-		profile.StatusTickMin = touDuPoisonTickMin
-		profile.StatusTickMax = touDuPoisonTickMax
-	}
-	if name == "暗影箭" {
-		profile.StatusName = "混乱"
-		profile.StatusDisplay = "20.png"
-		profile.StatusRounds = 2
-		profile.StatusChance = 17
-		profile.StatusDescription = "这个状态让人失去理智&0;胡乱攻击甚至自己人。"
-	}
-	if name == "毒矢" {
-		profile.StatusName = "中毒"
-		profile.StatusDisplay = "8.png"
-		profile.StatusRounds = 4
-		profile.StatusChance = 70
-		profile.StatusDescription = "降低对象20%魔防和物防，每回合内减少对象5%~10%气力"
-		profile.StatusDefensePercent = 20
-		profile.StatusTickMin = 5
-		profile.StatusTickMax = 10
-	}
-	if name == "冰箭速射" {
-		profile.StatusName = "内伤"
-		profile.StatusDisplay = "26.png"
-		profile.StatusRounds = 3
-		profile.StatusChance = 90
-		profile.StatusDescription = "削弱敌人物理攻击和魔法攻击"
-		profile.StatusAttackMin = 30
-		profile.StatusAttackMax = 35
-	}
-	if name == "夜叉棍法" {
-		profile.StatusName = "内伤"
-		profile.StatusDisplay = "26.png"
-		profile.StatusRounds = 3
-		profile.StatusChance = 90
-		profile.StatusDescription = "削弱敌人物理攻击和魔法攻击"
-		profile.StatusAttackMin = 32
-		profile.StatusAttackMax = 32
-	}
-	if name == "魔力速射" {
-		profile.AdditionalMagicBonus = 1.2
-		profile.MagicAttackBoost = 0.25
-	}
-	if name == "奥义.轰雷矢" {
-		profile.DefenseType = "magic"
-		profile.UseMagicAttack = true
-		profile.StatusName = "麻痹"
-		profile.StatusDisplay = "17.png"
-		profile.StatusRounds = 2
-		profile.StatusChance = 20
-		profile.StatusDescription = "眩晕&0;并每回合损失气力"
-		profile.StatusTickMin = 30
-		profile.StatusTickMax = 30
-		profile.SkipTurn = true
-	}
-	if name == "炎狩术" || name == "赤焰魔咒" || name == "雷击" || name == "雷爆咒" || name == "火神咒" || name == "石雨术" || name == "雷龙强袭" {
-		profile.DefenseType = "magic"
-		profile.UseMagicAttack = true
-	}
-	if name == "雷爆咒" {
-		profile.HitMultiplier = 1.5
-	}
-	if name == "雷龙强袭" {
-		profile.HitMultiplier = 2
-	}
-	if name == "力释棍术" {
-		profile.CanDodge = false
-		profile.CanFat = false
-	}
-	if name == "愈气术" || name == "回伤术" || name == "圣光诀" || name == "还魂术" {
-		profile.CanDodge = false
-		profile.CanFat = false
-	}
-	if name == "挑衅" || name == "凝神式" || name == "气愈式" {
-		profile.CanDodge = false
-		profile.CanFat = false
-	}
-	if name == "奥义.六合棍法" {
-		profile.HitMultiplier = 4
-	}
-	if name == "奥义.飘血" {
-		profile.HitMultiplier = sourceAoYiPiaoXueHitMultiplier(level)
-	}
-	if name == "强力飞镖" {
-		profile.DefenseType = "direct"
-	}
-	if name == "解毒术" {
-		profile.CanDodge = false
-		profile.CanFat = false
-	}
-	return profile
+	return commandProfile{}
 }
 
 func sourceBattleSkillProfileDescription(name string, level int, description string) string {
@@ -3026,6 +2019,9 @@ func sourceBattleCommandDefinitions(skills []session.RoleSkill) []CommandDefinit
 	seen := map[string]bool{"普通攻击": true}
 	for _, skill := range skills {
 		normalizedName := strings.TrimSpace(skill.Name)
+		if definition, ok := profession.BySkillName(normalizedName); ok && definition.Kind == "passive" {
+			continue
+		}
 		if seen[normalizedName] {
 			continue
 		}
@@ -3082,6 +2078,9 @@ func sourceBattleCommandDefinitionFromSkill(label string, profile commandProfile
 		commandID = CommandNormalAttack
 	}
 	target := sourceBattleSkillTargetFromConfig(label)
+	if skill, ok := profession.BySkillName(label); ok {
+		target = skill.Target
+	}
 	if target == "" {
 		target = sourceBattleCommandTarget(profile.SourceType)
 	}
@@ -3099,101 +2098,17 @@ func sourceBattleCommandDefinitionFromSkill(label string, profile commandProfile
 }
 
 func sourceBattleSkillCommandID(name string) string {
-	if commandID := sourceBattleSkillCommandIDFromConfig(name); commandID != "" {
-		return commandID
+	if skill, ok := profession.BySkillName(name); ok && skill.Kind == "skill" {
+		return skill.ID
 	}
-	switch strings.TrimSpace(name) {
-	case "密斩":
-		return CommandMiZhan
-	case "多段斩":
-		return CommandDuoDuanZhan
-	case "多段刺":
-		return CommandDuoDuanCi
-	case "嗜血斩":
-		return CommandShiXueZhan
-	case "狂爆":
-		return CommandKuangBao
-	case "红月斩":
-		return CommandHongYueZhan
-	case "血切":
-		return CommandXueQie
-	case "劈山棍法":
-		return CommandPiShanGunFa
-	case "夜叉棍法":
-		return CommandYeChaGunFa
-	case "力释棍术":
-		return CommandLiShiGunShu
-	case "盘龙棍法":
-		return CommandPanLongGunFa
-	case "强力飞镖":
-		return CommandQiangLiFeiBiao
-	case "投毒":
-		return CommandTouDu
-	case "魔力突刺":
-		return CommandMoLiTuCi
-	case "疾风刺":
-		return CommandJiFengCi
-	case "解毒术":
-		return CommandJieDuShu
-	case "强射":
-		return CommandQiangShe
-	case "贯甲连矢":
-		return CommandGuanJiaLianShi
-	case "冰箭速射":
-		return CommandBingJianSuShe
-	case "魔力速射":
-		return CommandMoLiSuShe
-	case "暗影箭":
-		return CommandAnYingJian
-	case "毒矢":
-		return CommandDuShi
-	case "炎狩术":
-		return CommandYanShouShu
-	case "雷爆咒":
-		return CommandLeiBaoZhou
-	case "火神咒":
-		return CommandHuoShenZhou
-	case "石雨术":
-		return CommandShiYuShu
-	case "雷龙强袭":
-		return CommandLeiLongQiangXi
-	case "愈气术":
-		return CommandYuQiShu
-	case "回伤术":
-		return CommandHuiShangShu
-	case "圣光诀":
-		return CommandShengGuangJue
-	case "还魂术":
-		return CommandHuanHunShu
-	case "奥义.雷魂斩":
-		return CommandLeiHunZhan
-	case "奥义.轰雷矢":
-		return CommandAoYiHongLeiShi
-	case "奥义.暗杀者":
-		return CommandAoYiAnShaZhe
-	case "奥义.六合棍法":
-		return CommandAoYiLiuHeGunFa
-	default:
-		return ""
-	}
+	return ""
 }
 
 func sourceBattleSkillSourceType(name string, fallbackType string) string {
-	if sourceType := sourceBattleSkillSourceTypeFromConfig(name); sourceType != "" {
-		return sourceType
+	if skill, ok := profession.BySkillName(name); ok && skill.Kind == "skill" {
+		return skill.SourceType
 	}
-	switch strings.TrimSpace(name) {
-	case "密斩", "多段斩", "多段刺", "嗜血斩", "血切", "劈山棍法", "夜叉棍法", "强力飞镖", "投毒", "魔力突刺", "疾风刺", "强射", "贯甲连矢", "冰箭速射", "魔力速射", "暗影箭", "毒矢", "炎狩术", "雷龙强袭", "奥义.雷魂斩", "奥义.轰雷矢", "奥义.暗杀者", "奥义.六合棍法":
-		return "oneE"
-	case "狂爆", "解毒术", "力释棍术":
-		return "own"
-	case "愈气术", "回伤术", "圣光诀", "还魂术":
-		return "oneO"
-	case "红月斩", "盘龙棍法", "雷爆咒", "火神咒", "石雨术":
-		return "all"
-	default:
-		return defaultString(strings.TrimSpace(fallbackType), "oneE")
-	}
+	return ""
 }
 
 func sourceBattleActionMode(sourceType string) string {
@@ -3230,76 +2145,7 @@ func normalizeBattleCommandID(commandID string) string {
 	if mapped := sourceBattleSkillCommandID(commandID); mapped != "" {
 		return mapped
 	}
-	switch strings.TrimSpace(commandID) {
-	case "密斩":
-		return CommandMiZhan
-	case "多段斩":
-		return CommandDuoDuanZhan
-	case "多段刺":
-		return CommandDuoDuanCi
-	case "嗜血斩":
-		return CommandShiXueZhan
-	case "狂爆":
-		return CommandKuangBao
-	case "红月斩":
-		return CommandHongYueZhan
-	case "血切":
-		return CommandXueQie
-	case "劈山棍法":
-		return CommandPiShanGunFa
-	case "夜叉棍法":
-		return CommandYeChaGunFa
-	case "力释棍术":
-		return CommandLiShiGunShu
-	case "盘龙棍法":
-		return CommandPanLongGunFa
-	case "强力飞镖":
-		return CommandQiangLiFeiBiao
-	case "投毒":
-		return CommandTouDu
-	case "魔力突刺":
-		return CommandMoLiTuCi
-	case "疾风刺":
-		return CommandJiFengCi
-	case "解毒术":
-		return CommandJieDuShu
-	case "强射":
-		return CommandQiangShe
-	case "贯甲连矢":
-		return CommandGuanJiaLianShi
-	case "冰箭速射":
-		return CommandBingJianSuShe
-	case "魔力速射":
-		return CommandMoLiSuShe
-	case "暗影箭":
-		return CommandAnYingJian
-	case "毒矢":
-		return CommandDuShi
-	case "炎狩术":
-		return CommandYanShouShu
-	case "雷爆咒":
-		return CommandLeiBaoZhou
-	case "雷龙强袭":
-		return CommandLeiLongQiangXi
-	case "愈气术":
-		return CommandYuQiShu
-	case "回伤术":
-		return CommandHuiShangShu
-	case "圣光诀":
-		return CommandShengGuangJue
-	case "还魂术":
-		return CommandHuanHunShu
-	case "奥义.雷魂斩":
-		return CommandLeiHunZhan
-	case "奥义.轰雷矢":
-		return CommandAoYiHongLeiShi
-	case "奥义.暗杀者":
-		return CommandAoYiAnShaZhe
-	case "奥义.六合棍法":
-		return CommandAoYiLiuHeGunFa
-	default:
-		return strings.TrimSpace(commandID)
-	}
+	return strings.TrimSpace(commandID)
 }
 
 func sourceChiYanMoZhouCurseChance(level int) int {
@@ -3371,345 +2217,10 @@ func sourceMoZhangShuDamageToMPPercent(level int) int {
 }
 
 func fallbackSourceBattleSkill(name string, level int) session.RoleSkill {
-	if level <= 0 {
-		level = 1
+	if skill, ok := profession.BySkillName(name); ok && skill.Kind == "skill" {
+		return session.RoleSkill{Name: skill.Name, Level: skill.Level, Type: skill.SourceType, Icon: skill.Icon, Description: skill.Description, MaxLevel: skill.Level}
 	}
-	switch strings.TrimSpace(name) {
-	case "密斩":
-		return session.RoleSkill{
-			Name:        "密斩",
-			Level:       1,
-			Type:        "oneE",
-			Icon:        "426.png",
-			Description: "f_s_密斩&9@单体·攻击&7@3&10@单刀/单斧&22@战斗&2@5&4@提升40%的物理伤害",
-		}
-	case "多段斩":
-		return session.RoleSkill{
-			Name:        "多段斩",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "178.png",
-			Description: fallbackDuoDuanDescription(level),
-		}
-	case "多段刺":
-		return session.RoleSkill{
-			Name:        "多段刺",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "257.png",
-			Description: fallbackDuoDuanCiDescription(level),
-		}
-	case "嗜血斩":
-		return session.RoleSkill{
-			Name:        "嗜血斩",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "179.png",
-			Description: fallbackShiXueDescription(level),
-		}
-	case "狂爆":
-		return session.RoleSkill{
-			Name:        "狂爆",
-			Level:       level,
-			Type:        "own",
-			Icon:        "646.png",
-			Description: "f_s_狂爆^5BC46D&9@单体·状态&8@战士 &10@单刀&22@战斗&2@15&4@3回合内物理攻击力翻倍&0;并降低100%的物理防御",
-		}
-	case "红月斩":
-		return session.RoleSkill{
-			Name:        "红月斩",
-			Level:       level,
-			Type:        "all",
-			Icon:        "181.png",
-			Description: fallbackHongYueDescription(level),
-		}
-	case "血切":
-		return session.RoleSkill{
-			Name:        "血切",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "182.png",
-			Description: fallbackXueQieDescription(level),
-		}
-	case "劈山棍法":
-		return session.RoleSkill{
-			Name:        "劈山棍法",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "185.png",
-			Description: fallbackPiShanGunFaDescription(level),
-		}
-	case "夜叉棍法":
-		if level != 1 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "夜叉棍法",
-			Level:       1,
-			Type:        "oneE",
-			Icon:        "188.png",
-			Description: fallbackYeChaGunFaDescription(level),
-		}
-	case "力释棍术":
-		if level != 1 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "力释棍术",
-			Level:       1,
-			Type:        "own",
-			Icon:        "186.png",
-			Description: "f_s_力释棍术^5BC46D&9@单体·状态&8@战士 &10@棍&22@战斗&2@10&4@5回合内提升物理攻击15%",
-		}
-	case "盘龙棍法":
-		if level != 1 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "盘龙棍法",
-			Level:       1,
-			Type:        "all",
-			Icon:        "187.png",
-			Description: "f_s_盘龙棍法^ffffff&9@群体·攻击&8@战士 &10@棍&22@战斗&2@14&4@对所有敌人造成82%的物理伤害",
-		}
-	case "强力飞镖":
-		return session.RoleSkill{
-			Name:        "强力飞镖",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "261.png",
-			Description: fallbackQiangLiFeiBiaoDescription(level),
-		}
-	case "投毒":
-		return session.RoleSkill{
-			Name:        "投毒",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "166.png",
-			Description: fallbackTouDuDescription(level),
-		}
-	case "魔力突刺":
-		return session.RoleSkill{
-			Name:        "魔力突刺",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "258.png",
-			Description: fallbackMoLiTuCiDescription(level),
-		}
-	case "疾风刺":
-		return session.RoleSkill{
-			Name:        "疾风刺",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "259.png",
-			Description: fallbackJiFengCiDescription(level),
-		}
-	case "解毒术":
-		return session.RoleSkill{
-			Name:        "解毒术",
-			Level:       level,
-			Type:        "own",
-			Icon:        "260.png",
-			Description: fallbackJieDuShuDescription(level),
-		}
-	case "强射":
-		return session.RoleSkill{
-			Name:        "强射",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "231.png",
-			Description: fallbackQiangSheDescription(level),
-		}
-	case "贯甲连矢":
-		return session.RoleSkill{
-			Name:        "贯甲连矢",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "236.png",
-			Description: fallbackGuanJiaLianShiDescription(level),
-		}
-	case "冰箭速射":
-		return session.RoleSkill{
-			Name:        "冰箭速射",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "233.png",
-			Description: fallbackBingJianSuSheDescription(level),
-		}
-	case "魔力速射":
-		return session.RoleSkill{
-			Name:        "魔力速射",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "234.png",
-			Description: fallbackMoLiSuSheDescription(level),
-		}
-	case "暗影箭":
-		return session.RoleSkill{
-			Name:        "暗影箭",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "235.png",
-			Description: fallbackAnYingJianDescription(level),
-		}
-	case "毒矢":
-		return session.RoleSkill{
-			Name:        "毒矢",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "237.png",
-			Description: fallbackDuShiDescription(level),
-		}
-	case "炎狩术":
-		if level != 5 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "炎狩术",
-			Level:       5,
-			Type:        "oneE",
-			Icon:        "702.png",
-			Description: "f_s_炎狩术^ffffff&9@单体·攻击&8@术士 &10@法杖&22@战斗&2@80&4@提升75%的魔法伤害",
-		}
-	case "雷爆咒":
-		if level < 1 || level > 5 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "雷爆咒",
-			Level:       level,
-			Type:        "all",
-			Icon:        "706.png",
-			Description: fallbackLeiBaoZhouDescription(level),
-		}
-	case "火神咒":
-		if level < 1 || level > 5 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "火神咒",
-			Level:       level,
-			Type:        "all",
-			Icon:        "270.png",
-			Description: fallbackHuoShenZhouDescription(level),
-		}
-	case "石雨术":
-		if level < 1 || level > 5 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "石雨术",
-			Level:       level,
-			Type:        "all",
-			Icon:        "276.png",
-			Description: fallbackShiYuShuDescription(level),
-		}
-	case "雷龙强袭":
-		if level != 1 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "雷龙强袭",
-			Level:       1,
-			Type:        "oneE",
-			Icon:        "707.png",
-			Description: "f_s_雷龙强袭^00ccff&9@单体·攻击&8@术士 &10@法杖&22@战斗&2@125&4@<font color='#00cc00'>特殊发动条件:需要2格魂元</font><br>提升180%的魔法伤害&0;进攻时候增加100%的命中",
-		}
-	case "奥义.雷魂斩":
-		return session.RoleSkill{
-			Name:        "奥义.雷魂斩",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "183.png",
-			Description: fallbackLeiHunZhanDescription(level),
-		}
-	case "奥义.轰雷矢":
-		return session.RoleSkill{
-			Name:        "奥义.轰雷矢",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "238.png",
-			Description: fallbackAoYiHongLeiShiDescription(level),
-		}
-	case "奥义.暗杀者":
-		return session.RoleSkill{
-			Name:        "奥义.暗杀者",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "262.png",
-			Description: fallbackAoYiAnShaZheDescription(level),
-		}
-	case "奥义.六合棍法":
-		if level != 1 {
-			return session.RoleSkill{}
-		}
-		return session.RoleSkill{
-			Name:        "奥义.六合棍法",
-			Level:       1,
-			Type:        "oneE",
-			Icon:        "190.png",
-			Description: "f_s_奥义.六合棍法^00ccff&9@单体·攻击&8@战士 &10@棍&22@战斗&2@24&4@<font color='#00cc00'>特殊发动条件:需要3格魂元</font><br>提升210%的物理伤害&0;进攻时候增加300%的命中",
-		}
-
-	case "挑衅":
-		return session.RoleSkill{
-			Name:        "挑衅",
-			Level:       1,
-			Type:        "all",
-			Icon:        "168.png",
-			Description: "f_s_挑衅^5BC46D&9@群体·状态&8@战士 &10@通用&22@战斗&2@20&4@技能发动后&0;3回合内使自己成为敌人攻击的首要目标.",
-		}
-	case "卷叶式":
-		return session.RoleSkill{
-			Name:        "卷叶式",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "170.png",
-			Description: fallbackJuanYeShiDescription(level),
-		}
-	case "强贯式":
-		return session.RoleSkill{
-			Name:        "强贯式",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "171.png",
-			Description: fallbackQiangGuanShiDescription(level),
-		}
-	case "凝神式":
-		return session.RoleSkill{
-			Name:        "凝神式",
-			Level:       level,
-			Type:        "own",
-			Icon:        "172.png",
-			Description: fallbackNingShenShiDescription(level),
-		}
-	case "狂舞式":
-		return session.RoleSkill{
-			Name:        "狂舞式",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "174.png",
-			Description: fallbackKuangWuShiDescription(level),
-		}
-	case "气愈式":
-		return session.RoleSkill{
-			Name:        "气愈式",
-			Level:       level,
-			Type:        "own",
-			Icon:        "173.png",
-			Description: fallbackQiYuShiDescription(level),
-		}
-	case "奥义.飘血":
-		return session.RoleSkill{
-			Name:        "奥义.飘血",
-			Level:       level,
-			Type:        "oneE",
-			Icon:        "175.png",
-			Description: fallbackAoYiPiaoXueDescription(level),
-		}
-	default:
-		return session.RoleSkill{}
-	}
+	return session.RoleSkill{}
 }
 
 func (runtime *Runtime) roleSkillLevelForActor(handle string, name string, fallbackLevel int) int {
@@ -4113,80 +2624,10 @@ func fallbackShiYuShuDescription(level int) string {
 }
 
 func sourceBattleSkillActionLabel(name string, level int) string {
-	switch strings.TrimSpace(name) {
-	case "密斩":
-		return "w8/manycut"
-	case "多段斩":
-		if level >= 3 {
-			return "w8/ddz2"
-		}
-		return "w8/ddz1"
-	case "多段刺":
-		return "w3/ddCut"
-	case "嗜血斩":
-		if level >= 3 {
-			return "w8/xyz2"
-		}
-		return "w8/xyz1"
-	case "狂爆":
-		return "w8/kb"
-	case "红月斩":
-		return "w8/redMoonAtk"
-	case "血切":
-		return "w8/cutBlood"
-	case "劈山棍法":
-		return "w11/cutHill2"
-	case "夜叉棍法":
-		return "w11/yaksa"
-	case "力释棍术":
-		return "w11/releasePower"
-	case "盘龙棍法":
-		return "w11/circleDargon"
-	case "强力飞镖":
-		return "w3/powerDart"
-	case "投毒":
-		return "w3/drugAtk"
-	case "魔力突刺":
-		return "w3/magicCut"
-	case "疾风刺":
-		return "w3/windCut"
-	case "解毒术":
-		return "w3/releaseDrug"
-	case "强射":
-		return "w1/powerShoot"
-	case "贯甲连矢":
-		return "w1/breakArmorShoot2"
-	case "冰箭速射":
-		return "w1/iceShoot"
-	case "魔力速射":
-		return "w1/magicShoot"
-	case "暗影箭":
-		return "w1/darkShoot"
-	case "毒矢":
-		return "w1/drugShoot"
-	case "炎狩术":
-		return "w10/fire2"
-	case "雷爆咒":
-		return "w10/thunderBombs"
-	case "火神咒":
-		return "w10/fireFiend"
-	case "石雨术":
-		return "w10/rockRain"
-	case "雷龙强袭":
-		return "w10/thunderDrongAtk"
-	case "奥义.雷魂斩":
-		return "w8/thunderSoulAtk"
-	case "奥义.轰雷矢":
-		return "w1/bombThunderShoot"
-	case "奥义.暗杀者":
-		return "w3/assassinate"
-	case "奥义.六合棍法":
-		return "w11/liuhe"
-	case "普通攻击":
-		return "nomalAtk"
-	default:
-		return sourceBattleSkillActionLabelFromConfig(name, level)
+	if skill, ok := profession.BySkillName(name); ok && skill.Kind == "skill" {
+		return skill.ActionLabel
 	}
+	return ""
 }
 
 func sourceBattleSkillMPCost(description string) int {
@@ -4238,534 +2679,17 @@ func firstSourcePercentInt(pattern *regexp.Regexp, text string) int {
 }
 
 func fallbackSourceBattleSkillMultiplier(name string, level int) float64 {
-	switch strings.TrimSpace(name) {
-	case "密斩":
-		return 1.4
-	case "多段斩":
-		switch level {
-		case 2:
-			return 1.6
-		case 3:
-			return 1.65
-		case 4:
-			return 1.7
-		case 5:
-			return 1.75
-		default:
-			return 1.55
-		}
-	case "多段刺":
-		if level == 5 {
-			return 1.45
-		}
-		return 1
-	case "嗜血斩":
-		switch level {
-		case 2:
-			return 0.94
-		case 3:
-			return 0.96
-		default:
-			return 0.92
-		}
-	case "狂爆":
-		return 0
-	case "红月斩":
-		return 0.72
-	case "血切":
-		return 0.3
-	case "劈山棍法":
-		switch level {
-		case 2:
-			return 1.6
-		case 3:
-			return 1.65
-		case 4:
-			return 1.7
-		case 5:
-			return 1.75
-		default:
-			return 1.55
-		}
-	case "夜叉棍法":
-		if level == 1 {
-			return 1.12
-		}
-		return 1
-	case "力释棍术":
-		if level == 1 {
-			return 0
-		}
-		return 0
-	case "盘龙棍法":
-		if level == 1 {
-			return 0.82
-		}
-		return 0
-	case "强力飞镖":
-		switch level {
-		case 2:
-			return 1.48
-		case 3:
-			return 1.5
-		}
-		return 1
-	case "投毒":
-		return 0
-	case "魔力突刺":
-		return 1
-	case "疾风刺":
-		return 0.4
-	case "解毒术":
-		return 0
-	case "强射":
-		if level == 5 {
-			return 1.45
-		}
-		return 1
-	case "贯甲连矢":
-		if level == 5 {
-			return 1.25
-		}
-		if level == 2 {
-			return 1.1
-		}
-		return 1
-	case "冰箭速射":
-		if level == 5 {
-			return 0.7
-		}
-		return 1
-	case "魔力速射":
-		if level == 5 {
-			return 0.5
-		}
-		return 1
-	case "暗影箭":
-		if level == 1 {
-			return 0.72
-		}
-		return 1
-	case "毒矢":
-		if level == 1 {
-			return 0.9
-		}
-		return 1
-	case "炎狩术":
-		if level == 5 {
-			return 1.75
-		}
-		return 0
-	case "赤焰魔咒":
-		switch level {
-		case 2:
-			return 0.85
-		case 3:
-			return 0.9
-		case 4:
-			return 0.95
-		case 5:
-			return 1
-		default:
-			return 0
-		}
-	case "雷击":
-		switch level {
-		case 3:
-			return 1.2
-		case 4:
-			return 1.25
-		case 5:
-			return 1.3
-		default:
-			return 0
-		}
-	case "雷爆咒":
-		switch level {
-		case 1:
-			return 0.82
-		case 2:
-			return 0.84
-		case 3:
-			return 0.86
-		case 4:
-			return 0.88
-		case 5:
-			return 0.9
-		default:
-			return 0
-		}
-	case "火神咒":
-		if level >= 1 && level <= 5 {
-			return 0.95 + float64(level)*0.05
-		}
-		return 0
-	case "石雨术":
-		if level >= 1 && level <= 5 {
-			return 0.65 + float64(level)*0.05
-		}
-		return 0
-	case "魔障术":
-		return 0
-	case "雷龙强袭":
-		if level == 1 {
-			return 2.8
-		}
-		return 0
-	case "奥义.雷魂斩":
-		return 3.4
-	case "奥义.轰雷矢":
-		if level == 1 {
-			return 2.2
-		}
-		return 0
-	case "奥义.暗杀者":
-		return 2.8
-	case "奥义.六合棍法":
-		if level == 1 {
-			return 3.1
-		}
-		return 0
-
-	case "卷叶式":
-		switch level {
-		case 2:
-			return 1.6
-		case 3:
-			return 1.65
-		case 4:
-			return 1.7
-		case 5:
-			return 1.75
-		default:
-			return 1.55
-		}
-	case "强贯式":
-		switch level {
-		case 1:
-			return 1.51
-		case 2:
-			return 1.52
-		case 3:
-			return 1.53
-		case 4:
-			return 1.54
-		default:
-			return 1.55
-		}
-	case "狂舞式":
-		switch level {
-		case 1:
-			return 0.8
-		case 2:
-			return 0.85
-		case 3:
-			return 0.9
-		case 4:
-			return 0.95
-		default:
-			return 1
-		}
-	case "奥义.飘血":
-		switch level {
-		case 1:
-			return 3
-		case 2:
-			return 3.1
-		case 3:
-			return 3.2
-		default:
-			return 3.3
-		}
-	case "挑衅", "凝神式", "气愈式":
-		return 0
-	default:
-		return 1
+	if skill, ok := profession.BySkillName(name); ok && skill.Kind == "skill" {
+		return skill.DamageMultiplier
 	}
+	return 0
 }
 
 func fallbackSourceBattleSkillMPCost(name string, level int) int {
-	switch strings.TrimSpace(name) {
-	case "密斩":
-		return 5
-	case "多段斩":
-		switch level {
-		case 2:
-			return 10
-		case 3:
-			return 12
-		case 4:
-			return 14
-		case 5:
-			return 16
-		default:
-			return 8
-		}
-	case "多段刺":
-		if level == 5 {
-			return 18
-		}
-		return 0
-	case "嗜血斩":
-		switch level {
-		case 2:
-			return 26
-		case 3:
-			return 28
-		default:
-			return 24
-		}
-	case "狂爆":
-		return 15
-	case "红月斩":
-		return 40
-	case "血切":
-		return 19
-	case "劈山棍法":
-		switch level {
-		case 2:
-			return 10
-		case 3:
-			return 12
-		case 4:
-			return 14
-		case 5:
-			return 16
-		default:
-			return 8
-		}
-	case "夜叉棍法":
-		if level == 1 {
-			return 15
-		}
-		return 0
-	case "力释棍术":
-		if level == 1 {
-			return 10
-		}
-		return 0
-	case "盘龙棍法":
-		if level == 1 {
-			return 14
-		}
-		return 0
-	case "强力飞镖":
-		switch level {
-		case 2:
-			return 20
-		case 3:
-			return 24
-		}
-		return 0
-	case "投毒":
-		return 16
-	case "魔力突刺":
-		return 20
-	case "疾风刺":
-		return 20
-	case "解毒术":
-		return 20
-	case "强射":
-		if level == 5 {
-			return 18
-		}
-		return 0
-	case "贯甲连矢":
-		if level == 5 {
-			return 28
-		}
-		if level == 2 {
-			return 25
-		}
-		return 0
-	case "冰箭速射":
-		if level == 5 {
-			return 28
-		}
-		return 0
-	case "魔力速射":
-		if level == 5 {
-			return 34
-		}
-		return 0
-	case "暗影箭":
-		if level == 1 {
-			return 20
-		}
-		return 0
-	case "毒矢":
-		if level == 1 {
-			return 15
-		}
-		return 0
-	case "炎狩术":
-		if level == 5 {
-			return 80
-		}
-		return 0
-	case "赤焰魔咒":
-		switch level {
-		case 2:
-			return 65
-		case 3:
-			return 75
-		case 4:
-			return 85
-		case 5:
-			return 95
-		default:
-			return 0
-		}
-	case "雷击":
-		switch level {
-		case 3:
-			return 75
-		case 4:
-			return 85
-		case 5:
-			return 95
-		default:
-			return 0
-		}
-	case "雷爆咒":
-		switch level {
-		case 1:
-			return 70
-		case 2:
-			return 80
-		case 3:
-			return 90
-		case 4:
-			return 100
-		case 5:
-			return 110
-		default:
-			return 0
-		}
-	case "火神咒":
-		if level >= 1 && level <= 5 {
-			return 210 + level*10
-		}
-		return 0
-	case "石雨术":
-		if level >= 1 && level <= 5 {
-			return 45 + level*10
-		}
-		return 0
-	case "魔障术":
-		switch level {
-		case 2:
-			return 90
-		case 3:
-			return 110
-		case 4:
-			return 130
-		case 5:
-			return 150
-		default:
-			return 0
-		}
-	case "雷龙强袭":
-		if level == 1 {
-			return 125
-		}
-		return 0
-	case "奥义.雷魂斩":
-		return 24
-	case "奥义.轰雷矢":
-		if level == 1 {
-			return 26
-		}
-		return 0
-	case "奥义.暗杀者":
-		return 26
-	case "奥义.六合棍法":
-		if level == 1 {
-			return 24
-		}
-		return 0
-
-	case "挑衅":
-		return 20
-	case "卷叶式":
-		switch level {
-		case 2:
-			return 10
-		case 3:
-			return 12
-		case 4:
-			return 14
-		case 5:
-			return 16
-		default:
-			return 8
-		}
-	case "强贯式":
-		switch level {
-		case 1:
-			return 12
-		case 2:
-			return 13
-		case 3:
-			return 15
-		case 4:
-			return 17
-		default:
-			return 20
-		}
-	case "凝神式":
-		switch level {
-		case 1:
-			return 12
-		case 2:
-			return 14
-		case 3:
-			return 16
-		case 4:
-			return 18
-		default:
-			return 22
-		}
-	case "狂舞式":
-		switch level {
-		case 1:
-			return 22
-		case 2:
-			return 24
-		case 3:
-			return 26
-		case 4:
-			return 28
-		default:
-			return 30
-		}
-	case "气愈式":
-		switch level {
-		case 1:
-			return 15
-		case 2:
-			return 19
-		case 3:
-			return 23
-		case 4:
-			return 27
-		default:
-			return 31
-		}
-	case "奥义.飘血":
-		switch level {
-		case 1:
-			return 26
-		case 2:
-			return 30
-		case 3:
-			return 34
-		default:
-			return 38
-		}
-	default:
-		return 0
+	if skill, ok := profession.BySkillName(name); ok && skill.Kind == "skill" {
+		return skill.MPCost
 	}
+	return 0
 }
 
 func fallbackShiXueLifeStealChance(level int) int {
@@ -6451,6 +4375,9 @@ func (runtime *Runtime) sourceBattleRewards(winner Camp, escaped bool) (int, []s
 	if winner != CampTeam || escaped {
 		return 0, []string{}
 	}
+	if exp, items, ok := runtime.originalMonsterRewards(); ok {
+		return exp, items
+	}
 
 	if reward, ok := runtime.sourceBattleRewardConfig(); ok && reward.Status == "confirmed" {
 		items := rollSourceBattleRewardItems(reward.Items, reward.DropRates)
@@ -6483,6 +4410,9 @@ func (runtime *Runtime) RerollBattleRewardItems(result ResultPayload) ResultPayl
 func (runtime *Runtime) hasSourceBattleRewardSource() bool {
 	if runtime == nil {
 		return false
+	}
+	if _, _, ok := runtime.originalMonsterRewards(); ok {
+		return true
 	}
 	if reward, ok := runtime.sourceBattleRewardConfig(); ok && reward.Status == "confirmed" {
 		return true

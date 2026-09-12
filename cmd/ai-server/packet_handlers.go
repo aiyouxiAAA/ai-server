@@ -328,7 +328,7 @@ func handlePacket(store *session.Store, packet protocol.Packet) packetResult {
 	return handlePacketWithSession(store, packet, &packetSession{})
 }
 
-func handlePacketWithSession(store *session.Store, packet protocol.Packet, socketSession *packetSession) packetResult {
+func handlePacketWithSessionCore(store *session.Store, packet protocol.Packet, socketSession *packetSession) packetResult {
 	switch packet.Cmd {
 	case cmdEquipmentStarRequest:
 		var request session.EquipmentStarRequest
@@ -431,6 +431,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			}
 			return result
 		}
+		if result, ok := buildAuthoredServiceOpenResult(socketSession, request.Handle); ok {
+			if result.answerSpeak != nil {
+				result.answerSpeak.NavigationToken = request.NavigationToken
+			}
+			return result
+		}
 		answerSpeak := buildClassicTownQuestAwareAnswerSpeak(store, socketSession, request.Handle)
 		return packetResult{
 			answerSpeak: &answerSpeak,
@@ -467,8 +473,8 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			return packetResult{}
 		}
 		log.Printf("[ai-server] classic town Answer handle=%s msgHandle=%s answerHandle=%s", request.Handle, request.MsgHandle, request.AnswerHandle)
-		if result, ok := buildClassicTownSourceQuestRewardResult(store, socketSession, request); ok {
-			return result
+		if quest.IsRetiredAnswer(request.AnswerHandle, "") || quest.IsRetiredAnswer(request.MsgHandle, "") {
+			return packetResult{handled: true, errorMessages: []classicTownErrorPush{{Msg: "旧任务已移除，请从雪栈村主线继续。"}}}
 		}
 		if destination, ok := resolveClassicTownTransportAnswer(socketSession, "", request.Handle, request.AnswerHandle); ok {
 			return buildClassicTownTransferResult(store, socketSession, strconv.Itoa(destination.MapID), destination.Spawn)
@@ -483,6 +489,12 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			}
 		}
 		if result, ok := buildClassicAuctionAnswerResult(request); ok {
+			return result
+		}
+		if result, ok := buildAuthoredQuestAnswerResult(store, socketSession, request); ok {
+			return result
+		}
+		if result, ok := buildAuthoredServiceAnswerResult(store, socketSession, request); ok {
 			return result
 		}
 		if result, ok := buildClassicTownHealerResult(store, socketSession, request); ok {
@@ -503,9 +515,6 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 			}
 		}
 		if result, ok := buildClassicTownVocationResult(store, socketSession, request); ok {
-			return result
-		}
-		if result, ok := buildAuthoredQuestAnswerResult(store, socketSession, request); ok {
 			return result
 		}
 		if result, ok := buildClassicQuestAnswerResult(store, socketSession, request); ok {
@@ -629,7 +638,7 @@ func handlePacketWithSession(store *session.Store, packet protocol.Packet, socke
 		if !decodePayload(packet.Payload, &request) {
 			return packetResult{}
 		}
-		return buildClassicTownOtherEquipmentResult(request)
+		return buildClassicTownStoredEquipmentResult(store, request)
 	case cmdClassicTownContainerMove:
 		var request classicTownContainerMoveRequest
 		if !decodePayload(packet.Payload, &request) {
@@ -1152,7 +1161,6 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 	if result.Over != nil {
 		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
-		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		questInfos = advanceClassicQuestProgressForTargets(
 			store,
 			socketSession,
@@ -1207,6 +1215,7 @@ func buildClassicBattleActionResult(store *session.Store, socketSession *packetS
 			},
 		}
 	}
+	appendClassicBattleRewardDelivery(store, socketSession, &packet)
 	return packet
 }
 
@@ -1257,26 +1266,7 @@ func buildClassicBattleActionRejectedRetryResult(socketSession *packetSession, r
 }
 
 func classicBattleActionRequiredItemName(commandID string) string {
-	switch strings.TrimSpace(commandID) {
-	case battle.CommandQiangLiFeiBiao, "强力飞镖":
-		return "飞镖"
-	case battle.CommandTouDu, "投毒":
-		return "毒药"
-	case battle.CommandGuanJiaLianShi, "贯甲连矢":
-		return "穿甲箭"
-	case battle.CommandBingJianSuShe, "冰箭速射":
-		return "冰之箭"
-	case battle.CommandMoLiSuShe, "魔力速射":
-		return "魔箭"
-	case battle.CommandAnYingJian, "暗影箭":
-		return "暗之箭"
-	case battle.CommandDuShi, "毒矢":
-		return "毒箭"
-	case battle.CommandHuanHunShu, "还魂术":
-		return "魂之石"
-	default:
-		return ""
-	}
+	return ""
 }
 
 func findClassicBattleRequiredBagItem(store *session.Store, socketSession *packetSession, name string) (session.RoleItem, bool) {
@@ -1346,7 +1336,6 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 	if result.Over != nil {
 		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
-		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		questInfos = advanceClassicQuestProgressForTargets(
 			store,
 			socketSession,
@@ -1397,6 +1386,7 @@ func buildClassicBattleItemActionResult(store *session.Store, socketSession *pac
 			Result:      packetResult{battleActions: packet.battleActions, battleBuffs: packet.battleBuffs, battleClearBuffs: packet.battleClearBuffs, battleClearCells: packet.battleClearCells, battleCommand: packet.battleCommand, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
 		}
 	}
+	appendClassicBattleRewardDelivery(store, socketSession, &packet)
 	return packet
 }
 
@@ -1429,7 +1419,6 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 	if result.Over != nil {
 		chatMessages = append(chatMessages, classicBattleOverChatMessages(socketSession, result.Over)...)
 		roleState, rolePhysique = finalizeClassicBattleOver(store, socketSession, result.Over.Result)
-		socketSession.battleLoot = buildClassicBattleLoot(socketSession, result.Over.Result)
 		questInfos = advanceClassicQuestProgressForTargets(
 			store,
 			socketSession,
@@ -1462,6 +1451,7 @@ func buildClassicBattlePlayOverResult(store *session.Store, socketSession *packe
 			Result:      packetResult{battleCommand: packet.battleCommand, battleCommands: packet.battleCommands, battleOver: packet.battleOver, battleRelive: packet.battleRelive},
 		}
 	}
+	appendClassicBattleRewardDelivery(store, socketSession, &packet)
 	return packet
 }
 
@@ -1737,15 +1727,8 @@ func buildClassicBattleLoot(socketSession *packetSession, result battle.ResultPa
 		return nil
 	}
 
-	capacity := len(result.Items)
-	if capacity > classicBattleLootCap {
-		capacity = classicBattleLootCap
-	}
-	items := make([]session.RoleItem, 0, capacity)
+	items := make([]session.RoleItem, 0, len(result.Items))
 	for _, rawName := range result.Items {
-		if len(items) >= classicBattleLootCap {
-			break
-		}
 		name, count := parseClassicBattleLootNameAndCount(rawName)
 		if name == "" {
 			continue
@@ -2074,6 +2057,10 @@ func buildClassicTownContainerMoveResult(store *session.Store, socketSession *pa
 			})
 		}
 		socketSession.battleLoot = remaining
+		promoted := packetResult{}
+		promoteClassicBattleLootOverflow(socketSession, &promoted)
+		itemInfos = append(itemInfos, promoted.itemInfos...)
+		itemClears = append(itemClears, promoted.itemClears...)
 		chatMessages := []classicTownChatMessagePush{}
 		if moveFailures > 0 {
 			message := "背包空间不足，部分战利品未能放入背包。"
@@ -2272,6 +2259,7 @@ func buildClassicBattleLootExchangeResult(socketSession *packetSession, sourceIn
 				clearSlot(sourceIndex)
 			}
 			pushItem(targetItem)
+			promoteClassicBattleLootOverflow(socketSession, &result)
 			return result
 		}
 
@@ -2788,6 +2776,9 @@ func buildClassicTownSaleItemResult(store *session.Store, socketSession *packetS
 		return packetResult{handled: true}
 	}
 
+	if message := authoredShopPurchaseError(socketSession, request.ShopID); message != "" {
+		return packetResult{handled: true, chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(message)}}
+	}
 	saleResult := store.SellRoleItem(socketSession.playerBase.PlayerID, socketSession.selectedRole.RoleID, request.Type, request.Index, request.Count)
 	if !saleResult.Found {
 		log.Printf("[ai-server] classic town SaleItem ignored missing role roleId=%s shopId=%s type=%s index=%d count=%d", socketSession.selectedRole.RoleID, request.ShopID, request.Type, request.Index, request.Count)
@@ -2971,7 +2962,8 @@ func isClassicTownHealerAnswer(handle string, answerHandle string) bool {
 		"2520542613299551",
 		"4950542616589339",
 		"4710542615621525",
-		"6360542618722932":
+		"6360542618722932",
+		"authored-ye-zhidong":
 		return true
 	default:
 		return false
@@ -3224,6 +3216,11 @@ func buildClassicTownBuyItemResult(
 	socketSession *packetSession,
 	request classicTownBuySkillRequest,
 ) packetResult {
+	if message := authoredShopPurchaseError(socketSession, request.ShopID); message != "" {
+		return packetResult{handled: true, buySkillResult: &classicTownBuySkillResultPush{
+			ShopID: request.ShopID, SkillID: request.SkillID, ErrorCode: "shop_unavailable", ErrorMessage: message,
+		}, chatMessages: []classicTownChatMessagePush{classicTownSystemWarningMessage(message)}}
+	}
 	row, ok := findSourceItemShopRow(request.ShopID, request.SkillID)
 	if !ok {
 		return packetResult{

@@ -3,7 +3,7 @@ package quest
 import "testing"
 
 func TestWuliangMapNPCQuestRoutesLinkCatalogRows(t *testing.T) {
-	routes := WuliangMapNPCQuestRoutes()
+	routes := retiredWuliangRoutes()
 	find := func(questID string, handle string, msgHandle string) (WuliangMapNPCQuestRoute, bool) {
 		for _, route := range routes {
 			if route.QuestID == questID && route.NPCHandle == handle && route.MsgHandle == msgHandle {
@@ -28,7 +28,7 @@ func TestWuliangMapNPCQuestRoutesLinkCatalogRows(t *testing.T) {
 }
 
 func TestClassicMapNPCQuestRoutesResolveCatalogRelations(t *testing.T) {
-	routes := ClassicMapNPCQuestRoutes()
+	routes := retiredMapRoutes()
 	if len(routes) == 0 {
 		t.Fatal("expected captured quest routes to link to the Classic map/NPC catalog")
 	}

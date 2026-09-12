@@ -4,6 +4,7 @@ import (
 	"ai-server/internal/quest"
 	"ai-server/internal/session"
 	"strconv"
+	"strings"
 )
 
 const cmdQuestGuideSnapshotPush = 1252 // Authored protocol extension; not a captured Classic command.
@@ -36,7 +37,7 @@ func buildQuestGuideSnapshot(store *session.Store, socket *packetSession) *quest
 		return nil
 	}
 	id, role := socket.playerBase.PlayerID, socket.selectedRole.RoleID
-	accepted, removed := store.AcceptedQuestTitles(id, role), store.RemovedQuestTitles(id, role)
+	removed := store.RemovedQuestTitles(id, role)
 	snapshot := &questGuideSnapshot{OwnerHandle: role, MapID: strconv.Itoa(socket.playerBase.MapID), Entries: []questGuideEntry{}, CompletedQuestIDs: []string{}}
 	for _, q := range quest.Authored() {
 		if removed[q.Info.Title] {
@@ -45,12 +46,12 @@ func buildQuestGuideSnapshot(store *session.Store, socket *packetSession) *quest
 	}
 	for _, g := range quest.Guides() {
 		q, _ := quest.FindAuthored(g.QuestID)
-		if removed[q.Info.Title] || socket.playerBase.Level < q.Info.Level {
+		phase := authoredQuestStatus(store, socket, q)
+		if phase == "locked" || phase == "completed" {
 			continue
 		}
-		phase := "available"
-		if accepted[q.Info.Title] {
-			phase = "accepted"
+		if phase == "accepted" && q.Rule.Kind != "visit" && store.AuthoredQuestReady(id, role, q.Info.ID) {
+			phase = "ready"
 		}
 		if phase != g.Phase {
 			continue
@@ -63,10 +64,20 @@ func buildQuestGuideSnapshot(store *session.Store, socket *packetSession) *quest
 		if g.TargetRole == "finish" {
 			npc = q.Finish
 		}
+		targetHandle, targetName := npc.Handle(), npc.Name
+		if g.Action == "open_page" {
+			targetHandle, targetName = g.TargetRole, g.Location
+		}
+		progress, _ := store.QuestProgress(id, role, q.Info.Title)
+		text := strings.ReplaceAll(g.Text, "{progress}", strconv.Itoa(progress))
+		// 'ready' chooses a guide row; the client still sees the accepted quest phase.
+		if phase == "ready" {
+			phase = "accepted"
+		}
 		snapshot.Entries = append(snapshot.Entries, questGuideEntry{
 			Key: g.QuestID + ":" + g.ObjectiveID, QuestID: g.QuestID, Title: q.Info.Title, Type: q.Info.Type,
 			Phase: phase, ObjectiveID: g.ObjectiveID, Action: g.Action, MapID: strconv.Itoa(g.MapID),
-			TargetHandle: npc.Handle(), TargetName: npc.Name, Objective: g.Text, Location: g.Location,
+			TargetHandle: targetHandle, TargetName: targetName, Objective: text, Location: g.Location,
 			HintID: g.HintID, Priority: g.Priority,
 		})
 	}

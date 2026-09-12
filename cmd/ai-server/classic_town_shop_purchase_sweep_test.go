@@ -6,6 +6,7 @@ import (
 
 	"ai-server/internal/protocol"
 	"ai-server/internal/session"
+	"ai-server/internal/world"
 )
 
 func TestClassicTownNPCShopPurchaseSweep(t *testing.T) {
@@ -15,12 +16,17 @@ func TestClassicTownNPCShopPurchaseSweep(t *testing.T) {
 				route := route
 				t.Run(route.title, func(t *testing.T) {
 					store, socketSession := seedSelectedRoleSession(t)
+					messageID := "1"
+					if npc, authored := world.FindAuthoredServiceNPC(route.handle); authored {
+						socketSession.playerBase.MapID = npc.MapID
+						messageID = authoredServiceMessageID
+					}
 					openResult := handlePacketWithSession(store, protocol.Packet{
 						Cmd: cmdClassicTownAnswerReq,
 						Seq: 1,
 						Payload: mustJSON(t, classicTownAnswerRequest{
 							Handle:       route.handle,
-							MsgHandle:    "1",
+							MsgHandle:    messageID,
 							AnswerHandle: route.answerHandle,
 						}),
 					}, socketSession)
@@ -37,6 +43,9 @@ func TestClassicTownNPCShopPurchaseSweep(t *testing.T) {
 						entry := entry
 						t.Run(entry.Name, func(t *testing.T) {
 							purchaseStore, purchaseSession := seedSelectedRoleSession(t)
+							if npc, authored := world.FindAuthoredServiceNPC(route.handle); authored {
+								purchaseSession.playerBase.MapID = npc.MapID
+							}
 							row, ok := findSourceItemShopRow(openResult.skillShop.ShopID, entry.ID)
 							if !ok {
 								t.Fatalf("expected route row for %s (%d)", entry.Name, entry.ID)

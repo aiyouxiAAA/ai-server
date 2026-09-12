@@ -1,0 +1,8 @@
+profession_id,skill_id,name,kind,source_type,target,action_label,animation_id,default_level,shortcut_slot,mp_cost,damage_multiplier,required_power,icon,asset_status,trigger_chance_percent,counter_skill_id,description
+blade-dancer,skill-normal-attack,普通攻击,skill,oneE,enemy,nomalAtk,normal,1,0,0,1,0,blade-dancer/normal-attack.png,accepted,0,,普通刀斩
+blade-dancer,skill-blade-triple,三连斩,skill,oneE,enemy,blade/triple,triple,1,1,6,1.6,0,blade-dancer/triple-slash.png,accepted,0,,三次挥斩合计160%物理伤害
+blade-dancer,passive-blade-guard,格挡,passive,被动技能,self,def,guard,1,-1,0,0,0,blade-dancer/guard.png,integrated_preview,50,skill-blade-execution,受到敌方直接攻击时50%概率完全格挡并立即处决反击；反击不耗蓝
+blade-dancer,skill-blade-execution,处决,skill,oneE,enemy,blade/execution,execution,1,2,10,2,0,blade-dancer/execution.png,integrated_preview,0,,处决连斩合计200%物理伤害；格挡反击时免费释放
+blade-dancer,skill-blade-ultimate,奥义,skill,oneE,enemy,blade/ultimate,ultimate,1,3,24,3.4,0,blade-dancer/ultimate.png,candidate,0,,完整奥义合计340%物理伤害；动作候选待返修
+blade-dancer,skill-blade-draw,拔刀斩,skill,oneE,enemy,blade/draw,draw,1,4,12,2.2,0,blade-dancer/draw-slash.png,accepted,0,,蓄力两秒后拔刀；造成220%物理伤害
+blade-dancer,skill-blade-phantom,幻影剑舞,skill,oneE,enemy,blade/phantom,phantom,1,5,18,2.8,0,blade-dancer/phantom-dance.png,candidate,0,,连续剑舞与末段飞波合计280%物理伤害；动作候选

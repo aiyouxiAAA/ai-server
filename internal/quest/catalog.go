@@ -155,8 +155,11 @@ func loadCatalog() ([]Info, error) {
 		return nil, fmt.Errorf("open classic quest catalog: %w", err)
 	}
 	defer file.Close()
+	return parseCatalog(file)
+}
 
-	reader := csv.NewReader(file)
+func parseCatalog(input io.Reader) ([]Info, error) {
+	reader := csv.NewReader(input)
 	reader.FieldsPerRecord = -1
 	headers, err := reader.Read()
 	if err != nil {

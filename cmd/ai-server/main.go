@@ -226,7 +226,6 @@ func main() {
 	}
 
 	apiMux.HandleFunc("/healthz", healthHandler)
-	registerDevItemHandlers(apiMux, store)
 	wsMux.HandleFunc("/healthz", healthHandler)
 	wsMux.HandleFunc("/ws", func(writer http.ResponseWriter, request *http.Request) {
 		handleWebSocket(store, writer, request)

@@ -298,6 +298,9 @@ type classicTownSkillShopRequirement struct {
 }
 
 func buildClassicTownSkillShopResult(store *session.Store, socketSession *packetSession, sourceHandle string, answerHandle string) (packetResult, bool) {
+	if answerHandle == "7" || answerHandle == "8" || answerHandle == "9" {
+		return packetResult{handled: true, errorMessages: []classicTownErrorPush{{Msg: "旧职业技能商店已停用，当前职业技能默认获得。"}}}, true
+	}
 	shop, ok := sourceSkillTeacherShops[answerHandle]
 	if !ok {
 		return packetResult{}, false
@@ -320,6 +323,10 @@ func buildClassicTownSkillShopResult(store *session.Store, socketSession *packet
 }
 
 func applySourceShopRoleName(shop *classicTownSkillShopPush, sourceHandle string) {
+	if npc, ok := world.FindAuthoredServiceNPC(sourceHandle); ok {
+		shop.RoleName, shop.SourceRoleName = npc.Name, npc.Name
+		return
+	}
 	roleName, sourceRoleName, ok := world.FindSourceNPCDisplayNames(sourceHandle)
 	if !ok {
 		return
@@ -478,31 +485,6 @@ const classicTownBuyBackRefreshSourceCapture = "D:/yzhgame/WOCClient/instances/i
 
 const classicTownBuyBackCopperDescription = "f_i_铜钱^ffffff&24@材料 消耗品&25@1000&19@1000枚时双击可兑换为银元宝.&20@游戏中的货币&0;用于流通买卖.&27@sitem_tq&103@0&104@0&105@&107@&108@0"
 
-var classicTownSourceBuyBackEntries = []classicTownSourceBuyBackEntry{
-	{
-		Index:         0,
-		Name:          "藤条",
-		ItemType:      "null",
-		Display:       "90.png",
-		Description:   "f_i_藤条&24@材料&25@99&20@密实坚固又轻巧坚韧的天然材料&0;具有不怕挤&0;不怕压&0;柔韧有弹性的特性.&103@0&104@0&105@&107@&108@31",
-		Count:         5,
-		ItemLevel:     1,
-		Price:         155,
-		SourceCapture: "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_215548_514_conn_0005/raw/server-to-client-0001.bin#2250",
-	},
-	{
-		Index:         1,
-		Name:          "花瓣",
-		ItemType:      "null",
-		Display:       "89.png",
-		Description:   "f_i_花瓣&24@材料&25@99&20@花瓣具有显著的斑纹&0;或有蜜腺可以分泌蜜汁&0;产生含糖的花蜜&0;吸引昆虫.&103@0&104@0&105@&107@&108@33",
-		Count:         6,
-		ItemLevel:     1,
-		Price:         198,
-		SourceCapture: "D:/yzhgame/WOCClient/instances/instance2.staging/tmp/woc-proxy-captures/20260606_210926_394_session_08036/connections/20260606_215548_514_conn_0005/raw/server-to-client-0001.bin#2254",
-	},
-}
-
 func classicTownBuyBackInfoPushes(
 	handle string,
 	taken map[int]bool,
@@ -583,13 +565,8 @@ func classicTownSourceBuyBackEntryToRoleItem(entry classicTownSourceBuyBackEntry
 }
 
 func classicTownBuyBackEntriesForSession(soldEntries []classicTownSourceBuyBackEntry) []classicTownSourceBuyBackEntry {
-	if len(soldEntries) == 0 {
-		return classicTownSourceBuyBackEntries
-	}
-	result := make([]classicTownSourceBuyBackEntry, 0, len(classicTownSourceBuyBackEntries)+len(soldEntries))
-	result = append(result, classicTownSourceBuyBackEntries...)
-	result = append(result, soldEntries...)
-	return result
+	// Captured rows describe one historical player's sales, not every player's inventory.
+	return soldEntries
 }
 
 func classicTownAppendSoldBuyBackEntry(
@@ -618,11 +595,6 @@ func classicTownAppendSoldBuyBackEntry(
 
 func classicTownNextBuyBackIndex(soldEntries []classicTownSourceBuyBackEntry) int {
 	next := 0
-	for _, entry := range classicTownSourceBuyBackEntries {
-		if entry.Index >= next {
-			next = entry.Index + 1
-		}
-	}
 	for _, entry := range soldEntries {
 		if entry.Index >= next {
 			next = entry.Index + 1
@@ -638,32 +610,8 @@ func classicTownSourceBuyBackRequirements(entry classicTownSourceBuyBackEntry) [
 	}}
 }
 
-var sourceSkillTeacherShops = map[string]classicTownSkillShopPush{
-	"7": {
-		Handle:   sourceSkillTeacherHandle,
-		ShopID:   "skill1",
-		Title:    "战士技能",
-		Vocation: "战士",
-		SkillCap: 22,
-		Skills:   sourceSkillShopEntries("skill1", "战士", sourceWarriorSkillShopRows),
-	},
-	"8": {
-		Handle:   sourceSkillTeacherHandle,
-		ShopID:   "skill2",
-		Title:    "术士技能",
-		Vocation: "术士",
-		SkillCap: 24,
-		Skills:   sourceSkillShopEntries("skill2", "术士", sourceMageSkillShopRows),
-	},
-	"9": {
-		Handle:   sourceSkillTeacherHandle,
-		ShopID:   "skill3",
-		Title:    "游侠技能",
-		Vocation: "游侠",
-		SkillCap: 26,
-		Skills:   sourceSkillShopEntries("skill3", "游侠", sourceRangerSkillShopRows),
-	},
-}
+// Historical shop rows remain capture fixtures; none are active profession shops.
+var sourceSkillTeacherShops = map[string]classicTownSkillShopPush{}
 
 func sourceSkillShopEntries(shopID string, vocation string, rows string) []classicTownSkillShopEntry {
 	lines := strings.Split(strings.TrimSpace(rows), "\n")

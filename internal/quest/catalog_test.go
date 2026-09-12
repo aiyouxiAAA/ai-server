@@ -3,7 +3,7 @@ package quest
 import "testing"
 
 func TestCatalogParsesCapturedQuestObjectives(t *testing.T) {
-	kill, ok := FindByID("capture-001")
+	kill, ok := retiredFindByID("capture-001")
 	if !ok || kill.Objective == nil {
 		t.Fatalf("expected captured kill objective, got %+v", kill)
 	}
@@ -17,14 +17,14 @@ func TestCatalogParsesCapturedQuestObjectives(t *testing.T) {
 		t.Fatalf("expected captured completion objective state, got %q", state)
 	}
 
-	collection, ok := FindByID("capture-008")
+	collection, ok := retiredFindByID("capture-008")
 	if !ok || collection.Objective == nil || collection.Objective.Kind != ObjectiveKindCollection || collection.Objective.Target != "朽木" || collection.Objective.Required != 3 {
 		t.Fatalf("expected captured wood collection objective, got %+v", collection)
 	}
 }
 
 func TestCatalogParsesCapturedQuestRewards(t *testing.T) {
-	info, ok := FindByID("capture-003")
+	info, ok := retiredFindByID("capture-003")
 	if !ok {
 		t.Fatal("expected captured quest capture-003")
 	}
@@ -37,7 +37,7 @@ func TestCatalogParsesCapturedQuestRewards(t *testing.T) {
 }
 
 func TestCatalogBuildsQuestRewardEntries(t *testing.T) {
-	info, ok := FindByID("capture-003")
+	info, ok := retiredFindByID("capture-003")
 	if !ok {
 		t.Fatal("expected captured quest capture-003")
 	}
@@ -58,7 +58,7 @@ func TestCatalogBuildsQuestRewardEntries(t *testing.T) {
 }
 
 func TestCatalogParsesQuestRequirements(t *testing.T) {
-	info, ok := FindByID("capture-032")
+	info, ok := retiredFindByID("capture-032")
 	if !ok {
 		t.Fatal("expected capture-032 in catalog")
 	}
@@ -68,7 +68,7 @@ func TestCatalogParsesQuestRequirements(t *testing.T) {
 }
 
 func TestCatalogParsesSkillAndOptionalRewards(t *testing.T) {
-	skillInfo, ok := FindByID("capture-007")
+	skillInfo, ok := retiredFindByID("capture-007")
 	if !ok {
 		t.Fatal("expected captured quest capture-007")
 	}
@@ -76,7 +76,7 @@ func TestCatalogParsesSkillAndOptionalRewards(t *testing.T) {
 		t.Fatalf("expected capture-007 exp and skill reward, got %+v", skillInfo.Reward)
 	}
 
-	optionalInfo, ok := FindByID("capture-058")
+	optionalInfo, ok := retiredFindByID("capture-058")
 	if !ok {
 		t.Fatal("expected captured quest capture-058")
 	}
@@ -108,7 +108,7 @@ func TestCatalogParsesSkillAndOptionalRewards(t *testing.T) {
 }
 
 func TestCatalogParsesWuliangRoutes(t *testing.T) {
-	info, ok := FindByID("capture-186")
+	info, ok := retiredFindByID("capture-186")
 	if !ok {
 		t.Fatal("expected captured Wuliang quest capture-186")
 	}
@@ -130,7 +130,7 @@ func TestCatalogParsesWuliangRoutes(t *testing.T) {
 }
 
 func TestCatalogParsesCapturedDafoWoodMonsterRoute(t *testing.T) {
-	info, ok := FindByID("capture-024")
+	info, ok := retiredFindByID("capture-024")
 	if !ok {
 		t.Fatal("expected captured Dafo quest capture-024")
 	}
@@ -176,7 +176,7 @@ func TestCatalogIncludesVisibleWuliangQuestChain(t *testing.T) {
 		"capture-210": "营救袁碧寰",
 	}
 	for id, title := range expected {
-		info, ok := FindByID(id)
+		info, ok := retiredFindByID(id)
 		if !ok {
 			t.Fatalf("expected visible Wuliang quest %s %s", id, title)
 		}
@@ -185,23 +185,23 @@ func TestCatalogIncludesVisibleWuliangQuestChain(t *testing.T) {
 		}
 	}
 
-	xuanji, _ := FindByID("capture-187")
+	xuanji, _ := retiredFindByID("capture-187")
 	if len(xuanji.Routes) != 2 || xuanji.Routes[1].MsgHandle != "6q3d_2" || xuanji.Routes[1].AnswerHandle != "6q3a_2_1" {
 		t.Fatalf("expected captured Xuanji completion route, got %+v", xuanji.Routes)
 	}
-	specialty, _ := FindByID("capture-189")
+	specialty, _ := retiredFindByID("capture-189")
 	if len(specialty.Routes) != 2 || specialty.Routes[1].Handle != "6350542618650282" || specialty.Routes[1].MsgHandle != "6q41d_2" {
 		t.Fatalf("expected captured specialty delivery route, got %+v", specialty.Routes)
 	}
-	waterDam, _ := FindByID("capture-203")
+	waterDam, _ := retiredFindByID("capture-203")
 	if len(waterDam.Routes) != 2 || waterDam.Routes[0].MsgHandle != "6q10d_1" || waterDam.Routes[1].MsgHandle != "6q10d_2" {
 		t.Fatalf("expected captured water dam routes on Yumo, got %+v", waterDam.Routes)
 	}
-	waterwheel, _ := FindByID("capture-207")
+	waterwheel, _ := retiredFindByID("capture-207")
 	if len(waterwheel.Routes) != 2 || waterwheel.Routes[0].MsgHandle != "6q16d_1" || waterwheel.Routes[1].MsgHandle != "6q16d_2" || waterwheel.QuestStateHandle != "6370542618853300" {
 		t.Fatalf("expected captured waterwheel routes on Yumo, got %+v", waterwheel)
 	}
-	precisionParts, _ := FindByID("capture-208")
+	precisionParts, _ := retiredFindByID("capture-208")
 	if len(precisionParts.Routes) != 2 || precisionParts.Routes[1].Handle != "6370542618853300" || precisionParts.Routes[1].MsgHandle != "6q17d_2" {
 		t.Fatalf("expected captured precision parts completion route on Yumo, got %+v", precisionParts.Routes)
 	}
@@ -239,7 +239,7 @@ func TestCatalogIncludesExtendedBaiyuanQuestChain(t *testing.T) {
 		"capture-238": "狮虎三魁",
 	}
 	for id, title := range expected {
-		info, ok := FindByID(id)
+		info, ok := retiredFindByID(id)
 		if !ok {
 			t.Fatalf("expected extended captured quest %s %s", id, title)
 		}
@@ -251,19 +251,19 @@ func TestCatalogIncludesExtendedBaiyuanQuestChain(t *testing.T) {
 		}
 	}
 
-	redArtifact, _ := FindByID("capture-211")
+	redArtifact, _ := retiredFindByID("capture-211")
 	if len(redArtifact.Routes) != 2 || redArtifact.Routes[0].MsgHandle != "5q26d_1" || redArtifact.Routes[1].AnswerHandle != "5q26a_2_1" || redArtifact.QuestStateHandle != "" {
 		t.Fatalf("expected captured red-artifact dialogue routes without QuestState mapping, got %+v", redArtifact)
 	}
-	rescue, _ := FindByID("capture-218")
+	rescue, _ := retiredFindByID("capture-218")
 	if len(rescue.Routes) != 2 || rescue.Routes[0].AnswerHandle != "6q34gs" || rescue.Routes[1].MsgHandle != "6q34d_2" {
 		t.Fatalf("expected captured Yuan rescue routes, got %+v", rescue.Routes)
 	}
-	furniture, _ := FindByID("capture-232")
+	furniture, _ := retiredFindByID("capture-232")
 	if len(furniture.Routes) != 2 || furniture.Routes[0].Handle != "6190542618476150" || furniture.Routes[1].Handle != "6370542618853300" {
 		t.Fatalf("expected captured furniture routes, got %+v", furniture.Routes)
 	}
-	shihu, _ := FindByID("capture-238")
+	shihu, _ := retiredFindByID("capture-238")
 	if len(shihu.Routes) != 2 || shihu.Routes[0].AnswerHandle != "4q51a_1_1" || shihu.Routes[1].AnswerHandle != "4q51a_2_1" {
 		t.Fatalf("expected captured Shihuku quest routes, got %+v", shihu.Routes)
 	}
@@ -295,7 +295,7 @@ func TestCatalogIncludesDateSweepBaiyuanAndSwampQuestChain(t *testing.T) {
 		"capture-260": "新鲜活力",
 	}
 	for id, title := range expected {
-		info, ok := FindByID(id)
+		info, ok := retiredFindByID(id)
 		if !ok {
 			t.Fatalf("expected date-sweep captured quest %s %s", id, title)
 		}
@@ -307,19 +307,19 @@ func TestCatalogIncludesDateSweepBaiyuanAndSwampQuestChain(t *testing.T) {
 		}
 	}
 
-	clue, _ := FindByID("capture-244")
+	clue, _ := retiredFindByID("capture-244")
 	if len(clue.Routes) != 2 || clue.Routes[0].AnswerHandle != "5q51gs" || clue.Routes[1].MsgHandle != "5q51d_2" {
 		t.Fatalf("expected captured clue quest accept and completion routes, got %+v", clue.Routes)
 	}
-	lastWish, _ := FindByID("capture-247")
+	lastWish, _ := retiredFindByID("capture-247")
 	if len(lastWish.Routes) != 2 || lastWish.Routes[0].Handle != "5300542617580783" || lastWish.Routes[1].Handle != "4710542615621525" {
 		t.Fatalf("expected captured last-wish cross-NPC routes, got %+v", lastWish.Routes)
 	}
-	poison, _ := FindByID("capture-254")
+	poison, _ := retiredFindByID("capture-254")
 	if len(poison.Routes) != 2 || poison.Routes[0].AnswerHandle != "aq30gs" || poison.Routes[1].AnswerHandle != "aq30os" {
 		t.Fatalf("expected captured poison-sac routes, got %+v", poison.Routes)
 	}
-	fresh, _ := FindByID("capture-260")
+	fresh, _ := retiredFindByID("capture-260")
 	if len(fresh.Routes) != 2 || fresh.Routes[0].Handle != "1810542611191117" || fresh.Routes[1].Handle != "6190542618476150" {
 		t.Fatalf("expected captured fresh-vitality routes, got %+v", fresh.Routes)
 	}
@@ -344,7 +344,7 @@ func TestCatalogIncludesInstanceCaptureQuestExpansion(t *testing.T) {
 		"capture-353": "幻化龙娃",
 	}
 	for id, title := range expected {
-		info, ok := FindByID(id)
+		info, ok := retiredFindByID(id)
 		if !ok || info.Title != title {
 			t.Fatalf("expected instance-capture quest %s %s, got %+v", id, title, info)
 		}

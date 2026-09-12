@@ -89,61 +89,9 @@ var classicMailCapturedCost = []string{
 	"[i=f_i_铜钱^ffffff&24@材料 消耗品&25@1000&19@1000枚时双击可兑换为银元宝.&20@游戏中的货币,用于流通买卖.&27@sitem_tq&101@163.png&103@0&104@0&105@&107@&108@0]铜钱[/]x5",
 }
 
-var classicMailSourceRecords = []classicMailSourceRecord{
-	{
-		Handle:   "5544758100159914",
-		Subject:  "新手任务提示",
-		From:     "系统",
-		Content:  "恭喜你升到15级,你可以接以下日常任务:\n1.义剑诛鬼 李老头 时间:每晚19:00-22:00\n2.杀猪除害 伏天 时间：每小时循环\n3.助商集物 丑五品 时间：每日循环\n4.生死劫   一心长态 噌痴 申公烈 夏侯武 时间:每日13:00-15:00",
-		SendDate: 1780758100159,
-		IsRead:   false,
-	},
-	{
-		Handle:   "9073752143795590",
-		Subject:  "转职时换下的衣服",
-		From:     "系统",
-		Content:  "转职时候换下的衣服",
-		SendDate: 1780752143795,
-		IsRead:   false,
-	},
-	{
-		Handle:   "7328462314719446",
-		Subject:  "转职时换下的衣服",
-		From:     "系统",
-		Content:  "转职时候换下的衣服",
-		SendDate: 1779462314719,
-		IsRead:   true,
-	},
-}
-
-var classicMailAttachmentRecords = []classicMailAttachmentRecord{
-	{
-		MailHandle: "5544758100159914",
-		Item: session.RoleItem{
-			Type:        classicMailContainerType,
-			Name:        "宝匣",
-			ItemType:    "own",
-			Display:     "596.png",
-			Description: "f_i_宝匣^00ccff&24@宝物&25@99&19@双击打开后可能获得一个小惊喜。&20@看起来比较小巧的褐色木质匣子，不知道里面放着什么样的物品。&27@sitem_wood&103@0&104@0&105@&107@&108@0",
-			Count:       2,
-			Index:       0,
-			ItemLevel:   3,
-		},
-	},
-	{
-		MailHandle: "5544758100159914",
-		Item: session.RoleItem{
-			Type:        classicMailContainerType,
-			Name:        "宠物月饼",
-			ItemType:    "own",
-			Display:     "1007.png",
-			Description: "f_i_宠物月饼^C156C7&24@特殊&25@99&19@<font color='#ffff00'>装备宠物时，双击直接使用</font><br/>给当前装备的宠物增加100点成长。&20@超强力宠物专用食物。&103@0&104@0&105@&107@&108@0",
-			Count:       2,
-			Index:       1,
-			ItemLevel:   4,
-		},
-	},
-}
+// No production mail service currently creates messages or attachments.
+var classicMailSourceRecords = []classicMailSourceRecord{}
+var classicMailAttachmentRecords = []classicMailAttachmentRecord{}
 
 func buildClassicMailOpenResult(request classicTownAnswerRequest) (packetResult, bool) {
 	if strings.TrimSpace(request.AnswerHandle) != "2" {

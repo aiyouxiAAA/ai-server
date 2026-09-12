@@ -39,11 +39,11 @@ func TestQuestGuideLifecycleAndMapScope(t *testing.T) {
 	}
 	socket.playerBase.MapID = 2
 	completed, _ := buildAuthoredQuestAnswerResult(store, socket, classicTownAnswerRequest{Handle: q.Finish.Handle(), MsgHandle: q.Info.ID, AnswerHandle: "complete"})
-	if completed.questGuide == nil || len(completed.questGuide.Entries) != 0 || len(completed.questGuide.CompletedQuestIDs) != 1 {
+	if completed.questGuide == nil || len(completed.questGuide.Entries) != 1 || completed.questGuide.Entries[0].QuestID != "XZ-M002" || len(completed.questGuide.CompletedQuestIDs) != 1 {
 		t.Fatalf("completion %+v", completed.questGuide)
 	}
 	log := buildClassicQuestLogResult(store, socket)
-	if log.questGuide == nil || len(log.questGuide.Entries) != 0 || len(log.questGuide.CompletedQuestIDs) != 1 {
+	if log.questGuide == nil || len(log.questGuide.Entries) != 1 || log.questGuide.Entries[0].QuestID != "XZ-M002" || len(log.questGuide.CompletedQuestIDs) != 1 {
 		t.Fatalf("restore %+v", log.questGuide)
 	}
 	if buildQuestGuideSnapshot(nil, socket) != nil {

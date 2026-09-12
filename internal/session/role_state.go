@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"ai-server/internal/classicdata"
+	"ai-server/internal/profession"
 )
 
 var classicRoleLevelToExp = []int{
@@ -736,16 +737,13 @@ func normalizeRoleCurrencies(currencies RoleCurrencies) RoleCurrencies {
 }
 
 func defaultRoleCurrencies() RoleCurrencies {
-	return RoleCurrencies{
-		"铜钱":  defaultCopper,
-		"银元宝": defaultSilver,
-		// Source mall (rmb_shop) spends 玉币. Seed a development balance so the
-		// safe mall shell can open and purchase without real recharge.
-		"玉币": defaultSilver,
-	}
+	return RoleCurrencies{}
 }
 
 func normalizeRoleVocation(vocation string) (string, bool) {
+	if definition, ok := profession.ByName(vocation); ok {
+		return definition.Name, true
+	}
 	switch strings.TrimSpace(vocation) {
 	case "", defaultRoleVoc:
 		return defaultRoleVoc, true
@@ -761,31 +759,13 @@ func normalizeRoleVocation(vocation string) (string, bool) {
 }
 
 func defaultRoleSkills() []RoleSkill {
-	return []RoleSkill{
-		{
-			Name:        "密斩",
-			Level:       1,
-			Type:        "oneE",
-			Icon:        "426.png",
-			Description: "f_s_密斩&9@单体·攻击&7@3&10@单刀/单斧&22@战斗&2@5&4@提升40%的物理伤害",
-		},
-		{
-			Name:        "普通攻击",
-			Level:       1,
-			Type:        "oneE",
-			Icon:        "7.png",
-			Description: "f_s_普通攻击^ffffff&9@单体·攻击&10@通用&22@战斗&5@给予对手普通的物理攻击.",
-		},
-	}
+	return applyOriginalProfession(RoleSummary{}).Skills
 }
 
 const defaultRoleFastPanelSlotCount = 10
 
 func defaultRoleFastPanel() []RoleFastPanelEntry {
-	return []RoleFastPanelEntry{
-		{Index: 0, Type: "skill", Name: "普通攻击"},
-		{Index: 1, Type: "skill", Name: "密斩"},
-	}
+	return applyOriginalProfession(RoleSummary{}).FastPanel
 }
 
 func capturedWoodcutterRoleSkills() []RoleSkill {
@@ -2316,6 +2296,7 @@ func withRoleRuntimeDefaults(role RoleSummary) RoleSummary {
 	}
 	role.Skills = cloneRoleSkills(role.Skills)
 	role.FastPanel = normalizeRoleFastPanel(role.FastPanel)
+	role = refreshOriginalProfessionSkills(role)
 	role.TownBuffs = normalizeRoleTownBuffs(role.TownBuffs)
 	role.ContainerCapacities = cloneRoleContainerCapacities(role.ContainerCapacities)
 	role.Currencies = normalizeRoleCurrencies(role.Currencies)
@@ -2378,7 +2359,7 @@ func normalizeRoleTownBuff(buff RoleTownBuff) RoleTownBuff {
 }
 
 func defaultRoleItems() []RoleItem {
-	return []RoleItem{starterAxeItem()}
+	return []RoleItem{}
 }
 
 func CapturedRoleItemTemplate(name string) (RoleItem, bool) {

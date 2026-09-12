@@ -39,7 +39,7 @@
     },
     {
       "id": "8",
-      "name": "卧佛谷_2",
+      "name": "听雪坡",
       "sourceXml": "mapdefined/xml/8.xml"
     },
     {
@@ -539,7 +539,7 @@
     },
     {
       "id": "108",
-      "name": "卧佛谷_3",
+      "name": "冻溪桥",
       "sourceXml": "mapdefined/xml/108.xml"
     },
     {
@@ -564,7 +564,7 @@
     },
     {
       "id": "113",
-      "name": "卧佛谷_8",
+      "name": "冰镜湖",
       "sourceXml": "mapdefined/xml/113.xml"
     },
     {

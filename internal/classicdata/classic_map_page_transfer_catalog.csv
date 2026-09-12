@@ -50,8 +50,8 @@ mapbox,127,127,观瀑台,1000,600,woc_mapbox_default
 mapbox,2,2,雪栈村,1000,600,woc_mapbox_default
 mapbox,6,6,村外雪径,1000,600,woc_mapbox_default
 mapbox,7,7,卧佛谷_1,1000,680,nine_wilds_terrain_20260909
-mapbox,8,8,卧佛谷_2,1000,450,woc_mapbox_mapxy
-mapbox,108,108,卧佛谷_3,1000,600,woc_mapbox_default
+mapbox,8,8,听雪坡,1000,450,woc_mapbox_mapxy
+mapbox,108,108,冻溪桥,1000,600,woc_mapbox_default
 mapbox,109,109,卧佛谷_4,1000,600,woc_mapbox_default
 mapbox,110,110,卧佛谷_5,1000,450,woc_mapbox_mapxy
 mapbox,111,111,卧佛谷_6,1000,450,woc_mapbox_mapxy
@@ -75,7 +75,7 @@ mapbox,154,154,黄风寨_9,1000,600,woc_mapbox_default
 mapbox,155,155,黄风寨_10,1000,600,woc_mapbox_default
 mapbox,156,156,黄风寨_11,1000,600,woc_mapbox_default
 mapbox,157,157,黄风寨_12,1000,600,woc_mapbox_default
-mapbox,113,113,卧佛谷_8,1000,600,woc_mapbox_default
+mapbox,113,113,冰镜湖,1000,600,woc_mapbox_default
 mapbox,114,114,卧佛谷_10,1000,600,woc_mapbox_default
 mapbox,115,115,卧佛谷_9,1000,600,woc_mapbox_default
 mapbox,31,31,平原_1,1000,600,woc_mapbox_default

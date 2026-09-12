@@ -42,7 +42,10 @@ func TestAuthoredVillageQuestLifecycle(t *testing.T) {
 	if len(accepted.questInfos) != 1 || accepted.questInfos[0].QuestID != q.Info.ID {
 		t.Fatalf("accept %+v", accepted)
 	}
-	check(4, 1)
+	check(0, 1)
+	if len(accepted.questStates) < 2 || accepted.questStates[0].Handle != q.Start.Handle() || accepted.questStates[0].State != 0 || accepted.questStates[1].Handle != q.Finish.Handle() || accepted.questStates[1].State != 1 {
+		t.Fatalf("accept must immediately clear the giver and mark the turn-in NPC: %+v", accepted.questStates)
+	}
 	report := authoredQuestDialogue(store, socket, q, q.Finish.Handle())
 	if len(report.DialogueLines) != 3 || report.DialogueLines[1].Speaker != "player" || report.Answers[0].Handle != "complete" {
 		t.Fatalf("authored report presentation %+v", report)
@@ -77,7 +80,7 @@ func TestAuthoredVillageQuestLifecycle(t *testing.T) {
 	snapshot := world.TownBootstrapSnapshot{}
 	snapshot.LoadMap.MapID = "2"
 	applyAuthoredVillageQuestBootstrap(&snapshot, store, socket)
-	if len(snapshot.CreateRoles) != 5 || snapshot.QuestStates[0].State != 4 || snapshot.QuestStates[1].State != 1 {
+	if len(snapshot.CreateRoles) != 5 || snapshot.QuestStates[0].State != 0 || snapshot.QuestStates[1].State != 1 {
 		t.Fatalf("accepted restore %+v", snapshot)
 	}
 	completed := send(q.Finish.Handle(), "complete")

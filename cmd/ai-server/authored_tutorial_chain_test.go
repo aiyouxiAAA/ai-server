@@ -4,11 +4,24 @@ import (
 	"ai-server/internal/protocol"
 	"ai-server/internal/quest"
 	"ai-server/internal/world"
+	"strings"
 	"testing"
 )
 
 func TestAuthoredTutorialChainPackets(t *testing.T) {
 	store, socket := seedVillageServiceRole(t, 1, 0, 0)
+	checkMarkers := func(states []world.QuestStatePush, expected map[string]int) {
+		t.Helper()
+		actual := map[string]int{}
+		for _, state := range states {
+			actual[state.Handle] = state.State
+		}
+		for handle, want := range expected {
+			if got, ok := actual[handle]; !ok || got != want {
+				t.Fatalf("marker %s = %d (present=%v), want %d; all=%+v", handle, got, ok, want, states)
+			}
+		}
+	}
 	send := func(id, handle, answer string) packetResult {
 		return handlePacketWithSession(store, protocol.Packet{Cmd: cmdClassicTownAnswerReq, Seq: 1, Payload: mustJSON(t, classicTownAnswerRequest{Handle: handle, MsgHandle: id, AnswerHandle: answer})}, socket)
 	}
@@ -25,9 +38,20 @@ func TestAuthoredTutorialChainPackets(t *testing.T) {
 		}
 		return r
 	}
-	step("XZ-M001", false)
+	first := step("XZ-M001", false)
+	checkMarkers(first.questStates, map[string]int{"authored-lu-xiaoman": 0, "authored-guan-boheng": 1})
 	step("XZ-M001", true)
+	for _, q := range quest.Authored()[1:] {
+		// Inspect each plain offer without mutating another quest's progress.
+		plain := q
+		plain.Rule.Previous = ""
+		offer := authoredQuestDialogue(store, socket, plain, plain.Start.Handle())
+		if len(offer.DialogueLines) != 1 || len(offer.Answers) != 1 || offer.Answers[0].Handle != "accept" || strings.Count(offer.DialogueLines[0].Text, q.Info.Description) != 1 {
+			t.Fatalf("plain quest must offer directly after one non-duplicated description: %+v", offer)
+		}
+	}
 	gift := step("XZ-M002", false)
+	checkMarkers(gift.questStates, map[string]int{"authored-shi-li": 4, "authored-lu-xiaoman": 0, "authored-guan-boheng": 0})
 	if len(gift.itemInfos) != 1 || gift.itemInfos[0].Name != "雪栈铁刀" || gift.questGuide.Entries[0].Action != "open_page" {
 		t.Fatalf("gift %+v", gift)
 	}
@@ -47,14 +71,17 @@ func TestAuthoredTutorialChainPackets(t *testing.T) {
 	if equip.questGuide == nil || equip.questGuide.Entries[0].TargetHandle != "authored-shi-li" {
 		t.Fatalf("equip guide %+v", equip.questGuide)
 	}
+	checkMarkers(equip.questStates, map[string]int{"authored-shi-li": 1})
 	step("XZ-M002", true)
-	step("XZ-M003", false)
+	lesson := step("XZ-M003", false)
+	checkMarkers(lesson.questStates, map[string]int{"authored-shi-li": 0, "authored-ye-zhidong": 1})
 	medical, _ := buildAuthoredQuestOpenResult(store, socket, "authored-ye-zhidong")
 	if medical.answerSpeak == nil || len(medical.answerSpeak.Answers) != 3 {
 		t.Fatal("healing lesson must retain heal/shop options")
 	}
 	step("XZ-M003", true)
-	step("XZ-M004", false)
+	battle := step("XZ-M004", false)
+	checkMarkers(battle.questStates, map[string]int{"authored-huo-changying": 4, "authored-ye-zhidong": 0})
 	if len(send("XZ-M004", "authored-huo-changying", "complete").questClears) != 0 {
 		t.Fatal("unwon battle completed")
 	}
@@ -85,6 +112,7 @@ func TestAuthoredTutorialChainPackets(t *testing.T) {
 	state.HP -= 11
 	role, base, _ := store.UpdateRoleState(socket.playerBase.PlayerID, socket.selectedRole.RoleID, state)
 	socket.selectedRole, socket.playerBase = &role, &base
+	checkMarkers(allAuthoredQuestStates(store, socket), map[string]int{"authored-huo-changying": 0, "authored-ye-zhidong": 4})
 	if len(send("XZ-M005", "authored-ye-zhidong", "complete").questClears) != 0 {
 		t.Fatal("injured turn-in allowed")
 	}
@@ -92,8 +120,10 @@ func TestAuthoredTutorialChainPackets(t *testing.T) {
 	if healed.roleState == nil || healed.questGuide == nil || healed.questGuide.Entries[0].ObjectiveID != "confirm-health" {
 		t.Fatal("healing didn't refresh guide")
 	}
+	checkMarkers(healed.questStates, map[string]int{"authored-huo-changying": 0, "authored-ye-zhidong": 1})
 	step("XZ-M005", true)
-	step("XZ-M006", false)
+	returning := step("XZ-M006", false)
+	checkMarkers(returning.questStates, map[string]int{"authored-ye-zhidong": 0, "authored-guan-boheng": 1})
 	final := step("XZ-M006", true)
 	if len(final.questGuide.Entries) != 0 || len(final.questGuide.CompletedQuestIDs) != 6 {
 		t.Fatal("chain end")

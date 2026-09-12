@@ -2,6 +2,10 @@
 
 目标：**直达结果，不制造流程。**
 
+## 游戏文案
+
+- 编写或调整任务、NPC对白及教学文案前，执行[客户端文案去重与简短规则](../ai-project/AGENTS.md#ui--viewport--prefab)，连同实际页面的教学区检查，不重复解释已明确的操作步骤。
+
 ## Git / 推送
 
 - 用户要求提交 / 推送时，必须同时检查 `D:/cocosProject/ai-server` 和 `D:/cocosProject/ai-project` 的 `git status --short --branch`。

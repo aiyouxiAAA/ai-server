@@ -41,7 +41,7 @@ func authoredQuestStates(store *session.Store, socket *packetSession, q quest.Au
 	case "available":
 		start = 2
 	case "accepted":
-		start = 4
+		// After acceptance only the turn-in NPC still owns a quest marker.
 		finish = 4
 		if store.AuthoredQuestReady(socket.playerBase.PlayerID, socket.selectedRole.RoleID, q.Info.ID) {
 			finish = 1
@@ -107,9 +107,14 @@ func authoredQuestDialogue(store *session.Store, socket *packetSession, q quest.
 			msg.DialogueLines = append(msg.DialogueLines, world.DialogueLine{Speaker: line.Speaker, Text: line.Text})
 		}
 		if len(msg.DialogueLines) == 0 {
-			msg.DialogueLines = append(msg.DialogueLines, world.DialogueLine{Speaker: "npc", Text: msg.Msg})
+			text := msg.Msg
+			if phase == "finish" {
+				text += "<br/>" + q.Info.Description
+			}
+			msg.DialogueLines = append(msg.DialogueLines, world.DialogueLine{Speaker: "npc", Text: text})
+		} else {
+			msg.DialogueLines = append(msg.DialogueLines, world.DialogueLine{Speaker: "npc", Text: "【" + q.Info.Title + "】<br/>" + q.Info.Description})
 		}
-		msg.DialogueLines = append(msg.DialogueLines, world.DialogueLine{Speaker: "npc", Text: "【" + q.Info.Title + "】<br/>" + q.Info.Description})
 	}
 	return msg
 }

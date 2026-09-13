@@ -18,6 +18,7 @@ import (
 )
 
 type packetResult struct {
+	realtimeResumeAt       time.Time
 	responseCmd            uint64
 	responsePayload        []byte
 	serverTime             *classicTownServerTimePush
@@ -309,6 +310,8 @@ type dungeonEntryRule struct {
 }
 
 type packetSession struct {
+	requestBudget           realtimeRequestBudget
+	movement                realtimeMovementGuard
 	selectedRole            *session.RoleSummary
 	playerBase              *session.PlayerBaseData
 	battleRuntime           *battle.Runtime

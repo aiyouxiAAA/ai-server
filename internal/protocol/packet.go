@@ -66,10 +66,10 @@ func Decode(data []byte) (Packet, error) {
 			if err != nil {
 				return Packet{}, err
 			}
-			end := next + int(length)
-			if end > len(data) {
+			if length > uint64(len(data)-next) {
 				return Packet{}, errors.New("packet payload exceeds frame length")
 			}
+			end := next + int(length)
 			packet.Payload = append([]byte(nil), data[next:end]...)
 			offset = end
 		case fieldTimestampMs:
@@ -122,10 +122,10 @@ func skipUnknown(data []byte, wireType int, offset int) (int, error) {
 		if err != nil {
 			return offset, err
 		}
-		end := next + int(length)
-		if end > len(data) {
+		if length > uint64(len(data)-next) {
 			return offset, errors.New("unknown length-delimited field exceeds frame length")
 		}
+		end := next + int(length)
 		return end, nil
 	default:
 		return offset, fmt.Errorf("unsupported wire type %d", wireType)

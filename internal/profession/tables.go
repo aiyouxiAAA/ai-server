@@ -21,6 +21,7 @@ type Skill struct {
 	Level, Slot, MPCost, RequiredPower, TriggerChance                          int
 	DamageMultiplier                                                           float64
 	Icon, AssetStatus, CounterSkillID, Description                             string
+	GrantToExisting                                                            bool
 }
 
 var Definitions, Skills = load()
@@ -47,7 +48,7 @@ func load() ([]Definition, []Skill) {
 			Level: integer(r, "default_level"), Slot: integer(r, "shortcut_slot"), MPCost: integer(r, "mp_cost"),
 			RequiredPower: integer(r, "required_power"), TriggerChance: integer(r, "trigger_chance_percent"),
 			DamageMultiplier: number(r, "damage_multiplier"), Icon: r["icon"], AssetStatus: r["asset_status"],
-			CounterSkillID: r["counter_skill_id"], Description: r["description"]}
+			CounterSkillID: r["counter_skill_id"], Description: r["description"], GrantToExisting: r["grant_to_existing"] == "1"}
 		if !ids[s.ProfessionID] || seen[s.ID] || s.ID == "" || s.Name == "" || s.Level < 1 || s.MPCost < 0 || s.DamageMultiplier < 0 || s.TriggerChance < 0 || s.TriggerChance > 100 {
 			panic("invalid profession skill: " + s.ID)
 		}

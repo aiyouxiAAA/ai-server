@@ -37,12 +37,12 @@ type worldSceneConnectionHub struct {
 }
 
 type worldSceneConnection struct {
-	writer         *websocketWriter
-	session        *packetSession
-	mapID          int
-	spawn          world.SpawnPoint
-	visible        map[string]struct{}
-	lastReconcile  map[string]world.SpawnPoint
+	writer        *websocketWriter
+	session       *packetSession
+	mapID         int
+	spawn         world.SpawnPoint
+	visible       map[string]struct{}
+	lastReconcile map[string]world.SpawnPoint
 }
 
 type worldScenePushAction struct {
@@ -705,7 +705,6 @@ func (hub *worldSceneConnectionHub) broadcastStaticRemoveHandlesToMap(mapID int,
 	}
 }
 
-
 // broadcastMoveRoleToMap 按原版 c_MoveRole(50012) 的 moveRole 语义,
 // 把某玩家当前位置/目标点推给同 mapId 上除自己外的在线邻居。
 func (hub *worldSceneConnectionHub) broadcastMoveRoleToMap(mapID int, exceptRoleID string, push world.RoleMovePush) {
@@ -794,6 +793,7 @@ func announceWorldSceneTransfer(writer *websocketWriter, socketSession *packetSe
 		spawn = world.DefaultSpawnForMap(newMapID)
 	}
 	worldSceneHub.register(currentRoleID, newMapID, writer, socketSession, spawn)
+	socketSession.movement.reset(currentRoleID, newMapID, spawn, time.Now())
 
 	writeWorldSceneActions(worldSceneHub.syncMapVisibility(newMapID))
 

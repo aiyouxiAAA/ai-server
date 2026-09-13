@@ -253,6 +253,7 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		return
 	}
 	defer conn.Close()
+	conn.SetReadLimit(1024 * 1024)
 
 	socketWriter := &websocketWriter{
 		conn:          conn,
@@ -296,10 +297,20 @@ func handleWebSocket(store *session.Store, writer http.ResponseWriter, request *
 		packet, err := protocol.Decode(data)
 		if err != nil {
 			log.Printf("[ai-server] decode packet failed: %v", err)
-			continue
+			_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(1008, "invalid_gameplay_request"), time.Now().Add(time.Second))
+			return
 		}
 
-		result := handlePacketWithSession(store, packet, socketSession)
+		result, violation := handleRealtimePacketOnWire(store, packet, socketSession)
+		if violation != "" {
+			roleID := ""
+			if socketSession.selectedRole != nil {
+				roleID = socketSession.selectedRole.RoleID
+			}
+			log.Printf("[ai-server] rejected gameplay request roleId=%s cmd=%d reason=%s", roleID, packet.Cmd, violation)
+			_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(1008, "invalid_gameplay_request"), time.Now().Add(time.Second))
+			return
+		}
 		handleElapsed := time.Since(packetStart)
 		if !result.handled {
 			log.Printf("[ai-server] unsupported command: %d", packet.Cmd)

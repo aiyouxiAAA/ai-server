@@ -304,6 +304,7 @@ type CellInfoPush struct {
 	YScale            int    `json:"yScale"`
 	MaxHP             int    `json:"maxHp"`
 	HP                int    `json:"hp"`
+	Shield            int    `json:"shield"`
 	MaxMP             int    `json:"maxMp,omitempty"`
 	MP                int    `json:"mp,omitempty"`
 	Speed             int    `json:"speed"`
@@ -359,7 +360,8 @@ type ItemActionRequest struct {
 }
 
 type PlayOverRequest struct {
-	BattleID string `json:"battleId"`
+	BattleID   string `json:"battleId"`
+	PlaybackID int    `json:"playbackId"`
 }
 
 type ItemAction struct {
@@ -374,6 +376,8 @@ type ItemAction struct {
 }
 
 type ActionPush struct {
+	PlaybackID            int                     `json:"playbackId,omitempty"`
+	PlaybackRemainingMS   int64                   `json:"playbackRemainingMs,omitempty"`
 	BattleID              string                  `json:"battleId,omitempty"`
 	ActorHandle           string                  `json:"actorHandle"`
 	TargetHandle          string                  `json:"targetHandle"`
@@ -409,6 +413,7 @@ type BuffInfoPush struct {
 	Description   string `json:"description"`
 	Round         int    `json:"round"`
 	ActionHandle  string `json:"actionHandle,omitempty"`
+	Shield        int    `json:"shield,omitempty"`
 }
 
 type ClearBuffInfoPush struct {
@@ -441,6 +446,7 @@ type TeamActor struct {
 }
 
 type Runtime struct {
+	Playback              PlaybackClock
 	BattleID              string
 	RoleID                string
 	MapID                 string
@@ -1697,6 +1703,9 @@ func (runtime *Runtime) resolveEnemyCommandActionsBase(enemy *CellInfoPush, targ
 	if runtime == nil || enemy == nil || target == nil {
 		return nil
 	}
+	if commandID == tabletWard.CommandID {
+		return runtime.resolveTabletWardAction(enemy)
+	}
 	profile := runtime.battleCommandProfile(enemy, commandID)
 	if strings.TrimSpace(profile.SourceType) == "all" {
 		action := runtime.resolveAllTargetAttack(enemy, runtime.livingCells(CampTeam), commandID)
@@ -2780,6 +2789,9 @@ func (runtime *Runtime) applyTargetHPDamage(target *CellInfoPush, damage int) (i
 		return 0, 0
 	}
 	beforeHP := target.HP
+	if runtime != nil {
+		damage -= runtime.absorbShieldDamage(target, damage)
+	}
 	mpDamage := 0
 	if runtime != nil && runtime.StatusEffects != nil {
 		effects := runtime.StatusEffects[target.Handle]
@@ -3329,6 +3341,9 @@ func (runtime *Runtime) restoreStatusEffect(target *CellInfoPush, effect BattleS
 	if target == nil {
 		return
 	}
+	if effect.Name == shieldStatusName {
+		target.Shield = 0
+	}
 	if effect.AttackReduction > 0 {
 		target.Attack += effect.AttackReduction
 	}
@@ -3797,6 +3812,7 @@ func (runtime *Runtime) resolveStatusBuffInfo(actor *CellInfoPush, target *CellI
 		Display:       effect.Display,
 		Description:   effect.Description,
 		Round:         effect.Rounds,
+		Shield:        target.Shield,
 	}
 	if strings.TrimSpace(buff.ReleaseHandle) == "" && actor != nil {
 		buff.ReleaseHandle = actor.Handle

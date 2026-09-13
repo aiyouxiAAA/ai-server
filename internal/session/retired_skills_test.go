@@ -27,8 +27,17 @@ func TestRetiredSkillsRemovedFromRoleAndShortcuts(t *testing.T) {
 			Skills:    []RoleSkill{{Name: "密斩", Level: 1}, {Name: "普通攻击", Level: 1}, {Name: "奥义.雷魂斩", Level: 5}},
 			FastPanel: []RoleFastPanelEntry{{Index: 0, Type: "skill", Name: "密斩"}, {Index: 1, Type: "skill", Name: "普通攻击"}, {Index: 8, Type: "item", Name: "馒头"}}}
 		got := refreshOriginalProfessionSkills(role)
-		if got.Voc != vocation || got.Level != 30 || got.RoleID != role.RoleID || len(got.Skills) != 1 || got.Skills[0].Name != "普通攻击" || len(got.FastPanel) != 2 || got.FastPanel[1].Name != "馒头" {
+		expected := 1
+		expectedPanel := 2
+		if vocation == "刃舞者" {
+			expected = 2
+			expectedPanel = 3
+		}
+		if got.Voc != vocation || got.Level != 30 || got.RoleID != role.RoleID || len(got.Skills) != expected || got.Skills[0].Name != "普通攻击" || len(got.FastPanel) != expectedPanel || got.FastPanel[len(got.FastPanel)-1].Name != "馒头" {
 			t.Fatalf("unexpected retirement result: %+v", got)
+		}
+		if len(refreshOriginalProfessionSkills(got).Skills) != expected {
+			t.Fatal("repeat refresh duplicated skill grant")
 		}
 	}
 }

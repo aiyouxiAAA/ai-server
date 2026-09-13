@@ -5,6 +5,7 @@ skill-blade-execution-lv1,skill-blade-execution,1,blade/execution,2,10,0,0,0
 skill-blade-ultimate-lv1,skill-blade-ultimate,1,blade/ultimate,3.4,24,0,0,0
 skill-blade-draw-lv1,skill-blade-draw,1,blade/draw,2.2,12,0,0,0
 skill-blade-phantom-lv1,skill-blade-phantom,1,blade/phantom,2.8,18,0,0,0
+skill-blade-ghost-lv1,skill-blade-ghost,1,blade/ghost,2.8,18,0,0,0
 battle-store-lv1,battle-store,1,def,0,0,0,0,0
 defense-lv1,defense,1,def,0,0,0,0,0
 battle-escape-lv1,battle-escape,1,escapeSuccess,0,0,0,0,0

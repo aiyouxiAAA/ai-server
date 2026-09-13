@@ -17,7 +17,7 @@ func TestBladeDancerCreationAndRetiredVocations(t *testing.T) {
 	}
 	skills, _, ok := store.GetRoleSkills(login.PlayerID, created.Role.RoleID)
 	panel, _ := store.GetRoleFastPanel(login.PlayerID, created.Role.RoleID)
-	if !ok || len(skills) != 7 || len(panel) != 6 {
+	if !ok || len(skills) != len(profession.Skills) || len(panel) != 7 {
 		t.Fatalf("defaults: %+v %+v", skills, panel)
 	}
 	for _, item := range panel {

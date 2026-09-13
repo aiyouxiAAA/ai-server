@@ -27,6 +27,8 @@ func originalRoleSkill(definition profession.Definition, skill profession.Skill,
 	category := "单体·攻击"
 	if skill.Kind == "passive" {
 		category = "被动"
+	} else if skill.SourceType == "all" {
+		category = "群体·攻击"
 	}
 	text := fmt.Sprintf("f_s_%s&9@%s&8@%s&22@战斗&2@%d&4@%s", skill.Name, category, definition.Name, skill.MPCost, skill.Description)
 	return RoleSkill{Name: skill.Name, Level: level, Type: skill.SourceType, Icon: skill.Icon, Description: text, MaxLevel: 1}
@@ -45,7 +47,34 @@ func refreshOriginalProfessionSkills(role RoleSummary) RoleSummary {
 			}
 		}
 	}
+	if ok {
+		for _, skill := range profession.Skills {
+			if skill.ProfessionID != definition.ID || !skill.GrantToExisting {
+				continue
+			}
+			found := false
+			for _, owned := range current {
+				if owned.Name == skill.Name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				current = append(current, originalRoleSkill(definition, skill, skill.Level))
+				if skill.Kind == "skill" && skill.Slot >= 0 {
+					kept := []RoleFastPanelEntry{}
+					for _, entry := range role.FastPanel {
+						if entry.Index != skill.Slot {
+							kept = append(kept, entry)
+						}
+					}
+					role.FastPanel = append(kept, RoleFastPanelEntry{Index: skill.Slot, Type: "skill", Name: skill.Name})
+				}
+			}
+		}
+	}
 	role.Skills = current
+	role.SkillCap = maxInt(role.SkillCap, len(current))
 	role.FastPanel = filterRoleFastPanelEntries(role.FastPanel, role.Skills)
 	return role
 }

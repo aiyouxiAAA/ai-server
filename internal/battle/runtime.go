@@ -402,6 +402,7 @@ type ActionResultCodeEntry struct {
 	Handle      string `json:"handle"`
 	StateCode   string `json:"stateCode"`
 	TargetInDef bool   `json:"targetInDef,omitempty"`
+	Damage      int    `json:"damage"` // Full resolved damage before shield/MP absorption and the remaining-HP cap.
 }
 
 type BuffInfoPush struct {
@@ -1306,6 +1307,7 @@ func (runtime *Runtime) resolveAllTargetAttack(actor *CellInfoPush, targets []*C
 			Handle:      target.Handle,
 			StateCode:   action.TargetActionStateCode,
 			TargetInDef: action.TargetInDef,
+			Damage:      action.Damage,
 		})
 		for _, refresh := range action.RefreshInfos {
 			if refresh.Handle == actor.Handle {

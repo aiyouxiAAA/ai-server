@@ -2,10 +2,10 @@ skill_id,kind,label,source_type,action_name,target
 skill-normal-attack,skill,普通攻击,oneE,普通攻击,enemy
 skill-blade-triple,skill,三连斩,oneE,三连斩,enemy
 skill-blade-execution,skill,处决,oneE,处决,enemy
-skill-blade-ultimate,skill,奥义,oneE,奥义,enemy
+skill-blade-guifeng,skill,断月·归锋,all,断月·归锋,enemy
 skill-blade-draw,skill,拔刀斩,oneE,拔刀斩,enemy
 skill-blade-phantom,skill,幻影剑舞,oneE,幻影剑舞,enemy
-skill-blade-ghost,skill,鬼影闪,all,鬼影闪,enemy
+skill-blade-ghost,skill,刃影闪,all,刃影闪,enemy
 battle-store,store,蓄魂,own,蓄魂,self
 defense,defense,防御,own,防御,self
 battle-escape,escape,逃跑,own,逃跑,self

@@ -2,7 +2,7 @@ skill_level_id,skill_id,level,source_action_label,damage_multiplier,mp_cost,hp_d
 skill-normal-attack-lv1,skill-normal-attack,1,nomalAtk,1,0,0,0,0
 skill-blade-triple-lv1,skill-blade-triple,1,blade/triple,1.6,6,0,0,0
 skill-blade-execution-lv1,skill-blade-execution,1,blade/execution,2,10,0,0,0
-skill-blade-ultimate-lv1,skill-blade-ultimate,1,blade/ultimate,3.4,24,0,0,0
+skill-blade-guifeng-lv1,skill-blade-guifeng,1,blade/guifeng,3.4,24,0,0,0
 skill-blade-draw-lv1,skill-blade-draw,1,blade/draw,2.2,12,0,0,0
 skill-blade-phantom-lv1,skill-blade-phantom,1,blade/phantom,2.8,18,0,0,0
 skill-blade-ghost-lv1,skill-blade-ghost,1,blade/ghost,2.8,18,0,0,0

@@ -43,6 +43,9 @@ func handleRealtimeGameplay(store *session.Store, packet protocol.Packet, socket
 			return packetResult{handled: true}, "malformed_cross_role"
 		}
 		if socket.playerBase == nil || request.MapID != strconv.Itoa(socket.playerBase.MapID) {
+			if isPreviousMapRequest(socket, request.MapID) {
+				return packetResult{handled: true}, ""
+			}
 			return packetResult{handled: true}, "cross_role_map_spoof"
 		}
 	case cmdClassicBattleStartReq:
@@ -54,6 +57,9 @@ func handleRealtimeGameplay(store *session.Store, packet protocol.Packet, socket
 			return packetResult{handled: true}, "unauthenticated_battle"
 		}
 		if request.MapID != strconv.Itoa(socket.playerBase.MapID) {
+			if isPreviousMapRequest(socket, request.MapID) {
+				return packetResult{handled: true}, ""
+			}
 			return packetResult{handled: true}, "battle_map_spoof"
 		}
 	case cmdClassicBattleActionReq, cmdClassicBattleActiveItemReq:
@@ -128,6 +134,13 @@ func handleRealtimeGameplay(store *session.Store, packet protocol.Packet, socket
 		socket.movement.reset(socket.selectedRole.RoleID, socket.playerBase.MapID, result.townBootstrap.CreatePlayer.SpawnFlash, now)
 	}
 	return result, ""
+}
+
+// Transfer and the old map's next movement/encounter may already be on the wire
+// together. Only the server-recorded previous map is ignored, without execution.
+func isPreviousMapRequest(socket *packetSession, mapID string) bool {
+	return socket.selectedRole != nil && socket.playerBase != nil &&
+		socket.movement.isPreviousMap(socket.selectedRole.RoleID, socket.playerBase.MapID, mapID)
 }
 
 func playbackConfigurationError(err error) packetResult {

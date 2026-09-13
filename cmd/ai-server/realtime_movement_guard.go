@@ -26,10 +26,27 @@ type realtimeMovementGuard struct {
 func (g *realtimeMovementGuard) reset(role string, mapID int, position world.SpawnPoint, now time.Time) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	g.previousMapID = g.mapID
+	if g.role != role {
+		g.previousMapID = 0
+	} else if g.mapID != mapID {
+		// Same-map bootstraps must not erase the map we actually just left.
+		g.previousMapID = g.mapID
+	}
 	g.role, g.mapID, g.position, g.last = role, mapID, position, now
 	g.credit = movementUnitsPerSecond * movementBurstSeconds
 }
+
+func (g *realtimeMovementGuard) isPreviousMap(role string, currentMapID int, requestedMapID string) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.isPreviousMapLocked(role, currentMapID, requestedMapID)
+}
+
+func (g *realtimeMovementGuard) isPreviousMapLocked(role string, currentMapID int, requestedMapID string) bool {
+	return role != "" && g.role == role && g.mapID == currentMapID && !g.last.IsZero() &&
+		g.previousMapID > 0 && g.previousMapID != currentMapID && requestedMapID == strconv.Itoa(g.previousMapID)
+}
+
 func validateRealtimeMovement(socket *packetSession, payload []byte, now time.Time) (bool, string) {
 	var request classicTownMoveRoleRequest
 	if json.Unmarshal(payload, &request) != nil {
@@ -61,7 +78,7 @@ func validateRealtimeMovement(socket *packetSession, payload []byte, now time.Ti
 		return false, "movement_map_spoof"
 	}
 	if mapID != socket.playerBase.MapID {
-		if mapID == g.previousMapID {
+		if g.isPreviousMapLocked(role, socket.playerBase.MapID, request.MapID) {
 			return true, ""
 		}
 		return false, "movement_map_spoof"
